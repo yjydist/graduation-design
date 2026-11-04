@@ -1,0 +1,9 @@
+# Local editor and operating-system state.
+.DS_Store
+.obsidian/
+__pycache__/
+*.pyc
+.screenshots/
+
+# Local temporary files.
+/tmp/

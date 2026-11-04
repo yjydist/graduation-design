@@ -1,0 +1,52 @@
+{
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "debug_traceBlockByHash",
+    "params": [
+      "0x46c9397a02b88e04bb48255188dba8f80877989370afc20ff8bce5281347ee62",
+      {
+        "disableStorage": true,
+        "disableMemory": true,
+        "disableStack": true,
+        "opcodes": [
+          "REVERT",
+          "RETURN"
+        ]
+      }
+    ]
+  },
+  "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": [
+      {
+        "txHash": "0x58058be8d12be58ce79a3deb118bffad22285e710b64d88bca73e780b06cf43c",
+        "result": {
+          "structLogs": [],
+          "gas": 39160,
+          "failed": false,
+          "returnValue": "0x"
+        }
+      },
+      {
+        "txHash": "0xf13bbad3b3b9a02b367431dbeb33af5f22629fa2c6cd547275fb113638e06620",
+        "result": {
+          "structLogs": [
+            {
+              "pc": 11206,
+              "op": "REVERT",
+              "gas": 7962129,
+              "gasCost": 0,
+              "depth": 1,
+              "reason": "0x40f2bce3"
+            }
+          ],
+          "gas": 37871,
+          "failed": true,
+          "returnValue": "0x"
+        }
+      }
+    ]
+  }
+}

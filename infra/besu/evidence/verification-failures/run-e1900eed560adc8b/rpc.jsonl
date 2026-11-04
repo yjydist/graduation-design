@@ -1,0 +1,1 @@
+{"observedAt":"2026-11-04T09:18:09.945665Z","request":{"jsonrpc":"2.0","id":1,"method":"eth_getBlockByNumber","params":["latest",false]},"error":"dial tcp 127.0.0.1:1: connect: connection refused"}

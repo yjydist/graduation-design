@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "original": {
+    "instanceId": "b8281b0331a0f1b3506411799e0afd393a00d0414a9fc99fb0d824112e7eeffa",
+    "deploymentId": "54fee2470d47c5c46c37011011e72e21b416648b38367bab63a49ba094976db2",
+    "registryAddress": "0xb2f9e4dbf830858f76c7e7a4b666a4257737d914"
+  },
+  "rebuilt": {
+    "instanceId": "dc8c27bace9e6bdba087c02e166e57821df2cc8f458be51d1239679ebfdf2db2",
+    "deploymentId": "5cc74e6cb76ae8055f27cc458ce140ba45adad3d3f943c38a93b2437d2216ead",
+    "registryAddress": "0x5b8fd0a27e5ae78fb3a2b7abac77e36b89a66728"
+  }
+}

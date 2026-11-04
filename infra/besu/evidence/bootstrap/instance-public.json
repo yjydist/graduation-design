@@ -1,0 +1,341 @@
+{
+  "instanceId": "56a7f1c74d90fcf68a29725523bf48e8ab4dac992e6d329680be06bbcd76e636",
+  "chainId": 20261104,
+  "synthetic": true,
+  "validators": [
+    {
+      "role": "A",
+      "controller": "A",
+      "address": "0x9b6a99e8220f8bb1b43c4ba230d26d5cdf31ee72",
+      "publicKey": "621b0fd2de0132ebe02c4abac8abbb30aeb6665bb5e680f6b51a6bb06f66c8bcec7d461ed7178425f0ce400c4132e10bb69d18ded6e5728fdc27d5843871802f",
+      "ip": "172.28.61.11",
+      "enode": "enode://621b0fd2de0132ebe02c4abac8abbb30aeb6665bb5e680f6b51a6bb06f66c8bcec7d461ed7178425f0ce400c4132e10bb69d18ded6e5728fdc27d5843871802f@172.28.61.11:30303"
+    },
+    {
+      "role": "B",
+      "controller": "B",
+      "address": "0x2176330d799c34fc6aba1cd3bb6e0d86c72b035e",
+      "publicKey": "fb61438cf0f04e09b41fee0f7745f7e0051dc1a344a98fbf8b91d65d77d1e5ec7db761767eef74fd610367fcba2912e3474918ad61080b9209ed4c3dbb22c1fe",
+      "ip": "172.28.61.12",
+      "enode": "enode://fb61438cf0f04e09b41fee0f7745f7e0051dc1a344a98fbf8b91d65d77d1e5ec7db761767eef74fd610367fcba2912e3474918ad61080b9209ed4c3dbb22c1fe@172.28.61.12:30303"
+    },
+    {
+      "role": "C",
+      "controller": "C",
+      "address": "0x7275f6ee12e3f8fb7dfcb05c61fb8abc77f2a584",
+      "publicKey": "094644d566dad4bb1f0dcdb76309c4a61d6896a45a9eef0e88edb796d18c8a8c5b8b781e8902de50e841681295249d4df95ed42e90776901cae261cde2ffec94",
+      "ip": "172.28.61.13",
+      "enode": "enode://094644d566dad4bb1f0dcdb76309c4a61d6896a45a9eef0e88edb796d18c8a8c5b8b781e8902de50e841681295249d4df95ed42e90776901cae261cde2ffec94@172.28.61.13:30303"
+    },
+    {
+      "role": "ops",
+      "controller": "ops",
+      "address": "0x9bc977b5af2be1be44b1da41538229a7e46719f3",
+      "publicKey": "b2bc26d0a92bf20f45249a9deef6a75346d926d9da8d06ce0ae3deef5471316b3661451a33711f18a86d8c2dc08ef404579ccddc438faba0e7e18c205ec11bfe",
+      "ip": "172.28.61.14",
+      "enode": "enode://b2bc26d0a92bf20f45249a9deef6a75346d926d9da8d06ce0ae3deef5471316b3661451a33711f18a86d8c2dc08ef404579ccddc438faba0e7e18c205ec11bfe@172.28.61.14:30303"
+    }
+  ],
+  "accounts": [
+    {
+      "role": "T",
+      "managementIdentity": "0xd88b151c28101b1845bb9090f2cc497f0607b893",
+      "subjectId": "did:web:grad.example.test:subjects:T",
+      "appKeyId": "did:web:grad.example.test:subjects:T#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x0417a01383c001244f5ff605dadd596e4cc9b3e40bb53fdea8b69c583a8b66c24e88adf7fdc58e6d05708225e8d649089ba513294773bee8aa289f6e3ada4b3109",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "F6ATg8ABJE9f9gXa3VluTMmz5Au1P96otpxYOotmwk4",
+        "y": "iK33_cWObQVwgiXo1kkIm6UTKUdzvuiqKJ9uOtpLMQk"
+      },
+      "didDocumentDigest": "41af25d65e0d57623d970c3e6f9d05f4214dde2f0dc4e4974977de8630598678"
+    },
+    {
+      "role": "deployer",
+      "managementIdentity": "0x5bf9bc150caefa50823843d2fa4ef0840c0fa0c3",
+      "subjectId": "did:web:grad.example.test:subjects:deployer",
+      "appKeyId": "did:web:grad.example.test:subjects:deployer#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x0451154886c98af1303f5e968764ce39f503aa76b2c8262a19e2dc5054ce3cb693cc050897cccc88786bedb31589cc7a531b96461e9ae53be75c10e7f4dea6c900",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "URVIhsmK8TA_XpaHZM459QOqdrLIJioZ4txQVM48tpM",
+        "y": "zAUIl8zMiHhr7bMVicx6UxuWRh6a5TvnXBDn9N6myQA"
+      },
+      "didDocumentDigest": "f87262269eac829a31dd479d29cfbe7f2be0008a9abf592ecb63c30955fae0cb"
+    },
+    {
+      "role": "domainA",
+      "managementIdentity": "0x12948aaf603147d48a6a78b6f6c4d6023de41a43",
+      "subjectId": "did:web:grad.example.test:subjects:domainA",
+      "appKeyId": "did:web:grad.example.test:subjects:domainA#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x04f0f874d8a9615cc17e03968e862fa20b508208ef8c2482ec015fe8fd65eea670f734f6bd5a95c915c6a53c5af6f72a43a7680b6223e1fccc054da8615682f979",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "8Ph02KlhXMF-A5aOhi-iC1CCCO-MJILsAV_o_WXupnA",
+        "y": "9zT2vVqVyRXGpTxa9vcqQ6doC2Ij4fzMBU2oYVaC-Xk"
+      },
+      "didDocumentDigest": "8fe41079981380fa3009497e70a2181ddcc38db4278c8f34f62468ccc9f8001d"
+    },
+    {
+      "role": "adminA",
+      "managementIdentity": "0xc8b04f88c969af3b18037ba5c9b67f9f77876713",
+      "subjectId": "did:web:grad.example.test:subjects:adminA",
+      "appKeyId": "did:web:grad.example.test:subjects:adminA#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x041cfde1ac2878b32a484e29d518a410677a19d218de340acf95a7c881bcff5781b3c207ee95026089a3f6964a39746b3a2b4e5746c6400a30ad993d844b632565",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "HP3hrCh4sypITinVGKQQZ3oZ0hjeNArPlafIgbz_V4E",
+        "y": "s8IH7pUCYImj9pZKOXRrOitOV0bGQAowrZk9hEtjJWU"
+      },
+      "didDocumentDigest": "04d47b09a422d325f2312502e9b702d0bf872b37b17dac7505d9bb1551f22575"
+    },
+    {
+      "role": "registrarA",
+      "managementIdentity": "0xff46a948f44c766979c83160d3bd26a562012a5a",
+      "subjectId": "did:web:grad.example.test:subjects:registrarA",
+      "appKeyId": "did:web:grad.example.test:subjects:registrarA#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x04384134e8e33345feb5bf1603b8cafdb3d75c4da12336a4b4d34207ab42482f27adf9a9901b4619a23cf198ab5803abf9cf4cb8ffca07aa4ec1363349aac65bac",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "OEE06OMzRf61vxYDuMr9s9dcTaEjNqS000IHq0JILyc",
+        "y": "rfmpkBtGGaI88ZirWAOr-c9MuP_KB6pOwTYzSarGW6w"
+      },
+      "didDocumentDigest": "c3d4cc1c8e92fd3b88c9f8b6446e856a595bf5291fb54a3dc9166006b67baff0"
+    },
+    {
+      "role": "IA",
+      "managementIdentity": "0x9925095c8c98982e770d7055b2915100977f5a72",
+      "subjectId": "did:web:grad.example.test:subjects:IA",
+      "appKeyId": "did:web:grad.example.test:subjects:IA#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x041a5ecefb606dbcec1654e799153d003f338c2aedaf698fd29c567f52b98cead873d7621c254622fff8dabe5b3c26e12b52302836ccfb68d68c7ba5609ed607da",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "Gl7O-2BtvOwWVOeZFT0APzOMKu2vaY_SnFZ_UrmM6tg",
+        "y": "c9diHCVGIv_42r5bPCbhK1IwKDbM-2jWjHulYJ7WB9o"
+      },
+      "didDocumentDigest": "804f4668f3ec3fd1850fae76c1c12607c47003331f2c7e5a270badee64f4a0eb"
+    },
+    {
+      "role": "domainB",
+      "managementIdentity": "0xdea2ed78aed1e6d052f5dc39b07e41d97c849b45",
+      "subjectId": "did:web:grad.example.test:subjects:domainB",
+      "appKeyId": "did:web:grad.example.test:subjects:domainB#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x04e520038b7466cacbfb815f5b84d2cf1979875b6b861b3ce40c133f7f26ffc7731546204b7c5e99d5d42a5da9a814d8b38f6a9d91157f861e71b183a0194e32c9",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "5SADi3Rmysv7gV9bhNLPGXmHW2uGGzzkDBM_fyb_x3M",
+        "y": "FUYgS3xemdXUKl2pqBTYs49qnZEVf4YecbGDoBlOMsk"
+      },
+      "didDocumentDigest": "e8d6b87bc324c71e26175fbba1057d7aa9d60f128585228661d922242f1b0ee9"
+    },
+    {
+      "role": "adminB",
+      "managementIdentity": "0xdc9046207d72a36c61fe029f07d748e036f115d0",
+      "subjectId": "did:web:grad.example.test:subjects:adminB",
+      "appKeyId": "did:web:grad.example.test:subjects:adminB#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x04c74ac798c0fbae6b6ce48837f8da96e2302baff150278c1d09c645f4dcc50c4ec67c43ca82c301a9d249268598f14fdce05a88e236a4bd42cf3d1f4126f176b1",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "x0rHmMD7rmts5Ig3-NqW4jArr_FQJ4wdCcZF9NzFDE4",
+        "y": "xnxDyoLDAanSSSaFmPFP3OBaiOI2pL1Czz0fQSbxdrE"
+      },
+      "didDocumentDigest": "b1afc39dfaa467e287517af2eb13eab58d7a73d92ea12048fe136462d9b7e25c"
+    },
+    {
+      "role": "registrarB",
+      "managementIdentity": "0x890ea06348306013c2e7624206537070c4fa39e3",
+      "subjectId": "did:web:grad.example.test:subjects:registrarB",
+      "appKeyId": "did:web:grad.example.test:subjects:registrarB#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x04afb43d278b9125628f57731d314dc487a0edad35bea173b08b989ecf36dbe892d54a836244ff00695dc178d04e98129489eca99c5279cbbc963fdc839890ef94",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "r7Q9J4uRJWKPV3MdMU3Eh6DtrTW-oXOwi5iezzbb6JI",
+        "y": "1UqDYkT_AGldwXjQTpgSlInsqZxSecu8lj_cg5iQ75Q"
+      },
+      "didDocumentDigest": "bcf396d767f7412221fe2aa940c42cb0999b888d48b3350de558b975631f19e5"
+    },
+    {
+      "role": "IB",
+      "managementIdentity": "0xaeca29171e2f48855332b7cb8628868eaf7045eb",
+      "subjectId": "did:web:grad.example.test:subjects:IB",
+      "appKeyId": "did:web:grad.example.test:subjects:IB#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x045bce48b1577858e8981fe6b168da30e5d3e23780e1c7c5a0cf58f9f4f1abcce4bcae1e9e32d759beef5ee317f1cdc2f0db8757c1954410f083130b7ccddd7170",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "W85IsVd4WOiYH-axaNow5dPiN4Dhx8Wgz1j59PGrzOQ",
+        "y": "vK4enjLXWb7vXuMX8c3C8NuHV8GVRBDwgxMLfM3dcXA"
+      },
+      "didDocumentDigest": "70136e902288350ecd6aab071a01be02bc6f01d21fc7a14ff5107e1dff31cc1f"
+    },
+    {
+      "role": "domainC",
+      "managementIdentity": "0xd18bbdcaa7a6b4f9c226dfa1a61ee8303f60e558",
+      "subjectId": "did:web:grad.example.test:subjects:domainC",
+      "appKeyId": "did:web:grad.example.test:subjects:domainC#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x046e48aa93c26546b0e6881c6c31c389a419bd78b680078f692351e53b6ed8467d85c37644de6161c6d3b4d5947944e71bdb8723e2eed4a93b17067b38cfaa6cfa",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "bkiqk8JlRrDmiBxsMcOJpBm9eLaAB49pI1HlO27YRn0",
+        "y": "hcN2RN5hYcbTtNWUeUTnG9uHI-Lu1Kk7FwZ7OM-qbPo"
+      },
+      "didDocumentDigest": "2a0db90d4094588d1c54f3897e154b8f9bbf777081df567518d06f0af6cf7374"
+    },
+    {
+      "role": "adminC",
+      "managementIdentity": "0x66429e784da1e19af823d99d7a62f669081d6a1e",
+      "subjectId": "did:web:grad.example.test:subjects:adminC",
+      "appKeyId": "did:web:grad.example.test:subjects:adminC#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x04ea870a6215a40af6413a39d6724d92f28105201da3a51dc9898ff5420571082ebd08b8ebdda943b13bc734c0965812130fa4dde156e14ca2de4486f3f64a7ddb",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "6ocKYhWkCvZBOjnWck2S8oEFIB2jpR3JiY_1QgVxCC4",
+        "y": "vQi4692pQ7E7xzTAllgSEw-k3eFW4Uyi3kSG8_ZKfds"
+      },
+      "didDocumentDigest": "c84f45e161d638ca979d30b2a5e54a9ee62607948e454ea1cb85594883244f0b"
+    },
+    {
+      "role": "registrarC",
+      "managementIdentity": "0xbc585e5c8afcc569fbc2e0329388b4cf80d82b48",
+      "subjectId": "did:web:grad.example.test:subjects:registrarC",
+      "appKeyId": "did:web:grad.example.test:subjects:registrarC#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x04cdca81a5295421687e2a047e690690be333590e6c38359a8060c6bb3b18558f7cf4b84cbb33c5d751dd7265171ea0f5ad72888baa1516dd58d63bbd2b45e5443",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "zcqBpSlUIWh-KgR-aQaQvjM1kObDg1moBgxrs7GFWPc",
+        "y": "z0uEy7M8XXUd1yZRceoPWtcoiLqhUW3VjWO70rReVEM"
+      },
+      "didDocumentDigest": "d530980d9a775bdda9c1bbbc5009ad4d6fd5e13912403a6f9aa816be8d19413f"
+    },
+    {
+      "role": "IC",
+      "managementIdentity": "0xb00dacb707065b994c39a10818ac752e1962a0e2",
+      "subjectId": "did:web:grad.example.test:subjects:IC",
+      "appKeyId": "did:web:grad.example.test:subjects:IC#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x04d1e6bd77c277c14c7fadc6217e1f3bce495971c8dd4924c5838a3097a795f250f2262ae1077b3ffe505a8ed234d5b288e0d618cc417461638e80d5442e738710",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "0ea9d8J3wUx_rcYhfh87zklZccjdSSTFg4owl6eV8lA",
+        "y": "8iYq4Qd7P_5QWo7SNNWyiODWGMxBdGFjjoDVRC5zhxA"
+      },
+      "didDocumentDigest": "c7436311a94be9819c99336763267db03c1aebf355e9ccad13ebf7d2f5ff4be1"
+    },
+    {
+      "role": "U",
+      "managementIdentity": "0xca95104c720a6e9ace90caabfeea8370eb07cf7a",
+      "subjectId": "did:web:grad.example.test:subjects:U",
+      "appKeyId": "did:web:grad.example.test:subjects:U#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x049aa6955593265716661a932d85a8a0aaf8d189702521b8475bc3d80a64dd1fd0bc4f6ecfe14bebdb095d1ca0de7cd78685ee37d77085e7aba73ccefaa26a200e",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "mqaVVZMmVxZmGpMthaigqvjRiXAlIbhHW8PYCmTdH9A",
+        "y": "vE9uz-FL69sJXRyg3nzXhoXuN9dwheerpzzO-qJqIA4"
+      },
+      "didDocumentDigest": "a0ebc33a0af45a3aba905d398b66611fb58405874d87b7e2f3a90b6989dfd138"
+    },
+    {
+      "role": "A1",
+      "managementIdentity": "0x5a64a63ecd8d79a310a2686882f00391d5f97934",
+      "subjectId": "did:web:grad.example.test:subjects:A1",
+      "appKeyId": "did:web:grad.example.test:subjects:A1#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x047e93e56d154836e324f9231c815b4e85f47ccfedc3b9b7ebed2a4df6fbbdd7a1e5edb8b1c08583d8dee5c98f712bd81c3f6c33cf499b2397b11ca25dc8830a0e",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "fpPlbRVINuMk-SMcgVtOhfR8z-3Dubfr7SpN9vu916E",
+        "y": "5e24scCFg9je5cmPcSvYHD9sM89JmyOXsRyiXciDCg4"
+      },
+      "didDocumentDigest": "6d260b9662f764bd4c7458968c39601b409411095cb2ede3605399a3328b6d76"
+    },
+    {
+      "role": "B1",
+      "managementIdentity": "0x363201f75989c414b045af8e999d3019f784373b",
+      "subjectId": "did:web:grad.example.test:subjects:B1",
+      "appKeyId": "did:web:grad.example.test:subjects:B1#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x042c300504f314780fc41f59390cb205dd307e3423662847b4d654edf58ce3618c8da5dbd1d521b38f4719d07900c6289734183c7be173e894b1b969b5528babf3",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "LDAFBPMUeA_EH1k5DLIF3TB-NCNmKEe01lTt9YzjYYw",
+        "y": "jaXb0dUhs49HGdB5AMYolzQYPHvhc-iUsblptVKLq_M"
+      },
+      "didDocumentDigest": "2eeb693398faf98dc315690dee688a6ff3d7706763adcda16855fb1a266d470b"
+    },
+    {
+      "role": "C",
+      "managementIdentity": "0x3c2f3a9effdaf465bdaacca4285f11cd3266c0a5",
+      "subjectId": "did:web:grad.example.test:subjects:C",
+      "appKeyId": "did:web:grad.example.test:subjects:C#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x0430d65dfd49129982a9f7fba2ad3a969fb7e4aee63b04d77bfa52f432a56f541db39f06a36d61a35db6ccaef592334fd228ec1eedb2d393eb5b02c4ed4bab2ea3",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "MNZd_UkSmYKp9_uirTqWn7fkruY7BNd7-lL0MqVvVB0",
+        "y": "s58Go21ho122zK71kjNP0ijsHu2y05PrWwLE7UurLqM"
+      },
+      "didDocumentDigest": "5d19e95d9b098d96c726c249d10fda2d030df50d6dec1a83672f75d43ff69b55"
+    },
+    {
+      "role": "unrelated",
+      "managementIdentity": "0x4ef99105b2c218923bf7df9da97d5325ab78d2a7",
+      "subjectId": "did:web:grad.example.test:subjects:unrelated",
+      "appKeyId": "did:web:grad.example.test:subjects:unrelated#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x044bbb9cbff0959686cb1b44842f370b1db2809cf87f15647a7df7cc81f654d27b252c16911a957b66e99792463f2b3b184c9aa9f5843c22355fd423f9488e9926",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "S7ucv_CVlobLG0SELzcLHbKAnPh_FWR6fffMgfZU0ns",
+        "y": "JSwWkRqVe2bpl5JGPys7GEyaqfWEPCI1X9Qj-UiOmSY"
+      },
+      "didDocumentDigest": "9bb555d86575f3aafe24a6a16ad883ac4e240f5e27b90bc3a4e2dabc29f56f28"
+    },
+    {
+      "role": "unpermitted",
+      "managementIdentity": "0xffd2d91ec65124903b66275413fa4da1209ae40d",
+      "subjectId": "did:web:grad.example.test:subjects:unpermitted",
+      "appKeyId": "did:web:grad.example.test:subjects:unpermitted#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0x048286889ece91092ccd2bbf029fe2fa5339c48522622c7a97b7278f690996e9ca96f7bc23cca81cff3fc0f131a21af9b3c48e8944cf9c8858ec582f3cbdc4bdb9",
+      "publicKeyJwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "goaIns6RCSzNK78Cn-L6UznEhSJiLHqXtyePaQmW6co",
+        "y": "lve8I8yoHP8_wPExohr5s8SOiUTPnIhY7FgvPL3Evbk"
+      },
+      "didDocumentDigest": "b57b5d43ef1c27cae9e09f9bc74b288a2f782d8c97863f0f3f94676ed240ab8d"
+    }
+  ]
+}

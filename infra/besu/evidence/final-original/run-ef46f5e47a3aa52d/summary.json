@@ -1,0 +1,49 @@
+{
+  "runId": "run-ef46f5e47a3aa52d",
+  "directory": "/Users/yjydist/Desktop/graduation-design/infra/besu/evidence/final-original/run-ef46f5e47a3aa52d",
+  "deploymentId": "4918853e0821c4ab69efbd09ba8fa7c0b9ed301d0af35456c54ad8478f9db416",
+  "passed": true,
+  "checks": [
+    {
+      "name": "preflight",
+      "passed": true,
+      "evidence": "preflight.json"
+    },
+    {
+      "name": "seed",
+      "passed": true,
+      "evidence": "seed.json"
+    },
+    {
+      "name": "network-baseline",
+      "passed": true,
+      "evidence": "network-baseline.json"
+    },
+    {
+      "name": "unit-and-integration-tests",
+      "passed": true,
+      "evidence": "unit-and-integration-tests.json"
+    },
+    {
+      "name": "unpermitted-node",
+      "passed": true,
+      "evidence": "unpermitted-node.json"
+    },
+    {
+      "name": "historical-and-interleaved-revocation",
+      "passed": true,
+      "evidence": "historical-and-interleaved-revocation.json"
+    },
+    {
+      "name": "node-fault-staleness-recovery",
+      "passed": true,
+      "evidence": "node-fault-staleness-recovery.json"
+    }
+  ],
+  "scope": "D0 minimal permissioned ledger and state availability",
+  "unexecuted": [
+    "order-level E6/E7",
+    "D0 complete credential protocol",
+    "M1/M2 business workflows"
+  ]
+}

@@ -7,3 +7,8 @@ __pycache__/
 
 # Local temporary files.
 /tmp/
+
+# Local ledger instances, secrets, node data and build outputs.
+/.local/
+/build/
+/contracts/build/

@@ -1,0 +1,90 @@
+{
+  "data": {
+    "image": "hyperledger/besu@sha256:3d6ac0368d449c13c4ba075acac90d6b96afa5b3113295385d88c4d5122c8808",
+    "logs": "unpermitted-node.log",
+    "rogueEndHead": {
+      "number": "0x0",
+      "hash": "0xcb074c99ee85c93606c5d2476e0eff814b3e2327c1bffd795ee8dce08285cb18",
+      "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "timestamp": "0x0"
+    },
+    "rogueGenesisHash": "0xcb074c99ee85c93606c5d2476e0eff814b3e2327c1bffd795ee8dce08285cb18",
+    "rogueStartHead": {
+      "number": "0x0",
+      "hash": "0xcb074c99ee85c93606c5d2476e0eff814b3e2327c1bffd795ee8dce08285cb18",
+      "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "timestamp": "0x0"
+    },
+    "samples": [
+      {
+        "observedAt": "2026-11-04T09:44:33.481222Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:34.366857Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:35.367686Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:36.361087Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:37.366193Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:38.368498Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:39.368431Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:40.367893Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:41.359546Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:42.36706Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:43.3672Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      },
+      {
+        "observedAt": "2026-11-04T09:44:44.366828Z",
+        "trustedPeers": "0x3",
+        "unpermittedPeers": "0x0"
+      }
+    ],
+    "startOutput": "12343242860ce76975808b0a10cf2a9604e105d76f6ce92ba6873f414a75f66b\n",
+    "unpermittedPublicKey": "0x0a32c8b55e0c96f1f7a6b0bbe007d1549f99570789b1e23edb6d2ec22bfbcdcedf8b43fbcf264ae1178976c5d7daf46c6a6992a6aa1b5eeb5355e454ecd5adb7"
+  },
+  "deploymentId": "429b7c647d2d1336306bed3c6bfd4944a059189b6e169d596fff7f0aebe1c6d9",
+  "result": {
+    "name": "unpermitted-node",
+    "passed": true,
+    "evidence": "unpermitted-node.json"
+  },
+  "runId": "run-6fd973b340a6334c"
+}

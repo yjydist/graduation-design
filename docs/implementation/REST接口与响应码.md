@@ -53,7 +53,7 @@ C 数据库按部署隔离. C 目录基准单价为 80000 分. 报价 ID 由 C �
 | POST /credentials | credentialId, subjectId, nbf, exp; IA/IB/IC 从本域账户取得核验声明 | 202 operationId; 核对 T 域认证及当前签发资格, 只能签本域身份, 确认后交付 |
 | GET /credentials/{id}/wallet-copy | 本域主体登录, credentialId | 仅向该凭证主体返回 {credentialId,issuerJwt,disclosures}, disclosures 是完整的原始披露字符串数组 |
 | POST /credentials/{id}/revoke | expectedDigest, expectedRevision, reason | 202; 限签发者 |
-| POST /tasks | taskId, resourceOwner, authorizationMode, taskSpec, validUntil | 202; creator 取已登录的任务管理员 |
+| POST /tasks | taskId, resourceOwner, authorizationMode, taskSpec, validUntil | 202; creator 取已登录且与受信部署任务创建资格一致的 U, 管理账户和当前资格仍由合约核对 |
 | POST /tasks/{id}/cancel | expectedRevision, reason | 202; 创建者或该任务资源方 C 可取消, 不可恢复 |
 | POST /grants/root | 模式, 采购主体, 任务, 约束 | 202; 按模式由 C 或 PA 核实资格签发 |
 | POST /grants/delegate | 父对象, 子约束, grantee | 202; 服务执行完整校验 |

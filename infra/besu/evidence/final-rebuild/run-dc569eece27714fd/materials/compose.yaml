@@ -1,0 +1,65 @@
+name: grad-besu
+
+x-node: &node
+  image: hyperledger/besu@sha256:3d6ac0368d449c13c4ba075acac90d6b96afa5b3113295385d88c4d5122c8808
+  platform: linux/arm64
+  user: "${BESU_UID:-1000}:${BESU_GID:-1000}"
+  environment:
+    JAVA_OPTS: -Xms256m -Xmx512m
+  mem_limit: 1280m
+  cpus: 2
+  pids_limit: 512
+  stop_grace_period: 30s
+  restart: "no"
+
+services:
+  a:
+    <<: *node
+    command: ["--config-file=/config/node.toml", "--p2p-host=172.28.61.11"]
+    ports: ["127.0.0.1:18545:8545"]
+    volumes:
+      - ./node.toml:/config/node.toml:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/genesis.json:/config/genesis.json:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/static-nodes.json:/config/static-nodes.json:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/nodes/A:/data
+    networks:
+      ledger: {ipv4_address: 172.28.61.11}
+  b:
+    <<: *node
+    command: ["--config-file=/config/node.toml", "--p2p-host=172.28.61.12"]
+    ports: ["127.0.0.1:18546:8545"]
+    volumes:
+      - ./node.toml:/config/node.toml:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/genesis.json:/config/genesis.json:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/static-nodes.json:/config/static-nodes.json:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/nodes/B:/data
+    networks:
+      ledger: {ipv4_address: 172.28.61.12}
+  c:
+    <<: *node
+    command: ["--config-file=/config/node.toml", "--p2p-host=172.28.61.13"]
+    ports: ["127.0.0.1:18547:8545"]
+    volumes:
+      - ./node.toml:/config/node.toml:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/genesis.json:/config/genesis.json:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/static-nodes.json:/config/static-nodes.json:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/nodes/C:/data
+    networks:
+      ledger: {ipv4_address: 172.28.61.13}
+  ops:
+    <<: *node
+    command: ["--config-file=/config/node.toml", "--p2p-host=172.28.61.14"]
+    ports: ["127.0.0.1:18548:8545"]
+    volumes:
+      - ./node.toml:/config/node.toml:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/genesis.json:/config/genesis.json:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/static-nodes.json:/config/static-nodes.json:ro
+      - ${BESU_INSTANCE:-../../.local/besu}/nodes/ops:/data
+    networks:
+      ledger: {ipv4_address: 172.28.61.14}
+
+networks:
+  ledger:
+    driver: bridge
+    ipam:
+      config: [{subnet: 172.28.61.0/24}]

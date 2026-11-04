@@ -1,0 +1,11 @@
+{
+  "data": null,
+  "deploymentId": "",
+  "result": {
+    "name": "preflight",
+    "passed": false,
+    "evidence": "preflight.json",
+    "error": "Post \"http://127.0.0.1:1\": dial tcp 127.0.0.1:1: connect: connection refused"
+  },
+  "runId": "run-e1900eed560adc8b"
+}

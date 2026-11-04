@@ -1,0 +1,23 @@
+{
+  "architecture": "arm64",
+  "cleanupTimeoutSeconds": 30,
+  "deltaStateSeconds": 5,
+  "emptyBlocks": 10,
+  "futureToleranceSeconds": 1,
+  "goVersion": "go1.27.3",
+  "oneNodeNewBlocks": 3,
+  "options": {
+    "instanceDirectory": "/Users/yjydist/Desktop/graduation-design/.local/besu-qbft",
+    "manifest": "/Users/yjydist/Desktop/graduation-design/.local/besu-qbft/deployment-registry.json",
+    "endpoint": "http://127.0.0.1:18547",
+    "outputRoot": "/Users/yjydist/Desktop/graduation-design/infra/besu/evidence/verification-failures",
+    "projectRoot": "/Users/yjydist/Desktop/graduation-design",
+    "composeFile": "/Users/yjydist/Desktop/graduation-design/infra/besu/compose.yaml",
+    "composeProject": "grad-besu",
+    "timeoutNanoseconds": 1,
+    "startupTimeoutNanoseconds": 120000000000,
+    "receiptTimeoutNanoseconds": 30000000000
+  },
+  "settleSeconds": 5,
+  "stableWindowSeconds": 15
+}

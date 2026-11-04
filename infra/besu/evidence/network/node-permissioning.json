@@ -1,0 +1,366 @@
+{
+  "passed": true,
+  "samples": [
+    {
+      "observedAt": 1793779503.1278532,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779503.201073,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779504.2154188,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779504.223156,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779505.235391,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779505.2429771,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779506.2572129,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779506.26434,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779507.276132,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779507.284466,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779508.294527,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779508.301337,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779509.312761,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779509.321297,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779510.332445,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779510.339346,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779511.353441,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779511.3605518,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779512.374366,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779512.3810902,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779513.391565,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779513.398196,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": 1793779514.407397,
+      "port": 18547,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3"
+      }
+    },
+    {
+      "observedAt": 1793779514.411558,
+      "port": 18549,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "net_peerCount",
+        "params": []
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    }
+  ],
+  "note": "Rogue uses the same genesis and static peers; its fresh node identity is absent from all four trusted node allowlists."
+}

@@ -1,0 +1,19 @@
+{
+  "runId": "run-e1900eed560adc8b",
+  "directory": "/Users/yjydist/Desktop/graduation-design/infra/besu/evidence/verification-failures/run-e1900eed560adc8b",
+  "passed": false,
+  "checks": [
+    {
+      "name": "preflight",
+      "passed": false,
+      "evidence": "preflight.json",
+      "error": "Post \"http://127.0.0.1:1\": dial tcp 127.0.0.1:1: connect: connection refused"
+    }
+  ],
+  "scope": "D0 minimal permissioned ledger and state availability",
+  "unexecuted": [
+    "order-level E6/E7",
+    "D0 complete credential protocol",
+    "M1/M2 business workflows"
+  ]
+}

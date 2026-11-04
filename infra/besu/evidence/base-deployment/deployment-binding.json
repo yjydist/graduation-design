@@ -1,0 +1,76 @@
+{
+  "cases": [
+    {
+      "error": "DEPLOYMENT_MISMATCH: schemaVersion",
+      "field": "schemaVersion",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: RootRecord",
+      "field": "rootDid",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: RootRecord",
+      "field": "managementIdentity",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: RootRecord",
+      "field": "didDocumentDigest",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: RootRecord",
+      "field": "appKeyVersion",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: RootRecord",
+      "field": "appPublicKey",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: chainId",
+      "field": "chainId",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: genesisHash",
+      "field": "genesisHash",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: runtimeCodeHash",
+      "field": "registryAddress",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: RootRecord",
+      "field": "appKeyId",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: resourceId",
+      "field": "resourceId",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: resourceOwner",
+      "field": "resourceOwner",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: runtimeCodeHash",
+      "field": "runtimeCodeHash",
+      "rejected": true
+    },
+    {
+      "error": "DEPLOYMENT_MISMATCH: instanceId",
+      "field": "instanceId",
+      "rejected": true
+    }
+  ],
+  "deploymentId": "54fee2470d47c5c46c37011011e72e21b416648b38367bab63a49ba094976db2",
+  "passed": true
+}

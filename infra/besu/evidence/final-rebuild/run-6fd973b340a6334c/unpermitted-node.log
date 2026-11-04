@@ -1,0 +1,614 @@
+Setting logging level to DEBUG
+2026-11-04 09:44:31.990+0000 | main | INFO  | Besu | Starting Besu
+2026-11-04 09:44:32.039+0000 | main | DEBUG | PlatformDependent0 | Java version: 25
+2026-11-04 09:44:32.039+0000 | main | DEBUG | PlatformDependent0 | -Dio.netty.noUnsafe: false
+2026-11-04 09:44:32.039+0000 | main | DEBUG | PlatformDependent0 | sun.misc.Unsafe.theUnsafe: available
+2026-11-04 09:44:32.040+0000 | main | DEBUG | PlatformDependent0 | sun.misc.Unsafe base methods: all available
+2026-11-04 09:44:32.040+0000 | main | DEBUG | PlatformDependent0 | java.nio.Buffer.address: available
+2026-11-04 09:44:32.041+0000 | main | DEBUG | PlatformDependent0 | direct buffer constructor: available
+2026-11-04 09:44:32.041+0000 | main | DEBUG | PlatformDependent0 | java.nio.Bits.unaligned: available, true
+2026-11-04 09:44:32.042+0000 | main | DEBUG | PlatformDependent0 | jdk.internal.misc.Unsafe.allocateUninitializedArray(int): available
+2026-11-04 09:44:32.043+0000 | main | DEBUG | PlatformDependent0 | java.nio.DirectByteBuffer.<init>(long, {int,long}): available
+2026-11-04 09:44:32.043+0000 | main | DEBUG | PlatformDependent | sun.misc.Unsafe: available
+2026-11-04 09:44:32.043+0000 | main | DEBUG | PlatformDependent | -Dio.netty.tmpdir: /tmp (java.io.tmpdir)
+2026-11-04 09:44:32.043+0000 | main | DEBUG | PlatformDependent | -Dio.netty.bitMode: 64 (sun.arch.data.model)
+2026-11-04 09:44:32.043+0000 | main | DEBUG | PlatformDependent | -Dio.netty.maxDirectMemory: 518979584 bytes
+2026-11-04 09:44:32.044+0000 | main | DEBUG | CleanerJava9 | java.nio.ByteBuffer.cleaner(): available
+2026-11-04 09:44:32.044+0000 | main | DEBUG | PlatformDependent | -Dio.netty.noPreferDirect: false
+2026-11-04 09:44:32.044+0000 | main | DEBUG | PlatformDependent | -Dio.netty.ignoreExpensiveClean: false
+2026-11-04 09:44:32.045+0000 | main | DEBUG | PlatformDependent | -Dio.netty.jfr.enabled: true
+2026-11-04 09:44:32.048+0000 | main | DEBUG | LoggerFactory | Using io.vertx.core.logging.Log4j2LogDelegateFactory
+2026-11-04 09:44:32.051+0000 | main | DEBUG | KQueue | KQueue support is not available: null
+2026-11-04 09:44:32.053+0000 | main | DEBUG | NativeLibraryLoader | -Dio.netty.native.workdir: /tmp (io.netty.tmpdir)
+2026-11-04 09:44:32.053+0000 | main | DEBUG | NativeLibraryLoader | -Dio.netty.native.deleteLibAfterLoading: true
+2026-11-04 09:44:32.053+0000 | main | DEBUG | NativeLibraryLoader | -Dio.netty.native.tryPatchShadedId: true
+2026-11-04 09:44:32.053+0000 | main | DEBUG | NativeLibraryLoader | -Dio.netty.native.detectNativeLibraryDuplicates: true
+2026-11-04 09:44:32.060+0000 | main | DEBUG | NativeLibraryLoader | Successfully loaded the library /tmp/libnetty_transport_native_epoll_aarch_643401382522711105896.so
+2026-11-04 09:44:32.061+0000 | main | DEBUG | NetUtil | -Djava.net.preferIPv4Stack: false
+2026-11-04 09:44:32.061+0000 | main | DEBUG | NetUtil | -Djava.net.preferIPv6Addresses: false
+2026-11-04 09:44:32.062+0000 | main | DEBUG | NetUtilInitializations | Loopback interface: lo (lo, 0:0:0:0:0:0:0:1%lo)
+2026-11-04 09:44:32.062+0000 | main | DEBUG | NetUtil | /proc/sys/net/core/somaxconn: 4096
+2026-11-04 09:44:32.064+0000 | main | DEBUG | NativeLibraryLoader | Successfully loaded the library /tmp/libnetty_transport_native_io_uring42_aarch_6417530914837260192353.so
+2026-11-04 09:44:32.065+0000 | main | DEBUG | IoUring | IoUring support is not available using kernel 7.0.14-linuxkit: failed to create io_uring ring fd: Operation not permitted
+2026-11-04 09:44:32.069+0000 | main | DEBUG | ResourceLeakDetector | -Dio.netty.leakDetection.level: simple
+2026-11-04 09:44:32.069+0000 | main | DEBUG | ResourceLeakDetector | -Dio.netty.leakDetection.targetRecords: 4
+2026-11-04 09:44:32.075+0000 | main | DEBUG | MultithreadEventLoopGroup | -Dio.netty.eventLoopThreads: 4
+2026-11-04 09:44:32.077+0000 | main | DEBUG | GlobalEventExecutor | -Dio.netty.globalEventExecutor.quietPeriodSeconds: 1
+2026-11-04 09:44:32.079+0000 | main | DEBUG | InternalThreadLocalMap | -Dio.netty.threadLocalMap.stringBuilder.initialSize: 1024
+2026-11-04 09:44:32.079+0000 | main | DEBUG | InternalThreadLocalMap | -Dio.netty.threadLocalMap.stringBuilder.maxSize: 4096
+2026-11-04 09:44:32.081+0000 | main | DEBUG | PlatformDependent | org.jctools-core.MpscChunkedArrayQueue: available
+2026-11-04 09:44:32.084+0000 | main | DEBUG | DefaultDnsServerAddressStreamProvider | Default DNS servers: [/127.0.0.11:53] (sun.net.dns.ResolverConfiguration)
+2026-11-04 09:44:32.088+0000 | main | DEBUG | DnsNameResolver | Default ResolvedAddressTypes: IPV4_ONLY
+2026-11-04 09:44:32.088+0000 | main | DEBUG | DnsNameResolver | Windows hostname: null
+2026-11-04 09:44:32.088+0000 | main | DEBUG | DnsNameResolver | Default search domains: []
+2026-11-04 09:44:32.088+0000 | main | DEBUG | DnsNameResolver | Default UnixResolverOptions{ndots=0, timeout=5, attempts=16}
+2026-11-04 09:44:32.088+0000 | main | DEBUG | DnsNameResolver | -Dio.netty.resolver.dns.resolveLocalhostWithoutDns: true
+2026-11-04 09:44:32.090+0000 | main | DEBUG | DefaultHostsFileEntriesResolver | -Dio.netty.hostsFileRefreshInterval: 0
+2026-11-04 09:44:32.096+0000 | main | WARN  | Besu | --sync-min-peers is ignored in FULL sync-mode
+2026-11-04 09:44:32.100+0000 | main | WARN  | Besu | --rpc-ws-host has been ignored because --rpc-ws-enabled was not defined on the command line.
+2026-11-04 09:44:32.101+0000 | main | WARN  | Besu | --graphql-http-host has been ignored because --graphql-http-enabled was not defined on the command line.
+2026-11-04 09:44:32.256+0000 | main | DEBUG | Native | Looking in classpath from jdk.internal.loader.ClassLoaders$AppClassLoader@14dad5dc for /com/sun/jna/linux-aarch64/libjnidispatch.so
+2026-11-04 09:44:32.257+0000 | main | DEBUG | Native | Found library resource at jar:file:/opt/besu/lib/jna-5.18.1.jar!/com/sun/jna/linux-aarch64/libjnidispatch.so
+2026-11-04 09:44:32.257+0000 | main | DEBUG | Native | Extracting library to /tmp/jna4672610931264370216.tmp
+2026-11-04 09:44:32.258+0000 | main | DEBUG | Native | Trying /tmp/jna4672610931264370216.tmp
+2026-11-04 09:44:32.258+0000 | main | DEBUG | Native | Found jnidispatch at /tmp/jna4672610931264370216.tmp
+2026-11-04 09:44:32.266+0000 | main | DEBUG | NativeLibrary | Looking for library '/tmp/secp256k1@12634130444619634799/libsecp256k1.so'
+2026-11-04 09:44:32.266+0000 | main | DEBUG | NativeLibrary | Adding paths from jna.library.path: null
+2026-11-04 09:44:32.267+0000 | main | DEBUG | NativeLibrary | Trying /tmp/secp256k1@12634130444619634799/libsecp256k1.so
+2026-11-04 09:44:32.267+0000 | main | DEBUG | NativeLibrary | Found library '/tmp/secp256k1@12634130444619634799/libsecp256k1.so' at /tmp/secp256k1@12634130444619634799/libsecp256k1.so
+2026-11-04 09:44:32.267+0000 | main | DEBUG | Cleaner | Starting CleanerThread
+2026-11-04 09:44:32.273+0000 | main | DEBUG | NativeLibrary | Looking for library '/tmp/secp256k1_ecrecover@14306907990196052979/libsecp256k1_ecrecover.so'
+2026-11-04 09:44:32.274+0000 | main | DEBUG | NativeLibrary | Adding paths from jna.library.path: null
+2026-11-04 09:44:32.274+0000 | main | DEBUG | NativeLibrary | Trying /tmp/secp256k1_ecrecover@14306907990196052979/libsecp256k1_ecrecover.so
+2026-11-04 09:44:32.274+0000 | main | DEBUG | NativeLibrary | Found library '/tmp/secp256k1_ecrecover@14306907990196052979/libsecp256k1_ecrecover.so' at /tmp/secp256k1_ecrecover@14306907990196052979/libsecp256k1_ecrecover.so
+2026-11-04 09:44:32.286+0000 | main | INFO  | Besu | RPC HTTP JSON-RPC config: JsonRpcConfiguration{enabled=true, port=8545, host=0.0.0.0, corsAllowedDomains=[], hostsAllowlist=[localhost, 127.0.0.1], rpcApis=[ETH, NET, WEB3], authenticationEnabled=false, authenticationCredentialsFile=null, authenticationPublicKeyFile=null, tlsConfiguration=Optional.empty, httpTimeoutSec=30, maxActiveConnections=80, maxBatchSize=1024}
+2026-11-04 09:44:32.290+0000 | main | DEBUG | Besu | Static Nodes file: /config/static-nodes.json
+2026-11-04 09:44:32.291+0000 | main | DEBUG | JacksonFactory | Using io.vertx.core.json.DatabindCodec
+2026-11-04 09:44:32.297+0000 | main | INFO  | Besu | Connecting to 4 static nodes.
+2026-11-04 09:44:32.298+0000 | main | DEBUG | Besu | Static Nodes = [enode://db4892e4ced3f167fd80489b05c4dec7c3ff328903d879c6e681a34d75579190e3e348b320393bf4997b9dad11da2bc1abd323d42ea0a967ba31cc5ca7638a08@172.28.61.11:30303, enode://d7002b2327451c7ba7dcd657aad0437a38e0ec4271182f26c76a0717f19f8cd747eb8084eba8cdf020f8663329eb8decb4adb60b7ca50ba5497035df82528c0b@172.28.61.12:30303, enode://dcce7ef0d3c6b7790901e7a584c115f283ebd1ac953aaf615a4ffb2d1cdfeff2108cb5ca003c2e01fed5af5203cbd515feeb2aa20c15a93f1ee17fdbaf2fd6ed@172.28.61.14:30303, enode://724d0a121e7decb34a640eeb1c3a43057f72db72bfee517d7d0fc94f6ba2edf00ec5ddf4c25606e86f2017996597c2ea148215da9d324e5a89fd43039c11ed8f@172.28.61.13:30303]
+2026-11-04 09:44:32.308+0000 | main | DEBUG | NativeLibrary | Looking for library 'jemalloc'
+2026-11-04 09:44:32.308+0000 | main | DEBUG | NativeLibrary | Adding paths from jna.library.path: null
+2026-11-04 09:44:32.308+0000 | main | DEBUG | NativeLibrary | Trying libjemalloc.so
+2026-11-04 09:44:32.308+0000 | main | DEBUG | NativeLibrary | Found library 'jemalloc' at libjemalloc.so
+2026-11-04 09:44:32.321+0000 | main | DEBUG | NativeLibrary | Looking for library 'udev'
+2026-11-04 09:44:32.321+0000 | main | DEBUG | NativeLibrary | Adding paths from jna.library.path: null
+2026-11-04 09:44:32.321+0000 | main | DEBUG | NativeLibrary | Trying libudev.so
+2026-11-04 09:44:32.322+0000 | main | DEBUG | NativeLibrary | Loading failed with message: libudev.so: cannot open shared object file: No such file or directory
+2026-11-04 09:44:32.322+0000 | main | DEBUG | NativeLibrary | Adding system paths: [/usr/lib, /lib, /lib/aarch64-linux-gnu]
+2026-11-04 09:44:32.322+0000 | main | DEBUG | NativeLibrary | Trying libudev.so
+2026-11-04 09:44:32.322+0000 | main | DEBUG | NativeLibrary | Loading failed with message: libudev.so: cannot open shared object file: No such file or directory
+2026-11-04 09:44:32.322+0000 | main | DEBUG | NativeLibrary | Looking for version variants
+2026-11-04 09:44:32.322+0000 | main | DEBUG | NativeLibrary | Trying /lib/aarch64-linux-gnu/libudev.so.1.7.8
+2026-11-04 09:44:32.322+0000 | main | DEBUG | NativeLibrary | Found library 'udev' at /lib/aarch64-linux-gnu/libudev.so.1.7.8
+2026-11-04 09:44:32.325+0000 | main | DEBUG | FileUtil | Reading file /proc/self/auxv
+2026-11-04 09:44:32.325+0000 | main | DEBUG | FileUtil | Reading file /proc/self/auxv
+2026-11-04 09:44:32.327+0000 | main | DEBUG | FileUtil | Reading file /proc/stat
+2026-11-04 09:44:32.329+0000 | main | DEBUG | FileUtil | Reading file /proc/meminfo
+2026-11-04 09:44:32.332+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/topology/core_id
+2026-11-04 09:44:32.332+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/topology/core_id
+2026-11-04 09:44:32.332+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/topology/physical_package_id
+2026-11-04 09:44:32.332+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/topology/physical_package_id
+2026-11-04 09:44:32.332+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cpu_capacity
+2026-11-04 09:44:32.332+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cpu_capacity
+2026-11-04 09:44:32.333+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index2/level
+2026-11-04 09:44:32.333+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index2/level
+2026-11-04 09:44:32.333+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index2/type
+2026-11-04 09:44:32.333+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index2/type
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index2/coherency_line_size
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index2/size
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index0/level
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index0/level
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index0/type
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index0/type
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index0/size
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index1/level
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index1/level
+2026-11-04 09:44:32.334+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index1/type
+2026-11-04 09:44:32.335+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index1/type
+2026-11-04 09:44:32.335+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.335+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index1/coherency_line_size
+2026-11-04 09:44:32.335+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu0/cache/index1/size
+2026-11-04 09:44:32.335+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/topology/core_id
+2026-11-04 09:44:32.335+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/topology/core_id
+2026-11-04 09:44:32.335+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/topology/physical_package_id
+2026-11-04 09:44:32.335+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/topology/physical_package_id
+2026-11-04 09:44:32.335+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cpu_capacity
+2026-11-04 09:44:32.335+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cpu_capacity
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index2/level
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index2/level
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index2/type
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index2/type
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index2/coherency_line_size
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index2/size
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index0/level
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index0/level
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index0/type
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index0/type
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.336+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index0/coherency_line_size
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index0/size
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index1/level
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index1/level
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index1/type
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index1/type
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index1/coherency_line_size
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu1/cache/index1/size
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/topology/core_id
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/topology/core_id
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/topology/physical_package_id
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/topology/physical_package_id
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cpu_capacity
+2026-11-04 09:44:32.337+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cpu_capacity
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index2/level
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index2/level
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index2/type
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index2/type
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index2/coherency_line_size
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index2/size
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index0/level
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index0/level
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index0/type
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index0/type
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index0/coherency_line_size
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index0/size
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index1/level
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index1/level
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index1/type
+2026-11-04 09:44:32.338+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index1/type
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index1/coherency_line_size
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu10/cache/index1/size
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/topology/core_id
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/topology/core_id
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/topology/physical_package_id
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/topology/physical_package_id
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cpu_capacity
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cpu_capacity
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index2/level
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index2/level
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index2/type
+2026-11-04 09:44:32.339+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index2/type
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index2/coherency_line_size
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index2/size
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index0/level
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index0/level
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index0/type
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index0/type
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index0/coherency_line_size
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index0/size
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index1/level
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index1/level
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index1/type
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index1/type
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index1/coherency_line_size
+2026-11-04 09:44:32.340+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu11/cache/index1/size
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/topology/core_id
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/topology/core_id
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/topology/physical_package_id
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/topology/physical_package_id
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cpu_capacity
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cpu_capacity
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index2/level
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index2/level
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index2/type
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index2/type
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index2/coherency_line_size
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index2/size
+2026-11-04 09:44:32.341+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index0/level
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index0/level
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index0/type
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index0/type
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index0/coherency_line_size
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index0/size
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index1/level
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index1/level
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index1/type
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index1/type
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index1/coherency_line_size
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu12/cache/index1/size
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/topology/core_id
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/topology/core_id
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/topology/physical_package_id
+2026-11-04 09:44:32.342+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/topology/physical_package_id
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cpu_capacity
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cpu_capacity
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index2/level
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index2/level
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index2/type
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index2/type
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index2/coherency_line_size
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index2/size
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index0/level
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index0/level
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index0/type
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index0/type
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index0/coherency_line_size
+2026-11-04 09:44:32.343+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index0/size
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index1/level
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index1/level
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index1/type
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index1/type
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index1/coherency_line_size
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu13/cache/index1/size
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/topology/core_id
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/topology/core_id
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/topology/physical_package_id
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/topology/physical_package_id
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cpu_capacity
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cpu_capacity
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index2/level
+2026-11-04 09:44:32.344+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index2/level
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index2/type
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index2/type
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index2/coherency_line_size
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index2/size
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index0/level
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index0/level
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index0/type
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index0/type
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index0/coherency_line_size
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index0/size
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index1/level
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index1/level
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index1/type
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index1/type
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.345+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index1/coherency_line_size
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu2/cache/index1/size
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/topology/core_id
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/topology/core_id
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/topology/physical_package_id
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/topology/physical_package_id
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cpu_capacity
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cpu_capacity
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index2/level
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index2/level
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index2/type
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index2/type
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index2/coherency_line_size
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index2/size
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index0/level
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index0/level
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index0/type
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index0/type
+2026-11-04 09:44:32.346+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index0/coherency_line_size
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index0/size
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index1/level
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index1/level
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index1/type
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index1/type
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index1/coherency_line_size
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu3/cache/index1/size
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/topology/core_id
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/topology/core_id
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/topology/physical_package_id
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/topology/physical_package_id
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cpu_capacity
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cpu_capacity
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index2/level
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index2/level
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index2/type
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index2/type
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index2/coherency_line_size
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index2/size
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index0/level
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index0/level
+2026-11-04 09:44:32.347+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index0/type
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index0/type
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index0/coherency_line_size
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index0/size
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index1/level
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index1/level
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index1/type
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index1/type
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index1/coherency_line_size
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu4/cache/index1/size
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/topology/core_id
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/topology/core_id
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/topology/physical_package_id
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/topology/physical_package_id
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cpu_capacity
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cpu_capacity
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index2/level
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index2/level
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index2/type
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index2/type
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.348+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index2/coherency_line_size
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index2/size
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index0/level
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index0/level
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index0/type
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index0/type
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index0/coherency_line_size
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index0/size
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index1/level
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index1/level
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index1/type
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index1/type
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index1/coherency_line_size
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu5/cache/index1/size
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/topology/core_id
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/topology/core_id
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/topology/physical_package_id
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/topology/physical_package_id
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cpu_capacity
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cpu_capacity
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index2/level
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index2/level
+2026-11-04 09:44:32.349+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index2/type
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index2/type
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index2/coherency_line_size
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index2/size
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index0/level
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index0/level
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index0/type
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index0/type
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index0/coherency_line_size
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index0/size
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index1/level
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index1/level
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index1/type
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index1/type
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index1/coherency_line_size
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu6/cache/index1/size
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/topology/core_id
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/topology/core_id
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/topology/physical_package_id
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/topology/physical_package_id
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cpu_capacity
+2026-11-04 09:44:32.350+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cpu_capacity
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index2/level
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index2/level
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index2/type
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index2/type
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index2/coherency_line_size
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index2/size
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index0/level
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index0/level
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index0/type
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index0/type
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index0/coherency_line_size
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index0/size
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index1/level
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index1/level
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index1/type
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index1/type
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index1/coherency_line_size
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu7/cache/index1/size
+2026-11-04 09:44:32.351+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/topology/core_id
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/topology/core_id
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/topology/physical_package_id
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/topology/physical_package_id
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cpu_capacity
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cpu_capacity
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index2/level
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index2/level
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index2/type
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index2/type
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index2/coherency_line_size
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index2/size
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index0/level
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index0/level
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index0/type
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index0/type
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index0/coherency_line_size
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index0/size
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index1/level
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index1/level
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index1/type
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index1/type
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index1/coherency_line_size
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu8/cache/index1/size
+2026-11-04 09:44:32.352+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/topology/core_id
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/topology/core_id
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/topology/physical_package_id
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/topology/physical_package_id
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cpu_capacity
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cpu_capacity
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index2/level
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index2/level
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index2/type
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index2/type
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index2/ways_of_associativity
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index2/coherency_line_size
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index2/size
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index0/level
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index0/level
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index0/type
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index0/type
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index0/ways_of_associativity
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index0/coherency_line_size
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index0/size
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index1/level
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index1/level
+2026-11-04 09:44:32.353+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index1/type
+2026-11-04 09:44:32.354+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index1/type
+2026-11-04 09:44:32.354+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index1/ways_of_associativity
+2026-11-04 09:44:32.354+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index1/coherency_line_size
+2026-11-04 09:44:32.354+0000 | main | DEBUG | FileUtil | Reading file /sys/devices/system/cpu/cpu9/cache/index1/size
+2026-11-04 09:44:32.355+0000 | main | DEBUG | FileUtil | Reading file /proc/cpuinfo
+2026-11-04 09:44:32.356+0000 | main | INFO  | Besu | 
+####################################################################################################
+#                                                                                                  #
+# Besu version 26.11.0                                                                             #
+#                                                                                                  #
+# Configuration:                                                                                   #
+# Network: Custom genesis file                                                                     #
+# /config/genesis.json                                                                             #
+# Network Id: 20261104                                                                             #
+# Data storage: Forest                                                                             #
+# RocksDB max open files: 1024 (derived from available resources)                                  #
+# Sync mode: Full                                                                                  #
+# Sync min peers: 1                                                                                #
+# P2P Discovery: disabled                                                                          #
+# RPC HTTP APIs: ETH,NET,WEB3                                                                      #
+# RPC HTTP port: 8545                                                                              #
+# Using LAYERED transaction pool implementation                                                    #
+# Using STACKED worldstate update mode                                                             #
+# Opcode optimizations enabled                                                                     #
+# Parallel transaction processing enabled                                                          #
+# BAL pruning enabled (retained BALs: 457568)                                                      #
+#                                                                                                  #
+# Host:                                                                                            #
+# Java: openjdk-java-25                                                                            #
+# Maximum heap size: 0.48 GB                                                                       #
+# OS: linux-aarch_64                                                                               #
+# glibc: 2.39                                                                                      #
+# jemalloc: 5.3.0-0-g54eaed1d8b56b1aa528be3bdd1877e59c56fa90c                                      #
+# Total memory: 7.75 GB                                                                            #
+# CPU cores: 14                                                                                    #
+#                                                                                                  #
+# Plugin Registration Summary:                                                                     #
+# No plugins have been registered.                                                                 #
+# TOTAL = 0 of 0 plugins successfully registered.                                                  #
+#                                                                                                  #
+####################################################################################################
+2026-11-04 09:44:32.356+0000 | main | INFO  | Besu | Security Module: localfile
+2026-11-04 09:44:32.356+0000 | main | INFO  | VersionMetadata | Lookup version metadata file in data directory: /data
+2026-11-04 09:44:32.356+0000 | main | INFO  | VersionMetadata | No version data detected. Writing Besu version 26.11.0 to metadata file
+2026-11-04 09:44:32.375+0000 | main | DEBUG | NativeLibrary | Looking for library '/tmp/gnark_eip_196@10009670217548280062/libgnark_eip_196.so'
+2026-11-04 09:44:32.375+0000 | main | DEBUG | NativeLibrary | Adding paths from jna.library.path: null
+2026-11-04 09:44:32.375+0000 | main | DEBUG | NativeLibrary | Trying /tmp/gnark_eip_196@10009670217548280062/libgnark_eip_196.so
+2026-11-04 09:44:32.376+0000 | main | DEBUG | NativeLibrary | Found library '/tmp/gnark_eip_196@10009670217548280062/libgnark_eip_196.so' at /tmp/gnark_eip_196@10009670217548280062/libgnark_eip_196.so
+2026-11-04 09:44:32.376+0000 | main | INFO  | Besu | Using the native implementation of alt bn128
+2026-11-04 09:44:32.376+0000 | main | INFO  | Besu | Using the Java implementation of modexp
+2026-11-04 09:44:32.380+0000 | main | INFO  | Besu | Using the native implementation of the signature algorithm
+2026-11-04 09:44:32.381+0000 | main | DEBUG | NativeLibrary | Looking for library 'blake2bf'
+2026-11-04 09:44:32.381+0000 | main | DEBUG | NativeLibrary | Adding paths from jna.library.path: null
+2026-11-04 09:44:32.381+0000 | main | DEBUG | NativeLibrary | Trying libblake2bf.so
+2026-11-04 09:44:32.381+0000 | main | DEBUG | NativeLibrary | Loading failed with message: libblake2bf.so: cannot open shared object file: No such file or directory
+2026-11-04 09:44:32.381+0000 | main | DEBUG | NativeLibrary | Adding system paths: [/usr/lib, /lib, /lib/aarch64-linux-gnu]
+2026-11-04 09:44:32.381+0000 | main | DEBUG | NativeLibrary | Trying libblake2bf.so
+2026-11-04 09:44:32.381+0000 | main | DEBUG | NativeLibrary | Loading failed with message: libblake2bf.so: cannot open shared object file: No such file or directory
+2026-11-04 09:44:32.382+0000 | main | DEBUG | NativeLibrary | Looking for version variants
+2026-11-04 09:44:32.382+0000 | main | DEBUG | Native | Looking in classpath from jdk.internal.loader.ClassLoaders$AppClassLoader@14dad5dc for blake2bf
+2026-11-04 09:44:32.382+0000 | main | DEBUG | NativeLibrary | Loading failed with message: Native library (linux-aarch64/libblake2bf.so) not found in resource path (/opt/besu/lib/besu-26.11.0.jar:/opt/besu/lib/besu-ethereum-evmtool-26.11.0.jar:/opt/besu/lib/besu-app-26.11.0.jar:/opt/besu/lib/besu-ethereum-ethstats-26.11.0.jar:/opt/besu/lib/besu-consensus-clique-26.11.0.jar:/opt/besu/lib/besu-consensus-qbft-26.11.0.jar:/opt/besu/lib/besu-consensus-ibftlegacy-26.11.0.jar:/opt/besu/lib/besu-consensus-ibft-26.11.0.jar:/opt/besu/lib/besu-consensus-qbft-core-26.11.0.jar:/opt/besu/lib/besu-consensus-common-26.11.0.jar:/opt/besu/lib/besu-ethereum-api-26.11.0.jar:/opt/besu/lib/besu-ethereum-referencetests-26.11.0.jar:/opt/besu/lib/besu-consensus-merge-26.11.0.jar:/opt/besu/lib/besu-ethereum-blockcreation-26.11.0.jar:/opt/besu/lib/besu-plugins-rocksdb-26.11.0.jar:/opt/besu/lib/besu-ethereum-eth-26.11.0.jar:/opt/besu/lib/besu-ethereum-permissioning-26.11.0.jar:/opt/besu/lib/besu-ethereum-p2p-26.11.0.jar:/opt/besu/lib/besu-ethereum-core-26.11.0.jar:/opt/besu/lib/besu-ethereum-core-support-test-26.11.0-test-support.jar:/opt/besu/lib/besu-config-26.11.0.jar:/opt/besu/lib/besu-ethereum-trie-26.11.0.jar:/opt/besu/lib/besu-plugins-health-26.11.0.jar:/opt/besu/lib/besu-crypto-services-26.11.0.jar:/opt/besu/lib/besu-metrics-rocksdb-26.11.0.jar:/opt/besu/lib/besu-services-pipeline-26.11.0.jar:/opt/besu/lib/besu-services-tasks-26.11.0.jar:/opt/besu/lib/besu-metrics-core-26.11.0.jar:/opt/besu/lib/besu-services-kvstore-26.11.0.jar:/opt/besu/lib/besu-plugin-api-26.11.0.jar:/opt/besu/lib/besu-plugin-api-blockproduction-26.11.0.jar:/opt/besu/lib/besu-plugin-api-execution-26.11.0.jar:/opt/besu/lib/besu-plugin-api-worldstate-26.11.0.jar:/opt/besu/lib/besu-plugin-api-worldstate-backend-26.11.0.jar:/opt/besu/lib/besu-evm-26.11.0.jar:/opt/besu/lib/besu-plugin-api-storage-26.11.0.jar:/opt/besu/lib/besu-plugin-api-metrics-26.11.0.jar:/opt/besu/lib/besu-plugin-api-security-26.11.0.jar:/opt/besu/lib/besu-plugin-api-permissioning-26.11.0.jar:/opt/besu/lib/besu-plugin-api-p2p-26.11.0.jar:/opt/besu/lib/besu-plugin-api-txpool-26.11.0.jar:/opt/besu/lib/besu-plugin-api-sync-26.11.0.jar:/opt/besu/lib/besu-plugin-api-rpc-26.11.0.jar:/opt/besu/lib/besu-plugin-api-chain-26.11.0.jar:/opt/besu/lib/besu-plugin-api-validation-26.11.0.jar:/opt/besu/lib/besu-plugin-api-core-26.11.0.jar:/opt/besu/lib/besu-datatypes-26.11.0.jar:/opt/besu/lib/besu-nat-26.11.0.jar:/opt/besu/lib/besu-ethereum-rlp-26.11.0.jar:/opt/besu/lib/besu-util-26.11.0.jar:/opt/besu/lib/besu-crypto-algorithms-26.11.0.jar:/opt/besu/lib/hibernate-validator-8.0.2.Final.jar:/opt/besu/lib/jakarta.validation-api-3.1.1.jar:/opt/besu/lib/jackson-datatype-jdk8-2.21.7.jar:/opt/besu/lib/jackson-databind-2.21.7.jar:/opt/besu/lib/tuweni-net-2.8.0.jar:/opt/besu/lib/discovery-26.10.1.jar:/opt/besu/lib/tuweni-crypto-2.8.0.jar:/opt/besu/lib/tuweni-units-2.8.0.jar:/opt/besu/lib/tuweni-rlp-2.8.0.jar:/opt/besu/lib/tuweni-bytes-2.8.0.jar:/opt/besu/lib/vertx-web-5.2.2.jar:/opt/besu/lib/vertx-auth-jwt-5.2.2.jar:/opt/besu/lib/vertx-unit-5.2.2.jar:/opt/besu/lib/vertx-web-common-5.2.2.jar:/opt/besu/lib/vertx-auth-common-5.2.2.jar:/opt/besu/lib/vertx-bridge-common-5.2.2.jar:/opt/besu/lib/vertx-eventbus-bridge-common-5.2.2.jar:/opt/besu/lib/vertx-core-5.2.2.jar:/opt/besu/lib/jackson-core-2.21.7.jar:/opt/besu/lib/oshi-core-6.10.0.jar:/opt/besu/lib/org.jupnp.support-3.0.4.jar:/opt/besu/lib/org.jupnp-3.0.4.jar:/opt/besu/lib/log4j-slf4j2-impl-2.26.1.jar:/opt/besu/lib/graphql-java-22.3.jar:/opt/besu/lib/java-dataloader-3.3.0.jar:/opt/besu/lib/dnsjava-3.6.4.jar:/opt/besu/lib/slf4j-api-2.0.17.jar:/opt/besu/lib/grpc-netty-1.79.0.jar:/opt/besu/lib/grpc-util-1.79.0.jar:/opt/besu/lib/grpc-core-1.79.0.jar:/opt/besu/lib/tuweni-io-2.8.0.jar:/opt/besu/lib/grpc-context-1.79.0.jar:/opt/besu/lib/grpc-api-1.79.0.jar:/opt/besu/lib/guava-33.7.2-jre.jar:/opt/besu/lib/dagger-2.59.2.jar:/opt/besu/lib/caffeine-3.2.3.jar:/opt/besu/lib/reactor-core-3.8.7.jar:/opt/besu/lib/jspecify-1.0.1.jar:/opt/besu/lib/splunk-library-javalogging-1.11.8.jar:/opt/besu/lib/gson-2.12.1.jar:/opt/besu/lib/error_prone_annotations-2.45.0.jar:/opt/besu/lib/opentelemetry-exporter-otlp-1.62.0.jar:/opt/besu/lib/opentelemetry-exporter-sender-okhttp-1.62.0.jar:/opt/besu/lib/ipaddress-5.6.1.jar:/opt/besu/lib/picocli-4.7.7.jar:/opt/besu/lib/opentelemetry-semconv-incubating-1.40.0-alpha.jar:/opt/besu/lib/opentelemetry-semconv-1.40.0.jar:/opt/besu/lib/tuweni-config-2.8.0.jar:/opt/besu/lib/tuweni-concurrent-2.8.0.jar:/opt/besu/lib/tuweni-toml-2.8.0.jar:/opt/besu/lib/javax.inject-1.jar:/opt/besu/lib/jna-platform-5.18.1.jar:/opt/besu/lib/secp256k1-2.1.0.jar:/opt/besu/lib/arithmetic-2.1.0.jar:/opt/besu/lib/gnark-2.1.0.jar:/opt/besu/lib/boringssl-2.1.0.jar:/opt/besu/lib/secp256r1-2.1.0.jar:/opt/besu/lib/blake2bf-2.1.0.jar:/opt/besu/lib/besu-native-common-2.1.0.jar:/opt/besu/lib/jna-5.18.1.jar:/opt/besu/lib/antlr4-4.13.2.jar:/opt/besu/lib/antlr4-runtime-4.13.2.jar:/opt/besu/lib/commons-collections4-4.5.0.jar:/opt/besu/lib/commons-lang3-3.20.0.jar:/opt/besu/lib/maven-artifact-3.9.15.jar:/opt/besu/lib/bcpkix-jdk18on-1.86.jar:/opt/besu/lib/abi-5.0.3.jar:/opt/besu/lib/utils-5.0.3.jar:/opt/besu/lib/bcutil-jdk18on-1.86.jar:/opt/besu/lib/bcprov-jdk18on-1.86.jar:/opt/besu/lib/jansi-2.4.2.jar:/opt/besu/lib/encoder-1.4.0.jar:/opt/besu/lib/rocksdbjni-10.6.2.jar:/opt/besu/lib/spring-security-crypto-6.4.9.jar:/opt/besu/lib/snappy-java-1.1.10.7.jar:/opt/besu/lib/jc-kzg-4844-2.1.8.jar:/opt/besu/lib/log4j-layout-template-json-2.26.1.jar:/opt/besu/lib/log4j-core-2.26.1.jar:/opt/besu/lib/log4j-jul-2.26.1.jar:/opt/besu/lib/async-profiler-4.0.jar:/opt/besu/lib/jackson-annotations-2.21.jar:/opt/besu/lib/netty-all-4.2.19.Final.jar:/opt/besu/lib/netty-transport-native-epoll-4.2.19.Final.jar:/opt/besu/lib/netty-transport-native-epoll-4.2.19.Final-linux-x86_64.jar:/opt/besu/lib/netty-transport-native-epoll-4.2.19.Final-linux-aarch_64.jar:/opt/besu/lib/netty-transport-native-epoll-4.2.19.Final-linux-riscv64.jar:/opt/besu/lib/netty-transport-native-kqueue-4.2.19.Final.jar:/opt/besu/lib/netty-transport-native-kqueue-4.2.19.Final-osx-x86_64.jar:/opt/besu/lib/netty-transport-native-kqueue-4.2.19.Final-osx-aarch_64.jar:/opt/besu/lib/netty-handler-proxy-4.2.19.Final.jar:/opt/besu/lib/netty-codec-http2-4.2.19.Final.jar:/opt/besu/lib/netty-codec-http-4.2.19.Final.jar:/opt/besu/lib/netty-codec-native-quic-4.2.19.Final-linux-x86_64.jar:/opt/besu/lib/netty-codec-native-quic-4.2.19.Final-linux-aarch_64.jar:/opt/besu/lib/netty-codec-native-quic-4.2.19.Final-osx-x86_64.jar:/opt/besu/lib/netty-codec-native-quic-4.2.19.Final-osx-aarch_64.jar:/opt/besu/lib/netty-codec-native-quic-4.2.19.Final-windows-x86_64.jar:/opt/besu/lib/netty-codec-classes-quic-4.2.19.Final.jar:/opt/besu/lib/netty-resolver-dns-native-macos-4.2.19.Final-osx-x86_64.jar:/opt/besu/lib/netty-resolver-dns-native-macos-4.2.19.Final-osx-aarch_64.jar:/opt/besu/lib/netty-resolver-dns-classes-macos-4.2.19.Final.jar:/opt/besu/lib/netty-resolver-dns-4.2.19.Final.jar:/opt/besu/lib/netty-handler-4.2.19.Final.jar:/opt/besu/lib/netty-transport-classes-epoll-4.2.19.Final.jar:/opt/besu/lib/netty-transport-classes-kqueue-4.2.19.Final.jar:/opt/besu/lib/netty-transport-native-io_uring-4.2.19.Final-linux-x86_64.jar:/opt/besu/lib/netty-transport-native-io_uring-4.2.19.Final-linux-aarch_64.jar:/opt/besu/lib/netty-transport-native-io_uring-4.2.19.Final-linux-riscv64.jar:/opt/besu/lib/netty-transport-classes-io_uring-4.2.19.Final.jar:/opt/besu/lib/netty-transport-native-unix-common-4.2.19.Final.jar:/opt/besu/lib/netty-codec-dns-4.2.19.Final.jar:/opt/besu/lib/netty-codec-compression-4.2.19.Final.jar:/opt/besu/lib/netty-codec-socks-4.2.19.Final.jar:/opt/besu/lib/netty-codec-base-4.2.19.Final.jar:/opt/besu/lib/netty-transport-4.2.19.Final.jar:/opt/besu/lib/netty-buffer-4.2.19.Final.jar:/opt/besu/lib/netty-codec-4.2.19.Final.jar:/opt/besu/lib/netty-codec-haproxy-4.2.19.Final.jar:/opt/besu/lib/netty-codec-http3-4.2.19.Final.jar:/opt/besu/lib/netty-codec-memcache-4.2.19.Final.jar:/opt/besu/lib/netty-codec-mqtt-4.2.19.Final.jar:/opt/besu/lib/netty-codec-redis-4.2.19.Final.jar:/opt/besu/lib/netty-codec-smtp-4.2.19.Final.jar:/opt/besu/lib/netty-codec-stomp-4.2.19.Final.jar:/opt/besu/lib/netty-codec-xml-4.2.19.Final.jar:/opt/besu/lib/netty-codec-protobuf-4.2.19.Final.jar:/opt/besu/lib/netty-codec-marshalling-4.2.19.Final.jar:/opt/besu/lib/netty-resolver-4.2.19.Final.jar:/opt/besu/lib/netty-common-4.2.19.Final.jar:/opt/besu/lib/netty-handler-ssl-ocsp-4.2.19.Final.jar:/opt/besu/lib/netty-transport-rxtx-4.2.19.Final.jar:/opt/besu/lib/netty-transport-sctp-4.2.19.Final.jar:/opt/besu/lib/netty-transport-udt-4.2.19.Final.jar:/opt/besu/lib/netty-tcnative-boringssl-static-2.0.84.Final.jar:/opt/besu/lib/netty-tcnative-classes-2.0.84.Final.jar:/opt/besu/lib/opentelemetry-extension-trace-propagators-1.62.0.jar:/opt/besu/lib/opentelemetry-sdk-extension-autoconfigure-1.62.0.jar:/opt/besu/lib/opentelemetry-exporter-otlp-common-1.62.0.jar:/opt/besu/lib/opentelemetry-exporter-common-1.62.0.jar:/opt/besu/lib/opentelemetry-sdk-extension-autoconfigure-spi-1.62.0.jar:/opt/besu/lib/opentelemetry-sdk-1.62.0.jar:/opt/besu/lib/opentelemetry-sdk-trace-1.62.0.jar:/opt/besu/lib/opentelemetry-sdk-metrics-1.62.0.jar:/opt/besu/lib/opentelemetry-sdk-logs-1.62.0.jar:/opt/besu/lib/opentelemetry-sdk-common-1.62.0.jar:/opt/besu/lib/opentelemetry-api-1.62.0.jar:/opt/besu/lib/opentelemetry-context-1.62.0.jar:/opt/besu/lib/opentelemetry-common-1.62.0.jar:/opt/besu/lib/prometheus-metrics-instrumentation-guava-1.5.0.jar:/opt/besu/lib/prometheus-metrics-instrumentation-jvm-1.5.0.jar:/opt/besu/lib/prometheus-metrics-core-1.5.0.jar:/opt/besu/lib/prometheus-metrics-exporter-httpserver-1.5.0.jar:/opt/besu/lib/prometheus-metrics-exporter-pushgateway-1.5.0.jar:/opt/besu/lib/prometheus-metrics-exporter-common-1.5.0.jar:/opt/besu/lib/prometheus-metrics-exposition-formats-1.5.0.jar:/opt/besu/lib/prometheus-metrics-exposition-textformats-1.5.0.jar:/opt/besu/lib/prometheus-metrics-model-1.5.0.jar:/opt/besu/lib/prometheus-metrics-config-1.5.0.jar:/opt/besu/lib/prometheus-metrics-tracer-initializer-1.5.0.jar:/opt/besu/lib/prometheus-metrics-tracer-otel-1.5.0.jar:/opt/besu/lib/prometheus-metrics-tracer-otel-agent-1.5.0.jar:/opt/besu/lib/prometheus-metrics-tracer-common-1.5.0.jar:/opt/besu/lib/vertx-codegen-5.2.2.jar:/opt/besu/lib/vertx-codegen-json-5.2.2.jar:/opt/besu/lib/vertx-codegen-processor-5.2.2.jar:/opt/besu/lib/vertx-codegen-api-5.2.2.jar:/opt/besu/lib/vertx-core-logging-5.2.2.jar:/opt/besu/lib/log4j-api-2.26.1.jar:/opt/besu/lib/value-annotations-2.12.1.jar:/opt/besu/lib/okhttp-jvm-5.3.2.jar:/opt/besu/lib/okio-jvm-3.16.4.jar:/opt/besu/lib/kotlin-stdlib-2.4.0.jar:/opt/besu/lib/failureaccess-1.0.3.jar:/opt/besu/lib/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/opt/besu/lib/j2objc-annotations-3.1.jar:/opt/besu/lib/jakarta.inject-api-2.0.1.jar:/opt/besu/lib/reactive-streams-1.0.4.jar:/opt/besu/lib/framework-1.3.2.jar:/opt/besu/lib/framework-internal-1.3.2.jar:/opt/besu/lib/jboss-logging-3.4.3.Final.jar:/opt/besu/lib/classmate-1.5.1.jar:/opt/besu/lib/animal-sniffer-annotations-1.26.jar:/opt/besu/lib/perfmark-api-0.27.0.jar:/opt/besu/lib/annotations-4.1.1.4.jar:/opt/besu/lib/annotations-13.0.jar:/opt/besu/lib/commons-net-3.9.0.jar:/opt/besu/lib/plexus-utils-3.6.1.jar:/opt/besu/lib/jnr-ffi-2.2.14.jar:/opt/besu/lib/commons-codec-1.16.0.jar:/opt/besu/lib/ST4-4.3.4.jar:/opt/besu/lib/antlr-runtime-3.5.3.jar:/opt/besu/lib/org.abego.treelayout.core-1.0.3.jar:/opt/besu/lib/icu4j-72.1.jar:/opt/besu/lib/jsr305-3.0.2.jar:/opt/besu/lib/jffi-1.3.11.jar:/opt/besu/lib/jffi-1.3.11-native.jar:/opt/besu/lib/asm-commons-9.2.jar:/opt/besu/lib/asm-util-9.2.jar:/opt/besu/lib/asm-analysis-9.2.jar:/opt/besu/lib/asm-tree-9.2.jar:/opt/besu/lib/asm-9.2.jar:/opt/besu/lib/jnr-a64asm-1.0.0.jar:/opt/besu/lib/jnr-x86asm-1.0.2.jar)
+2026-11-04 09:44:32.383+0000 | main | INFO  | Besu | Using the Java implementation of the blake2bf algorithm
+2026-11-04 09:44:32.429+0000 | main | DEBUG | NativeLibrary | Looking for library '/tmp/boringssl_precompiles@12827387317052380181/libboringssl_precompiles.so'
+2026-11-04 09:44:32.429+0000 | main | DEBUG | NativeLibrary | Adding paths from jna.library.path: null
+2026-11-04 09:44:32.429+0000 | main | DEBUG | NativeLibrary | Trying /tmp/boringssl_precompiles@12827387317052380181/libboringssl_precompiles.so
+2026-11-04 09:44:32.430+0000 | main | DEBUG | NativeLibrary | Found library '/tmp/boringssl_precompiles@12827387317052380181/libboringssl_precompiles.so' at /tmp/boringssl_precompiles@12827387317052380181/libboringssl_precompiles.so
+2026-11-04 09:44:32.448+0000 | main | DEBUG | NativeLibrary | Looking for library '/tmp/besu_native_ec@11495395602620789469/libbesu_native_ec.so'
+2026-11-04 09:44:32.448+0000 | main | DEBUG | NativeLibrary | Adding paths from jna.library.path: null
+2026-11-04 09:44:32.448+0000 | main | DEBUG | NativeLibrary | Trying /tmp/besu_native_ec@11495395602620789469/libbesu_native_ec.so
+2026-11-04 09:44:32.448+0000 | main | DEBUG | NativeLibrary | Found library '/tmp/besu_native_ec@11495395602620789469/libbesu_native_ec.so' at /tmp/besu_native_ec@11495395602620789469/libbesu_native_ec.so
+2026-11-04 09:44:32.456+0000 | main | INFO  | Besu | Using the native BoringSSL implementation of p256verify
+2026-11-04 09:44:32.488+0000 | main | INFO  | KeyPairUtil | Generated new secp256k1 public key 0x0a32c8b55e0c96f1f7a6b0bbe007d1549f99570789b1e23edb6d2ec22bfbcdcedf8b43fbcf264ae1178976c5d7daf46c6a6992a6aa1b5eeb5355e454ecd5adb7 and stored it to /data/key
+2026-11-04 09:44:32.536+0000 | main | DEBUG | ProtocolSpecBuilder | Opcode optimizations enabled for milestone BERLIN
+2026-11-04 09:44:32.549+0000 | main | INFO  | ProtocolScheduleBuilder | Protocol schedule created with milestones: [Berlin:0]
+2026-11-04 09:44:32.551+0000 | main | INFO  | RocksDBKeyValueStorageFactory | No existing database at /data. Using default metadata for new db versionedStorageFormat=BaseVersionedStorageFormat{format=FOREST, version=3}
+2026-11-04 09:44:32.557+0000 | main | DEBUG | RocksDBKeyValueStorageFactory | FOREST mode detected, using TransactionDB.
+2026-11-04 09:44:32.672+0000 | main | DEBUG | RocksDBColumnarKeyValueStorage | Table cache warm-up starting: 0 live files
+2026-11-04 09:44:32.673+0000 | main | DEBUG | RocksDBColumnarKeyValueStorage | Table cache warm-up complete: 0 files in 1 ms; table readers mem: 0
+2026-11-04 09:44:32.710+0000 | main | INFO  | BesuControllerBuilder | Adding ChainDataPruner to observe block added events
+2026-11-04 09:44:32.711+0000 | main | INFO  | BesuControllerBuilder | BAL pruning enabled | BALs retained: 457568 | Frequency: 256
+2026-11-04 09:44:32.723+0000 | main | INFO  | TransactionPoolFactory | Enabling transaction pool
+2026-11-04 09:44:32.731+0000 | main | INFO  | BesuControllerBuilder | QBFT is configured, creating initial sync for BFT
+2026-11-04 09:44:32.732+0000 | main | INFO  | BFTPivotSelectorFromPeers | Creating pivot block selector for BFT node
+2026-11-04 09:44:32.747+0000 | main | DEBUG | BesuPluginContextImpl | Plugin startup complete.
+2026-11-04 09:44:32.750+0000 | main | INFO  | RunnerBuilder | Detecting NAT service.
+2026-11-04 09:44:32.755+0000 | main | DEBUG | RlpxAgent | Using default NettyConnectionInitializer
+2026-11-04 09:44:32.757+0000 | main | DEBUG | NioIoHandler | -Dio.netty.noKeySetOptimization: false
+2026-11-04 09:44:32.757+0000 | main | DEBUG | NioIoHandler | -Dio.netty.selectorAutoRebuildThreshold: 512
+2026-11-04 09:44:32.758+0000 | main | INFO  | CompositePeerDiscoveryAgentFactory | Peer discovery mode: BOTH (requested=BOTH, V4=true, V5=true)
+2026-11-04 09:44:32.777+0000 | main | DEBUG | Loggers | Using Slf4j logging framework
+2026-11-04 09:44:32.812+0000 | main | INFO  | Runner | Starting external services ... 
+2026-11-04 09:44:32.812+0000 | main | INFO  | JsonRpcHttpService | Starting JSON-RPC service on 0.0.0.0:8545
+2026-11-04 09:44:32.812+0000 | main | DEBUG | JsonRpcHttpService | max number of active connections 80
+2026-11-04 09:44:32.831+0000 | main | DEBUG | AdaptiveByteBufAllocator | -Dio.netty.allocator.useCachedMagazinesForNonEventLoopThreads: false
+2026-11-04 09:44:32.834+0000 | main | DEBUG | Recycler | -Dio.netty.recycler.maxCapacityPerThread: 4096
+2026-11-04 09:44:32.834+0000 | main | DEBUG | Recycler | -Dio.netty.recycler.ratio: 8
+2026-11-04 09:44:32.834+0000 | main | DEBUG | Recycler | -Dio.netty.recycler.chunkSize: 32
+2026-11-04 09:44:32.834+0000 | main | DEBUG | Recycler | -Dio.netty.recycler.blocking: false
+2026-11-04 09:44:32.834+0000 | main | DEBUG | Recycler | -Dio.netty.recycler.batchFastThreadLocalOnly: true
+2026-11-04 09:44:32.836+0000 | main | DEBUG | ByteBufUtil | -Dio.netty.allocator.type: adaptive
+2026-11-04 09:44:32.836+0000 | main | DEBUG | ByteBufUtil | -Dio.netty.threadLocalDirectBufferSize: 0
+2026-11-04 09:44:32.836+0000 | main | DEBUG | ByteBufUtil | -Dio.netty.maxThreadLocalCharBufferSize: 16384
+2026-11-04 09:44:32.839+0000 | main | DEBUG | DefaultChannelId | -Dio.netty.processId: 1 (auto-detected)
+2026-11-04 09:44:32.840+0000 | main | DEBUG | DefaultChannelId | -Dio.netty.machineId: e2:54:a8:ff:fe:d7:9e:5d (auto-detected)
+2026-11-04 09:44:32.843+0000 | main | DEBUG | ChannelInitializerExtensions | -Dio.netty.bootstrap.extensions: null
+2026-11-04 09:44:32.847+0000 | vert.x-eventloop-thread-1 | INFO  | JsonRpcHttpService | JSON-RPC service started and listening on 0.0.0.0:8545
+2026-11-04 09:44:32.849+0000 | main | INFO  | AutoTransactionLogBloomCachingService | Starting auto transaction log bloom caching service.
+2026-11-04 09:44:32.849+0000 | main | INFO  | LogBloomCacheMetadata | Lookup cache metadata file in data directory: /data/caches
+2026-11-04 09:44:32.854+0000 | main | DEBUG | BesuPluginContextImpl | Plugin startup complete.
+2026-11-04 09:44:32.854+0000 | main | INFO  | Runner | Starting Ethereum main loop ... 
+2026-11-04 09:44:32.854+0000 | main | INFO  | NatService | No NAT environment detected so no service could be started
+2026-11-04 09:44:32.854+0000 | main | INFO  | NetworkRunner | Starting Network.
+2026-11-04 09:44:32.865+0000 | nioEventLoopGroup-2-1 | INFO  | RlpxAgent | P2P RLPx agent started and listening on /[0:0:0:0:0:0:0:0]:30303.
+2026-11-04 09:44:32.866+0000 | main | INFO  | DefaultP2PNetwork | Enode URL enode://0a32c8b55e0c96f1f7a6b0bbe007d1549f99570789b1e23edb6d2ec22bfbcdcedf8b43fbcf264ae1178976c5d7daf46c6a6992a6aa1b5eeb5355e454ecd5adb7@172.28.61.15:30303?discport=0
+2026-11-04 09:44:32.866+0000 | main | INFO  | DefaultP2PNetwork | Node address 0x051f383dde1e9c2a7d31be8ad650c64630c47c9f
+2026-11-04 09:44:32.875+0000 | main | INFO  | NetworkRunner | Supported capabilities: [eth/68, eth/69, eth/70, eth/71], [istanbul/100], [snap/1]
+2026-11-04 09:44:32.875+0000 | main | INFO  | DefaultSynchronizer | Starting synchronizer.
+2026-11-04 09:44:32.875+0000 | main | INFO  | TransactionPoolFactory | Enabling transaction handling following initial sync
+2026-11-04 09:44:32.877+0000 | main | INFO  | BftMiningCoordinator | Starting BFT mining coordinator following initial sync
+2026-11-04 09:44:32.879+0000 | main | DEBUG | QbftBlockHeightManagerFactory | Local node is a non-validator
+2026-11-04 09:44:32.879+0000 | main | INFO  | FullSyncDownloader | Starting full sync.
+2026-11-04 09:44:32.880+0000 | main | INFO  | FullSyncTargetManager | Unable to find sync target. Waiting for 1 peers minimum. Currently checking 0 peers for usefulness
+2026-11-04 09:44:32.881+0000 | main | INFO  | Runner | Ethereum main loop is up.
+2026-11-04 09:44:32.886+0000 | nioEventLoopGroup-3-1 | DEBUG | AbstractByteBuf | -Dio.netty.buffer.checkAccessible: true
+2026-11-04 09:44:32.886+0000 | nioEventLoopGroup-3-1 | DEBUG | AbstractByteBuf | -Dio.netty.buffer.checkBounds: true
+2026-11-04 09:44:32.886+0000 | nioEventLoopGroup-3-1 | DEBUG | ResourceLeakDetectorFactory | Loaded default ResourceLeakDetector: io.netty.util.ResourceLeakDetector@68ef933
+2026-11-04 09:44:32.927+0000 | nioEventLoopGroup-3-1 | DEBUG | AbstractPeerConnection | New PeerConnection ([Connection with hashCode -2057562032 inboundInitiated? false initAt 1793785472925]) established with peer 0xdcce7ef0d3c6b779...
+2026-11-04 09:44:32.927+0000 | nioEventLoopGroup-3-4 | DEBUG | AbstractPeerConnection | New PeerConnection ([Connection with hashCode -1503658408 inboundInitiated? false initAt 1793785472925]) established with peer 0xdb4892e4ced3f167...
+2026-11-04 09:44:32.927+0000 | nioEventLoopGroup-3-2 | DEBUG | AbstractPeerConnection | New PeerConnection ([Connection with hashCode -1962265424 inboundInitiated? false initAt 1793785472925]) established with peer 0xd7002b2327451c7b...
+2026-11-04 09:44:32.927+0000 | nioEventLoopGroup-3-3 | DEBUG | AbstractPeerConnection | New PeerConnection ([Connection with hashCode 503508791 inboundInitiated? false initAt 1793785472925]) established with peer 0x724d0a121e7decb3...
+2026-11-04 09:44:32.929+0000 | nioEventLoopGroup-3-3 | DEBUG | RlpxAgent | Outbound connection established to peer: 0x724d0a121e7decb34a640eeb1c3a43057f72db72bfee517d7d0fc94f6ba2edf00ec5ddf4c25606e86f2017996597c2ea148215da9d324e5a89fd43039c11ed8f
+2026-11-04 09:44:32.929+0000 | nioEventLoopGroup-3-4 | DEBUG | RlpxAgent | Outbound connection established to peer: 0xdb4892e4ced3f167fd80489b05c4dec7c3ff328903d879c6e681a34d75579190e3e348b320393bf4997b9dad11da2bc1abd323d42ea0a967ba31cc5ca7638a08
+2026-11-04 09:44:32.929+0000 | nioEventLoopGroup-3-2 | DEBUG | RlpxAgent | Outbound connection established to peer: 0xd7002b2327451c7ba7dcd657aad0437a38e0ec4271182f26c76a0717f19f8cd747eb8084eba8cdf020f8663329eb8decb4adb60b7ca50ba5497035df82528c0b
+2026-11-04 09:44:32.929+0000 | nioEventLoopGroup-3-1 | DEBUG | RlpxAgent | Outbound connection established to peer: 0xdcce7ef0d3c6b7790901e7a584c115f283ebd1ac953aaf615a4ffb2d1cdfeff2108cb5ca003c2e01fed5af5203cbd515feeb2aa20c15a93f1ee17fdbaf2fd6ed
+2026-11-04 09:44:32.944+0000 | nioEventLoopGroup-3-4 | DEBUG | EthPeers | Disconnected EthPeer 0xdb4892e4ced3f167...
+2026-11-04 09:44:32.944+0000 | nioEventLoopGroup-3-3 | DEBUG | EthPeers | Disconnected EthPeer 0x724d0a121e7decb3...
+2026-11-04 09:44:32.944+0000 | nioEventLoopGroup-3-1 | DEBUG | EthPeers | Disconnected EthPeer 0xdcce7ef0d3c6b779...
+2026-11-04 09:44:32.944+0000 | nioEventLoopGroup-3-2 | DEBUG | EthPeers | Disconnected EthPeer 0xd7002b2327451c7b...
+2026-11-04 09:44:32.944+0000 | nioEventLoopGroup-3-2 | DEBUG | EthProtocolManager | Disconnect - active Connection? false - Inbound - 0x UNKNOWN Unknown reason - 0xd7002b2327451c7b... besu/v26.11.0/linux-aarch_64/openjdk-java-25 - 0 peers left
+2026-11-04 09:44:32.945+0000 | nioEventLoopGroup-3-4 | DEBUG | EthProtocolManager | Disconnect - active Connection? false - Inbound - 0x UNKNOWN Unknown reason - 0xdb4892e4ced3f167... besu/v26.11.0/linux-aarch_64/openjdk-java-25 - 0 peers left
+2026-11-04 09:44:32.945+0000 | nioEventLoopGroup-3-1 | DEBUG | EthProtocolManager | Disconnect - active Connection? false - Inbound - 0x UNKNOWN Unknown reason - 0xdcce7ef0d3c6b779... besu/v26.11.0/linux-aarch_64/openjdk-java-25 - 0 peers left
+2026-11-04 09:44:32.945+0000 | nioEventLoopGroup-3-3 | DEBUG | EthProtocolManager | Disconnect - active Connection? false - Inbound - 0x UNKNOWN Unknown reason - 0x724d0a121e7decb3... besu/v26.11.0/linux-aarch_64/openjdk-java-25 - 0 peers left
+2026-11-04 09:44:33.380+0000 | vert.x-eventloop-thread-1 | DEBUG | Brotli | brotli4j not in the classpath; Brotli support will be unavailable.
+2026-11-04 09:44:33.380+0000 | vert.x-eventloop-thread-1 | DEBUG | Zstd | zstd-jni not in the classpath; Zstd support will be unavailable.
+2026-11-04 09:44:33.399+0000 | vert.x-eventloop-thread-1 | DEBUG | ZlibCodecFactory | -Dio.netty.noJdkZlibDecoder: false
+2026-11-04 09:44:33.399+0000 | vert.x-eventloop-thread-1 | DEBUG | ZlibCodecFactory | -Dio.netty.noJdkZlibEncoder: false
+2026-11-04 09:44:33.399+0000 | vert.x-eventloop-thread-1 | DEBUG | ZlibCodecFactory | JZlib not in the classpath; the only window bits supported value will be 15
+2026-11-04 09:44:33.399+0000 | vert.x-eventloop-thread-1 | DEBUG | JsonRpcHttpService | Opened connection from 172.28.61.1:62042. Total of active connections: 1/80
+2026-11-04 09:44:33.431+0000 | vert.x-eventloop-thread-1 | DEBUG | JdkZlibEncoder | -Dio.netty.jdkzlib.encoder.maxInitialOutputBufferSize=65536
+2026-11-04 09:44:33.431+0000 | vert.x-eventloop-thread-1 | DEBUG | JdkZlibEncoder | -Dio.netty.jdkzlib.encoder.maxInputBufferSize=65536
+2026-11-04 09:44:37.889+0000 | EthScheduler-Timer-0 | DEBUG | EthPeers | Waiting for peer matching filter. 0 peers currently connected.
+2026-11-04 09:44:37.892+0000 | EthScheduler-Timer-0 | DEBUG | EthPeers | Subscribing to new peer connections to wait until one matches filter
+2026-11-04 09:44:42.904+0000 | ForkJoinPool.commonPool-delayScheduler | INFO  | FullSyncTargetManager | Unable to find sync target. Waiting for 1 peers minimum. Currently checking 0 peers for usefulness
+2026-11-04 09:44:42.905+0000 | ForkJoinPool.commonPool-delayScheduler | DEBUG | EthPeers | Unsubscribing from new peer connections with ID 3

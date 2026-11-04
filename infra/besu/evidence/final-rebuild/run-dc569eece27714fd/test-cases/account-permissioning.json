@@ -1,0 +1,112 @@
+{
+  "endpoint": "http://127.0.0.1:18547",
+  "instanceId": "509845bc7868e91ba9ae7f06785dbde0ce87c8257fbd409373bf4868115f3a7c",
+  "passed": true,
+  "rawSignedTransaction": "0xf865808203e882520894b73ea7f42fc1be44aeda46377c8ddab90947b7eb808084026a5204a032323f686a2bb7ef8612456211c53a3a717141c1be480a75f11e83f9bc7d34fda01110ada023fc2ec3effd7da810c3a676b367b5af9553189cc1d64ce8276007d7",
+  "rpc": [
+    {
+      "observedAt": "2026-11-04T09:28:09.297345Z",
+      "request": {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "method": "eth_getBalance",
+        "params": [
+          "0xB73EA7f42Fc1Be44aeda46377c8ddAb90947b7eB",
+          "latest"
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3635c9adc5dea00000"
+      }
+    },
+    {
+      "observedAt": "2026-11-04T09:28:09.298179Z",
+      "request": {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "method": "eth_getTransactionCount",
+        "params": [
+          "0xB73EA7f42Fc1Be44aeda46377c8ddAb90947b7eB",
+          "pending"
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x0"
+      }
+    },
+    {
+      "observedAt": "2026-11-04T09:28:09.303828Z",
+      "request": {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "method": "eth_sendRawTransaction",
+        "params": [
+          "0xf865808203e882520894b73ea7f42fc1be44aeda46377c8ddab90947b7eb808084026a5204a032323f686a2bb7ef8612456211c53a3a717141c1be480a75f11e83f9bc7d34fda01110ada023fc2ec3effd7da810c3a676b367b5af9553189cc1d64ce8276007d7"
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {
+          "code": -32007,
+          "message": "Sender account not authorized to send transactions"
+        }
+      }
+    },
+    {
+      "observedAt": "2026-11-04T09:28:09.304987Z",
+      "request": {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "method": "eth_getTransactionByHash",
+        "params": [
+          "0xdd3bf96349d4bb752cf6812fb87c533e060b4900e7faab1c1eca681eb29110a9"
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": null
+      }
+    },
+    {
+      "observedAt": "2026-11-04T09:28:09.305788Z",
+      "request": {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "method": "eth_getTransactionReceipt",
+        "params": [
+          "0xdd3bf96349d4bb752cf6812fb87c533e060b4900e7faab1c1eca681eb29110a9"
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": null
+      }
+    },
+    {
+      "observedAt": "2026-11-04T09:28:09.306629Z",
+      "request": {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "method": "eth_getBalance",
+        "params": [
+          "0xB73EA7f42Fc1Be44aeda46377c8ddAb90947b7eB",
+          "latest"
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": "0x3635c9adc5dea00000"
+      }
+    }
+  ],
+  "synthetic": true,
+  "txHash": "0xdd3bf96349d4bb752cf6812fb87c533e060b4900e7faab1c1eca681eb29110a9"
+}

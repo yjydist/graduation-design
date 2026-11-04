@@ -1,0 +1,26 @@
+{
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "debug_traceTransaction",
+    "params": [
+      "0xf13bbad3b3b9a02b367431dbeb33af5f22629fa2c6cd547275fb113638e06620",
+      {
+        "tracer": "callTracer"
+      }
+    ]
+  },
+  "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "from": "0xad93518a90de008a48f14293447405cbf0d2237b",
+      "gas": "0x7a1200",
+      "gasUsed": "0xa9e2",
+      "to": "0xbeff1105f25afa2cd791d035e7211e869a78858f",
+      "input": "0x5dbcf6af7043f1bcc3eb9ef19c2bba73e726c0630b1cf2d0fc4b2ae88cd581ae74825bb4000000000000000000000000000000000000000000000000000000000000000129ef137cdc4f39454e49433af4dbbe7a60ada91de8ebd9954d630e1325a59e9c",
+      "value": "0x0",
+      "type": "CALL"
+    }
+  }
+}

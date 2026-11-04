@@ -1,0 +1,14 @@
+{"check":"preflight","deploymentId":"","observedAt":"2026-11-04T09:27:42.284388Z","phase":"started","runId":"run-dc569eece27714fd"}
+{"check":"preflight","observedAt":"2026-11-04T09:27:42.341258Z","phase":"finished","result":{"name":"preflight","passed":true,"evidence":"preflight.json"},"runId":"run-dc569eece27714fd"}
+{"check":"seed","deploymentId":"afdb7c2f889c2be4cd7bc106c901e150ec73414c00b87fb6b83913c6a1c43b47","observedAt":"2026-11-04T09:27:42.345532Z","phase":"started","runId":"run-dc569eece27714fd"}
+{"check":"seed","observedAt":"2026-11-04T09:27:57.257393Z","phase":"finished","result":{"name":"seed","passed":true,"evidence":"seed.json"},"runId":"run-dc569eece27714fd"}
+{"check":"network-baseline","deploymentId":"afdb7c2f889c2be4cd7bc106c901e150ec73414c00b87fb6b83913c6a1c43b47","observedAt":"2026-11-04T09:27:57.261028Z","phase":"started","runId":"run-dc569eece27714fd"}
+{"check":"network-baseline","observedAt":"2026-11-04T09:28:08.117559Z","phase":"finished","result":{"name":"network-baseline","passed":true,"evidence":"network-baseline.json"},"runId":"run-dc569eece27714fd"}
+{"check":"unit-and-integration-tests","deploymentId":"afdb7c2f889c2be4cd7bc106c901e150ec73414c00b87fb6b83913c6a1c43b47","observedAt":"2026-11-04T09:28:08.1238Z","phase":"started","runId":"run-dc569eece27714fd"}
+{"check":"unit-and-integration-tests","observedAt":"2026-11-04T09:29:45.00224Z","phase":"finished","result":{"name":"unit-and-integration-tests","passed":true,"evidence":"unit-and-integration-tests.json"},"runId":"run-dc569eece27714fd"}
+{"check":"unpermitted-node","deploymentId":"afdb7c2f889c2be4cd7bc106c901e150ec73414c00b87fb6b83913c6a1c43b47","observedAt":"2026-11-04T09:29:45.00635Z","phase":"started","runId":"run-dc569eece27714fd"}
+{"check":"unpermitted-node","observedAt":"2026-11-04T09:29:59.393215Z","phase":"finished","result":{"name":"unpermitted-node","passed":true,"evidence":"unpermitted-node.json"},"runId":"run-dc569eece27714fd"}
+{"check":"historical-and-interleaved-revocation","deploymentId":"afdb7c2f889c2be4cd7bc106c901e150ec73414c00b87fb6b83913c6a1c43b47","observedAt":"2026-11-04T09:29:59.399989Z","phase":"started","runId":"run-dc569eece27714fd"}
+{"check":"historical-and-interleaved-revocation","observedAt":"2026-11-04T09:30:01.365845Z","phase":"finished","result":{"name":"historical-and-interleaved-revocation","passed":true,"evidence":"historical-and-interleaved-revocation.json"},"runId":"run-dc569eece27714fd"}
+{"check":"node-fault-staleness-recovery","deploymentId":"afdb7c2f889c2be4cd7bc106c901e150ec73414c00b87fb6b83913c6a1c43b47","observedAt":"2026-11-04T09:30:01.370527Z","phase":"started","runId":"run-dc569eece27714fd"}
+{"check":"node-fault-staleness-recovery","observedAt":"2026-11-04T09:31:34.856338Z","phase":"finished","result":{"name":"node-fault-staleness-recovery","passed":true,"evidence":"node-fault-staleness-recovery.json"},"runId":"run-dc569eece27714fd"}

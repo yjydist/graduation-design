@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "sameSignedOperationsAndStates": true,
+  "operations": 15,
+  "writeEntrypoints": [
+    "bootstrapDomain",
+    "registerCredential",
+    "registerDomainCertification",
+    "registerGrant",
+    "registerIdentity",
+    "registerTask",
+    "revokeGrant"
+  ]
+}

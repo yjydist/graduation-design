@@ -2,13 +2,23 @@
 
 ## 项目结构
 
-- `README.md` 项目入口与当前状态
-- `毕设要求.md` 毕设的任务要求
-- `TODO.md` 任务安排
-- `paper/` 原始论文 PDF, 阅读笔记, [论文清单](paper/论文.md) 和 README 索引
-- [设计导航](docs/design/AGENTS.md) 按机制组织设计依据, 安全目标和需求追踪.
-- [实现导航](docs/implementation/AGENTS.md) 按实现顺序组织部署, 协议和业务事务契约.
-- [实验导航](docs/experiments/AGENTS.md) 按验证问题索引实验计划和用例.
+| 路径 | 说明 |
+| --- | --- |
+| `README.md` | 项目入口与当前状态. |
+| `毕设要求.md` | 毕设任务要求, 需求编号与项目边界. |
+| `TODO.md` | 分阶段任务安排与退出条件. |
+| `go.mod`, `go.sum` | Go 模块与依赖锁定. |
+| `cmd/ledgerctl/` | 账本工具 `ledgerctl` 的命令行入口. |
+| `internal/ledger/` | 网络材料生成, 合约编译部署, 链上交互, 固定高度读取, 自动验收与测试. 详见 [账本读取说明](internal/ledger/README.md). |
+| `contracts/` | Solidity 登记合约, 固定编译配置与构建产物. 详见 [合约运行说明](contracts/README.md). |
+| `infra/besu/` | Besu 网络配置, 启停与重建说明及验收证据. 详见 [网络说明](infra/besu/README.md). |
+| [设计导航](docs/design/AGENTS.md) | 按机制组织设计依据, 安全目标和需求追踪. |
+| [实现导航](docs/implementation/AGENTS.md) | 按实现顺序组织部署, 协议和业务事务契约. |
+| [实验导航](docs/experiments/AGENTS.md) | 按验证问题索引实验计划和用例. |
+| `openspec/specs/` | 当前能力规格. |
+| `openspec/changes/` | 进行中与已归档的变更制品. |
+| `openspec/config.yaml` | 工作流配置. |
+| `paper/` | 原始论文 PDF 和阅读笔记. 详见 [论文清单](paper/论文.md) 与 [文献索引](paper/README.md). |
 
 ## 项目原则
 

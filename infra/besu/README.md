@@ -7,6 +7,14 @@
 在项目根目录执行:
 
 ```bash
+mise run ledger:init
+mise run test:unit
+mise run ledger:build
+```
+
+等价底层命令:
+
+```bash
 CGO_ENABLED=0 go run ./cmd/ledgerctl init --dir .local/besu-qbft
 CGO_ENABLED=0 go test ./...
 CGO_ENABLED=0 go build -o build/ledgerctl ./cmd/ledgerctl
@@ -24,7 +32,16 @@ CGO_ENABLED=0 go build -o build/ledgerctl ./cmd/ledgerctl
 
 ## 网络启停与重建
 
-在项目根目录执行以下命令. UID/GID 使用当前操作者, 使节点能够访问 0700 目录和 0600 密钥. Docker Desktop 须允许该项目目录的 bind mount.
+在项目根目录执行以下命令. 根目录 `mise.toml` 默认将 `BESU_INSTANCE` 指向 `.local/besu-qbft`, 并在 `besu:*` 任务内动态注入当前操作者的 `BESU_UID` 与 `BESU_GID`, 使节点能够访问 0700 目录和 0600 密钥. Docker Desktop 须允许该项目目录的 bind mount.
+
+```bash
+mise run besu:config
+mise run besu:up
+mise run besu:ps
+mise run besu:logs
+```
+
+等价底层命令:
 
 ```bash
 export BESU_INSTANCE="$PWD/.local/besu-qbft"
@@ -45,20 +62,20 @@ Besu 26.11.0 的 linux/arm64 镜像已实际运行, Compose 固定 digest `sha25
 正常关闭与重启:
 
 ```bash
-docker compose -f infra/besu/compose.yaml down
-CGO_ENABLED=0 go run ./cmd/ledgerctl init --dir "$BESU_INSTANCE"
-docker compose -f infra/besu/compose.yaml up -d
+mise run besu:down
+mise run ledger:init
+mise run besu:up
 ```
 
 `down` 保留 bind mount 中的密钥和账本数据. 启动后应核对原高度的块哈希和新头, 不以容器处于 running 状态代替网络就绪. 首轮启动等待上限 120 秒.
 
-显式创建独立新实例, 保留旧实例和证据:
+显式创建独立新实例, 保留旧实例和证据 (`mise.toml` 默认将 `BESU_INSTANCE` 指向 `.local/besu-qbft`, 重建新实例 `.local/besu-rebuild` 时需显式指定 `--dir` 与 `BESU_INSTANCE`):
 
 ```bash
-docker compose -f infra/besu/compose.yaml down
+mise run besu:down
 CGO_ENABLED=0 go run ./cmd/ledgerctl init --dir .local/besu-rebuild
 export BESU_INSTANCE="$PWD/.local/besu-rebuild"
-docker compose -f infra/besu/compose.yaml up -d
+BESU_UID="$(id -u)" BESU_GID="$(id -g)" docker compose -f infra/besu/compose.yaml up -d
 ```
 
 新目录须不存在, 新 instanceId 和全部密钥重新生成. 本轮不提供原地清除实例或合约升级命令.
@@ -66,6 +83,15 @@ docker compose -f infra/besu/compose.yaml up -d
 ## 完整验收命令
 
 确认四节点已启动, 在项目根目录运行:
+
+```bash
+mise run ledger:compile
+mise run ledger:deploy
+mise run ledger:seed
+mise run ledger:verify
+```
+
+等价底层命令:
 
 ```bash
 CGO_ENABLED=0 go run ./cmd/ledgerctl compile
@@ -88,6 +114,8 @@ verify 每次创建独立 run 目录, 保存配置, 清单, 原始 RPC/交易/�
 - [账户许可拒绝](evidence/network/account-permissioning.json)保留原签名交易及 RPC 错误. 这是交易准入拒绝, 不作为合约执行回退证据. 可显式运行下列真实网络测试, 所选实例和证据目录均须使用绝对路径:
 
 ```bash
+mise run test:account-probe
+# 等价底层命令:
 LEDGER_INSTANCE="$BESU_INSTANCE" LEDGER_EVIDENCE="$PWD/.local/account-probe" \
   CGO_ENABLED=0 go test ./internal/ledger -run TestAccountPermissioningIntegration -count=1 -v
 ```

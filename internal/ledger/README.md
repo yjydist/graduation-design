@@ -5,6 +5,9 @@
 ## 历史与在线模式
 
 ```bash
+mise run ledger:check
+mise run ledger:inspect -- --block 0x7db
+# 等价底层命令:
 CGO_ENABLED=0 go run ./cmd/ledgerctl check --dir .local/besu-qbft --rpc-log .local/check-rpc.json
 CGO_ENABLED=0 go run ./cmd/ledgerctl inspect --dir .local/besu-qbft --block 0x7db --rpc-log .local/inspect-rpc.json
 ```

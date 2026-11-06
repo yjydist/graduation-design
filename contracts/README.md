@@ -7,6 +7,9 @@
 在项目根目录执行, 需要 Node.js/npm 和已启动的本地 Besu:
 
 ```bash
+mise run ledger:compile
+mise run ledger:deploy
+# 等价底层命令:
 CGO_ENABLED=0 go run ./cmd/ledgerctl compile
 CGO_ENABLED=0 go run ./cmd/ledgerctl deploy --dir .local/besu-qbft --name registry
 ```
@@ -24,6 +27,8 @@ CGO_ENABLED=0 go run ./cmd/ledgerctl deploy --dir .local/besu-qbft --name regist
 deploymentId 按部署契约的六字段 JCS 和 SHA-256 计算, 启动逐项核对可信节点的 chainId, genesisHash, 实际代码, instanceId, schemaVersion 以及完整 T 根. 资源和所有者绑定也核对实际只读值. 当前校验只针对链和根锚, 不代表已经完成后续网关的业务验证.
 
 ```bash
+mise run test:deployment-probe
+# 等价底层命令:
 LEDGER_DEPLOYMENT="$PWD/.local/besu-qbft/deployment-registry.json" \
   LEDGER_INSTANCE="$PWD/.local/besu-qbft" \
   LEDGER_EVIDENCE="$PWD/.local/deployment-probe" \
@@ -68,6 +73,10 @@ revokeGrant 检查 issuer, grantee, 本路径根签发者或已绑定资源方�
 ## 夹具命令与验证边界
 
 ```bash
+mise run ledger:compile
+mise run ledger:deploy
+mise run ledger:seed
+# 等价底层命令:
 CGO_ENABLED=0 go run ./cmd/ledgerctl compile
 CGO_ENABLED=0 go run ./cmd/ledgerctl deploy --dir .local/besu-qbft --name registry
 CGO_ENABLED=0 go run ./cmd/ledgerctl seed --dir .local/besu-qbft

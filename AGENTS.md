@@ -8,6 +8,7 @@
 | `毕设要求.md` | 毕设任务要求, 需求编号与项目边界. |
 | `TODO.md` | 分阶段任务安排与退出条件. |
 | `go.mod`, `go.sum` | Go 模块与依赖锁定. |
+| `mise.toml` | 开发环境版本锁定与运行命令统一入口. |
 | `cmd/ledgerctl/` | 账本工具 `ledgerctl` 的命令行入口. |
 | `internal/ledger/` | 网络材料生成, 合约编译部署, 链上交互, 固定高度读取, 自动验收与测试. 详见 [账本读取说明](internal/ledger/README.md). |
 | `contracts/` | Solidity 登记合约, 固定编译配置与构建产物. 详见 [合约运行说明](contracts/README.md). |

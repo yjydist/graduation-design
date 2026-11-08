@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -244,6 +243,6 @@ func TestJournalTargetMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Submit(context.Background(), client, dir, "op", key, &target, nil, ChainID); err == nil {
-		t.Fatal(fmt.Sprint("accepted signed transaction to a different target"))
+		t.Fatal("accepted signed transaction to a different target")
 	}
 }

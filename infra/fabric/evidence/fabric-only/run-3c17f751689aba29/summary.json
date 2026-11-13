@@ -1,0 +1,59 @@
+{
+  "runId": "run-3c17f751689aba29",
+  "evidenceDir": "infra/fabric/evidence/fabric-only/run-3c17f751689aba29",
+  "deploymentId": "d9ce30681d8c0910bdc1e574516b00f6b4a3eeab4afb34f4a779a3acb9752750",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-10T08:59:00.102678Z",
+  "finishedAt": "2026-11-10T09:01:03.850344Z",
+  "status": "PASS",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    }
+  ]
+}

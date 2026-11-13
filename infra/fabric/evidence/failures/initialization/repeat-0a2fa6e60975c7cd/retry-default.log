@@ -1,0 +1,8 @@
+[ledger:deploy] $ go run ./cmd/ledgerctl deploy
+initialize/repeat: wanted ID_ALREADY_USED, got FAILED (endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info
+Details:
+  - Address: peer-c:7051
+    MspId: CMsp
+    Message: request unauthorized due to incorrect timestamp 2026-11-11T07:55:04Z, peer time 2026-11-11T07:55:09Z, peer.authentication.timewindow 2s)
+exit status 1
+[ledger:deploy] ERROR task failed

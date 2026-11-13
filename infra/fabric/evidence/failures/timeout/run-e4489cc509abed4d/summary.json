@@ -1,0 +1,16 @@
+{
+  "runId": "run-e4489cc509abed4d",
+  "evidenceDir": ".local/openspec-fabric-verify.R4cdM8/timeout/run-e4489cc509abed4d",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-11T07:22:26.927643Z",
+  "finishedAt": "2026-11-11T07:22:26.927798Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "preflight",
+      "pass": false,
+      "error": "context deadline exceeded"
+    }
+  ],
+  "error": "context deadline exceeded"
+}

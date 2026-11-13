@@ -1,0 +1,2 @@
+{"at":"2026-11-11T07:22:26.927691Z","details":{"instance":".local/openspec-fabric-verify.R4cdM8/instance","runId":"run-e4489cc509abed4d"},"event":"start"}
+{"at":"2026-11-11T07:22:26.927748Z","details":"context deadline exceeded","event":"preflight_failed"}

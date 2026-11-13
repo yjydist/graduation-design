@@ -1,0 +1,23 @@
+{
+  "pausedSeconds": 3,
+  "heightBefore": 77,
+  "heightAfter": 77,
+  "resumedProbe": {
+    "txId": "503404f868142485e5b74d5f61057a489faf24111efc65ac8eeb6d0c59f1de75",
+    "identity": {
+      "mspId": "CMsp",
+      "certificateSha256": "0aeea26b16516df49806749655ce77118373e3e83cf134f88e5ae162fc6db623"
+    },
+    "probeBlockNumber": 77,
+    "view": {
+      "blockNumber": 77,
+      "blockHash": "4a3c37e29735b47b8e8d3eed4fddcd77bb2141ecf0c02c79a69e3bd0421a51e0"
+    },
+    "sentAt": "2026-11-11T16:36:52.165348+08:00",
+    "deadline": "2026-11-11T16:36:57.165348+08:00",
+    "adoptedAt": "2026-11-11T16:36:52.367087+08:00",
+    "sentMonoNs": 13203167,
+    "deadlineMonoNs": 5013203167,
+    "adoptedMonoNs": 214941500
+  }
+}

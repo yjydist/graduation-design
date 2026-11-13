@@ -1,0 +1,22 @@
+{
+  "operationKey": "verify/offline-retry",
+  "txId": "bb5d99ddefbecd37e5b0a601b3fa097533cd92fca26a936b841f6840562ba3ef",
+  "acceptedStatus": "PENDING",
+  "queriedStatusDuringOutage": "PENDING",
+  "queryMatchesAccepted": true,
+  "exitLog": [
+    "Exact retry exit 1",
+    "Changed-input retry exit 1"
+  ],
+  "exactRetryError": "read Peer genesis: rpc error: code = Unavailable desc = connection error: desc = \"transport: Error while dialing: dial tcp 127.0.0.1:18302: connect: connection refused\"",
+  "changedInputRetryError": "read Peer genesis: rpc error: code = Unavailable desc = connection error: desc = \"transport: Error while dialing: dial tcp 127.0.0.1:18302: connect: connection refused\"",
+  "changedInputErrorAfterRecovery": "OPERATION_KEY_CONFLICT: verify/offline-retry",
+  "originalProposalAndTransactionPreserved": true,
+  "recoveredStatus": "CONFIRMED",
+  "commit": {
+    "blockNumber": 76,
+    "blockHash": "238005545d9dc6d0803538fe68cf37a650b1bb403385e334eb0f9cbc9d51ed7e",
+    "transactionIndex": 0,
+    "validationCode": "VALID"
+  }
+}

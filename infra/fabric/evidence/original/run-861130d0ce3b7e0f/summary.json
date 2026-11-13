@@ -1,0 +1,62 @@
+{
+  "runId": "run-861130d0ce3b7e0f",
+  "evidenceDir": "infra/fabric/evidence/original/run-861130d0ce3b7e0f",
+  "deploymentId": "482c0062cebd44abddc096d703f624b67a3ebbb503c55d9a41a6174739a4343d",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-10T08:30:15.307303Z",
+  "finishedAt": "2026-11-10T08:31:21.032751Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": false,
+      "error": "replay original signed bytes: submit error: rpc error: code = Unavailable desc = insufficient number of orderers could successfully process transaction to satisfy quorum requirement\nDetails:\n  - Address: orderer-d:7050\n    MspId: OrdererDMsp\n    Message: received unsuccessful response from orderer: status=SERVICE_UNAVAILABLE, info=failed to submit request: request already processed\n  - Address: orderer-b:7050\n    MspId: OrdererBMsp\n    Message: received unsuccessful response from orderer: status=SERVICE_UNAVAILABLE, info=failed to submit request: request already processed"
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": false,
+      "error": "DEPLOYMENT_MISMATCH: peer response 500: error in simulation: failed to execute transaction 9172c7ea568502ef425762a76d6d6f7e43ec28bcc590794a5dbc499b87ce80e4: could not launch chaincode authregistry_c_f371e8196a35:ad822408c8ec00dfba1473007632be1141350fe45d462f1155fa47df426394bf: chaincode registration failed: connection to authregistry_c_f371e8196a35:ad822408c8ec00dfba1473007632be1141350fe45d462f1155fa47df426394bf failed: error cannot create connection for authregistry_c_f371e8196a35:ad822408c8ec00dfba1473007632be1141350fe45d462f1155fa47df426394bf: error creating grpc connection to cc-c:9999: failed to create new connection: context deadline exceeded"
+    }
+  ],
+  "error": "lost-response-and-original-replay: replay original signed bytes: submit error: rpc error: code = Unavailable desc = insufficient number of orderers could successfully process transaction to satisfy quorum requirement\nDetails:\n  - Address: orderer-d:7050\n    MspId: OrdererDMsp\n    Message: received unsuccessful response from orderer: status=SERVICE_UNAVAILABLE, info=failed to submit request: request already processed\n  - Address: orderer-b:7050\n    MspId: OrdererBMsp\n    Message: received unsuccessful response from orderer: status=SERVICE_UNAVAILABLE, info=failed to submit request: request already processed\nrestart-keeps-checkpoint: DEPLOYMENT_MISMATCH: peer response 500: error in simulation: failed to execute transaction 9172c7ea568502ef425762a76d6d6f7e43ec28bcc590794a5dbc499b87ce80e4: could not launch chaincode authregistry_c_f371e8196a35:ad822408c8ec00dfba1473007632be1141350fe45d462f1155fa47df426394bf: chaincode registration failed: connection to authregistry_c_f371e8196a35:ad822408c8ec00dfba1473007632be1141350fe45d462f1155fa47df426394bf failed: error cannot create connection for authregistry_c_f371e8196a35:ad822408c8ec00dfba1473007632be1141350fe45d462f1155fa47df426394bf: error creating grpc connection to cc-c:9999: failed to create new connection: context deadline exceeded"
+}

@@ -1,0 +1,79 @@
+{
+  "runId": "run-f8d3f2a2bd6db7c7",
+  "evidenceDir": "/Users/yjydist/Desktop/graduation-design/.local/openspec-fabric-recovery.B5UaUCcu/d0/run-f8d3f2a2bd6db7c7",
+  "deploymentId": "2c2ca85da029b1f2510b8dca83eb28090463226ca1d96d1c3cab6a03d9007f16",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-11T08:14:11.523751Z",
+  "finishedAt": "2026-11-11T08:16:03.18445Z",
+  "status": "PASS",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "initialization-resume",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "credential-validity-boundaries",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "shared-view-concurrent-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "checkpoint-query-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "chaincode-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    }
+  ]
+}

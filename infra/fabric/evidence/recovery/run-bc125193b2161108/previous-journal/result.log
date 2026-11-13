@@ -1,0 +1,3 @@
+Exact retry: exit 0, original pending operation byte-equivalent
+Changed input: exit 1, OPERATION_KEY_CONFLICT
+New key: exit 1, Peer unavailable and key absent from journal

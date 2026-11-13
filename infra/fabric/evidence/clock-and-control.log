@@ -1,0 +1,11 @@
+Compose single-host roles: orderer-a=A, orderer-b=B, orderer-c=C, orderer-d=experiment operations; all four controlled by the local Docker operator.
+peer-a host-before=1794300289
+peer-a container=1794300289
+peer-a host-after=1794300289
+peer-b host-before=1794300289
+peer-b container=1794300289
+peer-b host-after=1794300289
+peer-c host-before=1794300289
+peer-c container=1794300289
+peer-c host-after=1794300289
+clock error model: epsilon <= 1s; sample timestamps are whole seconds

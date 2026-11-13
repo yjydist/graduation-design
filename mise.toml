@@ -1,72 +1,54 @@
 [tools]
 go = "1.27.3"
-node = "26.13.0"
 python = "3.15.2"
 
 [env]
 CGO_ENABLED = "0"
-BESU_INSTANCE = "{{config_root}}/.local/besu-qbft"
-
-[tasks."besu:config"]
-description = "校验 Besu Docker Compose 配置语法与变量解析"
-run = 'BESU_UID="$(id -u)" BESU_GID="$(id -g)" docker compose -f infra/besu/compose.yaml config --quiet'
-
-[tasks."besu:up"]
-description = "后台启动本地四节点 Besu QBFT 网络"
-run = 'BESU_UID="$(id -u)" BESU_GID="$(id -g)" docker compose -f infra/besu/compose.yaml up -d'
-
-[tasks."besu:down"]
-description = "停止并移除 Besu 容器 (保留实例数据与密钥)"
-run = 'BESU_UID="$(id -u)" BESU_GID="$(id -g)" docker compose -f infra/besu/compose.yaml down'
-
-[tasks."besu:ps"]
-description = "查看四节点 Besu 容器运行状态"
-run = 'BESU_UID="$(id -u)" BESU_GID="$(id -g)" docker compose -f infra/besu/compose.yaml ps'
-
-[tasks."besu:logs"]
-description = "查看 C 节点近期日志"
-run = 'BESU_UID="$(id -u)" BESU_GID="$(id -g)" docker compose -f infra/besu/compose.yaml logs --tail 30 c'
 
 [tasks."ledger:build"]
 description = "构建 build/ledgerctl 可执行文件"
 run = "go build -o build/ledgerctl ./cmd/ledgerctl"
 
-[tasks."ledger:init"]
-description = "初始化或复核默认 Besu 实例材料"
-run = 'go run ./cmd/ledgerctl init --dir "$BESU_INSTANCE"'
-
-[tasks."ledger:compile"]
-description = "调用锁定的 solc@0.8.30 编译 AuthRegistry 合约"
-run = "go run ./cmd/ledgerctl compile"
-
-[tasks."ledger:deploy"]
-description = "部署 AuthRegistry 合约并写入 deployment-registry.json"
-run = 'go run ./cmd/ledgerctl deploy --dir "$BESU_INSTANCE" --name registry'
-
-[tasks."ledger:seed"]
-description = "执行 15 笔管理交易建立 D0 夹具"
-run = 'go run ./cmd/ledgerctl seed --dir "$BESU_INSTANCE"'
-
-[tasks."ledger:check"]
-description = "在线模式读取最新固定高度状态快照"
-run = 'go run ./cmd/ledgerctl check --dir "$BESU_INSTANCE" --rpc-log .local/check-rpc.json'
-
-[tasks."ledger:inspect"]
-description = "历史模式读取指定高度状态快照 (通过 -- --block <height> 传入)"
-run = 'go run ./cmd/ledgerctl inspect --dir "$BESU_INSTANCE" --rpc-log .local/inspect-rpc.json'
-
-[tasks."ledger:verify"]
-description = "运行完整 D0 自动验收并生成独立证据目录"
-run = 'go run ./cmd/ledgerctl verify --dir "$BESU_INSTANCE" --out .local/evidence'
-
 [tasks."test:unit"]
 description = "运行离线单元测试"
 run = "go test ./..."
 
-[tasks."test:account-probe"]
-description = "运行链上账户许可拒绝集成探针"
-run = 'LEDGER_INSTANCE="$BESU_INSTANCE" LEDGER_EVIDENCE="$PWD/.local/account-probe" go test ./internal/ledger -run TestAccountPermissioningIntegration -count=1 -v'
+[tasks."fabric:config"]
+description = "校验隔离的 Fabric Compose 配置"
+run = "sh infra/fabric/network.sh config"
 
-[tasks."test:deployment-probe"]
-description = "运行链上部署绑定与改根负例集成探针"
-run = 'LEDGER_DEPLOYMENT="$BESU_INSTANCE/deployment-registry.json" LEDGER_INSTANCE="$BESU_INSTANCE" LEDGER_EVIDENCE="$PWD/.local/deployment-probe" go test ./internal/ledger -run "TestDeploymentBindingIntegration|TestRootMutationIntegration" -count=1 -v'
+[tasks."fabric:up"]
+description = "启动并加入 Fabric procurement 通道"
+run = "sh infra/fabric/network.sh up"
+
+[tasks."fabric:down"]
+description = "关闭 Fabric 容器并保留实例目录和卷"
+run = "sh infra/fabric/network.sh down"
+
+[tasks."fabric:ps"]
+description = "查看 Fabric 容器"
+run = "sh infra/fabric/network.sh ps"
+
+[tasks."fabric:rebuild"]
+description = "使用新实例目录和端口创建独立 Fabric 通道"
+run = "sh infra/fabric/network.sh rebuild"
+
+[tasks."ledger:deploy"]
+description = "安装, 三域批准并初始化 Fabric 登记链码"
+run = "go run ./cmd/ledgerctl deploy"
+
+[tasks."ledger:seed"]
+description = "提交 Fabric D0 合成登记夹具"
+run = "go run ./cmd/ledgerctl seed"
+
+[tasks."ledger:check"]
+description = "使用本进程的提交探针装配在线 Fabric 视图"
+run = "go run ./cmd/ledgerctl check"
+
+[tasks."ledger:inspect"]
+description = "按 --block 复查 Fabric 历史"
+run = "go run ./cmd/ledgerctl inspect"
+
+[tasks."ledger:verify"]
+description = "运行 Fabric D0 验收并保存独立证据"
+run = "go run ./cmd/ledgerctl verify"

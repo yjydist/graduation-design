@@ -1,0 +1,15 @@
+{
+	"sequence": 1,
+	"version": "1.0",
+	"endorsement_plugin": "escc",
+	"validation_plugin": "vscc",
+	"validation_parameter": "CjYSEBIOCAISAggAEgIIARICCAIaChIICgRBTXNwEAMaChIICgRCTXNwEAMaChIICgRDTXNwEAM=",
+	"collections": {},
+	"source": {
+		"Type": {
+			"LocalPackage": {
+				"package_id": "authregistry_b_f371e8196a35:bb2f8570eea35b0cf813ac6ae10a664235fee2eb091efcd8f24a23f4f1945467"
+			}
+		}
+	}
+}

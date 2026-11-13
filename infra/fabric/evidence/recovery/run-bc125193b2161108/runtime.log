@@ -1,0 +1,12 @@
+Darwin arm64
+go version go1.27.3 darwin/arm64
+Docker 29.9.3 (aarch64), CPUs 14, memory 8318910464 bytes
+peer:
+ Version: v3.1.5
+ Commit SHA: 86c1172
+ Go version: go1.26.4
+ OS/Arch: linux/arm64
+ Chaincode:
+  Base Docker Label: org.hyperledger.fabric
+  Docker Namespace: hyperledger
+

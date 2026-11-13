@@ -1,0 +1,1 @@
+Error: endorsement failure during query. response: status:500 message:"Failed to get transaction with id 0a2fa6e60975c7cda660a09d6b6fd4b2917f19ef0d4ca68d98ab23c789f69f60, error no such transaction ID [0a2fa6e60975c7cda660a09d6b6fd4b2917f19ef0d4ca68d98ab23c789f69f60] in index"

@@ -1,9 +1,0 @@
-{
-  "package": "solc",
-  "version": "0.8.30",
-  "integrity": "sha512-9Srk/gndtBmoUbg4CE6ypAzPQlElv8ntbnl6SigUBAzgXKn35v87sj04uZeoZWjtDkdzT0qKFcIo/wl63UMxdw==",
-  "implementation": "solcjs",
-  "evmVersion": "berlin",
-  "optimizer": {"enabled": true, "runs": 200},
-  "viaIR": true
-}

@@ -1,2 +1,0 @@
-{"check":"preflight","deploymentId":"","observedAt":"2026-11-04T09:18:09.903092Z","phase":"started","runId":"run-a0665862103227d1"}
-{"check":"preflight","observedAt":"2026-11-04T09:18:09.910623Z","phase":"finished","result":{"name":"preflight","passed":false,"evidence":"preflight.json","error":"context deadline exceeded"},"runId":"run-a0665862103227d1"}

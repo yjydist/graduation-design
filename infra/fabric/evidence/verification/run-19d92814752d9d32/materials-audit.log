@@ -1,0 +1,2 @@
+Verified deployment ID, bootstrap, source and build digests, 3 package IDs, 3 embedded approvals, and the current configuration and Go dependency lock.
+Verified the new run has a distinct genesis hash, instance ID and deployment ID.

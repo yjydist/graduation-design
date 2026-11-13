@@ -1,6 +1,0 @@
-{
-  "passed": true,
-  "deploymentId": "54fee2470d47c5c46c37011011e72e21b416648b38367bab63a49ba094976db2",
-  "txHash": "0x2558d6692618847891c004911bf587d7b37a580d1a5650f8182d210b84c3e61a",
-  "note": "down/up then deploy with the same name reused the original signed transaction and complete deployment manifest."
-}

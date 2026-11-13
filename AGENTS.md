@@ -10,16 +10,16 @@
 | `go.mod`, `go.sum` | Go 模块与依赖锁定. |
 | `mise.toml` | 开发环境版本锁定与运行命令统一入口. |
 | `cmd/ledgerctl/` | 账本工具 `ledgerctl` 的命令行入口. |
-| `internal/ledger/` | 网络材料生成, 合约编译部署, 链上交互, 固定高度读取, 自动验收与测试. 详见 [账本读取说明](internal/ledger/README.md). |
-| `contracts/` | Solidity 登记合约, 固定编译配置与构建产物. 详见 [合约运行说明](contracts/README.md). |
-| `infra/besu/` | Besu 网络配置, 启停与重建说明及验收证据. 详见 [网络说明](infra/besu/README.md). |
+| `internal/fabric/`, `internal/fabricapi/` | Fabric 部署, 管理交易恢复, 区块视图, 探针, 协议字段及 D0 验收. |
+| `chaincode/registry/` | Fabric Go 登记链码. |
+| `infra/fabric/` | Fabric 通道及 Compose, 启停, 重建和验收. 详见 [网络说明](infra/fabric/README.md). |
 | `docs/` | 设计决策, 技术配置, 实现契约, 测试向量及实验方法和判据, 不承载实施进度. |
 | [设计导航](docs/design/AGENTS.md) | 按机制组织设计依据, 安全目标和需求追踪. |
 | [实现导航](docs/implementation/AGENTS.md) | 按实现顺序组织部署, 协议和业务事务契约. |
 | [实验导航](docs/experiments/AGENTS.md) | 按验证问题索引实验计划和用例. |
 | `openspec/specs/` | 已接受的能力规范与场景. |
 | `openspec/changes/` | 活动变更的理由, 设计, 任务和核验结论, 以及保留当时记录的归档. |
-| `infra/besu/evidence/` | 运行实例配置, 原始数据, 实际结果及失败样本, 由变更核验记录引用. |
+| `infra/fabric/evidence/` | Fabric 实例配置, 原始数据, 结果与失败样本, 由证据索引和变更核验记录定位. |
 | `openspec/config.yaml` | 工作流配置. |
 | `paper/` | 原始论文 PDF 和阅读笔记. 详见 [论文清单](paper/论文.md) 与 [文献索引](paper/README.md). |
 

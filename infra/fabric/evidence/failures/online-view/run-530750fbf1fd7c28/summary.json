@@ -1,0 +1,70 @@
+{
+  "runId": "run-530750fbf1fd7c28",
+  "evidenceDir": "/Users/yjydist/Desktop/graduation-design/.local/openspec-fabric-online-regression.K4Hpmb/before/run-530750fbf1fd7c28",
+  "deploymentId": "010d5da3bc866b9004765ac8defa6355b23c81618e93b974870779e121ae12da",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-11T02:19:51.068287Z",
+  "finishedAt": "2026-11-11T02:21:30.429351Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "shared-view-concurrent-checkpoint",
+      "pass": false,
+      "error": "could not resume after shared checkpoint advanced: Peer height 65 is below applied checkpoint 65"
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "chaincode-outage-and-recovery",
+      "pass": false,
+      "error": "chaincode_c_outage_new_check: expected STATE_STALE, got exit 1: \"STATE_UNAVAILABLE: view requires trusted continuous replay\\nDEPLOYMENT_MISMATCH: peer response 500: error in simulation: failed to execute transaction 30a0c7a16231c36cdc43f541cd12d46f12e71e207254fced3b01db9123377f67: could not launch chaincode authregistry_c_415928861515:ce75c74da0fa5b3b79dba69aa311d52df4b0849928f799d9a28789a7bce9c020: chaincode registration failed: connection to authregistry_c_415928861515:ce75c74da0fa5b3b79dba69aa311d52df4b0849928f799d9a28789a7bce9c020 failed: error cannot create connection for authregistry_c_415928861515:ce75c74da0fa5b3b79dba69aa311d52df4b0849928f799d9a28789a7bce9c020: error creating grpc connection to cc-c:9999: failed to create new connection: context deadline exceeded\\n\" (exit status 1)"
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    }
+  ],
+  "error": "shared-view-concurrent-checkpoint: could not resume after shared checkpoint advanced: Peer height 65 is below applied checkpoint 65\nchaincode-outage-and-recovery: chaincode_c_outage_new_check: expected STATE_STALE, got exit 1: \"STATE_UNAVAILABLE: view requires trusted continuous replay\\nDEPLOYMENT_MISMATCH: peer response 500: error in simulation: failed to execute transaction 30a0c7a16231c36cdc43f541cd12d46f12e71e207254fced3b01db9123377f67: could not launch chaincode authregistry_c_415928861515:ce75c74da0fa5b3b79dba69aa311d52df4b0849928f799d9a28789a7bce9c020: chaincode registration failed: connection to authregistry_c_415928861515:ce75c74da0fa5b3b79dba69aa311d52df4b0849928f799d9a28789a7bce9c020 failed: error cannot create connection for authregistry_c_415928861515:ce75c74da0fa5b3b79dba69aa311d52df4b0849928f799d9a28789a7bce9c020: error creating grpc connection to cc-c:9999: failed to create new connection: context deadline exceeded\\n\" (exit status 1)"
+}

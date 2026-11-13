@@ -1,0 +1,7 @@
+[test:unit] $ go test ./...
+?   	graduation-design/chaincode/registry	[no test files]
+?   	graduation-design/cmd/ledgerctl	[no test files]
+?   	graduation-design/internal/fabric	[no test files]
+ok  	graduation-design/internal/fabricapi	(cached)
+ok  	graduation-design/internal/ledger	(cached)
+Change 'migrate-ledger-to-fabric' is valid

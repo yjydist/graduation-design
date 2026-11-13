@@ -1,0 +1,3 @@
+{"at":"2026-11-10T08:47:04.636833Z","details":{"instance":".local/fabric-d0-clean","runId":"run-8084e289cf0f578f"},"event":"start"}
+{"at":"2026-11-10T08:47:04.636906Z","details":{"COMPOSE_PROJECT_NAME":"grad-fabric-54304b3d2963","FABRIC_ADMIN_A":"17104","FABRIC_ADMIN_B":"17105","FABRIC_ADMIN_C":"17106","FABRIC_ADMIN_D":"17107","FABRIC_ADMIN_X":"17108","FABRIC_DB":"17109","FABRIC_ORDERER_A":"17103","FABRIC_PEER_A":"17100","FABRIC_PEER_B":"17101","FABRIC_PEER_C":"17102"},"event":"network"}
+{"at":"2026-11-10T08:47:07.851119Z","details":"initialization PENDING: endorse error: rpc error: code = FailedPrecondition desc = no combination of peers can be derived which satisfy the endorsement policy: no peer combination can satisfy the endorsement policy","event":"deploy_failed"}

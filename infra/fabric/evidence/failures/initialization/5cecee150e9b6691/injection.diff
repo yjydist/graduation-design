@@ -1,0 +1,20 @@
+--- internal/fabric/operation.go
++++ operation-instrumented.go
+@@ -6,6 +6,7 @@
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
++	"os"
+ 	"strings"
+ 	"time"
+ 
+@@ -219,6 +220,9 @@
+ 			Status: "PENDING", Stage: "ENDORSE", AcceptedAt: time.Now().UTC()}
+ 		if err := j.save(ctx, conn, op); err != nil {
+ 			return nil, err
++		}
++		if key == "initialize/approved" {
++			os.Exit(99)
+ 		}
+ 	} else {
+ 		proposal, err = p.gateway.NewProposal(op.Proposal)

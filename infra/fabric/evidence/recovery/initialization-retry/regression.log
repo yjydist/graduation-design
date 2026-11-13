@@ -1,0 +1,31 @@
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/pending
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/commit_stage
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/no_rejection_code
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/no_rejection_observation
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/no_original_proposal
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/signed_transaction
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/signing_recorded
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/broadcast_recorded
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/commit_recorded
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal (0.00s)
+    --- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/pending (0.00s)
+    --- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/commit_stage (0.00s)
+    --- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/no_rejection_code (0.00s)
+    --- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/no_rejection_observation (0.00s)
+    --- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/no_original_proposal (0.00s)
+    --- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/signed_transaction (0.00s)
+    --- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/signing_recorded (0.00s)
+    --- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/broadcast_recorded (0.00s)
+    --- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/commit_recorded (0.00s)
+=== RUN   TestInterruptedInitialization
+    deployment_test.go:113: proposal saved before endorsement: key=initialize/approved txID=0fcceb2bcba76730dae0feeddc76d6cf22c1e35f5752d2cf2f5a6142bebc5771
+    deployment_test.go:142: original rejection: endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info
+        Details:
+          - Address: peer-c:7051
+            MspId: CMsp
+            Message: request unauthorized due to incorrect timestamp 2026-11-11T07:39:08Z, peer time 2026-11-11T07:39:16Z, peer.authentication.timewindow 2s
+    deployment_test.go:187: explicit retry confirmed once: key=initialize/approved/retry/0fcceb2bcba76730dae0feeddc76d6cf22c1e35f5752d2cf2f5a6142bebc5771 txID=8c82280ae10d858a600041ab7554a8fc4c4df1f0266e7174bdda1a46dee59e0c block=5 deployment=0091171ed6de83cc24e998f67ab2ae81d331dce8f0a40aed250cefe67cab90d2
+--- PASS: TestInterruptedInitialization (12.77s)
+PASS
+ok  	graduation-design/internal/fabric	13.173s

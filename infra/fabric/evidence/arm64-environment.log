@@ -1,0 +1,36 @@
+Darwin arm64
+Host CPU count and memory bytes
+14
+51539607552
+go version go1.27.3 darwin/arm64
+2026.11.5 macos-arm64 (2026-11-08)
+Docker Compose version v5.7.0
+{"Client":{"Version":"29.9.3","ApiVersion":"1.56","DefaultAPIVersion":"1.56","GitCommit":"5457199","GoVersion":"go1.26.10","Os":"darwin","Arch":"arm64","BuildTime":"Tue Nov  3 21:41:57 2026","Context":"desktop-linux"},"Server":{"Platform":{"Name":"Docker Desktop 4.99.0 (245822)"},"Version":"29.9.3","ApiVersion":"1.56","MinAPIVersion":"1.40","Os":"linux","Arch":"arm64","Components":[{"Name":"Engine","Version":"29.9.3","Details":{"ApiVersion":"1.56","Arch":"arm64","BuildTime":"Tue Nov  3 21:41:25 2026","Experimental":"false","GitCommit":"70efc0e","GoVersion":"go1.26.10","KernelVersion":"7.0.14-linuxkit","MinAPIVersion":"1.40","Module":"github.com/moby/moby/v2","ModuleVersion":"v2.0.0+unknown","Os":"linux"}},{"Name":"containerd","Version":"v2.4.2","Details":{"GitCommit":"b7a25261e029d68978bbf290df0a62fc819b3c51"}},{"Name":"runc","Version":"1.5.2","Details":{"GitCommit":"v1.5.2-0-g29dd3dc2"}},{"Name":"docker-init","Version":"0.19.0","Details":{"GitCommit":"de40ad0"}}],"GitCommit":"70efc0e","GoVersion":"go1.26.10","KernelVersion":"7.0.14-linuxkit","BuildTime":"2026-11-03T21:41:25.000000000+00:00"}}
+VM: aarch64 14 CPUs 8318910464 bytes
+NAME                                   IMAGE                                                                                                      COMMAND                  SERVICE     CREATED         STATUS                   PORTS
+grad-fabric-eb39bbd66c4a-db-1          postgres:17.9-alpine@sha256:c7526c0f6c3f30260a563d7bcf8ad778effac59a44f8ffa86678c35418338609               "docker-entrypoint.s…"   db          6 minutes ago   Up 6 minutes (healthy)   127.0.0.1:17009->5432/tcp
+grad-fabric-eb39bbd66c4a-orderer-a-1   hyperledger/fabric-orderer:3.1.5@sha256:dcb4c042237993a6f537b2f54e701e749f8e108f25c0cbe0c6742c205fccc3d5   "orderer start"          orderer-a   6 minutes ago   Up 6 minutes             127.0.0.1:17003->7050/tcp, 127.0.0.1:17004->9443/tcp
+grad-fabric-eb39bbd66c4a-orderer-b-1   hyperledger/fabric-orderer:3.1.5@sha256:dcb4c042237993a6f537b2f54e701e749f8e108f25c0cbe0c6742c205fccc3d5   "orderer start"          orderer-b   6 minutes ago   Up 6 minutes             127.0.0.1:17005->9443/tcp
+grad-fabric-eb39bbd66c4a-orderer-c-1   hyperledger/fabric-orderer:3.1.5@sha256:dcb4c042237993a6f537b2f54e701e749f8e108f25c0cbe0c6742c205fccc3d5   "orderer start"          orderer-c   6 minutes ago   Up 6 minutes             127.0.0.1:17006->9443/tcp
+grad-fabric-eb39bbd66c4a-orderer-d-1   hyperledger/fabric-orderer:3.1.5@sha256:dcb4c042237993a6f537b2f54e701e749f8e108f25c0cbe0c6742c205fccc3d5   "orderer start"          orderer-d   6 minutes ago   Up 6 minutes             127.0.0.1:17007->9443/tcp
+grad-fabric-eb39bbd66c4a-peer-a-1      hyperledger/fabric-peer:3.1.5@sha256:e07c735b6f2d131315f3ae6e582c5aa602143d9d14805bb98be8ebc9d6baa82c      "peer node start"        peer-a      6 minutes ago   Up 6 minutes             127.0.0.1:17000->7051/tcp
+grad-fabric-eb39bbd66c4a-peer-b-1      hyperledger/fabric-peer:3.1.5@sha256:e07c735b6f2d131315f3ae6e582c5aa602143d9d14805bb98be8ebc9d6baa82c      "peer node start"        peer-b      6 minutes ago   Up 6 minutes             127.0.0.1:17001->7051/tcp
+grad-fabric-eb39bbd66c4a-peer-c-1      hyperledger/fabric-peer:3.1.5@sha256:e07c735b6f2d131315f3ae6e582c5aa602143d9d14805bb98be8ebc9d6baa82c      "peer node start"        peer-c      6 minutes ago   Up 6 minutes             127.0.0.1:17002->7051/tcp
+peer:
+ Version: v3.1.5
+ Commit SHA: 86c1172
+ Go version: go1.26.4
+ OS/Arch: linux/arm64
+ Chaincode:
+  Base Docker Label: org.hyperledger.fabric
+  Docker Namespace: hyperledger
+
+orderer:
+ Version: v3.1.5
+ Commit SHA: 86c1172
+ Go version: go1.26.4
+ OS/Arch: linux/arm64
+
+aarch64
+postgres (PostgreSQL) 17.9
+d67a5c3366746a984f8ee9ae0ebf5c8b357c9d33dd589fa0b7668d739472cef0

@@ -1,0 +1,186 @@
+x-peer: &peer
+  image: hyperledger/fabric-peer:3.1.5@sha256:e07c735b6f2d131315f3ae6e582c5aa602143d9d14805bb98be8ebc9d6baa82c
+  platform: linux/arm64
+  cpus: 1
+  mem_limit: 512m
+  command: peer node start
+x-peer-env: &peer-env
+  CORE_PEER_LISTENADDRESS: 0.0.0.0:7051
+  CORE_PEER_TLS_ENABLED: "true"
+  CORE_PEER_TLS_CERT_FILE: /identity/tls/server.crt
+  CORE_PEER_TLS_KEY_FILE: /identity/tls/server.key
+  CORE_PEER_TLS_ROOTCERT_FILE: /identity/tls/ca.crt
+  CORE_PEER_MSPCONFIGPATH: /identity/msp
+  CORE_PEER_AUTHENTICATION_TIMEWINDOW: 2s
+  CORE_PEER_GOSSIP_USELEADERELECTION: "false"
+  CORE_PEER_GOSSIP_ORGLEADER: "true"
+  CORE_PEER_GOSSIP_STATE_ENABLED: "false"
+  CORE_PEER_DELIVERYCLIENT_BLOCKCENSORSHIPTIMEOUTKEY: 5s
+  CORE_PEER_DELIVERYCLIENT_RECONNECTBACKOFFTHRESHOLD: 2s
+  CORE_CHAINCODE_STARTUPTIMEOUT: 8s
+  CORE_CHAINCODE_EXECUTETIMEOUT: 8s
+  FABRIC_LOGGING_SPEC: warning
+x-orderer: &orderer
+  image: hyperledger/fabric-orderer:3.1.5@sha256:dcb4c042237993a6f537b2f54e701e749f8e108f25c0cbe0c6742c205fccc3d5
+  platform: linux/arm64
+  cpus: 1
+  mem_limit: 512m
+x-orderer-env: &orderer-env
+  ORDERER_GENERAL_LISTENADDRESS: 0.0.0.0
+  ORDERER_GENERAL_LISTENPORT: 7050
+  ORDERER_GENERAL_BOOTSTRAPMETHOD: none
+  ORDERER_GENERAL_LOCALMSPDIR: /identity/msp
+  ORDERER_GENERAL_TLS_ENABLED: "true"
+  ORDERER_GENERAL_TLS_CERTIFICATE: /identity/tls/server.crt
+  ORDERER_GENERAL_TLS_PRIVATEKEY: /identity/tls/server.key
+  ORDERER_GENERAL_TLS_ROOTCAS: "[/identity/tls/ca.crt]"
+  ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE: /identity/tls/server.crt
+  ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY: /identity/tls/server.key
+  ORDERER_ADMIN_LISTENADDRESS: 0.0.0.0:9443
+  ORDERER_ADMIN_TLS_ENABLED: "true"
+  ORDERER_ADMIN_TLS_CERTIFICATE: /identity/tls/server.crt
+  ORDERER_ADMIN_TLS_PRIVATEKEY: /identity/tls/server.key
+  ORDERER_ADMIN_TLS_CLIENTAUTHREQUIRED: "true"
+  ORDERER_ADMIN_TLS_CLIENTROOTCAS: "[/identity/tls/ca.crt]"
+  ORDERER_CHANNELPARTICIPATION_ENABLED: "true"
+  FABRIC_LOGGING_SPEC: warning
+x-chaincode: &chaincode
+  image: hyperledger/fabric-baseos:3.1.5@sha256:48f66ba5da1dac8276138c80bf09d17fa68c6b729ea3bd2fc182b1898cc3f0c5
+  platform: linux/arm64
+  cpus: 0.5
+  mem_limit: 192m
+  entrypoint: ["/registry-bin/registry"]
+  profiles: [registry]
+  healthcheck:
+    test: ["CMD", "bash", "-ec", "exec 3<>/dev/tcp/127.0.0.1/9999"]
+    interval: 1s
+    timeout: 2s
+    retries: 20
+
+services:
+  peer-a:
+    <<: *peer
+    environment:
+      <<: *peer-env
+      CORE_PEER_ID: peer-a
+      CORE_PEER_ADDRESS: peer-a:7051
+      CORE_PEER_LOCALMSPID: AMsp
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer-a:7051
+    volumes:
+      - ${FABRIC_INSTANCE}/crypto/peerOrganizations/a.local/peers/peer-a.a.local:/identity:ro
+      - peer-a:/var/hyperledger/production
+    ports: ["127.0.0.1:${FABRIC_PEER_A}:7051"]
+  peer-b:
+    <<: *peer
+    environment:
+      <<: *peer-env
+      CORE_PEER_ID: peer-b
+      CORE_PEER_ADDRESS: peer-b:7051
+      CORE_PEER_LOCALMSPID: BMsp
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer-b:7051
+    volumes:
+      - ${FABRIC_INSTANCE}/crypto/peerOrganizations/b.local/peers/peer-b.b.local:/identity:ro
+      - peer-b:/var/hyperledger/production
+    ports: ["127.0.0.1:${FABRIC_PEER_B}:7051"]
+  peer-c:
+    <<: *peer
+    environment:
+      <<: *peer-env
+      CORE_PEER_ID: peer-c
+      CORE_PEER_ADDRESS: peer-c:7051
+      CORE_PEER_LOCALMSPID: CMsp
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer-c:7051
+    volumes:
+      - ${FABRIC_INSTANCE}/crypto/peerOrganizations/c.local/peers/peer-c.c.local:/identity:ro
+      - peer-c:/var/hyperledger/production
+    ports: ["127.0.0.1:${FABRIC_PEER_C}:7051"]
+  orderer-a:
+    <<: *orderer
+    environment:
+      <<: *orderer-env
+      ORDERER_GENERAL_LOCALMSPID: OrdererAMsp
+    volumes:
+      - ${FABRIC_INSTANCE}/crypto/ordererOrganizations/oa.local/orderers/orderer-a.oa.local:/identity:ro
+      - orderer-a:/var/hyperledger/production/orderer
+    ports: ["127.0.0.1:${FABRIC_ORDERER_A}:7050", "127.0.0.1:${FABRIC_ADMIN_A}:9443"]
+  orderer-b:
+    <<: *orderer
+    environment:
+      <<: *orderer-env
+      ORDERER_GENERAL_LOCALMSPID: OrdererBMsp
+    volumes:
+      - ${FABRIC_INSTANCE}/crypto/ordererOrganizations/ob.local/orderers/orderer-b.ob.local:/identity:ro
+      - orderer-b:/var/hyperledger/production/orderer
+    ports: ["127.0.0.1:${FABRIC_ADMIN_B}:9443"]
+  orderer-c:
+    <<: *orderer
+    environment:
+      <<: *orderer-env
+      ORDERER_GENERAL_LOCALMSPID: OrdererCMsp
+    volumes:
+      - ${FABRIC_INSTANCE}/crypto/ordererOrganizations/oc.local/orderers/orderer-c.oc.local:/identity:ro
+      - orderer-c:/var/hyperledger/production/orderer
+    ports: ["127.0.0.1:${FABRIC_ADMIN_C}:9443"]
+  orderer-d:
+    <<: *orderer
+    environment:
+      <<: *orderer-env
+      ORDERER_GENERAL_LOCALMSPID: OrdererDMsp
+    volumes:
+      - ${FABRIC_INSTANCE}/crypto/ordererOrganizations/od.local/orderers/orderer-d.od.local:/identity:ro
+      - orderer-d:/var/hyperledger/production/orderer
+    ports: ["127.0.0.1:${FABRIC_ADMIN_D}:9443"]
+  orderer-rogue:
+    <<: *orderer
+    profiles: [negative]
+    environment:
+      <<: *orderer-env
+      ORDERER_GENERAL_LOCALMSPID: OrdererRogueMsp
+    volumes:
+      - ${FABRIC_INSTANCE}/crypto/ordererOrganizations/ox.local/orderers/orderer-rogue.ox.local:/identity:ro
+      - orderer-rogue:/var/hyperledger/production/orderer
+    ports: ["127.0.0.1:${FABRIC_ADMIN_X}:9443"]
+  db:
+    image: postgres:17.9-alpine@sha256:c7526c0f6c3f30260a563d7bcf8ad778effac59a44f8ffa86678c35418338609
+    platform: linux/arm64
+    cpus: 1
+    mem_limit: 512m
+    environment:
+      POSTGRES_USER: view
+      POSTGRES_DB: fabric
+      POSTGRES_PASSWORD_FILE: /run/secrets/view-password
+    volumes:
+      - ${FABRIC_INSTANCE}/view-password:/run/secrets/view-password:ro
+      - db:/var/lib/postgresql/data
+    ports: ["127.0.0.1:${FABRIC_DB}:5432"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "view", "-d", "fabric"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  cc-a:
+    <<: *chaincode
+    volumes:
+      - ${FABRIC_INSTANCE}/registry:/registry-bin:ro
+      - ${FABRIC_INSTANCE}/cc-a:/registry:ro
+  cc-b:
+    <<: *chaincode
+    volumes:
+      - ${FABRIC_INSTANCE}/registry:/registry-bin:ro
+      - ${FABRIC_INSTANCE}/cc-b:/registry:ro
+  cc-c:
+    <<: *chaincode
+    volumes:
+      - ${FABRIC_INSTANCE}/registry:/registry-bin:ro
+      - ${FABRIC_INSTANCE}/cc-c:/registry:ro
+
+volumes:
+  peer-a:
+  peer-b:
+  peer-c:
+  orderer-a:
+  orderer-b:
+  orderer-c:
+  orderer-d:
+  orderer-rogue:
+  db:

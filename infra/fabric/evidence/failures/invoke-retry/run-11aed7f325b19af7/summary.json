@@ -1,0 +1,81 @@
+{
+  "runId": "run-11aed7f325b19af7",
+  "evidenceDir": "/Users/yjydist/Desktop/graduation-design/.local/fabric-invoke-retry.h8IG65df/before-evidence/run-11aed7f325b19af7",
+  "deploymentId": "19d43105cec3630b176b7eb14a9281a0a865841b437ec40ea545fcad71fbdc13",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-11T08:47:51.230206Z",
+  "finishedAt": "2026-11-11T08:49:09.417847Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "initialization-resume",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "credential-validity-boundaries",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "shared-view-concurrent-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "checkpoint-query-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": false,
+      "error": "invoke exact retry did not return the original pending operation during C Peer outage: exit status 1 (decode: invalid character 'r' looking for beginning of value)"
+    },
+    {
+      "name": "chaincode-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    }
+  ],
+  "error": "sorter-and-peer-failures: invoke exact retry did not return the original pending operation during C Peer outage: exit status 1 (decode: invalid character 'r' looking for beginning of value)"
+}

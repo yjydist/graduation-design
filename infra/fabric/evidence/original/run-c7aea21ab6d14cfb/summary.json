@@ -1,0 +1,61 @@
+{
+  "runId": "run-c7aea21ab6d14cfb",
+  "evidenceDir": "infra/fabric/evidence/original/run-c7aea21ab6d14cfb",
+  "deploymentId": "482c0062cebd44abddc096d703f624b67a3ebbb503c55d9a41a6174739a4343d",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-10T08:33:49.943835Z",
+  "finishedAt": "2026-11-10T08:34:45.414869Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": false,
+      "error": "endorse error: rpc error: code = Aborted desc = failed to collect enough transaction endorsements, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: rpc error: code = Unavailable desc = connection error: desc = \"transport: authentication handshake failed: EOF\"\n  - Address: peer-b:7051\n    MspId: BMsp\n    Message: rpc error: code = Unknown desc = request unauthorized due to incorrect timestamp 2026-11-10T08:34:35Z, peer time 2026-11-10T08:34:38Z, peer.authentication.timewindow 2s"
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    }
+  ],
+  "error": "sorter-and-peer-failures: endorse error: rpc error: code = Aborted desc = failed to collect enough transaction endorsements, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: rpc error: code = Unavailable desc = connection error: desc = \"transport: authentication handshake failed: EOF\"\n  - Address: peer-b:7051\n    MspId: BMsp\n    Message: rpc error: code = Unknown desc = request unauthorized due to incorrect timestamp 2026-11-10T08:34:35Z, peer time 2026-11-10T08:34:38Z, peer.authentication.timewindow 2s"
+}

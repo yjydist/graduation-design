@@ -1,0 +1,11 @@
+=== RUN   TestInterruptedInitialization
+    deployment_test.go:61: proposal saved before endorsement: key=initialize/approved txID=c669b3d250be7dcb230670d9430258dc97995ebd5894b4c0d09aab2abbec0aed
+    deployment_test.go:73: original rejection: endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info
+        Details:
+          - Address: peer-c:7051
+            MspId: CMsp
+            Message: request unauthorized due to incorrect timestamp 2026-11-11T08:30:41Z, peer time 2026-11-11T08:31:01Z, peer.authentication.timewindow 2s
+    deployment_test.go:118: explicit retry confirmed once: key=initialize/approved/retry/c669b3d250be7dcb230670d9430258dc97995ebd5894b4c0d09aab2abbec0aed txID=9187f424383943c1f650e71fa212e0efff859f89fcbe54c89ac2286eb7aeebb6 block=5 deployment=90ab7e9eff7ac5105f61fd7b920318951bdc655a26e85e1985e6f8cbf59635c5
+--- PASS: TestInterruptedInitialization (43.79s)
+PASS
+ok  	graduation-design/internal/fabric	44.121s

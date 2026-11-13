@@ -1,0 +1,16 @@
+{
+  "runId": "run-6ee6e6d0f8633270",
+  "evidenceDir": "/Users/yjydist/Desktop/graduation-design/.local/openspec-fabric-verify.tlfb3TPH/timeout/run-6ee6e6d0f8633270",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-11T08:30:38.454466Z",
+  "finishedAt": "2026-11-11T08:30:38.454606Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "preflight",
+      "pass": false,
+      "error": "context deadline exceeded"
+    }
+  ],
+  "error": "context deadline exceeded"
+}

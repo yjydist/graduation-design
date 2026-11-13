@@ -1,0 +1,16 @@
+{
+  "runId": "run-8084e289cf0f578f",
+  "evidenceDir": "infra/fabric/evidence/clean/run-8084e289cf0f578f",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-10T08:47:04.636788Z",
+  "finishedAt": "2026-11-10T08:47:07.85126Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "deployment",
+      "pass": false,
+      "error": "initialization PENDING: endorse error: rpc error: code = FailedPrecondition desc = no combination of peers can be derived which satisfy the endorsement policy: no peer combination can satisfy the endorsement policy"
+    }
+  ],
+  "error": "initialization PENDING: endorse error: rpc error: code = FailedPrecondition desc = no combination of peers can be derived which satisfy the endorsement policy: no peer combination can satisfy the endorsement policy"
+}

@@ -1,0 +1,2 @@
+{"at":"2026-11-11T08:17:55.810079Z","details":{"instance":"/Users/yjydist/Desktop/graduation-design/.local/openspec-fabric-recovery.B5UaUCcu/d0-instance","runId":"run-40a78835f077e58b"},"event":"start"}
+{"at":"2026-11-11T08:17:55.810535Z","details":"context deadline exceeded","event":"preflight_failed"}

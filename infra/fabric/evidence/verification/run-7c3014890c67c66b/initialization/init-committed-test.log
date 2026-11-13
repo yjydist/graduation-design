@@ -1,0 +1,7 @@
+=== RUN   TestDeploymentResumesAfterCommittedInitialization
+    deployment_test.go:133: original initialization confirmed: txID=eaf7b15f4f19f934d1499b6c91bda2d5bf6f235fea2a5e00731554acf8ff4e1d block=5
+    deployment_test.go:136: proposal saved before endorsement: key=initialize/repeat txID=944cad50c5112e20f8126040977830f59847c3e2ad2f02df04419c0f30b8c102
+    deployment_test.go:164: resumed deployment e402f7637d988f56dfe347581f86ee9a89850935403a0284095bc8922a12b13c with original initialization block 5, unchanged height 6 and original repeat proposal 944cad50c5112e20f8126040977830f59847c3e2ad2f02df04419c0f30b8c102
+--- PASS: TestDeploymentResumesAfterCommittedInitialization (42.78s)
+PASS
+ok  	graduation-design/internal/fabric	43.196s

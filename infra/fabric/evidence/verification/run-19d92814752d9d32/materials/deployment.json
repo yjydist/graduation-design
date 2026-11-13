@@ -1,0 +1,63 @@
+{
+  "channelId": "procurement",
+  "genesisHash": "b8ea68f899f54dcc2876eca4e2802de3e92a550ab42b8ebe14cee9fea8b56ecb",
+  "instanceId": "dab6ea345c71e7cfe7a134f51f58d2409a72663f90a861ac43b1325719b0e50b",
+  "registryName": "authregistry",
+  "schemaVersion": "grad-auth-v1",
+  "deploymentId": "4af9200c3bd94f8b8303ecc16973210c44258242dc1086ff0d56a244c4b03c56",
+  "channelConfigSha256": "f7e9f838f3884e76c8e7bb7325853e0be2230e4d571429a257c75c90aad0b372",
+  "bootstrapSha256": "dcd2668eb184c3ee04f04df81f2617d60569d6490103be6dab107b45289503ac",
+  "chaincodeBuildSha256": "56f76ba5d452d9dd5de94c307dba2ddfc662725126064b0f69b24e1c8fdd09a4",
+  "chaincodeSourceSha256": "3f9653afd830e0695b595b727935bd53ffa8f5735480a063fd05ace200cba1c2",
+  "packageIds": {
+    "a": "authregistry_a_94194eba8d12:048c3222970f93cffed80fd46625b2265cb9078f2441fe292d8c5bb0960ffb84",
+    "b": "authregistry_b_94194eba8d12:f6ba65541dc27a45d1f096a4bb7575dd27bda1c491ea577b31b6993b1ee97184",
+    "c": "authregistry_c_94194eba8d12:e707cc1cd8a3ed812e6846f9b0dab1cc8e69645f5183cb3eeaee914270f18f36"
+  },
+  "definitionSha256": "8fbbe52338447e7f71a187133183c71b470219368e1cf1eb2bf28e1f63a6b917",
+  "definitionBlock": {
+    "blockNumber": 4,
+    "blockHash": "0de1700be870d807e44038036c109a7ec5d7c71bf092f5337c9eb23edfc2b835"
+  },
+  "definitionTxId": "de28df365401049d592c32ea204bea66c291917b1b60770c1c2b0c1eda0f7cbd",
+  "initializationBlock": {
+    "blockNumber": 5,
+    "blockHash": "fb86d63a9084b229e1ca4bbe4b39eb326c85f97912d28b58969c3df04d4884cd"
+  },
+  "bootstrap": {
+    "channelId": "procurement",
+    "genesisHash": "b8ea68f899f54dcc2876eca4e2802de3e92a550ab42b8ebe14cee9fea8b56ecb",
+    "instanceId": "dab6ea345c71e7cfe7a134f51f58d2409a72663f90a861ac43b1325719b0e50b",
+    "registryName": "authregistry",
+    "schemaVersion": "grad-auth-v1",
+    "root": {
+      "rootDid": "did:web:t.local",
+      "managementIdentity": {
+        "mspId": "TMsp",
+        "certificateSha256": "fd80cc7612e9ad946a970c33cb45ede0d8493c3cab65ae913799ffe4edb6ee49"
+      },
+      "didDocumentDigest": "1a7937484a7e46a98fc99df6c9ac8d3b28ce8f970c3645b653e9dd96dadf3ea1",
+      "appKeyId": "did:web:t.local#auth",
+      "appKeyVersion": 1,
+      "appPublicKey": "047a7b5270923e710c46e261cafada884df190ea439376766bb96bd12dbb183f7f4c900c138913db54d95e975f007738a138ab5d224f0ce947560cc45a3a7fa56d"
+    },
+    "initializer": {
+      "mspId": "AMsp",
+      "certificateSha256": "1259d31fcfbbb33e9f3f73b894c27da3289834c01f4223c28b192f28a6ca90e4"
+    },
+    "taskCreator": {
+      "domainId": "A",
+      "subjectId": "did:web:a.local:u",
+      "managementIdentity": {
+        "mspId": "AMsp",
+        "certificateSha256": "b9c070d7c3c3179d7de0c8f4fab2e518cb70b66bd02720b5844574af85248f85"
+      }
+    },
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "resourceOwner": "did:web:c.local:supplier",
+    "resourceManagement": {
+      "mspId": "CMsp",
+      "certificateSha256": "9e555c44c5e4ca08274968987f3f928cd9e73c513b5d08a213c0d7e48990f808"
+    }
+  }
+}

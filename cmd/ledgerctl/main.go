@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"graduation-design/internal/ledger"
+	"graduation-design/internal/fabric"
 )
 
 func main() {
-	if err := ledger.Run(os.Args[1:], os.Stdout); err != nil {
+	if err := fabric.Run(os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

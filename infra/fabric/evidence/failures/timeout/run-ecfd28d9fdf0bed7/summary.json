@@ -1,0 +1,16 @@
+{
+  "runId": "run-ecfd28d9fdf0bed7",
+  "evidenceDir": "infra/fabric/evidence/failures/timeout/run-ecfd28d9fdf0bed7",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-10T08:44:49.012268Z",
+  "finishedAt": "2026-11-10T08:44:49.012453Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "preflight",
+      "pass": false,
+      "error": "context deadline exceeded"
+    }
+  ],
+  "error": "context deadline exceeded"
+}

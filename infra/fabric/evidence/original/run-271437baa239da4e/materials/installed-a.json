@@ -1,0 +1,18 @@
+{
+	"installed_chaincodes": [
+		{
+			"package_id": "authregistry_a_f371e8196a35:d9fdebdbfbcafbe863b178b03a3c38a78f79911ab4c45d6749ff4cc22cc29709",
+			"label": "authregistry_a_f371e8196a35",
+			"references": {
+				"procurement": {
+					"chaincodes": [
+						{
+							"name": "authregistry",
+							"version": "1.0"
+						}
+					]
+				}
+			}
+		}
+	]
+}

@@ -1,0 +1,69 @@
+{
+  "runId": "run-573e012a0b91ad43",
+  "evidenceDir": "/Users/yjydist/Desktop/graduation-design/.local/openspec-fabric-online-clean.Bx5luk/evidence/run-573e012a0b91ad43",
+  "deploymentId": "8892fdfc65b731427bb54798fb749efcf923efeb9eb96dd448882f709aa4cd74",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-11T02:25:04.150232Z",
+  "finishedAt": "2026-11-11T02:27:02.62824Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": false,
+      "error": "sorters never acknowledged the replay after restart: context deadline exceeded"
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "shared-view-concurrent-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "chaincode-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    }
+  ],
+  "error": "lost-response-and-original-replay: sorters never acknowledged the replay after restart: context deadline exceeded"
+}

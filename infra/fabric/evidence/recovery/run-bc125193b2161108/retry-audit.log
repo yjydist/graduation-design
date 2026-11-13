@@ -1,0 +1,2 @@
+Exact retry returned original PENDING operation; changed input returned OPERATION_KEY_CONFLICT.
+Network recovery confirmed the same txID and signed bytes in block 70.

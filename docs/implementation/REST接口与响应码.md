@@ -28,7 +28,7 @@ C 数据库按部署隔离. C 目录基准单价为 80000 分. 报价 ID 由 C �
 
 ## 2 REST 接口
 
-管理接口只供 T 认证服务, 域服务和已登录管理员使用, 采用 HTTPS, 域间 mTLS 及服务端角色校验; 浏览器写操作须防 CSRF. 浏览器不能直接把任意管理地址当成签名者, 服务端按当前登录主体选择测试钱包. 测试密钥仅用于可重置的本地实验.
+管理接口只供 T 认证服务, 域服务和已登录管理员使用, 采用 HTTPS, 域间 mTLS 及服务端角色校验; 浏览器写操作须防 CSRF. 服务端按已认证的登录主体选择已登记的 Fabric 管理证书. 测试密钥仅用于可重置的本地实验.
 
 | 方法和路径 (均在 /v1 下) | 请求要点 | 结果及约束 |
 | --- | --- | --- |
@@ -48,7 +48,7 @@ C 数据库按部署隔离. C 目录基准单价为 80000 分. 报价 ID 由 C �
 | POST /identity-links/{id}/revoke | 原因, 预期状态 | 202; 任一端 managementIdentity 或所属域注册机构, 不可恢复 |
 | GET /identity-links/{id} | 关联 ID | 记录, effectiveActive 及 stateRevision; 仅端点与授权审计者可查 |
 | POST /identities/{id}/rotate | 新 DID 文档及 newKeyProof, 绑定 expectedRevision 和 expectedKeyVersion, 绑定新公钥及文档摘要 | 202; 限该主体的登记管理身份. 接受前发现版本冲突返回 409 STATE_CHANGED, 接受后发生冲突按 operation 查询失败结果 |
-| POST /identities/{id}/recovery-challenges | 原域内账号的重新认证材料, 候选新管理地址/新应用密钥/文档及预期版本, reason | 201; 限本域当前注册机构审核普通非终态身份, 返回[恢复规格](部署与链上登记.md#3-身份状态与管理账户恢复)定义的完整挑战; 域 DID/机构使用 T 引导接口 |
+| POST /identities/{id}/recovery-challenges | 原域内账号的重新认证材料, 候选新管理证书绑定/新应用密钥/文档及预期版本, reason | 201; 限本域当前注册机构审核普通非终态身份, 返回[恢复规格](部署与链上登记.md#3-身份状态与管理账户恢复)定义的完整挑战; 域 DID/机构使用 T 引导接口 |
 | POST /identities/{id}/recover | challengeId, applicationProof, managementProof | 202 operationId; 仅当前注册机构核验新钥双证明后提交, 原子消费挑战并持久化操作. 保留原 status, 增加密钥版本, 不要求旧管理私钥 |
 | POST /credentials | credentialId, subjectId, nbf, exp; IA/IB/IC 从本域账户取得核验声明 | 202 operationId; 核对 T 域认证及当前签发资格, 只能签本域身份, 确认后交付 |
 | GET /credentials/{id}/wallet-copy | 本域主体登录, credentialId | 仅向该凭证主体返回 {credentialId,issuerJwt,disclosures}, disclosures 是完整的原始披露字符串数组 |
@@ -65,7 +65,7 @@ C 数据库按部署隔离. C 目录基准单价为 80000 分. 报价 ID 由 C �
 | POST /contexts/{taskId} | expectedContextVersion, observedAt, riskLevel, accessDeadline | 200; 由 C 观测服务写主库, 返回已提交观测 |
 | POST /auth/challenges | actor, taskId, requestHash | 201; nonce 为 32 字节随机数的规范无填充 base64url 字符串, 长度 43, 受众及 30 秒期限由 C 固定 |
 | POST /access/execute | 规范请求, 证据包, 挑战及叶子 KB | 200/4xx/503; 直接执行, 不签发宽权限 token |
-| GET /operations/{id} | operationId | 查询成功为 HTTP 200, 返回 PENDING/CONFIRMED/FAILED, txHash, receiptStatus, block, observedNode, failureCode; FAILED 不把该 GET 改成 HTTP 409 |
+| GET /operations/{id} | operationId | 查询成功为 HTTP 200, 返回 PENDING/CONFIRMED/FAILED, txId, stage, validationCode, blockNumber, blockHash, transactionIndex, observedPeer, failureCode; FAILED 不把该 GET 改成 HTTP 409 |
 | GET /grants/{id}/path | 叶子 ID | 授权路径和当前验证结果; 需审计权限 |
 | POST /internal/order-outcome-cases | caseId, sendRevision, deploymentId, request, requestHash, challengeIds | B 恢复服务经 mTLS 向 C 登记已停发的核账单; 202 只确认登记 |
 | POST /audit/order-outcomes | 原订单 request 及可能已发送的 challengeIds; 已登记核账单另带 caseId | 仅 C 审计员按核账规程查主库, 读取历史结果 |
@@ -73,28 +73,29 @@ C 数据库按部署隔离. C 目录基准单价为 80000 分. 报价 ID 由 C �
 | GET /decisions/{id} | decisionId | 决策解释; 限请求主体及审计者 |
 | GET /health/ready | 无 | 状态完整且新鲜才 ready; 不暴露密钥 |
 
-**管理请求与交付边界.** 管理写请求须提供 Idempotency-Key, 其格式与业务键一致. 对 (登录管理身份, 方法, 路径, key) 建唯一索引, 保存请求正文 JCS 摘要和 operationId. 链上管理写同键同摘要仍以 202 返回原 operationId, 包括原操作已 FAILED 时; 环境写返回原已提交的 200 结果, 同键异摘要均返回 409 IDEMPOTENCY_CONFLICT. 已认证请求先查操作键, 精确重试不因原 expectedRevision 已过时而变成新冲突. 新链上管理操作及待提交材料在本域同一事务持久化后才算接受并返回 202. 链上对象的生命周期操作带 expectedRevision, 接受前预检发现旧 revision 返回 409 STATE_CHANGED, 不创建待提交操作或分配交易 nonce. 新域认证的激活/替换使用 expectedDomainRevision 和 expectedCurrentCertificationId 检查域配置竞争, 认证撤销使用认证自身的 expectedRevision/expectedDigest. 模式或角色由已认证主体与登记记录决定, 登录人无权指定另一个主体的钱包.
+**管理请求与交付边界.** 管理写请求须提供 Idempotency-Key, 其格式与业务键一致. 对 (登录管理身份, 方法, 路径, key) 建唯一索引, 保存请求正文 JCS 摘要和 operationId. 链上管理写同键同摘要仍以 202 返回原 operationId, 包括原操作已 FAILED 时; 环境写返回原已提交的 200 结果, 同键异摘要均返回 409 IDEMPOTENCY_CONFLICT. 已认证请求先查操作键, 精确重试不因原 expectedRevision 已过时而变成新冲突. 新链上管理操作及待提交材料在本域同一事务持久化后才算接受并返回 202. 链上对象的生命周期操作带 expectedRevision, 接受前预检发现旧 revision 返回 409 STATE_CHANGED, 不创建待提交操作或 Fabric 提案. 新域认证的激活/替换使用 expectedDomainRevision 和 expectedCurrentCertificationId 检查域配置竞争, 认证撤销使用认证自身的 expectedRevision/expectedDigest. 模式或角色由已认证主体与登记记录决定, 登录人无权指定另一个主体的管理证书.
 
-**接受后的管理结果.** 202 只表示操作已持久化并可查询, 不表示合约执行成功. 两笔操作均通过预检并被接受后, 后入块的一笔仍可能因版本竞争回退. 原 POST 不再补发 409, 客户端查询原 operationId 取得结果. 查询限发起身份或本域审计者, 响应字段为 operationId, status, txHash, receiptStatus, block, observedNode, failureCode, 尚未知的交易/区块字段用 null.
+202 表示新操作及待提交材料已持久化. 客户端用 operationId 查询原操作, 查询权限限发起身份或本域审计者. 尚未知的 txId, 区块及校验字段为 null. 原 POST 的 202 保留, 随后发现的失败在查询时返回.
 
 | 阶段或结果 | HTTP 行为 | operation 状态及 failureCode |
 | --- | --- | --- |
-| 新请求接受前发现版本不符 | 原 POST 返回 409 STATE_CHANGED | 不创建待提交 operation, 不广播交易 |
-| 操作已接受, 尚无确定回执 | 原 POST 返回 202; GET 查询成功为 200 | PENDING, failureCode=null. 超时或失联不当作交易失败 |
-| 原交易成功回执 status=0x1 | GET 查询成功为 200 | CONFIRMED, failureCode=null |
-| 原交易回退 status=0x0, 确认原因为版本竞争 | GET 查询成功为 200 | FAILED, failureCode=STATE_CHANGED, 保留原 txHash 和失败回执 |
-| 原交易回退, 确认是其它权限/生命周期错误 | GET 查询成功为 200 | FAILED, failureCode 为对应的管理业务码, 如 IDENTITY_MANAGEMENT_FORBIDDEN 或 GRANT_STATE_CONFLICT |
-| 原交易回退, 尚无可信的具体原因 | GET 查询成功为 200 | FAILED, failureCode=TRANSACTION_REVERTED. 仅凭 status=0x0 不推断具体业务码 |
+| 新请求接受前发现版本不符 | POST 409 STATE_CHANGED | 无待提交 operation 或提案 |
+| 已接受, 广播超时或原提交结果暂不可见 | POST 202, GET 200 | PENDING, failureCode=null |
+| 原提案确定性拒绝 | GET 200 | FAILED, ENDORSE 阶段. 原响应支持业务码时映射, 其余用 ENDORSEMENT_REJECTED |
+| 原交易在可信 Peer 为 VALID 且已核对原位置 | GET 200 | CONFIRMED, COMMIT 阶段, failureCode=null |
+| 原交易入块为 MVCC_READ_CONFLICT | GET 200 | FAILED, COMMIT 阶段, STATE_CHANGED |
+| 其它原交易入块无效 | GET 200 | FAILED, COMMIT 阶段, COMMIT_INVALID |
+| 重投触发 DUPLICATE_TXID | GET 200 | 保留原交易的结果. 原位置无法核对时保持 PENDING |
 
-具体失败码的证据要求见[交易确认与重试](部署与链上登记.md#2-谁能改合约中的哪一行). 原操作的精确重试不重新签发材料或提交新交易; FAILED 后确需重新申请时, 客户端先读取当前状态, 使用新的操作键和更新后的预期版本. [HTTP 202 语义](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3).
+原操作的精确重试返回 202 和同一 operationId, 包括原操作已 FAILED 的情况. 需要再次申请时, 先读当前状态, 使用新操作键和新预期版本. 只有原交易 VALID 且材料交付时的当前资格和期限通过复核才开放交付. [交易确认与重试](部署与链上登记.md#21-提交确认与恢复), [HTTP 202](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3).
 
-T 服务与各域使用同样的操作键/回执规则. 域认证更新必须走 T 接口, 普通域管理员没有单独修改 administrator/registrar/identityIssuers 的入口. 已撤销或资格到期时仍允许原管理者撤销旧对象.
+T 和各域采用相同操作键和提交规则. 域认证更新走 T 接口, 普通域管理员不能单独修改被认证的角色. 有权管理者可撤销其已到期的登记对象.
 
 管理角色与交易提交规则见[部署与链上登记](部署与链上登记.md), 核账单与回执字段见[订单核账](订单核账.md). 域间 GET /internal/tasks/{id}/spec 仅供本任务获准根签发者取明细. POST /internal/grantee-presentations 按任务与该跳分工授权, 仅返回受托者批准的最小出示和域认证, 本地当前认证正文缺失时返回 MATERIAL_NOT_SYNCED. GET /internal/resource-identities/{did} 向获准域服务返回 C 服务最小出示及当前域认证, 核对配置端点, 资源所有者和新鲜登记后更新本地材料. POST /internal/grant-deliveries 投递 {deploymentId,recipient,grantId,taskSpec,grants,credentials,trustPaths}, 凭证数组只含祖先的最小出示. IA/IB/IC 经 GET /trust/domain-certifications/{id} 取本域当前认证正文并向获准验证方交付. 新的 trustPaths 固定为 issuer 和 domainCertification, C 的 RP 根交付包须含 IC 签发的 C 服务凭证及 T 的 C 域认证. 不再提供域间背书接口.
 
 ## 3 响应码
 
-本表用于当前 HTTP 请求的同步结果. 管理 POST 已返回 202 后的链上失败使用 operation.failureCode, 不再次返回本表的 HTTP 错误. TRANSACTION_REVERTED 仅为异步操作的通用失败码, 不新增同名 HTTP 响应.
+本表用于当前 HTTP 请求的同步结果. 管理 POST 已返回 202 后的链上失败使用 operation.failureCode, 不再次返回本表的 HTTP 错误. ENDORSEMENT_REJECTED 和 COMMIT_INVALID 用于异步操作的相应阶段.
 
 | HTTP | code | 含义 |
 | --- | --- | --- |
@@ -106,7 +107,7 @@ T 服务与各域使用同样的操作键/回执规则. 域认证更新必须走
 | 403 | IDENTITY_UNTRUSTED / CREDENTIAL_INACTIVE / KEY_VERSION_STALE | 身份来源, 凭证或密钥状态无效 |
 | 403 | DOMAIN_INACTIVE / DOMAIN_CERTIFICATION_INVALID / ISSUER_SCOPE_INVALID | 域非 ACTIVE, 或域认证不受预置 T 认可/非当前/撤销/到期/字段不符, 或域机构越界签发 |
 | 403 | TRUST_MANAGEMENT_FORBIDDEN | 非 T 角色试图准入域, 变更认证范围或管理域状态 |
-| 403 | IDENTITY_MANAGEMENT_FORBIDDEN / IDENTITY_RECOVERY_PROOF_INVALID | 无权变更身份状态或恢复管理地址 / 恢复挑战的账号核实, 绑定或新钥双证明无效 |
+| 403 | IDENTITY_MANAGEMENT_FORBIDDEN / IDENTITY_RECOVERY_PROOF_INVALID | 无权变更身份状态或恢复管理证书绑定 / 恢复挑战的账号核实, 绑定或新钥双证明无效 |
 | 409 | IDENTITY_STATE_CONFLICT | 身份状态转换非法, 或试图轮换/恢复已撤销身份 |
 | 403 | GRANT_INACTIVE / GRANT_MANAGEMENT_FORBIDDEN | 访问所用叶子已暂停或撤销 / 调用者无权变更该授权 |
 | 409 | TASK_STATE_CONFLICT | 新的取消操作不满足 ACTIVE 到 CANCELLED 的转换前提 |
@@ -128,7 +129,8 @@ T 服务与各域使用同样的操作键/回执规则. 域认证更新必须走
 | 403 | QUOTE_SCOPE_MISMATCH | 报价不存在, 不属于当前任务/主体或商品等字段不匹配 |
 | 409 | AMOUNT_MISMATCH / QUOTE_EXPIRED | 可信报价与提交业务不一致 |
 | 409 | PRICE_UNAVAILABLE | 已通过任务和准入校验, 新询价在 C 目录无对应价格行 |
-| 503 | STATE_STALE / CONTEXT_STALE / POLICY_UNAVAILABLE | 无法在新鲜且完整状态下决策 |
+| 503 | STATE_STALE | 当前视图缺少本实例已应用的有效探针, 或到达原探针期限 |
+| 503 | STATE_UNAVAILABLE / CONTEXT_STALE / POLICY_UNAVAILABLE | 视图未就绪或缺失可信状态, 环境过期, 或所需策略不可用 |
 | 503 | STORE_UNAVAILABLE / COMMIT_UNKNOWN | 数据库不可用或锁等待超时并已回滚 / 已发送 COMMIT 但未取得确定结果 |
 | 500 | POLICY_EVALUATION_ERROR / INTERNAL_ERROR | 内部错误; 不得退化成允许 |
 

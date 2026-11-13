@@ -1,0 +1,4 @@
+authorization-registry {'MODIFIED': 3, 'ADDED': 2, 'REMOVED': 1, 'scenarios': 17}
+fixed-height-state {'RENAMED': 1, 'MODIFIED': 5, 'ADDED': 1, 'REMOVED': 1, 'scenarios': 8}
+permissioned-ledger {'RENAMED': 1, 'MODIFIED': 3, 'ADDED': 1, 'REMOVED': 1, 'scenarios': 8}
+total {'MODIFIED': 11, 'ADDED': 4, 'REMOVED': 3, 'scenarios': 33, 'RENAMED': 2}

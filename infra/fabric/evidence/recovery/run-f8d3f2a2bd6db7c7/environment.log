@@ -1,0 +1,11 @@
+Darwin arm64
+go version go1.27.3 darwin/arm64
+/Users/yjydist/Desktop/graduation-design/.local/openspec-fabric-recovery.B5UaUCcu/d0-instance/registry/registry: go1.27.3
+	path	graduation-design/chaincode/registry
+29.9.3 linux/arm64
+Docker Compose version v5.7.0
+cpus=14 memoryBytes=8318910464
+linux/arm64 ["hyperledger/fabric-peer@sha256:e07c735b6f2d131315f3ae6e582c5aa602143d9d14805bb98be8ebc9d6baa82c"]
+linux/arm64 ["hyperledger/fabric-orderer@sha256:dcb4c042237993a6f537b2f54e701e749f8e108f25c0cbe0c6742c205fccc3d5"]
+linux/arm64 ["hyperledger/fabric-baseos@sha256:48f66ba5da1dac8276138c80bf09d17fa68c6b729ea3bd2fc182b1898cc3f0c5"]
+linux/arm64 ["postgres@sha256:c7526c0f6c3f30260a563d7bcf8ad778effac59a44f8ffa86678c35418338609"]

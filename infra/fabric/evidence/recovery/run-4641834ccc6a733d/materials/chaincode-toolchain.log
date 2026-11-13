@@ -1,0 +1,18 @@
+/Users/yjydist/Desktop/graduation-design/.local/openspec-fabric-recovery.ItbLK4/instance/registry/registry: go1.27.3
+	path	graduation-design/chaincode/registry
+	mod	graduation-design	(devel)	
+	dep	github.com/hyperledger/fabric-chaincode-go/v2	v2.3.0	h1:NB/QO2t4R5f6Nz/oREqZeaE4splHI2U9gqndfEQZreo=
+	dep	github.com/hyperledger/fabric-protos-go-apiv2	v0.3.7	h1:sQ5qv8vQQfwewa1JlCiSCC8dLElmaU2/frLolpgibEY=
+	dep	golang.org/x/net	v0.61.0	h1:RR+6j/BTBCrggOLugxa+66R8FvoN6MHlzDlZIbN9YFw=
+	dep	golang.org/x/sys	v0.49.0	h1:XbzkgYJHdqh/8m2Uu0W/dQv8nktxx4BFHp1M0gROTXA=
+	dep	golang.org/x/text	v0.43.0	h1:1QivrlhwAsnMOcqgOdl9my7s9OyZl8O5/UGUTJVXoWc=
+	dep	google.golang.org/genproto/googleapis/rpc	v0.0.0-20260706201446-f0a921348800	h1:qEHAMpSaUhtD0p3NbEEI83HwNGFxEwaSJ1G9PLnCBZE=
+	dep	google.golang.org/grpc	v1.84.0	h1:soMyaPJ8pAak5PIQ0DGBUir0XRo2fRoMqhNWMLlLxO0=
+	dep	google.golang.org/protobuf	v1.36.12	h1:pJOKDDOyeXErUroCihFAd5LQuwXBSpVnKGrj5o/fwxc=
+	build	-buildmode=exe
+	build	-compiler=gc
+	build	-trimpath=true
+	build	CGO_ENABLED=0
+	build	GOARCH=arm64
+	build	GOOS=linux
+	build	GOARM64=v8.0

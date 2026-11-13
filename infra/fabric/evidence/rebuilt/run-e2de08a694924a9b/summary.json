@@ -1,0 +1,61 @@
+{
+  "runId": "run-e2de08a694924a9b",
+  "evidenceDir": "infra/fabric/evidence/rebuilt/run-e2de08a694924a9b",
+  "deploymentId": "af057e5b97bab7d517af089f95a428ccb57fc0a5517f47fb40fbb482e1806f4d",
+  "scope": "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-10T08:40:31.064364Z",
+  "finishedAt": "2026-11-10T08:42:18.875164Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": false,
+      "error": "interleaved read did not preserve pre-revocation snapshot: run-e2de08a694924a9b/snapshot-revoke: expected VALID, got FAILED at ENDORSE (failure=0x663278a90d00, commit=\u003cnil\u003e, endorse error: rpc error: code = Aborted desc = failed to collect enough transaction endorsements, see attached details for more info\nDetails:\n  - Address: peer-a:7051\n    MspId: AMsp\n    Message: chaincode response 500, D0:MISSING_DEPENDENCY\n  - Address: peer-b:7051\n    MspId: BMsp\n    Message: chaincode response 500, D0:MISSING_DEPENDENCY)"
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    }
+  ],
+  "error": "fixed-snapshot-history-and-probe-limits: interleaved read did not preserve pre-revocation snapshot: run-e2de08a694924a9b/snapshot-revoke: expected VALID, got FAILED at ENDORSE (failure=0x663278a90d00, commit=\u003cnil\u003e, endorse error: rpc error: code = Aborted desc = failed to collect enough transaction endorsements, see attached details for more info\nDetails:\n  - Address: peer-a:7051\n    MspId: AMsp\n    Message: chaincode response 500, D0:MISSING_DEPENDENCY\n  - Address: peer-b:7051\n    MspId: BMsp\n    Message: chaincode response 500, D0:MISSING_DEPENDENCY)"
+}

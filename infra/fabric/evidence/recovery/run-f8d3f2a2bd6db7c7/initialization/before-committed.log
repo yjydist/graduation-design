@@ -1,0 +1,12 @@
+=== RUN   TestDeploymentResumesAfterCommittedInitialization
+    deployment_test.go:133: original initialization confirmed: txID=1b77384622b9d16c30facaa404019069d41724be0168ec79181bb242b2148d7b block=5
+    deployment_test.go:136: proposal saved before endorsement: key=initialize/repeat txID=21b4a9da69aca46d26ea84be8bccab3d2e051a2a4091c53fe1f23fde6331281f
+    deployment_test.go:145: deploy could not resume after the root committed: initialize/repeat: wanted ID_ALREADY_USED, got FAILED (endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info
+        Details:
+          - Address: peer-c:7051
+            MspId: CMsp
+            Message: request unauthorized due to incorrect timestamp 2026-11-11T08:09:42Z, peer time 2026-11-11T08:10:02Z, peer.authentication.timewindow 2s)
+--- FAIL: TestDeploymentResumesAfterCommittedInitialization (42.08s)
+FAIL
+FAIL	graduation-design/internal/fabric	42.586s
+FAIL

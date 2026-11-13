@@ -1,0 +1,23 @@
+{
+  "online": {
+    "deploymentId": "482c0062cebd44abddc096d703f624b67a3ebbb503c55d9a41a6174739a4343d",
+    "mode": "online",
+    "blockNumber": 207,
+    "blockHash": "f589f6939432af43fc2dc8e85f5e3ec1c3dac59e18c26642baa44d09076811fb",
+    "probeTxId": "a39c22ed85ab34f7511a8748b5210510910983dd27eaf3f0739158a8d48512fe",
+    "statuses": [
+      "ACTIVE",
+      "ACTIVE"
+    ]
+  },
+  "historical": {
+    "deploymentId": "482c0062cebd44abddc096d703f624b67a3ebbb503c55d9a41a6174739a4343d",
+    "mode": "historical",
+    "blockNumber": 207,
+    "blockHash": "f589f6939432af43fc2dc8e85f5e3ec1c3dac59e18c26642baa44d09076811fb",
+    "statuses": [
+      "ACTIVE",
+      "ACTIVE"
+    ]
+  }
+}

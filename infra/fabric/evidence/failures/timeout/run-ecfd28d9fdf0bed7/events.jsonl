@@ -1,0 +1,2 @@
+{"at":"2026-11-10T08:44:49.012342Z","details":{"instance":".local/fabric-d0","runId":"run-ecfd28d9fdf0bed7"},"event":"start"}
+{"at":"2026-11-10T08:44:49.012395Z","details":"context deadline exceeded","event":"preflight_failed"}

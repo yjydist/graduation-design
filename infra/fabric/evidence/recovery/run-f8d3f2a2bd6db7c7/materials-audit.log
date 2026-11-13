@@ -1,0 +1,2 @@
+Verified deployment ID, bootstrap, source and build digests, 3 package IDs, embedded approvals, runtime configuration, and Go dependency lock.
+The recovered earlier deployment kept its prior source digest and package IDs. The clean D0 run used the updated chaincode.

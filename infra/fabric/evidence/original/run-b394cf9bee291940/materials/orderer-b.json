@@ -1,0 +1,9 @@
+Status: 200
+{
+	"name": "procurement",
+	"url": "/participation/v1/channels/procurement",
+	"consensusRelation": "consenter",
+	"status": "active",
+	"height": 115
+}
+

@@ -1,0 +1,21 @@
+--- a/internal/fabric/operation.go
++++ b/internal/fabric/operation.go
+@@ -6,6 +6,7 @@
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
++	"os"
+ 	"strings"
+ 	"time"
+ 
+@@ -220,6 +221,10 @@
+ 		if err := j.save(ctx, conn, op); err != nil {
+ 			return nil, err
+ 		}
++		if key == "initialize/repeat" {
++			fmt.Printf("stopped after saving %s before endorsement, txID=%s\n", key, op.TxID)
++			os.Exit(42)
++		}
+ 	} else {
+ 		proposal, err = p.gateway.NewProposal(op.Proposal)
+ 		if err != nil {

@@ -1,0 +1,2 @@
+{"at":"2026-11-11T07:52:34.624703Z","details":{"instance":"/Users/yjydist/Desktop/graduation-design/.local/openspec-fabric-verification.aohgiVp5/instance","runId":"run-38de841cdc7d3d98"},"event":"start"}
+{"at":"2026-11-11T07:52:34.624744Z","details":"context deadline exceeded","event":"preflight_failed"}

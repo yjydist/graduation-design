@@ -1,0 +1,1 @@
+[ledger:deploy] $ go run ./cmd/ledgerctl deploy --retry-initialization

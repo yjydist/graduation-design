@@ -1,0 +1,144 @@
+Organizations:
+  - &AMsp
+    Name: AMsp
+    ID: AMsp
+    MSPDir: crypto/peerOrganizations/a.local/msp
+    AnchorPeers: [{Host: peer-a, Port: 7051}]
+    Policies:
+      Readers: {Type: Signature, Rule: "OR('AMsp.member')"}
+      Writers: {Type: Signature, Rule: "OR('AMsp.client','AMsp.admin')"}
+      Admins: {Type: Signature, Rule: "OR('AMsp.admin')"}
+      Endorsement: {Type: Signature, Rule: "OR('AMsp.peer')"}
+  - &BMsp
+    Name: BMsp
+    ID: BMsp
+    MSPDir: crypto/peerOrganizations/b.local/msp
+    AnchorPeers: [{Host: peer-b, Port: 7051}]
+    Policies:
+      Readers: {Type: Signature, Rule: "OR('BMsp.member')"}
+      Writers: {Type: Signature, Rule: "OR('BMsp.client','BMsp.admin')"}
+      Admins: {Type: Signature, Rule: "OR('BMsp.admin')"}
+      Endorsement: {Type: Signature, Rule: "OR('BMsp.peer')"}
+  - &CMsp
+    Name: CMsp
+    ID: CMsp
+    MSPDir: crypto/peerOrganizations/c.local/msp
+    AnchorPeers: [{Host: peer-c, Port: 7051}]
+    Policies:
+      Readers: {Type: Signature, Rule: "OR('CMsp.member')"}
+      Writers: {Type: Signature, Rule: "OR('CMsp.client','CMsp.admin')"}
+      Admins: {Type: Signature, Rule: "OR('CMsp.admin')"}
+      Endorsement: {Type: Signature, Rule: "OR('CMsp.peer')"}
+  - &TMsp
+    Name: TMsp
+    ID: TMsp
+    MSPDir: crypto/peerOrganizations/t.local/msp
+    Policies:
+      Readers: {Type: Signature, Rule: "OR('TMsp.client')"}
+      Writers: {Type: Signature, Rule: "OR('TMsp.client')"}
+      Admins: {Type: Signature, Rule: "AND('AMsp.admin','BMsp.admin','CMsp.admin')"}
+  - &OrdererAMsp
+    Name: OrdererAMsp
+    ID: OrdererAMsp
+    MSPDir: crypto/ordererOrganizations/oa.local/msp
+    OrdererEndpoints: [orderer-a:7050]
+    Policies:
+      Readers: {Type: Signature, Rule: "OR('OrdererAMsp.member')"}
+      Writers: {Type: Signature, Rule: "OR('OrdererAMsp.orderer','OrdererAMsp.admin')"}
+      Admins: {Type: Signature, Rule: "OR('OrdererAMsp.admin')"}
+  - &OrdererBMsp
+    Name: OrdererBMsp
+    ID: OrdererBMsp
+    MSPDir: crypto/ordererOrganizations/ob.local/msp
+    OrdererEndpoints: [orderer-b:7050]
+    Policies:
+      Readers: {Type: Signature, Rule: "OR('OrdererBMsp.member')"}
+      Writers: {Type: Signature, Rule: "OR('OrdererBMsp.orderer','OrdererBMsp.admin')"}
+      Admins: {Type: Signature, Rule: "OR('OrdererBMsp.admin')"}
+  - &OrdererCMsp
+    Name: OrdererCMsp
+    ID: OrdererCMsp
+    MSPDir: crypto/ordererOrganizations/oc.local/msp
+    OrdererEndpoints: [orderer-c:7050]
+    Policies:
+      Readers: {Type: Signature, Rule: "OR('OrdererCMsp.member')"}
+      Writers: {Type: Signature, Rule: "OR('OrdererCMsp.orderer','OrdererCMsp.admin')"}
+      Admins: {Type: Signature, Rule: "OR('OrdererCMsp.admin')"}
+  - &OrdererDMsp
+    Name: OrdererDMsp
+    ID: OrdererDMsp
+    MSPDir: crypto/ordererOrganizations/od.local/msp
+    OrdererEndpoints: [orderer-d:7050]
+    Policies:
+      Readers: {Type: Signature, Rule: "OR('OrdererDMsp.member')"}
+      Writers: {Type: Signature, Rule: "OR('OrdererDMsp.orderer','OrdererDMsp.admin')"}
+      Admins: {Type: Signature, Rule: "OR('OrdererDMsp.admin')"}
+Profiles:
+  Procurement:
+    Capabilities: {V3_0: true}
+    Policies:
+      Readers: {Type: Signature, Rule: "OR('AMsp.member','BMsp.member','CMsp.member','TMsp.client','OrdererAMsp.orderer','OrdererBMsp.orderer','OrdererCMsp.orderer','OrdererDMsp.orderer')"}
+      Writers: {Type: Signature, Rule: "OR('AMsp.client','AMsp.admin','BMsp.client','BMsp.admin','CMsp.client','CMsp.admin','TMsp.client')"}
+      Admins: {Type: Signature, Rule: "AND('AMsp.admin','BMsp.admin','CMsp.admin')"}
+    Orderer:
+      OrdererType: BFT
+      BatchTimeout: 200ms
+      BatchSize: {MaxMessageCount: 100, AbsoluteMaxBytes: 10 MB, PreferredMaxBytes: 512 KB}
+      Capabilities: {V2_0: true}
+      SmartBFT:
+        RequestBatchMaxCount: 100
+        RequestBatchMaxInterval: 200ms
+        RequestForwardTimeout: 2s
+        RequestComplainTimeout: 5s
+        RequestAutoRemoveTimeout: 40s
+        ViewChangeResendInterval: 2s
+        ViewChangeTimeout: 10s
+        LeaderHeartbeatTimeout: 5s
+        LeaderHeartbeatCount: 10
+        CollectTimeout: 1s
+        IncomingMessageBufferSize: 200
+        RequestPoolSize: 10000
+      Organizations: [*OrdererAMsp, *OrdererBMsp, *OrdererCMsp, *OrdererDMsp]
+      Policies:
+        Readers: {Type: ImplicitMeta, Rule: "ANY Readers"}
+        Writers: {Type: ImplicitMeta, Rule: "ANY Writers"}
+        Admins: {Type: ImplicitMeta, Rule: "MAJORITY Admins"}
+        BlockValidation: {Type: ImplicitMeta, Rule: "ANY Writers"}
+      ConsenterMapping:
+        - ID: 1
+          Host: orderer-a
+          Port: 7050
+          MSPID: OrdererAMsp
+          Identity: crypto/ordererOrganizations/oa.local/orderers/orderer-a.oa.local/msp/signcerts/orderer-a.oa.local-cert.pem
+          ClientTLSCert: crypto/ordererOrganizations/oa.local/orderers/orderer-a.oa.local/tls/server.crt
+          ServerTLSCert: crypto/ordererOrganizations/oa.local/orderers/orderer-a.oa.local/tls/server.crt
+        - ID: 2
+          Host: orderer-b
+          Port: 7050
+          MSPID: OrdererBMsp
+          Identity: crypto/ordererOrganizations/ob.local/orderers/orderer-b.ob.local/msp/signcerts/orderer-b.ob.local-cert.pem
+          ClientTLSCert: crypto/ordererOrganizations/ob.local/orderers/orderer-b.ob.local/tls/server.crt
+          ServerTLSCert: crypto/ordererOrganizations/ob.local/orderers/orderer-b.ob.local/tls/server.crt
+        - ID: 3
+          Host: orderer-c
+          Port: 7050
+          MSPID: OrdererCMsp
+          Identity: crypto/ordererOrganizations/oc.local/orderers/orderer-c.oc.local/msp/signcerts/orderer-c.oc.local-cert.pem
+          ClientTLSCert: crypto/ordererOrganizations/oc.local/orderers/orderer-c.oc.local/tls/server.crt
+          ServerTLSCert: crypto/ordererOrganizations/oc.local/orderers/orderer-c.oc.local/tls/server.crt
+        - ID: 4
+          Host: orderer-d
+          Port: 7050
+          MSPID: OrdererDMsp
+          Identity: crypto/ordererOrganizations/od.local/orderers/orderer-d.od.local/msp/signcerts/orderer-d.od.local-cert.pem
+          ClientTLSCert: crypto/ordererOrganizations/od.local/orderers/orderer-d.od.local/tls/server.crt
+          ServerTLSCert: crypto/ordererOrganizations/od.local/orderers/orderer-d.od.local/tls/server.crt
+    Application:
+      Organizations: [*AMsp, *BMsp, *CMsp, *TMsp]
+      Capabilities: {V2_5: true}
+      Policies:
+        Readers: {Type: Signature, Rule: "OR('AMsp.member','BMsp.member','CMsp.member','TMsp.client','OrdererAMsp.orderer','OrdererBMsp.orderer','OrdererCMsp.orderer','OrdererDMsp.orderer')"}
+        Writers: {Type: Signature, Rule: "OR('AMsp.client','AMsp.admin','BMsp.client','BMsp.admin','CMsp.client','CMsp.admin','TMsp.client')"}
+        Admins: {Type: Signature, Rule: "AND('AMsp.admin','BMsp.admin','CMsp.admin')"}
+        LifecycleEndorsement: {Type: Signature, Rule: "AND('AMsp.peer','BMsp.peer','CMsp.peer')"}
+        Endorsement: {Type: Signature, Rule: "OutOf(2,'AMsp.peer','BMsp.peer','CMsp.peer')"}

@@ -1,2 +1,0 @@
-{"check":"preflight","deploymentId":"","observedAt":"2026-11-04T09:18:09.924565Z","phase":"started","runId":"run-e1900eed560adc8b"}
-{"check":"preflight","observedAt":"2026-11-04T09:18:09.94639Z","phase":"finished","result":{"name":"preflight","passed":false,"evidence":"preflight.json","error":"Post \"http://127.0.0.1:1\": dial tcp 127.0.0.1:1: connect: connection refused"},"runId":"run-e1900eed560adc8b"}

@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "deploymentId": "24074b58013405c34358a017f317932ad17885e51274017680c84603c483081d",
+  "originalInitializationTxId": "e49a656dc70da17c27cfb1c4334ffed8527e689d686d5eab6ae0614179cefefe",
+  "initBlock": {
+    "blockNumber": 5,
+    "blockHash": "4f627f25326cd1b8e2d19d9eb486125ba96dc67e27be2f82efadf820419fc9d0"
+  },
+  "manifestIdentical": true,
+  "initializationEvidenceIdentical": true
+}

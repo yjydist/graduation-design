@@ -1,0 +1,4 @@
+authorization-registry: 5 requirements, 19 scenarios
+fixed-height-state: 6 requirements, 8 scenarios
+permissioned-ledger: 4 requirements, 8 scenarios
+All three main specs match the added and modified requirements in the delta.

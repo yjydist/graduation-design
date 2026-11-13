@@ -28,6 +28,84 @@ CREATE TABLE IF NOT EXISTS fabric_operation (
     operation_key text NOT NULL,
     data jsonb NOT NULL,
     PRIMARY KEY (deployment, operation_key)
+);
+CREATE TABLE IF NOT EXISTS operations (
+    deployment_id text NOT NULL,
+    operation_key text NOT NULL,
+    operation_id text NOT NULL UNIQUE,
+    caller_msp_id text NOT NULL,
+    caller_fingerprint text NOT NULL,
+    method text NOT NULL,
+    tx_id text NOT NULL,
+    block_no bigint NOT NULL DEFAULT 0,
+    block_hash text NOT NULL DEFAULT '',
+    stage text NOT NULL,
+    status text NOT NULL,
+    validation_code text,
+    failure_code text,
+    payload_hash text NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (deployment_id, operation_key)
+);
+CREATE TABLE IF NOT EXISTS registration_challenges (
+    challenge_id text PRIMARY KEY,
+    deployment_id text NOT NULL,
+    challenge_sha256 text NOT NULL,
+    msp_id text NOT NULL,
+    certificate_sha256 text NOT NULL,
+    domain_id text NOT NULL,
+    subject_id text NOT NULL,
+    app_key_id text NOT NULL,
+    nonce text NOT NULL UNIQUE,
+    challenge_json jsonb NOT NULL,
+    issued_at bigint NOT NULL,
+    expires_at bigint NOT NULL,
+    consumed boolean NOT NULL DEFAULT FALSE,
+    consumed_by_operation_id text,
+    consumed_at bigint
+);
+CREATE TABLE IF NOT EXISTS certification_outbox (
+    deployment_id text NOT NULL,
+    domain_id text NOT NULL,
+    certification_id text NOT NULL,
+    recipient text NOT NULL,
+    cert_jws text NOT NULL,
+    cert_digest text NOT NULL,
+    root_key_version bigint NOT NULL,
+    tx_id text NOT NULL,
+    block_no bigint NOT NULL,
+    created_at bigint NOT NULL,
+    PRIMARY KEY (deployment_id, domain_id, certification_id, recipient)
+);
+CREATE TABLE IF NOT EXISTS certification_receipts (
+    deployment_id text NOT NULL,
+    domain_id text NOT NULL,
+    certification_id text NOT NULL,
+    recipient text NOT NULL,
+    cert_jws text NOT NULL,
+    cert_digest text NOT NULL,
+    received_at bigint NOT NULL,
+    PRIMARY KEY (deployment_id, domain_id, certification_id, recipient)
+);
+CREATE TABLE IF NOT EXISTS grant_outbox (
+    deployment_id text NOT NULL,
+    recipient text NOT NULL,
+    grant_id text NOT NULL,
+    package_json jsonb NOT NULL,
+    package_digest text NOT NULL,
+    tx_id text NOT NULL,
+    block_no bigint NOT NULL,
+    created_at bigint NOT NULL,
+    PRIMARY KEY (deployment_id, recipient, grant_id)
+);
+CREATE TABLE IF NOT EXISTS wallet_receipts (
+    deployment_id text NOT NULL,
+    recipient text NOT NULL,
+    grant_id text NOT NULL,
+    package_json jsonb NOT NULL,
+    package_digest text NOT NULL,
+    received_at bigint NOT NULL,
+    PRIMARY KEY (deployment_id, recipient, grant_id)
 );`
 
 type outcome struct {
@@ -130,8 +208,30 @@ func (j journal) save(ctx context.Context, conn *pgxpool.Conn, op *operation) er
 	if err != nil {
 		return err
 	}
-	_, err = conn.Exec(ctx, `INSERT INTO fabric_operation(deployment,operation_key,data) VALUES($1,$2,$3)
-		ON CONFLICT(deployment,operation_key) DO UPDATE SET data=EXCLUDED.data`, j.deploymentID, op.Key, raw)
+	if _, err := conn.Exec(ctx, `INSERT INTO fabric_operation(deployment,operation_key,data) VALUES($1,$2,$3)
+		ON CONFLICT(deployment,operation_key) DO UPDATE SET data=EXCLUDED.data`, j.deploymentID, op.Key, raw); err != nil {
+		return err
+	}
+	var blockNo int64
+	var blockHash string
+	var valCode *string
+	if op.Commit != nil {
+		blockNo = int64(op.Commit.Number)
+		blockHash = op.Commit.Hash
+		c := op.Commit.Code
+		valCode = &c
+	}
+	opID := j.deploymentID + ":" + op.Key
+	_, err = conn.Exec(ctx, `INSERT INTO operations(
+		deployment_id, operation_key, operation_id, caller_msp_id, caller_fingerprint,
+		method, tx_id, block_no, block_hash, stage, status, validation_code, failure_code, payload_hash, updated_at
+	) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
+	ON CONFLICT(deployment_id, operation_key) DO UPDATE SET
+		tx_id=EXCLUDED.tx_id, block_no=EXCLUDED.block_no, block_hash=EXCLUDED.block_hash,
+		stage=EXCLUDED.stage, status=EXCLUDED.status, validation_code=EXCLUDED.validation_code,
+		failure_code=EXCLUDED.failure_code, updated_at=NOW()`,
+		j.deploymentID, op.Key, opID, op.Caller.MSPID, op.Caller.Fingerprint,
+		op.Method, op.TxID, blockNo, blockHash, op.Stage, op.Status, valCode, op.FailureCode, op.InputDigest)
 	return err
 }
 

@@ -402,7 +402,7 @@ func collectRegistryPublicFiles(registryDir string) (map[string]string, error) {
 			return nil, err
 		}
 	}
-	for _, single := range []string{"vc-v2.context.json", "context-manifest.json", "taskspec.json", "evidence-sample.json", "fixtures.json", "seed.json"} {
+	for _, single := range []string{"vc-v2.context.json", "context-manifest.json", "taskspec.json", "evidence-sample.json", "u-quote-sample.json", "fixtures.json", "seed.json"} {
 		p := filepath.Join(registryDir, single)
 		if _, err := os.Stat(p); err == nil {
 			out[single] = p

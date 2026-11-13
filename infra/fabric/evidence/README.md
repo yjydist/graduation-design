@@ -1,9 +1,10 @@
-# Fabric D0 验收证据
+# Fabric 验收证据
 
-在 arm64 Docker Desktop 上, 原实例与干净重建实例各通过 12 项. 加入在线读取回归后, 同一隔离实例和独立空卷各通过 14 项. 加入初始化续跑及检查点查询断流回归后, 独立空卷通过 16 项. 补齐根提交后的续跑及凭证期限边界后, 独立空卷通过 17 项. D0 最小协议升级后, 在默认实例与干净重建独立实例各通过 20 项 (在原有 17 项之上新增协议向量复算, 测试 CA `did:web` 与上下文摘要固定, 以及绑定当前部署的真实签名出示与 8 字段篡改拒绝, 且公开材料扫描确认零私钥泄漏). 运行命令和环境要求见[网络说明](../README.md), 历史网络判据见[迁移核验](../../../openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), D0 协议变更清单见[协议任务](../../../openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md).
+在 arm64 Docker Desktop 上, 原实例与干净重建实例各通过 12 项. 加入在线读取回归后, 同一隔离实例和独立空卷各通过 14 项. 加入初始化续跑及检查点查询断流回归后, 独立空卷通过 16 项. 补齐根提交后的续跑及凭证期限边界后, 独立空卷通过 17 项. D0 最小协议升级后, 在默认实例与干净重建独立实例各通过 20 项. 直接访问业务闭环接入后, 真实 Fabric 实例 `.local/fabric-d0` 通过全部 26 项联合验收 (`run-d317a93ba562e854`, 在原有 20 项之上新增注册双证明与材料同步, `quote.read` 询价与同键幂等/冲突, 错误叶子私钥拒绝, 原探针到期 `STATE_STALE`, 锁后 `BLOCKED` 无报价副作用, 以及到期当秒拒绝, 且零私钥泄漏). 运行命令和环境要求见[网络说明](../README.md), 历史网络判据见[迁移核验](../../../openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), D0 协议变更清单见[协议任务](../../../openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md), 直接访问变更清单见[M1 直接访问任务](../../../openspec/changes/implement-m1-direct-access/tasks.md).
 
 | 运行 | 汇总 | 原始记录 |
 | --- | --- | --- |
+| 直接访问实机联合验收 run-d317a93ba562e854 | [26/26](direct-access/original/run-d317a93ba562e854/summary.json) | [事件](direct-access/original/run-d317a93ba562e854/events.jsonl), [区块及交易校验码](direct-access/original/run-d317a93ba562e854/blocks.jsonl), [直接访问结果](direct-access/original/run-d317a93ba562e854/direct-access.json), [U 询价公开样本](direct-access/original/run-d317a93ba562e854/materials/protocol/u-quote-sample.json), [离线单测日志](direct-access/unit-test.log) |
 | D0 协议默认实例 run-174750e6dc3e2e4d | [20/20](protocol/original/run-174750e6dc3e2e4d/summary.json) | [事件](protocol/original/run-174750e6dc3e2e4d/events.jsonl), [区块及交易校验码](protocol/original/run-174750e6dc3e2e4d/blocks.jsonl), [协议公开材料](protocol/original/run-174750e6dc3e2e4d/materials/protocol/evidence-sample.json), [上下文清单](protocol/original/run-174750e6dc3e2e4d/materials/protocol/context-manifest.json) |
 | D0 协议干净重建 run-7361ca2734fcc311 | [20/20](protocol/rebuilt/run-7361ca2734fcc311/summary.json) | [事件](protocol/rebuilt/run-7361ca2734fcc311/events.jsonl), [区块及交易校验码](protocol/rebuilt/run-7361ca2734fcc311/blocks.jsonl), [协议公开材料](protocol/rebuilt/run-7361ca2734fcc311/materials/protocol/evidence-sample.json), [离线单测日志](protocol/unit-test.log) |
 | --- | --- | --- |

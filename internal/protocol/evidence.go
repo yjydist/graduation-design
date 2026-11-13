@@ -73,17 +73,18 @@ type ChallengeContext struct {
 
 // SnapshotView represents an immutable fixed-height ledger state snapshot used for access evidence verification.
 type SnapshotView struct {
-	Height         uint64
-	Now            time.Time
-	ClockError     time.Duration
-	DeploymentID   string
-	Root           api.RootRecord
-	Domains        map[string]api.Domain
-	Certifications map[string]api.Certification
-	Identities     map[string]api.Identity
-	Credentials    map[string]api.Credential
-	Tasks          map[string]api.Task
-	Grants         map[string]api.Grant
+	Height              uint64
+	Now                 time.Time
+	ClockError          time.Duration
+	ExactIntervalBounds bool
+	DeploymentID        string
+	Root                api.RootRecord
+	Domains             map[string]api.Domain
+	Certifications      map[string]api.Certification
+	Identities          map[string]api.Identity
+	Credentials         map[string]api.Credential
+	Tasks               map[string]api.Task
+	Grants              map[string]api.Grant
 }
 
 // VerifiedEvidenceResult summarizes verified cryptographic bindings recovered from an AccessEvidencePackage.
@@ -304,6 +305,10 @@ func VerifyAccessEvidencePackage(
 	if margin <= 0 {
 		margin = api.ClockError
 	}
+	intervalMargin := margin
+	if snap.ExactIntervalBounds {
+		intervalMargin = 0
+	}
 	now := snap.Now
 	if now.IsZero() {
 		now = time.Now().UTC()
@@ -329,7 +334,7 @@ func VerifyAccessEvidencePackage(
 	if !ok {
 		return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("task %q not found at snapshot height %d", pkg.Request.TaskID, snap.Height))
 	}
-	if task.DeploymentID != snap.DeploymentID || task.Status != api.Active || !task.Interval.Current(now, margin) {
+	if task.DeploymentID != snap.DeploymentID || task.Status != api.Active || !task.Interval.Current(now, intervalMargin) {
 		return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("task %q inactive or expired at height %d", task.ID, snap.Height))
 	}
 	taskDigest, err := pkg.TaskSpec.Digest()
@@ -346,7 +351,7 @@ func VerifyAccessEvidencePackage(
 		return nil, err
 	}
 	if creatorCred, ok := snap.Credentials[task.CreatorCredential]; !ok ||
-		creatorCred.Status != api.Active || !creatorCred.Interval.Current(now, margin) ||
+		creatorCred.Status != api.Active || !creatorCred.Interval.Current(now, intervalMargin) ||
 		creatorCred.Subject != task.Creator || creatorCred.SubjectKeyVersion != task.CreatorKeyVersion {
 		return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("task creator credential %q invalid or inactive", task.CreatorCredential))
 	}
@@ -388,7 +393,7 @@ func VerifyAccessEvidencePackage(
 			return nil, err
 		}
 		onChainGrant, ok := snap.Grants[pg.Claims.ID]
-		if !ok || onChainGrant.DeploymentID != snap.DeploymentID || onChainGrant.Status != api.Active || !onChainGrant.Interval.Current(now, margin) {
+		if !ok || onChainGrant.DeploymentID != snap.DeploymentID || onChainGrant.Status != api.Active || !onChainGrant.Interval.Current(now, intervalMargin) {
 			return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant %q missing, inactive, or expired at snapshot height %d", pg.Claims.ID, snap.Height))
 		}
 		if err := matchGrantAnchor(&pg.Claims, pg.Digest, onChainGrant); err != nil {
@@ -474,7 +479,7 @@ func VerifyAccessEvidencePackage(
 			return nil, nil, nil, err
 		}
 		chainCred, ok := snap.Credentials[verCred.Claims.ID]
-		if !ok || chainCred.DeploymentID != snap.DeploymentID || chainCred.Status != api.Active || !chainCred.Interval.Current(now, margin) {
+		if !ok || chainCred.DeploymentID != snap.DeploymentID || chainCred.Status != api.Active || !chainCred.Interval.Current(now, intervalMargin) {
 			return nil, nil, nil, NewError(ErrCodeCredentialStatusInvalid, fmt.Sprintf("credential %q missing, inactive, or expired on ledger", verCred.Claims.ID))
 		}
 		if chainCred.Digest != verCred.AnchorDigest {
@@ -579,7 +584,7 @@ func VerifyAccessEvidencePackage(
 			return nil, NewError(ErrCodeDomainCertificationInvalid, fmt.Sprintf("domain %q missing, inactive, or mismatches certificationId %q", parsedCert.CredentialSubject.DomainID, parsedCert.ID))
 		}
 		certAnchor, ok := snap.Certifications[parsedCert.ID]
-		if !ok || certAnchor.DeploymentID != snap.DeploymentID || certAnchor.Status != api.Active || !certAnchor.Interval.Current(now, margin) {
+		if !ok || certAnchor.DeploymentID != snap.DeploymentID || certAnchor.Status != api.Active || !certAnchor.Interval.Current(now, intervalMargin) {
 			return nil, NewError(ErrCodeDomainCertificationInvalid, fmt.Sprintf("on-chain certification %q missing, inactive, or expired", parsedCert.ID))
 		}
 		chainScopes := make([]IssuerScope, len(certAnchor.Scopes))

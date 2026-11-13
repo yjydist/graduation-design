@@ -161,6 +161,12 @@ func verify(ctx context.Context, dir, out string) (report *verification, err err
 		{"protocol-encoding-and-vectors", a.protocolVectors},
 		{"did-web-and-context-pinning", a.protocolDIDAndContext},
 		{"verifiable-evidence-and-tamper-rejection", a.protocolEvidence},
+		{"registration-and-material-delivery", a.registrationAndMaterialDelivery},
+		{"direct-access-quote-and-idempotency", a.directAccessQuoteAndIdempotency},
+		{"wrong-leaf-key-rejected", a.wrongLeafKeyRejected},
+		{"probe-expiry-state-stale", a.probeExpiryStateStale},
+		{"post-lock-blocked-no-quote", a.postLockBlockedNoQuote},
+		{"exact-second-deadline-rejection", a.exactSecondDeadlineRejection},
 	}
 	for _, test := range cases {
 		log.event("case_start", test.name)

@@ -211,7 +211,11 @@ func (a acceptance) protocolDIDAndContext() error {
 			return err
 		}
 	}
-	for _, role := range []string{"U", "A1", "alt", "B1", "C"} {
+	expectedRoles := []string{"U", "A1", "alt", "B1", "C"}
+	if _, ok := a.f.Identities["PA"]; ok {
+		expectedRoles = append(expectedRoles, "PA")
+	}
+	for _, role := range expectedRoles {
 		if err := checkDID(a.f.Identities[role].ID, protocol.KeyPurposeAuthentication); err != nil {
 			return err
 		}
@@ -344,6 +348,18 @@ func (a acceptance) protocolEvidence() error {
 		}
 		snap.Credentials[credRec.ID] = credRec
 	}
+	if paID, ok := a.f.Identities["PA"]; ok {
+		idRec, err := ledgerRecord[api.Identity](a.ctx, a.p, "identity", paID.ID)
+		if err != nil {
+			return err
+		}
+		snap.Identities[idRec.ID] = idRec
+		credRec, err := ledgerRecord[api.Credential](a.ctx, a.p, "credential", a.f.Credentials["PA"].ID)
+		if err != nil {
+			return err
+		}
+		snap.Credentials[credRec.ID] = credRec
+	}
 	taskRec, err := ledgerRecord[api.Task](a.ctx, a.p, "task", a.f.Task.ID)
 	if err != nil {
 		return err
@@ -392,12 +408,26 @@ func (a acceptance) protocolEvidence() error {
 			return err
 		}
 	}
-	for _, role := range []string{"U", "A1", "alt", "B1", "C"} {
+	sdRoles := []string{"U", "A1", "alt", "B1", "C"}
+	if _, ok := a.f.Credentials["PA"]; ok {
+		sdRoles = append(sdRoles, "PA")
+	}
+	if _, ok := a.f.Credentials["C-service"]; ok {
+		sdRoles = append(sdRoles, "C-service")
+	}
+	for _, role := range sdRoles {
 		sdBytes, err := os.ReadFile(a.instance.registrySubPath("credentials", role+".sdjwt"))
 		if err != nil {
 			return err
 		}
 		credAnchor := snap.Credentials[a.f.Credentials[role].ID]
+		if role == "C-service" {
+			var err error
+			credAnchor, err = ledgerRecord[api.Credential](a.ctx, a.p, "credential", a.f.Credentials[role].ID)
+			if err != nil {
+				return err
+			}
+		}
 		issuerID := snap.Identities[credAnchor.Issuer]
 		holderID := snap.Identities[credAnchor.Subject]
 		_, issPub, _, err := resolver.ResolveDID(a.ctx, issuerID.ID, protocol.DIDResolutionExpectation{
@@ -414,8 +444,10 @@ func (a acceptance) protocolEvidence() error {
 		if err != nil {
 			return err
 		}
-		if vc.AnchorDigest != credAnchor.Digest || vc.Domain != holderID.Domain || vc.Role != holderID.Kind {
-			return fmt.Errorf("role %s SD-JWT anchor or claims mismatch", role)
+		wantBizRole := expectedSDClaimRole(role)
+		if vc.AnchorDigest != credAnchor.Digest || vc.Domain != holderID.Domain ||
+			(vc.Role != holderID.Kind && vc.Role != wantBizRole) {
+			return fmt.Errorf("role %s SD-JWT anchor or claims mismatch (got role=%q)", role, vc.Role)
 		}
 	}
 
@@ -566,4 +598,21 @@ func (a acceptance) protocolEvidence() error {
 		"tamperRejected":     rejected,
 	})
 	return nil
+}
+
+func expectedSDClaimRole(role string) string {
+	switch role {
+	case "U", "alt":
+		return "procurement-owner"
+	case "PA":
+		return "procurement-authority"
+	case "A1":
+		return "procurement-agent"
+	case "B1":
+		return "broker-agent"
+	case "C", "C-service":
+		return "supplier-service"
+	default:
+		return role
+	}
 }

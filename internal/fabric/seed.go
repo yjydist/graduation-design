@@ -54,6 +54,9 @@ func (i *instance) fixtures(d *deployment) (*fixtures, error) {
 		if f.DeploymentID != d.DeploymentID || f.Synthetic || f.SchemaVersion != protocol.SchemaVersion {
 			return nil, fmt.Errorf("DEPLOYMENT_MISMATCH: fixtures incompatible with verifiable protocol")
 		}
+		if err := i.ensureProtocolFixtures(d, &f); err != nil {
+			return nil, err
+		}
 		return &f, nil
 	} else if !os.IsNotExist(err) {
 		return nil, err
@@ -192,13 +195,14 @@ func (i *instance) fixtures(d *deployment) (*fixtures, error) {
 		}
 	}
 
-	sdCreds := make(map[string]*protocol.SignedSDJWTCredential, 5)
-	for _, r := range []struct{ role, id, domain, kind string }{
-		{"U", subjectU, "A", "USER"},
-		{"A1", "did:web:a.local:a1", "A", "AGENT"},
-		{"alt", "did:web:a.local:other", "A", "USER"},
-		{"B1", "did:web:b.local:b1", "B", "AGENT"},
-		{"C", subjectC, "C", "SERVICE"},
+	sdCreds := make(map[string]*protocol.SignedSDJWTCredential, 6)
+	for _, r := range []struct{ role, id, domain, kind, sdRole string }{
+		{"U", subjectU, "A", "USER", "procurement-owner"},
+		{"PA", "did:web:a.local:pa", "A", "SERVICE", "procurement-authority"},
+		{"A1", "did:web:a.local:a1", "A", "AGENT", "procurement-agent"},
+		{"alt", "did:web:a.local:other", "A", "USER", "procurement-owner"},
+		{"B1", "did:web:b.local:b1", "B", "AGENT", "broker-agent"},
+		{"C", subjectC, "C", "SERVICE", "supplier-service"},
 	} {
 		id, _, err := makeID(r.role, r.id, r.domain, r.kind, protocol.KeyPurposeAuthentication, protocol.KeyPurposeAssertionMethod)
 		if err != nil {
@@ -236,7 +240,7 @@ func (i *instance) fixtures(d *deployment) (*fixtures, error) {
 				},
 			},
 			r.domain,
-			r.kind,
+			r.sdRole,
 			nil,
 		)
 		if err != nil {
@@ -483,6 +487,10 @@ func (i *instance) fixtures(d *deployment) (*fixtures, error) {
 		return nil, fmt.Errorf("internal G0 digest mismatch")
 	}
 
+	if err := i.writeUQuoteSample(d, &f, sdCreds["U"].PresentationPrefix, appPrivKeys["U"], certJWSByDomain["C"], g0JWS, now); err != nil {
+		return nil, err
+	}
+
 	if err := writePublicJSON(path, &f); err != nil {
 		return nil, err
 	}
@@ -521,12 +529,20 @@ func (i *instance) seed(ctx context.Context, j journal, d *deployment) (*seedRep
 			return report, err
 		}
 	}
-	for _, role := range []string{"U", "A1", "alt", "B1", "C"} {
-		id := f.Identities[role]
+	for _, role := range []string{"U", "PA", "A1", "alt", "B1", "C"} {
+		id, ok := f.Identities[role]
+		if !ok {
+			continue
+		}
 		if err := write("identity-"+role, "registrar"+id.Domain, "RegisterIdentity", id); err != nil {
 			return report, err
 		}
 		if err := write("credential-"+role, "I"+id.Domain, "RegisterCredential", f.Credentials[role]); err != nil {
+			return report, err
+		}
+	}
+	if cSvc, ok := f.Credentials["C-service"]; ok {
+		if err := write("credential-C-service", "IC", "RegisterCredential", cSvc); err != nil {
 			return report, err
 		}
 	}
@@ -542,5 +558,413 @@ func (i *instance) seed(ctx context.Context, j journal, d *deployment) (*seedRep
 			return report, err
 		}
 	}
+	if err := i.syncMaterialOutboxes(ctx, j, d, f, report); err != nil {
+		return report, err
+	}
 	return report, writePublicJSON(i.registryPath("seed.json"), report)
+}
+
+func (i *instance) ensureProtocolFixtures(d *deployment, f *fixtures) error {
+	updated := false
+	bound := api.Bound{DeploymentID: d.DeploymentID}
+
+	if _, hasPA := f.Identities["PA"]; !hasPA {
+		_, management, _, err := i.role("PA")
+		if err != nil {
+			return err
+		}
+		paDID := "did:web:a.local:pa"
+		paKeyID := paDID + "#key-1"
+		paPriv, pubHex, docDigest, _, err := i.ensureAppKey("PA", paDID, paKeyID, protocol.KeyPurposeAuthentication, protocol.KeyPurposeAssertionMethod)
+		_ = paPriv
+		if err != nil {
+			return err
+		}
+		if err := i.updateDIDIndex(map[string]string{paDID: didRelPath(paDID)}); err != nil {
+			return err
+		}
+		f.DIDDocuments[paDID] = didRelPath(paDID)
+		paID := api.Identity{
+			Bound:             bound,
+			ID:                paDID,
+			Domain:            "A",
+			Kind:              "SERVICE",
+			Management:        management,
+			DocumentDigest:    docDigest,
+			KeyID:             paKeyID,
+			KeyVersion:        1,
+			PublicKey:         pubHex,
+			AccountCommitment: api.Digest([]byte("grad-auth-account:" + d.DeploymentID + ":" + paDID)),
+		}
+		f.Identities["PA"] = paID
+
+		iaPriv, err := loadECPrivateKeyPEM(i.privatePath("app", "IA.key.pem"))
+		if err != nil {
+			return err
+		}
+		iaRec := f.Domains["A"].Issuers[0]
+		valid := f.Certifications["A"].Certification.Interval
+		vf := time.Unix(valid.NBF, 0).UTC().Format(time.RFC3339)
+		vu := time.Unix(valid.EXP, 0).UTC().Format(time.RFC3339)
+		credID := "urn:grad:credential:PA-v1"
+		holderJWK, err := protocol.AppPublicKeyToJWK(paID.PublicKey)
+		if err != nil {
+			return err
+		}
+		signedSD, err := protocol.IssueEnterpriseIdentityCredential(
+			iaPriv,
+			iaRec.KeyID,
+			protocol.EnterpriseIdentityCredential{
+				Type:              []string{protocol.CredentialTypeVC, protocol.CredentialTypeEnterpriseIdentity},
+				ID:                credID,
+				DeploymentID:      d.DeploymentID,
+				Issuer:            iaRec.ID,
+				Iss:               iaRec.ID,
+				Sub:               paID.ID,
+				IssuerKeyVersion:  iaRec.KeyVersion,
+				AppKeyVersion:     paID.KeyVersion,
+				ValidFrom:         vf,
+				ValidUntil:        vu,
+				NBF:               valid.NBF,
+				EXP:               valid.EXP,
+				CredentialStatus:  protocol.CredentialStatus{ID: credID, Type: protocol.StatusTypeCredential},
+				Cnf:               protocol.ConfirmationKey{JWK: holderJWK},
+				CredentialSubject: protocol.SDJWTCredentialSubject{ID: paID.ID},
+			},
+			"A",
+			"procurement-authority",
+			nil,
+		)
+		if err != nil {
+			return err
+		}
+		if err := writePublicFile(i.registrySubPath("credentials", "PA.sdjwt"), []byte(signedSD.PresentationPrefix)); err != nil {
+			return err
+		}
+		f.Credentials["PA"] = api.Credential{
+			Bound:             bound,
+			ID:                credID,
+			Issuer:            iaRec.ID,
+			Subject:           paID.ID,
+			IssuerKeyVersion:  iaRec.KeyVersion,
+			SubjectKeyVersion: paID.KeyVersion,
+			Type:              protocol.CredentialTypeEnterpriseIdentity,
+			ClaimNames:        []string{"domain", "role"},
+			Digest:            signedSD.AnchorDigest,
+			Interval:          valid,
+		}
+		updated = true
+	}
+
+	if _, hasCSvc := f.Credentials["C-service"]; !hasCSvc {
+		cSDBytes, err := os.ReadFile(i.registrySubPath("credentials", "C.sdjwt"))
+		if err == nil && !strings.Contains(string(cSDBytes), "supplier-service") {
+			cID := f.Identities["C"]
+			icRec := f.Domains["C"].Issuers[0]
+			icPriv, err := loadECPrivateKeyPEM(i.privatePath("app", "IC.key.pem"))
+			if err != nil {
+				return err
+			}
+			icPub, _, err := protocol.ParseAppPublicKey(icRec.PublicKey)
+			if err != nil {
+				return err
+			}
+			vc, err := protocol.VerifySDJWTCredential(string(cSDBytes), icPub, icRec.KeyID, cID.PublicKey, false)
+			if err == nil && vc.Role != "supplier-service" {
+				valid := f.Certifications["C"].Certification.Interval
+				vf := time.Unix(valid.NBF, 0).UTC().Format(time.RFC3339)
+				vu := time.Unix(valid.EXP, 0).UTC().Format(time.RFC3339)
+				credID := "urn:grad:credential:C-service-v1"
+				holderJWK, err := protocol.AppPublicKeyToJWK(cID.PublicKey)
+				if err != nil {
+					return err
+				}
+				signedSD, err := protocol.IssueEnterpriseIdentityCredential(
+					icPriv,
+					icRec.KeyID,
+					protocol.EnterpriseIdentityCredential{
+						Type:              []string{protocol.CredentialTypeVC, protocol.CredentialTypeEnterpriseIdentity},
+						ID:                credID,
+						DeploymentID:      d.DeploymentID,
+						Issuer:            icRec.ID,
+						Iss:               icRec.ID,
+						Sub:               cID.ID,
+						IssuerKeyVersion:  icRec.KeyVersion,
+						AppKeyVersion:     cID.KeyVersion,
+						ValidFrom:         vf,
+						ValidUntil:        vu,
+						NBF:               valid.NBF,
+						EXP:               valid.EXP,
+						CredentialStatus:  protocol.CredentialStatus{ID: credID, Type: protocol.StatusTypeCredential},
+						Cnf:               protocol.ConfirmationKey{JWK: holderJWK},
+						CredentialSubject: protocol.SDJWTCredentialSubject{ID: cID.ID},
+					},
+					"C",
+					"supplier-service",
+					nil,
+				)
+				if err != nil {
+					return err
+				}
+				if err := writePublicFile(i.registrySubPath("credentials", "C-service.sdjwt"), []byte(signedSD.PresentationPrefix)); err != nil {
+					return err
+				}
+				f.Credentials["C-service"] = api.Credential{
+					Bound:             bound,
+					ID:                credID,
+					Issuer:            icRec.ID,
+					Subject:           cID.ID,
+					IssuerKeyVersion:  icRec.KeyVersion,
+					SubjectKeyVersion: cID.KeyVersion,
+					Type:              protocol.CredentialTypeEnterpriseIdentity,
+					ClaimNames:        []string{"domain", "role"},
+					Digest:            signedSD.AnchorDigest,
+					Interval:          valid,
+				}
+				updated = true
+			}
+		}
+	}
+
+	if _, err := os.Stat(i.registrySubPath("u-quote-sample.json")); os.IsNotExist(err) {
+		uPriv, err := loadECPrivateKeyPEM(i.privatePath("app", "U.key.pem"))
+		if err != nil {
+			return err
+		}
+		uSD, err := os.ReadFile(i.registrySubPath("credentials", "U.sdjwt"))
+		if err != nil {
+			return err
+		}
+		cCert, err := os.ReadFile(i.registrySubPath("certifications", "C.jws"))
+		if err != nil {
+			return err
+		}
+		g0Raw, err := os.ReadFile(i.registrySubPath("grants", "g0.jws"))
+		if err != nil {
+			return err
+		}
+		if err := i.writeUQuoteSample(d, f, string(uSD), uPriv, string(cCert), string(g0Raw), time.Now().UTC().Truncate(time.Second)); err != nil {
+			return err
+		}
+	}
+
+	if updated {
+		return writePublicJSON(i.registryPath("fixtures.json"), f)
+	}
+	return nil
+}
+
+func (i *instance) writeUQuoteSample(
+	d *deployment,
+	f *fixtures,
+	uPresentationPrefix string,
+	uPriv *ecdsa.PrivateKey,
+	certCJWS string,
+	g0JWS string,
+	now time.Time,
+) error {
+	nonce, err := protocol.GenerateNonce()
+	if err != nil {
+		return err
+	}
+	chal := protocol.ChallengeContext{
+		ChallengeID: "u-quote-" + api.Digest([]byte(d.DeploymentID + "/u-quote-challenge"))[:16],
+		Nonce:       nonce,
+		Audience:    "https://c.local",
+		IssuedAt:    now.Unix(),
+		ExpiresAt:   f.G0.EXP,
+	}
+	cSDPath := i.registrySubPath("credentials", "C.sdjwt")
+	cSDBytes, err := os.ReadFile(cSDPath)
+	if err != nil {
+		return err
+	}
+	pkg := protocol.AccessEvidencePackage{
+		Request: protocol.AccessRequest{
+			SchemaVersion:     api.Schema,
+			DeploymentID:      d.DeploymentID,
+			Actor:             f.Identities["U"].ID,
+			PrincipalDomain:   "A",
+			AuthorizationMode: api.RP,
+			TaskID:            f.Task.ID,
+			Audience:          "https://c.local",
+			Resource:          "urn:grad:resource:C:quotes",
+			Action:            "quote.read",
+			SupplierID:        "urn:grad:supplier:C",
+			QuoteID:           nil,
+			ProductID:         "urn:grad:product:P1",
+			Quantity:          1,
+			Currency:          "CNY",
+			AmountMinor:       0,
+			IdempotencyKey:    "seed-sample-u-quote-001",
+		},
+		TaskSpec: f.TaskSpec,
+		AncestorCredentials: []protocol.AncestorCredential{
+			{CredentialID: f.Credentials["C"].ID, Presentation: string(cSDBytes)},
+		},
+		Grants: []string{g0JWS},
+		TrustPaths: []protocol.TrustPathEntry{
+			{Issuer: f.Domains["C"].Issuers[0].ID, DomainCertification: certCJWS},
+		},
+	}
+	if certAJWS, err := os.ReadFile(i.registrySubPath("certifications", "A.jws")); err == nil {
+		pkg.TrustPaths = append(pkg.TrustPaths, protocol.TrustPathEntry{
+			Issuer:              f.Domains["A"].Issuers[0].ID,
+			DomainCertification: string(certAJWS),
+		})
+	}
+	bindings, _, err := protocol.AssembleAccessEvidencePackage(
+		&pkg,
+		uPresentationPrefix,
+		f.Identities["U"].KeyID,
+		uPriv,
+		chal,
+		now.Unix(),
+		false,
+	)
+	if err != nil {
+		return err
+	}
+	sampleFile := EvidenceSample{
+		ChallengeID: chal.ChallengeID,
+		Nonce:       chal.Nonce,
+		Audience:    chal.Audience,
+		IssuedAt:    chal.IssuedAt,
+		ExpiresAt:   chal.ExpiresAt,
+		Bindings:    *bindings,
+		Package:     pkg,
+	}
+	return writePublicJSON(i.registrySubPath("u-quote-sample.json"), sampleFile)
+}
+
+func (i *instance) syncMaterialOutboxes(ctx context.Context, j journal, d *deployment, f *fixtures, report *seedReport) error {
+	ds := NewDeliveryService(j.db)
+	now := time.Now().UTC().Unix()
+	snap := &protocol.SnapshotView{
+		Height:         1,
+		Now:            time.Unix(now, 0).UTC(),
+		DeploymentID:   d.DeploymentID,
+		Root:           d.Bootstrap.Root,
+		Domains:        make(map[string]api.Domain),
+		Certifications: make(map[string]api.Certification),
+		Identities:     make(map[string]api.Identity),
+		Credentials:    make(map[string]api.Credential),
+		Tasks:          map[string]api.Task{f.Task.ID: activateTaskSnapshot(f.Task)},
+		Grants: map[string]api.Grant{
+			f.G0.ID: activateGrantSnapshot(f.G0),
+			f.G1.ID: activateGrantSnapshot(f.G1),
+		},
+	}
+	for domID, db := range f.Domains {
+		dom := db.Domain
+		dom.Issuers = []string{db.Issuers[0].ID}
+		dom.Certification = f.Certifications[domID].Certification.ID
+		dom.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Domains[domID] = dom
+
+		cert := f.Certifications[domID].Certification
+		cert.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Certifications[cert.ID] = cert
+
+		di := db.Identity
+		di.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Identities[di.ID] = di
+
+		ii := db.Issuers[0]
+		ii.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Identities[ii.ID] = ii
+	}
+	for role, id := range f.Identities {
+		id.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Identities[id.ID] = id
+		if cred, ok := f.Credentials[role]; ok {
+			cred.Version = api.Version{Status: api.Active, Revision: 1}
+			snap.Credentials[cred.ID] = cred
+		}
+	}
+	if cSvc, ok := f.Credentials["C-service"]; ok {
+		cSvc.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Credentials[cSvc.ID] = cSvc
+	}
+
+	rootPub, _, err := protocol.ParseAppPublicKey(d.Bootstrap.Root.PublicKey)
+	if err != nil {
+		return err
+	}
+	icPub, _, err := protocol.ParseAppPublicKey(f.Domains["C"].Issuers[0].PublicKey)
+	if err != nil {
+		return err
+	}
+	cPub, _, err := protocol.ParseAppPublicKey(f.Identities["C"].PublicKey)
+	if err != nil {
+		return err
+	}
+
+	opCoords := func(suffix string) (string, int64) {
+		for _, op := range report.Operations {
+			if op != nil && op.Key == "seed/"+suffix && op.Commit != nil {
+				return op.TxID, int64(op.Commit.Number)
+			}
+		}
+		return api.Digest([]byte("seed/" + suffix)), 1
+	}
+
+	for _, domID := range []string{"A", "B", "C"} {
+		jwsBytes, err := os.ReadFile(i.registrySubPath("certifications", domID+".jws"))
+		if err != nil {
+			return err
+		}
+		txID, blockNo := opCoords("cert-" + domID)
+		for _, rec := range []string{f.Domains[domID].Issuers[0].ID, f.Identities["U"].ID, f.Identities["C"].ID} {
+			if err := ds.PublishDomainCertification(ctx, snap, rec, domID, string(jwsBytes), rootPub, txID, blockNo, true, now); err != nil {
+				return err
+			}
+			if _, err := ds.SyncCertificationReceipt(ctx, snap, rec, domID, rootPub, now); err != nil {
+				return err
+			}
+		}
+	}
+
+	g0Bytes, err := os.ReadFile(i.registrySubPath("grants", "g0.jws"))
+	if err != nil {
+		return err
+	}
+	certCBytes, err := os.ReadFile(i.registrySubPath("certifications", "C.jws"))
+	if err != nil {
+		return err
+	}
+	cSvcBytes, err := os.ReadFile(i.registrySubPath("credentials", "C-service.sdjwt"))
+	if err != nil {
+		cSvcBytes, err = os.ReadFile(i.registrySubPath("credentials", "C.sdjwt"))
+		if err != nil {
+			return err
+		}
+	}
+	g0TxID, g0BlockNo := opCoords("G0")
+	pkg := GrantDeliveryPackage{
+		DeploymentID:           d.DeploymentID,
+		Recipient:              f.Identities["U"].ID,
+		GrantID:                f.G0.ID,
+		GrantJWS:               string(g0Bytes),
+		TaskSpec:               f.TaskSpec,
+		ServicePresentation:    string(cSvcBytes),
+		DomainCertificationJWS: string(certCBytes),
+	}
+	if _, err := ds.PublishGrantOutbox(ctx, snap, pkg, rootPub, icPub, cPub, g0TxID, g0BlockNo, true, now); err != nil {
+		return err
+	}
+	if _, _, err := ds.DeliverGrantReceipt(ctx, snap, d.DeploymentID, f.Identities["U"].ID, f.G0.ID, nil, rootPub, icPub, cPub, now); err != nil {
+		return err
+	}
+	return nil
+}
+
+func activateTaskSnapshot(t api.Task) api.Task {
+	t.Version = api.Version{Status: api.Active, Revision: 1}
+	return t
+}
+
+func activateGrantSnapshot(g api.Grant) api.Grant {
+	g.Version = api.Version{Status: api.Active, Revision: 1}
+	return g
 }

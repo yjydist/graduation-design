@@ -3,6 +3,7 @@ package protocol
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
@@ -263,6 +264,64 @@ type RegistrationChallenge struct {
 	Nonce              string             `json:"nonce"`
 	Purpose            string             `json:"purpose"`
 	SubjectID          string             `json:"subjectId"`
+}
+
+// SignManagementDualProofBundle constructs and signs both proofs for a registration challenge:
+// the Fabric management X.509 ECDSA ASN.1 DER signature and the application ES256 JWS proof.
+func SignManagementDualProofBundle(
+	dep DeploymentBinding,
+	chal RegistrationChallenge,
+	mgmtCertDER []byte,
+	mgmtPriv *ecdsa.PrivateKey,
+	appPriv *ecdsa.PrivateKey,
+) (*ManagementDualProofBundle, error) {
+	if mgmtPriv == nil || mgmtPriv.Curve != elliptic.P256() {
+		return nil, NewError(ErrCodeInvalidSchema, "management private key must be ECDSA P-256")
+	}
+	if appPriv == nil || appPriv.Curve != elliptic.P256() {
+		return nil, NewError(ErrCodeInvalidSchema, "application private key must be ECDSA P-256")
+	}
+	depID, err := dep.ComputeID()
+	if err != nil {
+		return nil, err
+	}
+	chal.DeploymentID = depID
+	chal.Purpose = RegistrationChallengePurpose
+	chal.ManagementIdentity.CertificateSha256 = DigestBytes(mgmtCertDER)
+
+	chalJCS, err := MarshalJCS(chal)
+	if err != nil {
+		return nil, err
+	}
+	chalSum := sha256.Sum256(chalJCS)
+	chalHex := hex.EncodeToString(chalSum[:])
+
+	mgmtSigDER, err := ecdsa.SignASN1(rand.Reader, mgmtPriv, chalSum[:])
+	if err != nil {
+		return nil, err
+	}
+	compact, _, err := SignCompactJWS(appPriv, ManagementProofTyp, chal.AppKeyID, chalJCS)
+	if err != nil {
+		return nil, err
+	}
+	parts := strings.Split(compact, ".")
+	if len(parts) != 3 {
+		return nil, NewError(ErrCodeInvalidSchema, "internal error splitting application proof JWS")
+	}
+	bundle := &ManagementDualProofBundle{
+		AppJWSProtected:          parts[0],
+		AppJWSSignature:          parts[2],
+		Challenge:                chal,
+		ChallengeSha256:          chalHex,
+		Deployment:               dep,
+		DeploymentID:             depID,
+		ManagementCertificateDER: base64.RawURLEncoding.EncodeToString(mgmtCertDER),
+		ManagementSignatureDER:   base64.RawURLEncoding.EncodeToString(mgmtSigDER),
+	}
+	if err := bundle.Verify(); err != nil {
+		return nil, err
+	}
+	return bundle, nil
 }
 
 // ManagementDualProofBundle captures the management and DID application proofs for verification.

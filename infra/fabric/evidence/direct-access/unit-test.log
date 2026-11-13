@@ -1,0 +1,7 @@
+?   	graduation-design/chaincode/registry	[no test files]
+?   	graduation-design/cmd/ledgerctl	[no test files]
+ok  	graduation-design/internal/fabric	1.421s
+ok  	graduation-design/internal/fabricapi	0.293s
+ok  	graduation-design/internal/gateway	0.744s
+ok  	graduation-design/internal/policy	0.407s
+ok  	graduation-design/internal/protocol	0.352s

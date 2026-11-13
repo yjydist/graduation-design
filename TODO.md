@@ -2,7 +2,7 @@
 
 **当前状态.** Fabric D0 最小网络与 D0 最小协议已完成并通过验证. 离线单元测试通过, 在默认实例 `.local/fabric-d0` 与干净重建独立实例 `.local/fabric-d0-protocol` 上均通过 20 项 D0 网络与协议联合验收 (`20/20`), 完成 P-256 应用密钥与测试 CA `did:web` 根信任, W3C VC v2 本地上下文摘要固定, 以及绑定制备部署的 ES256/SD-JWT 凭证和 `AccessEvidencePackage` 出示闭环. 业务服务端点, OPA 求值与订单核账按 M1-M4 阶段推进. 任务书结束日期为 2027-05-21.
 
-[Fabric 任务](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/tasks.md), [Fabric 核验](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), [D0 协议任务](openspec/changes/bootstrap-d0-protocol/tasks.md)与[证据索引](infra/fabric/evidence/README.md)记录实施和复跑.
+[Fabric 任务](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/tasks.md), [Fabric 核验](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), [D0 协议任务](openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md)与[证据索引](infra/fabric/evidence/README.md)记录实施和复跑.
 
 | 阶段 | 待办 | 可进入下一阶段的证据 |
 | --- | --- | --- |

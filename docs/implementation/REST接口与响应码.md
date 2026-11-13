@@ -2,7 +2,7 @@
 
 ## 1 客户端调用顺序
 
-request 的全部字段必填, idempotencyKey 为 1-64 个 ASCII 字母, 数字, 下划线或连字符. 询价时切换到 quotes 资源和 quote.read, quoteId 为 null, amountMinor 为 0, 使用新的询价键. 下单时只使用询价响应中的 quoteId, 商品, 数量, 币种和总价, 改为订单资源, 动作和订单键. 每个动作依次调用以下接口.
+request 的全部字段必填, idempotencyKey 为 1-64 个 ASCII 字母, 数字, 下划线或连字符. 询价时切换到 quotes 资源和 quote.read, quoteId 为 null, amountMinor 为 0, 使用新的询价键. 下单时只使用询价响应中的 quoteId, 商品, 数量, 币种和总价, 改为订单资源, 动作和订单键. 当 `B₁`/`B₂` 作为 LLM 智能体运行时, 下表定义其底层确定性协议工具 (`request_quote`, `create_order` 等) 的执行契约: LLM 只向工具提交业务意图参数 (如动作, 任务/报价引用, 数量等), 挑战申请, `nonce` 原样绑定, `KB-JWT` 签名, `intentId` 持久化锁及响应校验均由工具层严格执行. 每个动作依次调用以下接口.
 
 | 调用 | 成功响应 JSON | 客户端如何使用 |
 | --- | --- | --- |

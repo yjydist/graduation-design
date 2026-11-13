@@ -1,6 +1,6 @@
 # Fabric 验收证据
 
-在 arm64 Docker Desktop 上, 原实例与干净重建实例各通过 12 项. 加入在线读取回归后, 同一隔离实例和独立空卷各通过 14 项. 加入初始化续跑及检查点查询断流回归后, 独立空卷通过 16 项. 补齐根提交后的续跑及凭证期限边界后, 独立空卷通过 17 项. D0 最小协议升级后, 在默认实例与干净重建独立实例各通过 20 项. 直接访问业务闭环接入后, 真实 Fabric 实例 `.local/fabric-d0` 通过全部 26 项联合验收 (`run-d317a93ba562e854`, 在原有 20 项之上新增注册双证明与材料同步, `quote.read` 询价与同键幂等/冲突, 错误叶子私钥拒绝, 原探针到期 `STATE_STALE`, 锁后 `BLOCKED` 无报价副作用, 以及到期当秒拒绝, 且零私钥泄漏). 运行命令和环境要求见[网络说明](../README.md), 历史网络判据见[迁移核验](../../../openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), D0 协议变更清单见[协议任务](../../../openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md), 直接访问变更清单见[M1 直接访问任务](../../../openspec/changes/implement-m1-direct-access/tasks.md).
+在 arm64 Docker Desktop 上, 原实例与干净重建实例各通过 12 项. 加入在线读取回归后, 同一隔离实例和独立空卷各通过 14 项. 加入初始化续跑及检查点查询断流回归后, 独立空卷通过 16 项. 补齐根提交后的续跑及凭证期限边界后, 独立空卷通过 17 项. D0 最小协议升级后, 在默认实例与干净重建独立实例各通过 20 项. 直接访问业务闭环接入后, 真实 Fabric 实例 `.local/fabric-d0` 通过全部 26 项联合验收 (`run-d317a93ba562e854`, 在原有 20 项之上新增注册双证明与材料同步, `quote.read` 询价与同键幂等/冲突, 错误叶子私钥拒绝, 原探针到期 `STATE_STALE`, 锁后 `BLOCKED` 无报价副作用, 以及到期当秒拒绝, 且零私钥泄漏). 运行命令和环境要求见[网络说明](../README.md), 历史网络判据见[迁移核验](../../../openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), D0 协议变更清单见[协议任务](../../../openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md), 直接访问变更清单见[M1 直接访问任务](../../../openspec/changes/archive/2026-11-13-implement-m1-direct-access/tasks.md).
 
 | 运行 | 汇总 | 原始记录 |
 | --- | --- | --- |

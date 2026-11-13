@@ -2,7 +2,7 @@
 
 **当前状态.** Fabric D0 最小网络, D0 最小协议与 M1 直接访问已完成并通过验证. 离线单元测试 `go test -count=1 ./...` 全部通过, 在真实 Fabric 实例 `.local/fabric-d0` 上通过全部 26 项 D0 + 直接访问联合验收 (`26/26`, `run-d317a93ba562e854`), 完成域认证与 IA/IC 资格, 注册双证明与材料交付, OPA 嵌入式策略求值, `StateProvider` 一致视图快照, `READ COMMITTED` 业务锁事务, 锁后 OPA 求值与期限当秒拒绝, `POST /v1/access/execute` (`quote.read`) 询价及同键幂等事务闭环. 后续两种根与两级委托, 动态状态与实验按 M2-M4 阶段推进. 任务书结束日期为 2027-05-21.
 
-[Fabric 任务](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/tasks.md), [Fabric 核验](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), [D0 协议任务](openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md), [M1 直接访问任务](openspec/changes/implement-m1-direct-access/tasks.md)与[证据索引](infra/fabric/evidence/README.md)记录实施和复跑.
+[Fabric 任务](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/tasks.md), [Fabric 核验](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), [D0 协议任务](openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md), [M1 直接访问任务](openspec/changes/archive/2026-11-13-implement-m1-direct-access/tasks.md)与[证据索引](infra/fabric/evidence/README.md)记录实施和复跑.
 
 | 阶段 | 待办 | 可进入下一阶段的证据 |
 | --- | --- | --- |

@@ -1,0 +1,91 @@
+{
+  "runId": "run-7361ca2734fcc311",
+  "evidenceDir": ".local/fabric-evidence-d0-protocol/rebuilt/run-7361ca2734fcc311",
+  "deploymentId": "3c9db8a8f114e8c19f4a1e6d4a728ccb1b0d9a06a89c4b08916a90c74c9cca90",
+  "scope": "Fabric D0 verifiable protocol anchors, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-13T02:24:49.511672Z",
+  "finishedAt": "2026-11-13T02:26:09.933299Z",
+  "status": "PASS",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "initialization-resume",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "credential-validity-boundaries",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "shared-view-concurrent-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "checkpoint-query-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "chaincode-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "protocol-encoding-and-vectors",
+      "pass": true
+    },
+    {
+      "name": "did-web-and-context-pinning",
+      "pass": true
+    },
+    {
+      "name": "verifiable-evidence-and-tamper-rejection",
+      "pass": true
+    }
+  ]
+}

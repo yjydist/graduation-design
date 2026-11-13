@@ -1,0 +1,14 @@
+{
+  "did:web:a.local": "did/a.local.did.json",
+  "did:web:a.local:a1": "did/a.local_a1.did.json",
+  "did:web:a.local:issuer": "did/a.local_issuer.did.json",
+  "did:web:a.local:other": "did/a.local_other.did.json",
+  "did:web:a.local:u": "did/a.local_u.did.json",
+  "did:web:b.local": "did/b.local.did.json",
+  "did:web:b.local:b1": "did/b.local_b1.did.json",
+  "did:web:b.local:issuer": "did/b.local_issuer.did.json",
+  "did:web:c.local": "did/c.local.did.json",
+  "did:web:c.local:issuer": "did/c.local_issuer.did.json",
+  "did:web:c.local:supplier": "did/c.local_supplier.did.json",
+  "did:web:t.local": "did/t.local.did.json"
+}

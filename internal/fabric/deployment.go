@@ -98,15 +98,27 @@ func (i *instance) bootstrap(genesis *block) (api.Bootstrap, []byte, error) {
 	var boot api.Bootstrap
 	path := i.registryPath("bootstrap.json")
 	if data, err := os.ReadFile(path); err == nil {
-		err = json.Unmarshal(data, &boot)
-		if err == nil && boot.GenesisHash != genesis.Hash {
-			err = fmt.Errorf("bootstrap genesis hash mismatch")
+		if err := json.Unmarshal(data, &boot); err != nil {
+			return boot, nil, err
 		}
-		return boot, data, err
+		if boot.GenesisHash != genesis.Hash {
+			return boot, nil, fmt.Errorf("bootstrap genesis hash mismatch")
+		}
+		if boot.Root.KeyID != "did:web:t.local#key-1" {
+			return boot, nil, fmt.Errorf("%w: legacy synthetic bootstrap root keyId %q; rebuild a clean instance", errDeploymentMismatch, boot.Root.KeyID)
+		}
+		mat, err := i.ensureBootstrapProtocolMaterials(time.Now().UTC())
+		if err != nil {
+			return boot, nil, err
+		}
+		if mat.RootPubHex != boot.Root.PublicKey || mat.RootDIDDigest != boot.Root.DocumentDigest {
+			return boot, nil, fmt.Errorf("%w: persisted root protocol materials mismatch bootstrap.json", errDeploymentMismatch)
+		}
+		return boot, data, nil
 	} else if !os.IsNotExist(err) {
 		return boot, nil, err
 	}
-	key, err := publicKey()
+	mat, err := i.ensureBootstrapProtocolMaterials(time.Now().UTC())
 	if err != nil {
 		return boot, nil, err
 	}
@@ -121,8 +133,8 @@ func (i *instance) bootstrap(genesis *block) (api.Bootstrap, []byte, error) {
 	boot = api.Bootstrap{
 		DeploymentFields: api.DeploymentFields{ChannelID: api.Channel, GenesisHash: genesis.Hash, InstanceID: randomID(), RegistryName: api.Registry, SchemaVersion: api.Schema},
 		Root: api.RootRecord{
-			DID: "did:web:t.local", Management: bindings["T"], DocumentDigest: api.Digest([]byte("synthetic root document " + key)),
-			KeyID: "did:web:t.local#auth", KeyVersion: 1, PublicKey: key,
+			DID: "did:web:t.local", Management: bindings["T"], DocumentDigest: mat.RootDIDDigest,
+			KeyID: "did:web:t.local#key-1", KeyVersion: 1, PublicKey: mat.RootPubHex,
 		},
 		Initializer: bindings["init"],
 		TaskCreator: api.TaskAuthority{Domain: "A", Subject: subjectU, Management: bindings["U"]},
@@ -132,7 +144,7 @@ func (i *instance) bootstrap(genesis *block) (api.Bootstrap, []byte, error) {
 	if err != nil {
 		return boot, nil, err
 	}
-	return boot, data, writeFile(path, data, 0600)
+	return boot, data, writePublicFile(path, data)
 }
 
 func (i *instance) build(ctx context.Context, d *deployment) error {

@@ -67,7 +67,7 @@ func verify(ctx context.Context, dir, out string) (report *verification, err err
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return nil, err
 	}
-	report = &verification{Run: run, Dir: path, Scope: "Fabric D0 synthetic registry, original transaction evidence and state-provider acceptance", Started: time.Now().UTC()}
+	report = &verification{Run: run, Dir: path, Scope: "Fabric D0 verifiable protocol anchors, original transaction evidence and state-provider acceptance", Started: time.Now().UTC()}
 	defer func() {
 		report.Finished = time.Now().UTC()
 		report.Status = "PASS"
@@ -134,6 +134,9 @@ func verify(ctx context.Context, dir, out string) (report *verification, err err
 		return report, err
 	}
 	a.f = seed.fixtures
+	if err := i.publicMaterials(path); err != nil {
+		return report, err
+	}
 	cases := []struct {
 		name string
 		run  func() error
@@ -155,6 +158,9 @@ func verify(ctx context.Context, dir, out string) (report *verification, err err
 		{"sorter-and-peer-failures", a.networkFaults},
 		{"chaincode-outage-and-recovery", a.chaincodeOutage},
 		{"restart-keeps-checkpoint", a.restart},
+		{"protocol-encoding-and-vectors", a.protocolVectors},
+		{"did-web-and-context-pinning", a.protocolDIDAndContext},
+		{"verifiable-evidence-and-tamper-rejection", a.protocolEvidence},
 	}
 	for _, test := range cases {
 		log.event("case_start", test.name)
@@ -199,6 +205,23 @@ func (i *instance) publicMaterials(out string) error {
 		if err := os.WriteFile(filepath.Join(dest, name), b, 0644); err != nil {
 			return err
 		}
+	}
+	protoFiles, err := collectRegistryPublicFiles(filepath.Join(i.dir, "registry"))
+	if err != nil {
+		return err
+	}
+	for rel, src := range protoFiles {
+		b, err := os.ReadFile(src)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dest, "protocol", rel)
+		if err := writePublicFile(target, b); err != nil {
+			return err
+		}
+	}
+	if _, err := scanDirForPrivateKeys(out); err != nil {
+		return err
 	}
 	return nil
 }

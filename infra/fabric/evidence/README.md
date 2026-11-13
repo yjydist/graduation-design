@@ -1,8 +1,11 @@
 # Fabric D0 验收证据
 
-在 arm64 Docker Desktop 上, 原实例与干净重建实例各通过 12 项. 加入在线读取回归后, 同一隔离实例和独立空卷各通过 14 项. 加入初始化续跑及检查点查询断流回归后, 独立空卷通过 16 项. 补齐根提交后的续跑及凭证期限边界后, 独立空卷通过 17 项. 运行命令和环境要求见[网络说明](../README.md), 判据和覆盖范围见[变更核验](../../../openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md).
+在 arm64 Docker Desktop 上, 原实例与干净重建实例各通过 12 项. 加入在线读取回归后, 同一隔离实例和独立空卷各通过 14 项. 加入初始化续跑及检查点查询断流回归后, 独立空卷通过 16 项. 补齐根提交后的续跑及凭证期限边界后, 独立空卷通过 17 项. D0 最小协议升级后, 在默认实例与干净重建独立实例各通过 20 项 (在原有 17 项之上新增协议向量复算, 测试 CA `did:web` 与上下文摘要固定, 以及绑定当前部署的真实签名出示与 8 字段篡改拒绝, 且公开材料扫描确认零私钥泄漏). 运行命令和环境要求见[网络说明](../README.md), 历史网络判据见[迁移核验](../../../openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), D0 协议变更清单见[协议任务](../../../openspec/changes/bootstrap-d0-protocol/tasks.md).
 
 | 运行 | 汇总 | 原始记录 |
+| --- | --- | --- |
+| D0 协议默认实例 run-174750e6dc3e2e4d | [20/20](protocol/original/run-174750e6dc3e2e4d/summary.json) | [事件](protocol/original/run-174750e6dc3e2e4d/events.jsonl), [区块及交易校验码](protocol/original/run-174750e6dc3e2e4d/blocks.jsonl), [协议公开材料](protocol/original/run-174750e6dc3e2e4d/materials/protocol/evidence-sample.json), [上下文清单](protocol/original/run-174750e6dc3e2e4d/materials/protocol/context-manifest.json) |
+| D0 协议干净重建 run-7361ca2734fcc311 | [20/20](protocol/rebuilt/run-7361ca2734fcc311/summary.json) | [事件](protocol/rebuilt/run-7361ca2734fcc311/events.jsonl), [区块及交易校验码](protocol/rebuilt/run-7361ca2734fcc311/blocks.jsonl), [协议公开材料](protocol/rebuilt/run-7361ca2734fcc311/materials/protocol/evidence-sample.json), [离线单测日志](protocol/unit-test.log) |
 | --- | --- | --- |
 | 原实例 run-271437baa239da4e | [12/12](original/run-271437baa239da4e/summary.json) | [事件](original/run-271437baa239da4e/events.jsonl), [区块及交易校验码](original/run-271437baa239da4e/blocks.jsonl), [部署与安装标识](original/run-271437baa239da4e/materials/deployment.json) |
 | 干净重建 run-f008fd88766dd7c6 | [12/12](clean/run-f008fd88766dd7c6/summary.json) | [事件](clean/run-f008fd88766dd7c6/events.jsonl), [区块及交易校验码](clean/run-f008fd88766dd7c6/blocks.jsonl), [部署与安装标识](clean/run-f008fd88766dd7c6/materials/deployment.json) |
@@ -20,7 +23,7 @@
 | 初始化中断回归与旧实例续跑 | [专项回归](recovery/initialization-retry/regression.log) | [独立实例原操作和续跑](recovery/initialization-retry/fresh-initialization.json), [旧实例原操作和续跑](recovery/initialization-retry/prior-interruption/initialization.json), [原块复核](recovery/initialization-retry/block-audit.log) |
 | 跨部署配对 | [实例对照](comparison/rebuild.json) | [旧夹具拒绝](comparison/old-material.json), [本部署交易](comparison/new-material.json), [原提交块](comparison/new-material-block.pb) |
 
-每个运行目录的 blocks.jsonl 用 raw 指向保留的完整区块 protobuf, 记录块号/哈希/父哈希和交易位置. events.jsonl 记录各判据, 原签名提案/交易及失败阶段, 故障时刻, 探针发送/提交观测/采用与本地单调期限. materials 保存公开创世块, 包含 MSP, consenter 和策略, 另有 Compose, 依赖锁, 引导清单和初始化样本. 两个主验收运行还保存三域原始安装及批准查询结果和链码构建信息. seed.json 保存标记为 synthetic 的应用材料和真实登记结果.
+每个运行目录的 blocks.jsonl 用 raw 指向保留的完整区块 protobuf, 记录块号/哈希/父哈希和交易位置. events.jsonl 记录各判据, 原签名提案/交易及失败阶段, 故障时刻, 探针发送/提交观测/采用与本地单调期限. materials 保存公开创世块, 包含 MSP, consenter 和策略, 另有 Compose, 依赖锁, 引导清单和初始化样本; D0 协议运行还在 `materials/protocol/` 保存 `vc-v2.context.json`, `context-manifest.json`, 公开 DID 文档, 测试 CA 根证书, 非合成域认证/SD-JWT 凭证/委托/出示样本 (`seed.json` 中 `"synthetic": false`), 而旧 D0 网络归档运行保存 `"synthetic": true` 的对照样本. 两个主验收运行还保存三域原始安装及批准查询结果和链码构建信息.
 
 宿主, 容器资源, 工具链和镜像锁见[arm64 运行记录](arm64-environment.log). 四排序身份分别对应 A/B/C/实验运维, 实际同属一个 Docker Desktop 宿主和操作者. [时钟与控制方样本](clock-and-control.log)的时钟采样精度为秒. 提案偏差窗口 2 秒, 校时误差界 1 秒是实验假设. [默认入口读取对照](comparison/default-entrypoints.json)及[离线检查](comparison/checks.log)另存.
 

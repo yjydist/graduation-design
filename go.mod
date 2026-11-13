@@ -1,6 +1,6 @@
 module graduation-design
 
-go 1.27.3
+go 1.27
 
 require (
 	github.com/hyperledger/fabric-chaincode-go/v2 v2.3.0

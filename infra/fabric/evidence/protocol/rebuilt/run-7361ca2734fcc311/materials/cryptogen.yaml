@@ -1,0 +1,61 @@
+OrdererOrgs:
+  - Name: orderer-a
+    Domain: oa.local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer-a
+        SANS: [orderer-a, 127.0.0.1]
+  - Name: orderer-b
+    Domain: ob.local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer-b
+        SANS: [orderer-b, 127.0.0.1]
+  - Name: orderer-c
+    Domain: oc.local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer-c
+        SANS: [orderer-c, 127.0.0.1]
+  - Name: orderer-d
+    Domain: od.local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer-d
+        SANS: [orderer-d, 127.0.0.1]
+  - Name: orderer-rogue
+    Domain: ox.local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer-rogue
+        SANS: [orderer-rogue, 127.0.0.1]
+PeerOrgs:
+  - Name: org-a
+    Domain: a.local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: peer-a
+        SANS: [peer-a, 127.0.0.1]
+    Users: {Count: 9}
+  - Name: org-b
+    Domain: b.local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: peer-b
+        SANS: [peer-b, 127.0.0.1]
+    Users: {Count: 9}
+  - Name: org-c
+    Domain: c.local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: peer-c
+        SANS: [peer-c, 127.0.0.1]
+    Users: {Count: 9}
+  - Name: org-t
+    Domain: t.local
+    EnableNodeOUs: true
+    Users: {Count: 1}
+  - Name: org-x
+    Domain: x.local
+    EnableNodeOUs: true
+    Users: {Count: 1}

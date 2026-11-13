@@ -15,7 +15,7 @@ mise run ledger:check
 mise run ledger:verify -- --out .local/fabric-evidence
 ```
 
-`fabric:up` 用创世块加入四个排序节点和 A/B/C 的 Peer. 首次 `deploy` 安装每域自己的 TLS 链码服务, 批准和提交定义, 核验初始化并保存 `registry/deployment.json`. `seed` 生成并持久化本实例合成夹具, 使用原操作键复跑. 夹具有效期 24 小时, 超期可用历史模式复查, 新的在线验收使用独立实例和新夹具. 复跑 `verify` 包含停机, 恢复及重启场景, 在独立实验实例运行.
+`fabric:up` 用创世块加入四个排序节点和 A/B/C 的 Peer. 首次 `deploy` 安装每域自己的 TLS 链码服务, 生成或加载持久化 P-256 应用与测试 TLS 私钥 (`<instance>/private/`), 写出公开 DID 文档, 测试 CA 根证书与本地 VC v2 上下文摘要清单 (`<instance>/registry/`), 批准和提交定义, 核验初始化并保存 `registry/deployment.json` (不接受旧版无持久化私钥的合成 `bootstrap.json`). `seed` 为各角色持久化应用私钥并使用原操作键提交绑定制备部署的真实 ES256 `vc+jwt` 域认证, `vc+sd-jwt` 身份凭证, `taskSpec`, `G0`/`G1` (`grad-delegation+jwt`) 委托和示例 `AccessEvidencePackage`. 夹具有效期 24 小时, 超期可用历史模式复查, 新的在线验收使用独立实例和新夹具. 复跑 `verify` 包含停机, 恢复, 重启及协议验签场景, 在独立实验实例运行.
 
 首次部署中断后, 先在同一实例重跑 `mise run ledger:deploy`. 原初始化已有效提交时, 续跑复用原安装包, 核对原交易和根记录并恢复部署清单. 若提示原初始化提案被拒绝并要求显式续跑, 执行以下命令.
 
@@ -47,11 +47,11 @@ FABRIC_INSTANCE=.local/fabric-d0-rebuilt mise run ledger:verify -- --out .local/
 FABRIC_INSTANCE=.local/fabric-d0-rebuilt mise run fabric:down
 ```
 
-重建生成新的 Compose 项目, 创世块, 证书, 数据卷, instanceId 和 deploymentId. 密钥与数据库口令留在 `.local/`.
+重建生成新的 Compose 项目, 创世块, 证书, 数据卷, instanceId, deploymentId 以及新的 T 根/角色应用密钥与测试 TLS 证书. 私钥与数据库口令留在 `.local/` 和 `<instance>/private/`.
 
 ## 3 取证和故障边界
 
-`verify` 为每次运行分配独立目录, 保存公开运行材料, 完整块, 逐笔校验码, 原操作, 探针单调时间和通过或失败的判据. 必需判据失败或超时以非零状态退出. 默认验收上限 5 分钟, 可通过 `--timeout` 设定.
+`verify` 为每次运行分配独立目录, 保存公开运行材料 (含 `materials/protocol/` 中的 DID 文档, 测试 CA 证书, 本地上下文清单与非合成凭证/委托/出示包并扫描确认零私钥泄漏), 完整块, 逐笔校验码, 原操作, 探针单调时间和通过或失败的判据. 必需判据失败或超时以非零状态退出. 默认验收上限 5 分钟, 可通过 `--timeout` 设定.
 
 两项初始化中断回归各用一个刚启动且尚未执行 `deploy` 的独立空卷实例. 测试分别覆盖首次提案在背书前中断, 以及根已有效提交但部署清单尚未写出. 两项测试均会停止和恢复各自实例的 C Peer, 并完成部署.
 
@@ -63,4 +63,4 @@ mise run fabric:rebuild -- .local/fabric-init-committed-test 17220
 FABRIC_INIT_COMMITTED_TEST_DIR="$PWD/.local/fabric-init-committed-test" mise exec -- go test -v -count=1 ./internal/fabric -run '^TestDeploymentResumesAfterCommittedInitialization$'
 ```
 
-三个业务组织与实验运维分别对应四个排序身份. 当前容器均由同一宿主和运维控制, 停机仅检验容器级故障和连续恢复. D0 的管理交易使用真实 Fabric 证书和背书, 应用材料为合成锚. 真实凭证, 策略求值与订单实验的判据见[实验计划](../../docs/experiments/实验计划.md).
+三个业务组织与实验运维分别对应四个排序身份. 当前容器均由同一宿主和运维控制, 停机仅检验容器级故障和连续恢复. D0 的管理交易使用真实 Fabric 证书和背书, 应用层已切换为持久化 P-256 应用密钥, 测试 CA `did:web` 解析, 固定 W3C VC v2 本地上下文摘要与真实 ES256/SD-JWT 凭证和 `AccessEvidencePackage` 出示; 业务服务端点, 策略求值与订单实验的判据见[实验计划](../../docs/experiments/实验计划.md).

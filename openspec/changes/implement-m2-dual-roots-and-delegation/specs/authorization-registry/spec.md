@@ -1,0 +1,87 @@
+# authorization-registry Specification
+
+## MODIFIED Requirements
+
+### Requirement: 固定根与最小登记路径
+
+登记系统 SHALL 以经三域批准的清单执行一次受限初始化, 固定并只读暴露 RootRecord, instanceId 及 A 域/U 的任务创建资格. 系统 SHALL 通过调用者的 MSPID 和 X.509 客户端证书指纹匹配登记角色, 提供 T 对 A/B/C 域与 IA/IB/IC 的引导及首份域认证, 本域管理员配置 PA 的 `purchasingAuthority` 资格, 经注册挑战与双证明校验的本域身份与凭证锚, U 创建 RP/BM 任务, `C`/`PA` 签发对应根授权 `G0` 以及 `G1`/`G2` 子委托登记. U 创建任务 SHALL 检查其当前管理身份, 主体归属, 域认证及引用凭证的状态, 版本和期限. 系统 SHALL 拒绝绕过角色约束及运行期改变根或任务创建资格的操作.
+
+#### Scenario: 受限初始化
+
+- **WHEN** 普通通道客户端尝试抢先初始化, 或受信初始化方提交偏离已批准清单的根或任务创建资格
+- **THEN** 提案被拒绝, 根记录不被占用
+- **AND** 合法初始化提交为 VALID 后, 再次初始化不能更改任一固定字段
+
+#### Scenario: 初始化提案中断后续跑
+
+- **WHEN** 首次初始化的提案和 txID 已保存, 但背书前中断并在恢复时被明确拒绝
+- **THEN** 系统 SHALL 保留原操作, 提案, txID 和拒绝结果
+- **AND** 仅在操作者显式请求, 原操作未生成已签交易且可信 Peer 确认根仍为空时, 系统 SHALL 用新操作键提交原批准清单
+
+#### Scenario: 根已有效提交后恢复部署清单
+
+- **WHEN** 初始化原交易已有效提交, 但在写出部署清单前中断
+- **THEN** 续跑核对可信 Peer 的原交易及根记录, 使用原安装包及原初始化区块恢复部署清单
+- **AND** 已有重复初始化验证操作保持原结果, 重复初始化拒绝由验收单独检查
+
+#### Scenario: 按角色建立 RP 夹具
+
+- **WHEN** T 引导 A/C 域和 IA/IC 并登记首份认证, 各域获准调用者登记 U, PA, A1, C 服务及凭证锚, U 创建任务, C 登记交给 U 的 G0, U 登记交给 A1 的 G1
+- **THEN** 每一步在依赖满足状态, 当前指针, 密钥版本和期限规则时才能有效提交, 最终 G0/G1 均为 ACTIVE
+- **AND** 根, 身份, 域认证, 凭证锚, 任务及 G0/G1 的链上摘要均由绑定当前部署的真实 DID 文档, ES256/SD-JWT 签名材料与 `taskSpec` 计算并可在同一高度视图复核
+
+#### Scenario: 按角色建立 RP 与 BM 三域多级夹具
+
+- **WHEN** T 引导 A/B/C 域和 IA/IB/IC 并登记首份认证, A 域管理员设置 PA 的 `purchasingAuthority` 资格, 各域获准调用者登记 U, PA, A1, B1, U-in-B, C 服务及凭证锚, U 分别创建 RP 与 BM 任务, C 或当前有效 PA 登记交给 U 的 G0, U 登记交给 A1 的 G1, A1 登记交给 B1 的 G2
+- **THEN** 每一步在依赖满足状态, 当前指针, 密钥版本, 模式权源和期限规则时才能有效提交, 最终两模式路径的 G0/G1/G2 均为 ACTIVE
+- **AND** 根, 身份, 域认证, 凭证锚, 任务及 G0/G1/G2 的链上摘要均由绑定当前部署的真实 DID 文档, ES256/SD-JWT 签名材料与 `taskSpec` 计算并可在同一高度视图复核
+
+#### Scenario: 绕过域权限或父受托者
+
+- **WHEN** 普通域客户端执行 T 的域准入, 跨域注册机构登记普通身份, 非本域签发者登记凭证锚, 非资源方签 RP 根, 非父 grantee 登记 G1, 或同 MSP 的另一张证书冒用已登记角色
+- **THEN** 对应提案被拒绝, 目标记录与已有记录均无变更
+
+#### Scenario: 绕过采购资格或二跳父受托者
+
+- **WHEN** 非有效 PA 签发 BM 根, PA 在 RP 下签发 G0, 非本域管理员设置 PA 资格, 或非父 grantee 登记 G2
+- **THEN** 对应提案被拒绝, 目标记录与已有记录均无变更
+
+#### Scenario: 未配置的合法主体尝试创建任务
+
+- **WHEN** 同属 A 域且身份及凭证有效的其他主体尝试创建任务
+- **THEN** 提案被拒绝, 使用同等合法输入的 U 可有效提交
+- **AND** T 和域管理员均不能在运行期增加任务创建资格
+
+#### Scenario: 注册挑战双证明缺失或证书不匹配
+
+- **WHEN** 普通身份注册受理时提交错误的管理证明证书 (同 MSP 另一证书), 替换挑战或缺少任一双证明
+- **THEN** 注册机构拒绝受理该登记且不消费挑战, 无待提交 `operations` 或链上身份写入
+- **AND** 应用证明与管理证明均有效时消费挑战并持久化 `operations` 后提交上链
+
+### Requirement: 域认证与根授权材料受控交付
+
+域认证与各级委托材料 SHALL 仅在原链上交易确认 `VALID`, 且交付时刻当前资格和有效期仍满足约束时, 经发件箱逐跳开放给目标域或受托者. 接收方 SHALL 在固定高度一致视图上核对签名, 链上锚定摘要, 祖先最小身份出示, 去重 `trustPaths` 与实际收件人后按 `(deploymentId, recipient, grantId)` 原子写入本地收件回执.
+
+#### Scenario: 原交易确认后完成 C 到 U 的材料交付与去重
+
+- **WHEN** T 对 A/C 域认证和 `C -> U` 的 RP `G0` 原交易均在可信 Peer 上确认为 `VALID`, 且 `C` 服务最小凭证出示与 `C` 域认证正文齐全
+- **THEN** `C` 经发件箱向 `U` 交付 `G0`, `taskSpec` 及相关信任路径材料, `U` 核验一致视图后写入 `wallet_receipts`
+- **AND** 相同投递键和包摘要重复投递返回确认, 同 `(deploymentId, recipient, grantId)` 提交不同包摘要返回 `409 DELIVERY_CONFLICT`, 当前域认证正文暂缺时返回 `503 MATERIAL_NOT_SYNCED` 且不写回执
+
+#### Scenario: 原交易确认后完成 C/PA 到 U 到 A1 到 B1 的多跳交付与去重
+
+- **WHEN** T 对 A/B/C 域认证以及 `G0 -> G1 -> G2` 原交易均在可信 Peer 上确认为 `VALID`, 且对应根服务与祖先最小凭证出示及各域认证正文齐全
+- **THEN** 每跳签发者经发件箱向受托者交付包含 `taskSpec`, 上游委托链, 祖先最小出示与按域认证 ID 去重 `trustPaths` 的材料包, 接收方核验一致视图后写入 `wallet_receipts`
+- **AND** 相同投递键和包摘要重复投递返回确认, 同 `(deploymentId, recipient, grantId)` 提交不同包摘要返回 `409 DELIVERY_CONFLICT`, 当前域认证正文暂缺时返回 `503 MATERIAL_NOT_SYNCED` 且不写回执
+
+## ADDED Requirements
+
+### Requirement: 双域身份关联提案与双域审批
+
+系统 SHALL 支持本域与外域已登记主体之间发起跨部署隔离的双域身份关联提案 (`ProposeIdentityLink`), 并仅在另一端所属域当前注册机构核对同一提案摘要与两端有效资格后审批 (`ApproveIdentityLink`) 才变为 `effectiveActive`. 任一端点主体或所属域注册机构 SHALL 可终态撤销关联 (`RevokeIdentityLink`), 且关联状态 SHALL 不转移或替代任一端的采购授权路径.
+
+#### Scenario: 双域身份关联审批与权限隔离
+
+- **WHEN** A 域已登记主体 `U` 与 B 域已登记主体 `U-in-B` 出示各自域内账号认证与应用密钥 PoP 提交关联提案, 随后分别在单方确认阶段及 B 域注册机构审批后查询 `effectiveActive` 状态
+- **THEN** 仅首方登记后关联处于待审批且 `effectiveActive` 为 `false`; 同域冒充另一域审批, 缺失一端 PoP 或提交不匹配提案摘要均被拒绝
+- **AND** B 域注册机构批准同一提案摘要后关联变为 `effectiveActive == true`, 且尝试用 `U-in-B` 替代 `G0` 中的 `U` 访问仍被拒绝, 撤销关联后各自独立路径不受影响

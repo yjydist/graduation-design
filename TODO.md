@@ -2,7 +2,7 @@
 
 **当前状态.** Fabric D0 最小网络, D0 最小协议, M1 直接访问与 M2 两种根与两级委托已全部完成并通过验证. 离线单元测试 `go test -count=1 ./...` 全部通过, 在真实 Fabric 实例 `.local/fabric-d0` 上通过全部 30 项联合验收 (`30/30`, `run-acd4ab7dc0c992f7`), 完成 T 对 A/B/C 及 PA 业务资格认证, 双域身份关联 (`IdentityLink`) 审批与权限隔离, RP/BM 双根两级委托 (`G0`/`G1`/`G2`) 与 ANCESTOR_INACTIVE 撤销传播, C 独立策略拒绝合法 PA 根, 双网关实例同键并发唯一订单与锁后阻塞守卫, 以及基于 MCP Go SDK (`ledgerctl mcp`) 与 OpenAI/Anthropic 官方 Go SDK 的 800 元成单 / 1200 元超限拒绝闭环. 后续动态状态与实验按 M3-M4 阶段推进. 任务书结束日期为 2027-05-21.
 
-[Fabric 任务](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/tasks.md), [Fabric 核验](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), [D0 协议任务](openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md), [M1 直接访问任务](openspec/changes/archive/2026-11-13-implement-m1-direct-access/tasks.md), [M2 双根与委托任务](openspec/changes/implement-m2-dual-roots-and-delegation/tasks.md)与[证据索引](infra/fabric/evidence/README.md)记录实施和复跑.
+[Fabric 任务](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/tasks.md), [Fabric 核验](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), [D0 协议任务](openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md), [M1 直接访问任务](openspec/changes/archive/2026-11-13-implement-m1-direct-access/tasks.md), [M2 双根与委托任务](openspec/changes/archive/2026-11-15-implement-m2-dual-roots-and-delegation/tasks.md)与[证据索引](infra/fabric/evidence/README.md)记录实施和复跑.
 
 | 阶段 | 待办 | 可进入下一阶段的证据 |
 | --- | --- | --- |

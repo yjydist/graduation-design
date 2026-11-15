@@ -104,7 +104,7 @@ var roles = map[string]roleLocation{
 	"init": {"a", "User1"}, "T": {"t", "User1"},
 	"domainA": {"a", "User2"}, "registrarA": {"a", "User3"}, "IA": {"a", "User4"},
 	"U": {"a", "User5"}, "A1": {"a", "User6"}, "alt": {"a", "User7"}, "wrongA": {"a", "User8"}, "PA": {"a", "User9"},
-	"domainB": {"b", "User2"}, "registrarB": {"b", "User3"}, "IB": {"b", "User4"}, "B1": {"b", "User5"},
+	"domainB": {"b", "User2"}, "registrarB": {"b", "User3"}, "IB": {"b", "User4"}, "B1": {"b", "User5"}, "U-in-B": {"b", "User6"}, "wrongB": {"b", "User7"},
 	"domainC": {"c", "User2"}, "registrarC": {"c", "User3"}, "IC": {"c", "User4"},
 	"C": {"c", "User5"}, "probe1": {"c", "User6"}, "probe2": {"c", "User7"},
 	"read": {"c", "User8"}, "rogue": {"x", "User1"},

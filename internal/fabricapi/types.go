@@ -14,6 +14,7 @@ const (
 	Registry  = "authregistry"
 	Schema    = "grad-auth-v1"
 	RP        = "RESOURCE_PREAUTHORIZED"
+	BM        = "BUYER_MANDATE"
 	Active    = "ACTIVE"
 	Pending   = "PENDING"
 	Suspended = "SUSPENDED"
@@ -132,13 +133,52 @@ type Bound struct {
 
 type Domain struct {
 	Bound
-	ID            string     `json:"domainId"`
-	DID           string     `json:"domainDid"`
-	Admin         Management `json:"administrator"`
-	Registrar     Management `json:"registrar"`
-	Issuers       []string   `json:"identityIssuers"`
-	Certification string     `json:"currentCertificationId"`
+	ID                  string     `json:"domainId"`
+	DID                 string     `json:"domainDid"`
+	Admin               Management `json:"administrator"`
+	Registrar           Management `json:"registrar"`
+	Issuers             []string   `json:"identityIssuers"`
+	PurchasingAuthority string     `json:"purchasingAuthority,omitempty"`
+	Certification       string     `json:"currentCertificationId"`
 	Version
+}
+
+type PurchasingAuthorityUpdate struct {
+	Bound
+	DomainID            string `json:"domainId"`
+	PurchasingAuthority string `json:"purchasingAuthority"`
+	ExpectedRevision    uint64 `json:"expectedRevision"`
+}
+
+type IdentityLink struct {
+	Bound
+	ID                      string `json:"id"`
+	SourceDomain            string `json:"sourceDomain"`
+	SourceSubject           string `json:"sourceSubject"`
+	SourceKeyVersion        uint64 `json:"sourceKeyVersion"`
+	SourceAccountCommitment string `json:"sourceAccountCommitment"`
+	TargetDomain            string `json:"targetDomain"`
+	TargetSubject           string `json:"targetSubject"`
+	TargetKeyVersion        uint64 `json:"targetKeyVersion"`
+	TargetAccountCommitment string `json:"targetAccountCommitment"`
+	ProposalDigest          string `json:"proposalDigest"`
+	ProposedAt              int64  `json:"proposedAt"`
+	ExpiresAt               int64  `json:"expiresAt"`
+	ApprovedBy              string `json:"approvedBy,omitempty"`
+	ApprovedAt              int64  `json:"approvedAt,omitempty"`
+	RevokedBy               string `json:"revokedBy,omitempty"`
+	RevokedAt               int64  `json:"revokedAt,omitempty"`
+	Reason                  string `json:"reason,omitempty"`
+	EffectiveActive         bool   `json:"effectiveActive"`
+	Version
+}
+
+type IdentityLinkApproval struct {
+	Bound
+	ID               string `json:"id"`
+	ProposalDigest   string `json:"proposalDigest"`
+	ExpectedRevision uint64 `json:"expectedRevision"`
+	ApprovedAt       int64  `json:"approvedAt"`
 }
 
 type Identity struct {
@@ -241,6 +281,7 @@ type Mutation struct {
 	ID               string `json:"id"`
 	ExpectedRevision uint64 `json:"expectedRevision"`
 	ExpectedDigest   string `json:"expectedDigest"`
+	Reason           string `json:"reason,omitempty"`
 }
 
 type Replacement struct {

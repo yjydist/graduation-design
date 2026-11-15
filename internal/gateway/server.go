@@ -148,6 +148,7 @@ type DecisionRecord struct {
 	Code                  string   `json:"code"`
 	Reason                string   `json:"reason,omitempty"`
 	QuoteID               *string  `json:"quoteId,omitempty"`
+	OrderID               *string  `json:"orderId,omitempty"`
 	BlockNumber           int64    `json:"blockNumber"`
 	BlockHash             string   `json:"blockHash"`
 	RevocationEpoch       int64    `json:"revocationEpoch"`
@@ -190,11 +191,138 @@ type QuoteDTO struct {
 	ValidUntil       int64  `json:"validUntil"`
 }
 
+// OrderDTO is the immutable order response returned by order.create.
+type OrderDTO struct {
+	OrderID          string `json:"orderId"`
+	QuoteID          string `json:"quoteId"`
+	TaskID           string `json:"taskId"`
+	Actor            string `json:"actor"`
+	SupplierID       string `json:"supplierId"`
+	ProductID        string `json:"productId"`
+	Quantity         int64  `json:"quantity"`
+	Currency         string `json:"currency"`
+	TotalAmountMinor int64  `json:"totalAmountMinor"`
+	IdempotencyKey   string `json:"idempotencyKey"`
+	Status           string `json:"status"`
+	CreatedAt        int64  `json:"createdAt"`
+}
+
+// ClientActionRecord persists local agent intent/idempotency tracking across retries/crashes.
+type ClientActionRecord struct {
+	DeploymentID   string
+	ActionID       string
+	Actor          string
+	TaskID         string
+	Action         string
+	IdempotencyKey string
+	RequestHash    string
+	ChallengeID    string
+	QuoteID        string
+	OrderID        string
+	DecisionID     string
+	Status         string
+	CreatedAt      int64
+	UpdatedAt      int64
+}
+
 // ExecuteResponse models 200 OK from POST /v1/access/execute.
 type ExecuteResponse struct {
 	DecisionID string    `json:"decisionId"`
 	Code       string    `json:"code"`
 	Quote      *QuoteDTO `json:"quote,omitempty"`
+	Order      *OrderDTO `json:"order,omitempty"`
+}
+
+// BeginClientAction records a local agent intent row idempotently prior to sending order.create.
+func BeginClientAction(
+	ctx context.Context,
+	db *pgxpool.Pool,
+	deploymentID, actor, taskID, action, idempotencyKey, requestHash string,
+	nowSec int64,
+) (*ClientActionRecord, error) {
+	if db == nil {
+		return nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "db pool required")
+	}
+	actionID := "urn:grad:action:" + newUUID()
+	_, err := db.Exec(ctx, `INSERT INTO client_actions(
+		deployment_id, action_id, actor, task_id, action, idempotency_key, request_hash, status, created_at, updated_at
+	) VALUES($1,$2,$3,$4,$5,$6,$7,'PENDING',$8,$8)
+	ON CONFLICT(deployment_id, actor, task_id, action, idempotency_key) DO NOTHING`,
+		deploymentID, actionID, actor, taskID, action, idempotencyKey, requestHash, nowSec,
+	)
+	if err != nil {
+		return nil, protocol.WrapError(protocol.ErrCodeStateUnavailable, "insert client_actions row", err)
+	}
+	rec, err := GetClientActionByKey(ctx, db, deploymentID, actor, taskID, action, idempotencyKey)
+	if err != nil {
+		return nil, err
+	}
+	if rec.RequestHash != requestHash {
+		return nil, protocol.NewError(protocol.ErrCodeIdempotencyConflict, "client action idempotencyKey bound to different requestHash")
+	}
+	return rec, nil
+}
+
+// GetClientActionByKey loads an existing local client_actions intent row by its idempotency tuple.
+func GetClientActionByKey(
+	ctx context.Context,
+	db *pgxpool.Pool,
+	deploymentID, actor, taskID, action, idempotencyKey string,
+) (*ClientActionRecord, error) {
+	if db == nil {
+		return nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "db pool required")
+	}
+	var rec ClientActionRecord
+	var chalID, quoteID, orderID, decID *string
+	err := db.QueryRow(ctx, `SELECT
+		deployment_id, action_id, actor, task_id, action, idempotency_key, request_hash,
+		challenge_id, quote_id, order_id, decision_id, status, created_at, updated_at
+		FROM client_actions
+		WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND action=$4 AND idempotency_key=$5`,
+		deploymentID, actor, taskID, action, idempotencyKey,
+	).Scan(
+		&rec.DeploymentID, &rec.ActionID, &rec.Actor, &rec.TaskID, &rec.Action, &rec.IdempotencyKey, &rec.RequestHash,
+		&chalID, &quoteID, &orderID, &decID, &rec.Status, &rec.CreatedAt, &rec.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if chalID != nil {
+		rec.ChallengeID = *chalID
+	}
+	if quoteID != nil {
+		rec.QuoteID = *quoteID
+	}
+	if orderID != nil {
+		rec.OrderID = *orderID
+	}
+	if decID != nil {
+		rec.DecisionID = *decID
+	}
+	return &rec, nil
+}
+
+// UpdateClientAction updates the status/challenge/resource references of a client_actions row.
+func UpdateClientAction(
+	ctx context.Context,
+	db *pgxpool.Pool,
+	deploymentID, actionID, status, challengeID, quoteID, orderID, decisionID string,
+	nowSec int64,
+) error {
+	if db == nil {
+		return protocol.NewError(protocol.ErrCodeStateUnavailable, "db pool required")
+	}
+	_, err := db.Exec(ctx, `UPDATE client_actions
+		SET status=$1,
+		    challenge_id=COALESCE(NULLIF($2,''), challenge_id),
+		    quote_id=COALESCE(NULLIF($3,''), quote_id),
+		    order_id=COALESCE(NULLIF($4,''), order_id),
+		    decision_id=COALESCE(NULLIF($5,''), decision_id),
+		    updated_at=$6
+		WHERE deployment_id=$7 AND action_id=$8`,
+		status, challengeID, quoteID, orderID, decisionID, nowSec, deploymentID, actionID,
+	)
+	return err
 }
 
 // NewServer constructs a configured gateway Server.
@@ -451,10 +579,10 @@ func (s *Server) handleGetDecision(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var rec DecisionRecord
-	var reason, quoteID, domID, certID, certDigest, idIssuer, failedObj *string
+	var reason, quoteID, orderID, domID, certID, certDigest, idIssuer, failedObj *string
 	err := s.cfg.DB.QueryRow(r.Context(), `SELECT
 		deployment_id, decision_id, request_id, challenge_id, actor, task_id, action, idempotency_key,
-		outcome, code, reason, quote_id, block_number, block_hash, revocation_epoch,
+		outcome, code, reason, quote_id, order_id, block_number, block_hash, revocation_epoch,
 		probe_tx_id, probe_block, probe_sent_at, probe_deadline, probe_sent_mono_ns, probe_deadline_mono_ns, decision_at,
 		root_did, root_key_version, domain_id, certification_id, certification_digest, domain_revision,
 		identity_issuer, policy_digest, context_version, context_risk_level, context_observed_at,
@@ -463,7 +591,7 @@ func (s *Server) handleGetDecision(w http.ResponseWriter, r *http.Request) {
 		s.cfg.DeploymentID, decID,
 	).Scan(
 		&rec.DeploymentID, &rec.DecisionID, &rec.RequestID, &rec.ChallengeID, &rec.Actor, &rec.TaskID, &rec.Action, &rec.IdempotencyKey,
-		&rec.Outcome, &rec.Code, &reason, &quoteID, &rec.BlockNumber, &rec.BlockHash, &rec.RevocationEpoch,
+		&rec.Outcome, &rec.Code, &reason, &quoteID, &orderID, &rec.BlockNumber, &rec.BlockHash, &rec.RevocationEpoch,
 		&rec.ProbeTxID, &rec.ProbeBlock, &rec.ProbeSentAt, &rec.ProbeDeadline, &rec.ProbeSentMonoNs, &rec.ProbeDeadlineMonoNs, &rec.DecisionAt,
 		&rec.RootDID, &rec.RootKeyVersion, &domID, &certID, &certDigest, &rec.DomainRevision,
 		&idIssuer, &rec.PolicyDigest, &rec.ContextVersion, &rec.ContextRiskLevel, &rec.ContextObservedAt,
@@ -481,6 +609,7 @@ func (s *Server) handleGetDecision(w http.ResponseWriter, r *http.Request) {
 		rec.Reason = *reason
 	}
 	rec.QuoteID = quoteID
+	rec.OrderID = orderID
 	if domID != nil {
 		rec.DomainID = *domID
 	}

@@ -11,7 +11,8 @@ func (tx transaction) registerTask(t api.Task) error {
 	if t.Creator != authority.Subject || t.Domain != authority.Domain || tx.caller != authority.Management {
 		return reject(denied)
 	}
-	if !tx.bound(t.Bound) || !api.IsDigest(t.ID) || !api.IsDigest(t.Digest) || t.Resource != tx.boot.ResourceID || t.Mode != api.RP {
+	if !tx.bound(t.Bound) || !api.IsDigest(t.ID) || !api.IsDigest(t.Digest) || t.Resource != tx.boot.ResourceID ||
+		(t.Mode != api.RP && t.Mode != api.BM) {
 		return reject(badInput)
 	}
 	key := api.Key("task", t.ID)
@@ -72,16 +73,29 @@ func (tx transaction) checkGrant(g api.Grant) error {
 	if err := tx.match(issuer.Management, binding{Domain: issuer.Domain, Subject: issuer.ID, Role: issuer.Kind}); err != nil {
 		return err
 	}
-	if g.Mode != t.Mode || g.Resource != t.Resource || g.Domain != t.Domain || !tx.current(g.Interval) || !g.Interval.Within(t.Interval) {
+	if g.Mode != t.Mode || (g.Mode != api.RP && g.Mode != api.BM) || g.Resource != t.Resource || g.Domain != t.Domain || !tx.current(g.Interval) || !g.Interval.Within(t.Interval) {
 		return reject(badInput)
 	}
 	if err := tx.grantCredentials(g); err != nil {
 		return err
 	}
 	if g.Parent == "" {
-		if g.ParentDigest != "" || g.Root != g.ID || g.Issuer != tx.boot.ResourceOwner ||
-			issuer.Management != tx.boot.ResourceManagement || issuer.Domain != "C" || issuer.Kind != "SERVICE" || g.Grantee != t.Creator {
+		if g.ParentDigest != "" || g.Root != g.ID || g.Grantee != t.Creator {
 			return reject(badInput)
+		}
+		if g.Mode == api.RP {
+			if g.Issuer != tx.boot.ResourceOwner ||
+				issuer.Management != tx.boot.ResourceManagement || issuer.Domain != "C" || issuer.Kind != "SERVICE" {
+				return reject(badInput)
+			}
+			return nil
+		}
+		dom, _, err := tx.activeDomain(t.Domain)
+		if err != nil {
+			return err
+		}
+		if dom.PurchasingAuthority == "" || g.Issuer != dom.PurchasingAuthority || issuer.Domain != t.Domain || issuer.Kind != "SERVICE" {
+			return reject(paInvalid)
 		}
 		return nil
 	}
@@ -158,7 +172,11 @@ func (tx transaction) revocable(m api.Mutation, issuerOnly bool) (api.Grant, err
 		if err != nil {
 			return g, err
 		}
-		allowed = slices.Contains([]string{g.Grantee, root.Issuer, tx.boot.ResourceOwner}, i.ID)
+		candidates := []string{g.Grantee, root.Issuer}
+		if root.Mode == api.RP {
+			candidates = append(candidates, tx.boot.ResourceOwner)
+		}
+		allowed = slices.Contains(candidates, i.ID)
 	}
 	if !allowed {
 		return g, reject(denied)

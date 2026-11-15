@@ -188,3 +188,124 @@ func TestStateProviderRepeatableReadAndFaults(t *testing.T) {
 		t.Fatalf("expected STATE_UNAVAILABLE on missing dependency, got %v", err)
 	}
 }
+
+func TestStateProviderBMRootAndIdentityLinkView(t *testing.T) {
+	pool := testPgPool(t)
+	ctx := t.Context()
+
+	dir := t.TempDir()
+	inst := &instance{dir: dir, env: map[string]string{}}
+	writeTestRoleCerts(t, inst)
+
+	genesis := &block{}
+	genesis.Hash = api.Digest([]byte("test-bm-view-genesis-" + time.Now().Format(time.RFC3339Nano)))
+	boot, bootRaw, err := inst.bootstrap(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dep := &deployment{
+		DeploymentFields: boot.DeploymentFields,
+		DeploymentID:     api.Digest(bootRaw),
+		Bootstrap:        boot,
+	}
+	f, err := inst.fixtures(dep)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), "DELETE FROM fabric_current WHERE deployment=$1", dep.DeploymentID)
+		_, _ = pool.Exec(context.Background(), "DELETE FROM fabric_head WHERE deployment=$1", dep.DeploymentID)
+		_, _ = pool.Exec(context.Background(), "DELETE FROM certification_receipts WHERE deployment_id=$1", dep.DeploymentID)
+	})
+
+	certCJWS, err := os.ReadFile(inst.registrySubPath("certifications", "C.jws"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sp := NewStateProvider(pool, dep, nil)
+	baseMono := time.Now()
+	sp.SetStaticProbe(&ProbeSnapshot{
+		TxID:       api.Digest([]byte("probe-tx-bm")),
+		Identity:   api.Management{MSPID: "CMsp", Fingerprint: api.Digest([]byte("probe"))},
+		ProbeBlock: 10,
+		SentAt:     baseMono,
+		Deadline:   baseMono.Add(30 * time.Second),
+	})
+	sp.SetMonoClock(func() time.Time { return baseMono })
+
+	seedSyntheticViewRows(t, sp, dep, f, string(certCJWS), 10, api.Digest([]byte("block-10")))
+
+	// Insert BM task & PA-issued G0 without PA set in Domain["A"] -> must fail view assembly!
+	bmTask := f.Task
+	bmTask.ID = api.Digest([]byte("bm-task-view"))
+	bmTask.Mode = api.BM
+	bmG0 := f.G0
+	bmG0.ID = api.Digest([]byte("bm-g0-view"))
+	bmG0.Root = bmG0.ID
+	bmG0.Task = bmTask.ID
+	bmG0.Mode = api.BM
+	bmG0.Issuer = f.Identities["PA"].ID
+	bmG0.IssuerCredential = f.Credentials["PA"].ID
+
+	putRec := func(k string, v any) {
+		raw, _ := json.Marshal(v)
+		if _, err := pool.Exec(ctx, `INSERT INTO fabric_current(deployment, key, value) VALUES($1,$2,$3)
+			ON CONFLICT(deployment,key) DO UPDATE SET value=EXCLUDED.value`, dep.DeploymentID, k, raw); err != nil {
+			t.Fatal(err)
+		}
+	}
+	putRec(api.Key("task", bmTask.ID), activateTaskSnapshot(bmTask))
+	putRec(api.Key("grant", bmG0.ID), activateGrantSnapshot(bmG0))
+
+	if _, err := sp.AssembleProtocolSnapshot(ctx, bmG0.ID, time.Now().UTC()); err == nil {
+		t.Fatalf("expected BM view assembly to fail when Domain.PurchasingAuthority is unset")
+	}
+
+	// Set Domain A PurchasingAuthority = PA and insert an ACTIVE IdentityLink -> view assembly succeeds & link is effective.
+	domA := f.Domains["A"].Domain
+	domA.Issuers = []string{f.Domains["A"].Issuers[0].ID}
+	domA.Certification = f.Certifications["A"].Certification.ID
+	domA.PurchasingAuthority = f.Identities["PA"].ID
+	domA.Version = api.Version{Status: api.Active, Revision: 2}
+	putRec(api.Key("domain", "A"), domA)
+
+	now := time.Now().UTC()
+	link := api.IdentityLink{
+		Bound:                   api.Bound{DeploymentID: dep.DeploymentID},
+		ID:                      "urn:grad:link:view-test",
+		SourceDomain:            "A",
+		SourceSubject:           f.Identities["U"].ID,
+		SourceKeyVersion:        1,
+		SourceAccountCommitment: f.Identities["U"].AccountCommitment,
+		TargetDomain:            "B",
+		TargetSubject:           f.Identities["B1"].ID,
+		TargetKeyVersion:        1,
+		TargetAccountCommitment: f.Identities["B1"].AccountCommitment,
+		ProposalDigest:          api.Digest([]byte("link-prop")),
+		ProposedAt:              now.Add(-time.Minute).Unix(),
+		ExpiresAt:               now.Add(time.Hour).Unix(),
+		EffectiveActive:         true,
+		Version:                 api.Version{Status: api.Active, Revision: 2},
+	}
+	putRec(api.Key("link", link.ID), link)
+
+	view, err := sp.AssembleProtocolSnapshot(ctx, bmG0.ID, now)
+	if err != nil {
+		t.Fatalf("expected BM view assembly to succeed after SetPurchasingAuthority: %v", err)
+	}
+	if !view.Snapshot.IsIdentityLinkEffective(link.ID) {
+		t.Fatalf("expected active identity link to be effective in snapshot")
+	}
+	// Revoking link disables EffectiveActive in snapshot.
+	link.Status = api.Revoked
+	link.EffectiveActive = false
+	putRec(api.Key("link", link.ID), link)
+	viewRev, err := sp.AssembleProtocolSnapshot(ctx, bmG0.ID, now)
+	if err != nil {
+		t.Fatalf("AssembleProtocolSnapshot after link revoke: %v", err)
+	}
+	if viewRev.Snapshot.IsIdentityLinkEffective(link.ID) {
+		t.Fatalf("expected revoked identity link to report effectiveActive=false")
+	}
+}

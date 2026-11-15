@@ -291,6 +291,17 @@ func (r reader) assemble(id string, afterRoot func() error) error {
 	if root.Parent != "" || root.ID != leaf.Root {
 		return fmt.Errorf("INVALID_STATE: invalid root reference")
 	}
+	if root.Mode == api.BM {
+		dom, err := record[api.Domain](r, api.Key("domain", root.Domain))
+		if err != nil {
+			return err
+		}
+		if dom.Status != api.Active || dom.PurchasingAuthority == "" || root.Issuer != dom.PurchasingAuthority {
+			return fmt.Errorf("INVALID_STATE: PURCHASING_AUTHORITY_INVALID: root issuer %s != domain %s PA %q", root.Issuer, dom.ID, dom.PurchasingAuthority)
+		}
+	} else if root.Mode != api.RP {
+		return fmt.Errorf("INVALID_STATE: unsupported authorizationMode %q", root.Mode)
+	}
 	for g, count := leaf, 0; ; count++ {
 		if count > 32 || g.Root != root.ID || g.Task != root.Task || g.DeploymentID != r.d.DeploymentID {
 			return fmt.Errorf("INVALID_STATE: broken delegation path")

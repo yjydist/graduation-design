@@ -166,3 +166,97 @@ func TestGrantSignVerifyAndDelegationChain(t *testing.T) {
 		t.Fatalf("expected INVALID_SCHEMA for wildcard action, got %v", err)
 	}
 }
+
+func TestM2TwoHopGrantChainErrorCodes(t *testing.T) {
+	privPA, _, err := GenerateP256KeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	privU, _, err := GenerateP256KeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	privA1, _, err := GenerateP256KeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	depID := strings.Repeat("bb", 32)
+	taskID := strings.Repeat("cc", 32)
+	g0ID := strings.Repeat("d0", 32)
+	g1ID := strings.Repeat("d1", 32)
+	g2ID := strings.Repeat("d2", 32)
+	now := time.Now().UTC().Unix()
+	nbf, exp := now-60, now+3600
+
+	g0Claims := GrantClaims{
+		ID: g0ID, SchemaVersion: SchemaVersion, DeploymentID: depID, RootID: g0ID, TaskID: taskID,
+		AuthorizationMode: ModeBuyerMandate, PrincipalDomain: "A", ResourceID: "urn:grad:resource:C:orders",
+		Issuer: "did:web:a.local:pa", Grantee: "did:web:a.local:u",
+		IssuerKeyVersion: 1, GranteeKeyVersion: 1,
+		IssuerCredentialID: "urn:grad:credential:PA-v1", GranteeCredentialID: "urn:grad:credential:U-v1",
+		Resources: []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
+		Actions: []string{"order.create", "quote.read"}, Suppliers: []string{"urn:grad:supplier:C"},
+		Aud: "https://c.local", Currency: "CNY", MaxAmountMinor: 500000, NBF: nbf, EXP: exp, RemainingDepth: 2,
+	}
+	g0JWS, g0Dig, err := SignGrant(privPA, "did:web:a.local:pa#key-1", &g0Claims)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g1Claims := GrantClaims{
+		ID: g1ID, SchemaVersion: SchemaVersion, DeploymentID: depID, ParentID: &g0ID, ParentDigest: &g0Dig,
+		RootID: g0ID, TaskID: taskID, AuthorizationMode: ModeBuyerMandate, PrincipalDomain: "A",
+		ResourceID: "urn:grad:resource:C:orders", Issuer: "did:web:a.local:u", Grantee: "did:web:a.local:a1",
+		IssuerKeyVersion: 1, GranteeKeyVersion: 1,
+		IssuerCredentialID: "urn:grad:credential:U-v1", GranteeCredentialID: "urn:grad:credential:A1-v1",
+		Resources: []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
+		Actions: []string{"order.create", "quote.read"}, Suppliers: []string{"urn:grad:supplier:C"},
+		Aud: "https://c.local", Currency: "CNY", MaxAmountMinor: 500000, NBF: nbf, EXP: exp, RemainingDepth: 1,
+	}
+	g1JWS, g1Dig, err := SignGrant(privU, "did:web:a.local:u#key-1", &g1Claims)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g2Claims := GrantClaims{
+		ID: g2ID, SchemaVersion: SchemaVersion, DeploymentID: depID, ParentID: &g1ID, ParentDigest: &g1Dig,
+		RootID: g0ID, TaskID: taskID, AuthorizationMode: ModeBuyerMandate, PrincipalDomain: "A",
+		ResourceID: "urn:grad:resource:C:orders", Issuer: "did:web:a.local:a1", Grantee: "did:web:b.local:b1",
+		IssuerKeyVersion: 1, GranteeKeyVersion: 1,
+		IssuerCredentialID: "urn:grad:credential:A1-v1", GranteeCredentialID: "urn:grad:credential:B1-v1",
+		Resources: []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
+		Actions: []string{"order.create", "quote.read"}, Suppliers: []string{"urn:grad:supplier:C"},
+		Aud: "https://c.local", Currency: "CNY", MaxAmountMinor: 100000, NBF: nbf, EXP: exp, RemainingDepth: 0,
+	}
+	g2JWS, _, err := SignGrant(privA1, "did:web:a.local:a1#key-1", &g2Claims)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pg0, _ := ParseAndVerifyGrant(g0JWS, &privPA.PublicKey, "")
+	pg1, _ := ParseAndVerifyGrant(g1JWS, &privU.PublicKey, "")
+	pg2, _ := ParseAndVerifyGrant(g2JWS, &privA1.PublicKey, "")
+	if err := VerifyGrantChain([]*ParsedGrant{pg0, pg1, pg2}); err != nil {
+		t.Fatalf("expected valid 2-hop BM chain, got %v", err)
+	}
+
+	// Expansion -> DELEGATION_EXPANSION + GRANT_CHAIN_INVALID
+	expG2 := g2Claims
+	expG2.MaxAmountMinor = 600000
+	expG2JWS, _, _ := SignGrant(privA1, "did:web:a.local:a1#key-1", &expG2)
+	pgExpG2, _ := ParseAndVerifyGrant(expG2JWS, &privA1.PublicKey, "")
+	if err := VerifyGrantChain([]*ParsedGrant{pg0, pg1, pgExpG2}); !HasCode(err, ErrCodeDelegationExpansion) || !HasCode(err, ErrCodeGrantChainInvalid) {
+		t.Fatalf("expected DELEGATION_EXPANSION + GRANT_CHAIN_INVALID, got %v", err)
+	}
+
+	// Mode mismatch -> AUTHORIZATION_MODE_MISMATCH + GRANT_CHAIN_INVALID
+	modeG2 := g2Claims
+	modeG2.AuthorizationMode = ModeResourcePreauthorized
+	modeG2JWS, _, _ := SignGrant(privA1, "did:web:a.local:a1#key-1", &modeG2)
+	pgModeG2, _ := ParseAndVerifyGrant(modeG2JWS, &privA1.PublicKey, "")
+	if err := VerifyGrantChain([]*ParsedGrant{pg0, pg1, pgModeG2}); !HasCode(err, ErrCodeAuthorizationModeMismatch) || !HasCode(err, ErrCodeGrantChainInvalid) {
+		t.Fatalf("expected AUTHORIZATION_MODE_MISMATCH, got %v", err)
+	}
+
+	// Skipping G1 (G0 -> G2) -> PATH_INVALID
+	if err := VerifyGrantChain([]*ParsedGrant{pg0, pg2}); !HasCode(err, ErrCodePathInvalid) || !HasCode(err, ErrCodeGrantChainInvalid) {
+		t.Fatalf("expected PATH_INVALID when skipping G1, got %v", err)
+	}
+}

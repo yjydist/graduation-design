@@ -22,7 +22,7 @@ import (
 func writeTestRoleCerts(t *testing.T, inst *instance) {
 	t.Helper()
 	now := time.Now().UTC()
-	for _, r := range []string{"init", "T", "domainA", "registrarA", "IA", "U", "PA", "A1", "alt", "domainB", "registrarB", "IB", "B1", "domainC", "registrarC", "IC", "C"} {
+	for _, r := range []string{"init", "T", "domainA", "registrarA", "IA", "U", "PA", "A1", "alt", "domainB", "registrarB", "IB", "B1", "U-in-B", "domainC", "registrarC", "IC", "C"} {
 		loc := roles[r]
 		user := loc.user + "@" + loc.org + ".local"
 		certPath := filepath.Join(inst.orgDir(loc.org), "users", user, "msp", "signcerts", user+"-cert.pem")

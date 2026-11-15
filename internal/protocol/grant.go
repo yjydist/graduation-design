@@ -179,7 +179,8 @@ func VerifyGrantChain(grants []*ParsedGrant) error {
 		return err
 	}
 	if root.Claims.ParentID != nil || root.Claims.ParentDigest != nil {
-		return NewError(ErrCodeGrantChainInvalid, "first grant in chain must be root grant (null parentId/parentDigest)")
+		msg := "first grant in chain must be root grant (null parentId/parentDigest)"
+		return WrapError(ErrCodePathInvalid, msg, NewError(ErrCodeGrantChainInvalid, msg))
 	}
 	for i := 1; i < len(grants); i++ {
 		parent := grants[i-1]
@@ -191,45 +192,59 @@ func VerifyGrantChain(grants []*ParsedGrant) error {
 			return err
 		}
 		if child.Claims.ParentID == nil || *child.Claims.ParentID != parent.Claims.ID {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] parentId mismatches parent %q", i, parent.Claims.ID))
+			msg := fmt.Sprintf("grant[%d] parentId mismatches parent %q", i, parent.Claims.ID)
+			return WrapError(ErrCodePathInvalid, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if child.Claims.ParentDigest == nil || *child.Claims.ParentDigest != parent.Digest {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] parentDigest mismatches parent digest", i))
+			msg := fmt.Sprintf("grant[%d] parentDigest mismatches parent digest", i)
+			return WrapError(ErrCodePathInvalid, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if child.Claims.RootID != root.Claims.ID {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] rootId mismatches %q", i, root.Claims.ID))
+			msg := fmt.Sprintf("grant[%d] rootId mismatches %q", i, root.Claims.ID)
+			return WrapError(ErrCodePathInvalid, msg, NewError(ErrCodeGrantChainInvalid, msg))
+		}
+		if child.Claims.AuthorizationMode != parent.Claims.AuthorizationMode {
+			msg := fmt.Sprintf("grant[%d] authorizationMode %q mismatches parent %q", i, child.Claims.AuthorizationMode, parent.Claims.AuthorizationMode)
+			return WrapError(ErrCodeAuthorizationModeMismatch, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if child.Claims.DeploymentID != parent.Claims.DeploymentID ||
 			child.Claims.TaskID != parent.Claims.TaskID ||
-			child.Claims.AuthorizationMode != parent.Claims.AuthorizationMode ||
 			child.Claims.PrincipalDomain != parent.Claims.PrincipalDomain ||
 			child.Claims.ResourceID != parent.Claims.ResourceID ||
 			child.Claims.Aud != parent.Claims.Aud ||
 			child.Claims.Currency != parent.Claims.Currency {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] core task/scope bindings mismatch parent", i))
+			msg := fmt.Sprintf("grant[%d] core task/scope bindings mismatch parent", i)
+			return WrapError(ErrCodePathInvalid, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if child.Claims.Issuer != parent.Claims.Grantee ||
 			child.Claims.IssuerKeyVersion != parent.Claims.GranteeKeyVersion ||
 			child.Claims.IssuerCredentialID != parent.Claims.GranteeCredentialID {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] issuer binding mismatches parent grantee", i))
+			msg := fmt.Sprintf("grant[%d] issuer binding mismatches parent grantee", i)
+			return WrapError(ErrCodePathInvalid, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if child.Claims.MaxAmountMinor > parent.Claims.MaxAmountMinor {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] maxAmountMinor %d exceeds parent %d", i, child.Claims.MaxAmountMinor, parent.Claims.MaxAmountMinor))
+			msg := fmt.Sprintf("grant[%d] maxAmountMinor %d exceeds parent %d", i, child.Claims.MaxAmountMinor, parent.Claims.MaxAmountMinor)
+			return WrapError(ErrCodeDelegationExpansion, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if child.Claims.NBF < parent.Claims.NBF || child.Claims.EXP > parent.Claims.EXP {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] interval exceeds parent validity window", i))
+			msg := fmt.Sprintf("grant[%d] interval exceeds parent validity window", i)
+			return WrapError(ErrCodeDelegationExpansion, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if child.Claims.RemainingDepth >= parent.Claims.RemainingDepth {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] remainingDepth %d must be < parent %d", i, child.Claims.RemainingDepth, parent.Claims.RemainingDepth))
+			msg := fmt.Sprintf("grant[%d] remainingDepth %d must be < parent %d", i, child.Claims.RemainingDepth, parent.Claims.RemainingDepth)
+			return WrapError(ErrCodeDelegationExpansion, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if !isSubset(child.Claims.Resources, parent.Claims.Resources) {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] resources expand parent scope", i))
+			msg := fmt.Sprintf("grant[%d] resources expand parent scope", i)
+			return WrapError(ErrCodeDelegationExpansion, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if !isSubset(child.Claims.Actions, parent.Claims.Actions) {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] actions expand parent scope", i))
+			msg := fmt.Sprintf("grant[%d] actions expand parent scope", i)
+			return WrapError(ErrCodeDelegationExpansion, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if !isSubset(child.Claims.Suppliers, parent.Claims.Suppliers) {
-			return NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] suppliers expand parent scope", i))
+			msg := fmt.Sprintf("grant[%d] suppliers expand parent scope", i)
+			return WrapError(ErrCodeDelegationExpansion, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 	}
 	return nil

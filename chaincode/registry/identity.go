@@ -175,6 +175,187 @@ func (tx transaction) setDomainStatus(input api.DomainStatus) error {
 	return tx.put(key, d)
 }
 
+func (tx transaction) setPurchasingAuthority(input api.PurchasingAuthorityUpdate) error {
+	if !tx.bound(input.Bound) || input.DomainID == "" || input.ExpectedRevision == 0 {
+		return reject(badInput)
+	}
+	key := api.Key("domain", input.DomainID)
+	d, err := get[api.Domain](tx.stub, key)
+	if err != nil {
+		return err
+	}
+	if err := tx.match(d.Admin, binding{Domain: d.ID, Subject: d.DID, Role: "DOMAIN"}); err != nil {
+		return err
+	}
+	if d.Status != api.Active || d.Certification == "" {
+		return reject(invalid)
+	}
+	if _, err := tx.qualification(d); err != nil {
+		return err
+	}
+	if d.Revision != input.ExpectedRevision {
+		return reject(stale)
+	}
+	if input.PurchasingAuthority != "" {
+		pa, err := get[api.Identity](tx.stub, api.Key("identity", input.PurchasingAuthority))
+		if err != nil {
+			return err
+		}
+		if pa.Status != api.Active {
+			return reject(invalid)
+		}
+		if pa.Domain != d.ID || pa.Kind != "SERVICE" {
+			return reject(paInvalid)
+		}
+	}
+	d.PurchasingAuthority = input.PurchasingAuthority
+	d.Revision++
+	return tx.put(key, d)
+}
+
+func (tx transaction) proposeIdentityLink(l api.IdentityLink) error {
+	if !tx.bound(l.Bound) || l.ID == "" || l.SourceDomain == "" || l.TargetDomain == "" ||
+		l.SourceDomain == l.TargetDomain || l.SourceSubject == "" || l.TargetSubject == "" ||
+		l.SourceSubject == l.TargetSubject || !api.IsDigest(l.ProposalDigest) ||
+		l.ProposedAt <= 0 || l.ExpiresAt <= l.ProposedAt {
+		return reject(linkProofInvalid)
+	}
+	srcDom, _, err := tx.activeDomain(l.SourceDomain)
+	if err != nil {
+		return err
+	}
+	if _, _, err := tx.activeDomain(l.TargetDomain); err != nil {
+		return err
+	}
+	if err := tx.match(srcDom.Registrar, binding{Domain: srcDom.ID, Role: "REGISTRAR"}); err != nil {
+		return err
+	}
+	key := api.Key("link", l.ID)
+	if err := tx.vacant(key); err != nil {
+		return err
+	}
+	srcID, err := get[api.Identity](tx.stub, api.Key("identity", l.SourceSubject))
+	if err != nil {
+		return err
+	}
+	dstID, err := get[api.Identity](tx.stub, api.Key("identity", l.TargetSubject))
+	if err != nil {
+		return err
+	}
+	if srcID.Status != api.Active || dstID.Status != api.Active {
+		return reject(invalid)
+	}
+	if srcID.Domain != l.SourceDomain || srcID.Kind != "USER" || srcID.KeyVersion != l.SourceKeyVersion ||
+		srcID.AccountCommitment == "" || srcID.AccountCommitment != l.SourceAccountCommitment ||
+		dstID.Domain != l.TargetDomain || dstID.Kind != "USER" || dstID.KeyVersion != l.TargetKeyVersion ||
+		dstID.AccountCommitment == "" || dstID.AccountCommitment != l.TargetAccountCommitment {
+		return reject(linkProofInvalid)
+	}
+	l.EffectiveActive = false
+	l.ApprovedBy = ""
+	l.ApprovedAt = 0
+	l.RevokedBy = ""
+	l.RevokedAt = 0
+	l.Reason = ""
+	l.Version = api.Version{Status: api.Pending, Revision: 1}
+	return tx.put(key, l)
+}
+
+func (tx transaction) approveIdentityLink(input api.IdentityLinkApproval) error {
+	if !tx.bound(input.Bound) || input.ID == "" || !api.IsDigest(input.ProposalDigest) ||
+		input.ExpectedRevision == 0 || input.ApprovedAt <= 0 {
+		return reject(badInput)
+	}
+	key := api.Key("link", input.ID)
+	l, err := get[api.IdentityLink](tx.stub, key)
+	if err != nil {
+		return err
+	}
+	dstDom, _, err := tx.activeDomain(l.TargetDomain)
+	if err != nil {
+		return err
+	}
+	if err := tx.match(dstDom.Registrar, binding{Domain: dstDom.ID, Role: "REGISTRAR"}); err != nil {
+		return reject(linkApprovalForbidden)
+	}
+	if l.Status != api.Pending {
+		return reject(linkStateConflict)
+	}
+	if l.Revision != input.ExpectedRevision {
+		return reject(stale)
+	}
+	if l.ProposalDigest != input.ProposalDigest {
+		return reject(linkProposalMismatch)
+	}
+	if input.ApprovedAt < l.ProposedAt || input.ApprovedAt >= l.ExpiresAt || tx.at.Unix() >= l.ExpiresAt+int64(api.ClockError.Seconds()) {
+		return reject(linkStateConflict)
+	}
+	if _, _, err := tx.activeDomain(l.SourceDomain); err != nil {
+		return reject(linkStateConflict)
+	}
+	srcID, err := get[api.Identity](tx.stub, api.Key("identity", l.SourceSubject))
+	if err != nil || srcID.Status != api.Active || srcID.KeyVersion != l.SourceKeyVersion || srcID.AccountCommitment != l.SourceAccountCommitment {
+		return reject(linkStateConflict)
+	}
+	dstID, err := get[api.Identity](tx.stub, api.Key("identity", l.TargetSubject))
+	if err != nil || dstID.Status != api.Active || dstID.KeyVersion != l.TargetKeyVersion || dstID.AccountCommitment != l.TargetAccountCommitment {
+		return reject(linkStateConflict)
+	}
+	l.Status = api.Active
+	l.EffectiveActive = true
+	l.ApprovedBy = dstDom.DID
+	l.ApprovedAt = input.ApprovedAt
+	l.Revision++
+	return tx.put(key, l)
+}
+
+func (tx transaction) revokeIdentityLink(m api.Mutation) error {
+	if !tx.bound(m.Bound) || m.ID == "" || m.ExpectedRevision == 0 {
+		return reject(badInput)
+	}
+	key := api.Key("link", m.ID)
+	l, err := get[api.IdentityLink](tx.stub, key)
+	if err != nil {
+		return err
+	}
+	srcDom, err := get[api.Domain](tx.stub, api.Key("domain", l.SourceDomain))
+	if err != nil {
+		return err
+	}
+	dstDom, err := get[api.Domain](tx.stub, api.Key("domain", l.TargetDomain))
+	if err != nil {
+		return err
+	}
+	srcID, err := get[api.Identity](tx.stub, api.Key("identity", l.SourceSubject))
+	if err != nil {
+		return err
+	}
+	dstID, err := get[api.Identity](tx.stub, api.Key("identity", l.TargetSubject))
+	if err != nil {
+		return err
+	}
+	authorized := tx.match(srcDom.Registrar, binding{Domain: srcDom.ID, Role: "REGISTRAR"}) == nil ||
+		tx.match(dstDom.Registrar, binding{Domain: dstDom.ID, Role: "REGISTRAR"}) == nil ||
+		tx.match(srcID.Management, binding{Domain: srcID.Domain, Subject: srcID.ID, Role: srcID.Kind}) == nil ||
+		tx.match(dstID.Management, binding{Domain: dstID.Domain, Subject: dstID.ID, Role: dstID.Kind}) == nil
+	if !authorized {
+		return reject(denied)
+	}
+	if l.Status != api.Pending && l.Status != api.Active {
+		return reject(linkStateConflict)
+	}
+	if l.Revision != m.ExpectedRevision {
+		return reject(stale)
+	}
+	l.Status = api.Revoked
+	l.EffectiveActive = false
+	l.RevokedBy = tx.caller.String()
+	l.RevokedAt = tx.at.Unix()
+	l.Reason = m.Reason
+	l.Revision++
+	return tx.put(key, l)
+}
+
 func (tx transaction) registerIdentity(i api.Identity) error {
 	if i.Kind != "USER" && i.Kind != "AGENT" && i.Kind != "SERVICE" {
 		return reject(badInput)

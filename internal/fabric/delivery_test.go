@@ -538,3 +538,71 @@ func TestCertificationAndGrantDeliveryFlow(t *testing.T) {
 	}
 }
 
+func TestM2MultiHopDeliveryAndTrustPathDedup(t *testing.T) {
+	pool := testPgPool(t)
+	ctx := t.Context()
+
+	dir := t.TempDir()
+	inst := &instance{dir: dir, env: map[string]string{}}
+	writeTestRoleCerts(t, inst)
+
+	genesis := &block{}
+	genesis.Hash = api.Digest([]byte("test-m2-delivery-genesis"))
+	boot, bootRaw, err := inst.bootstrap(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dep := &deployment{DeploymentFields: boot.DeploymentFields, DeploymentID: api.Digest(bootRaw), Bootstrap: boot}
+	f, err := inst.fixtures(dep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), "DELETE FROM certification_outbox WHERE deployment_id=$1", dep.DeploymentID)
+		_, _ = pool.Exec(context.Background(), "DELETE FROM certification_receipts WHERE deployment_id=$1", dep.DeploymentID)
+		_, _ = pool.Exec(context.Background(), "DELETE FROM grant_outbox WHERE deployment_id=$1", dep.DeploymentID)
+		_, _ = pool.Exec(context.Background(), "DELETE FROM wallet_receipts WHERE deployment_id=$1", dep.DeploymentID)
+	})
+
+	// Test BuildAccessTrustPaths deduplicates IA across U and A1 while sorting UTF-16 ascending.
+	snap := &protocol.SnapshotView{
+		Height: 1, Now: time.Now().UTC(), DeploymentID: dep.DeploymentID, Root: boot.Root,
+		Domains: map[string]api.Domain{}, Certifications: map[string]api.Certification{},
+		Identities: map[string]api.Identity{}, Credentials: map[string]api.Credential{},
+		Tasks: map[string]api.Task{}, Grants: map[string]api.Grant{},
+	}
+	for domID, db := range f.Domains {
+		d := db.Domain
+		d.Issuers = []string{db.Issuers[0].ID}
+		d.Certification = f.Certifications[domID].Certification.ID
+		d.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Domains[domID] = d
+		snap.Identities[db.Issuers[0].ID] = db.Issuers[0]
+	}
+	tp, err := BuildAccessTrustPaths(
+		map[string]string{"A": "certA", "B": "certB", "C": "certC"},
+		snap,
+		f.Domains["B"].Issuers[0].ID,
+		f.Domains["A"].Issuers[0].ID,
+		f.Domains["A"].Issuers[0].ID,
+	)
+	if err != nil || len(tp) != 2 || tp[0].Issuer != f.Domains["A"].Issuers[0].ID || tp[1].Issuer != f.Domains["B"].Issuers[0].ID {
+		t.Fatalf("unexpected deduplicated trustPaths: %+v err=%v", tp, err)
+	}
+
+	// Sync all M2 outboxes & receipts via syncMaterialOutboxes.
+	report := &seedReport{fixtures: f}
+	if err := inst.syncMaterialOutboxes(ctx, journal{db: pool}, dep, f, report); err != nil {
+		t.Fatalf("syncMaterialOutboxes failed: %v", err)
+	}
+
+	var count int
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM wallet_receipts WHERE deployment_id=$1", dep.DeploymentID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	// Expect 1 legacy M1 G0 + 3 RP hops + 3 BM hops = 7 wallet_receipts rows.
+	if count != 7 {
+		t.Fatalf("expected 7 wallet_receipts rows for M1+M2 delivery, got %d", count)
+	}
+}
+

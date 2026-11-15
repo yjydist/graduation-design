@@ -485,6 +485,9 @@ func (i *instance) deploy(ctx context.Context, retryInitialization bool) (*deplo
 	}
 	defer p.close()
 	if d, err := i.loadDeployment(); err == nil {
+		if err := i.refreshChaincodeIfChanged(ctx, d); err != nil {
+			return nil, err
+		}
 		return d, d.validatePeer(ctx, p)
 	} else if !os.IsNotExist(err) {
 		return nil, err
@@ -818,4 +821,49 @@ func (i *instance) waitRegistryEndorsement(ctx context.Context) error {
 		return fmt.Errorf("registry endorsement discovery not ready: %w (%v)", err, last)
 	}
 	return nil
+}
+
+func (i *instance) refreshChaincodeIfChanged(ctx context.Context, d *deployment) error {
+	curSource, err := registrySourceDigest()
+	if err != nil {
+		return err
+	}
+	if curSource == d.SourceDigest {
+		return nil
+	}
+	_, p1, _, err := i.role("probe1")
+	if err != nil {
+		return err
+	}
+	_, p2, _, err := i.role("probe2")
+	if err != nil {
+		return err
+	}
+	binary := i.registryPath("registry")
+	flags := fmt.Sprintf("-X main.bootstrapDigest=%s -X main.initializer=%s -X main.probeOne=%s -X main.probeTwo=%s",
+		d.BootstrapDigest, d.Bootstrap.Initializer, p1, p2)
+	cmd := exec.CommandContext(ctx, "go", "build", "-mod=readonly", "-trimpath", "-buildvcs=false", "-ldflags", flags, "-o", binary+".new", "./chaincode/registry")
+	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=arm64", "CGO_ENABLED=0")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("rebuild chaincode: %w: %s", err, out)
+	}
+	b, err := os.ReadFile(binary + ".new")
+	if err != nil {
+		return err
+	}
+	d.BuildDigest = api.Digest(b)
+	d.SourceDigest = curSource
+	if err := os.Rename(binary+".new", binary); err != nil {
+		return err
+	}
+	if err := writeJSON(i.registryPath("deployment.json"), d); err != nil {
+		return err
+	}
+	if _, err := i.run(ctx, "compose", "--profile", "registry", "restart", "cc-a", "cc-b", "cc-c"); err != nil {
+		return fmt.Errorf("restart chaincode containers: %w", err)
+	}
+	if _, err := i.run(ctx, "compose", "--profile", "registry", "up", "-d", "--wait", "--wait-timeout", "25", "cc-a", "cc-b", "cc-c"); err != nil {
+		return fmt.Errorf("wait restarted chaincode containers: %w", err)
+	}
+	return i.waitRegistryEndorsement(ctx)
 }

@@ -1,0 +1,8 @@
+ok  	graduation-design/chaincode/registry	0.443s
+?   	graduation-design/cmd/ledgerctl	[no test files]
+ok  	graduation-design/internal/agent	0.979s
+ok  	graduation-design/internal/fabric	2.635s
+ok  	graduation-design/internal/fabricapi	0.313s
+ok  	graduation-design/internal/gateway	1.375s
+ok  	graduation-design/internal/policy	0.414s
+ok  	graduation-design/internal/protocol	0.389s

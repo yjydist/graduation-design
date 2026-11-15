@@ -167,6 +167,10 @@ func verify(ctx context.Context, dir, out string) (report *verification, err err
 		{"probe-expiry-state-stale", a.probeExpiryStateStale},
 		{"post-lock-blocked-no-quote", a.postLockBlockedNoQuote},
 		{"exact-second-deadline-rejection", a.exactSecondDeadlineRejection},
+		{"m2-dual-roots-and-identity-link", a.m2DualRootsAndIdentityLink},
+		{"m2-agent-mcp-rp-and-bm-orders", a.m2AgentMCPRPAndBMOrders},
+		{"m2-revocation-and-postlock-order-guards", a.m2RevocationAndPostLockOrderGuards},
+		{"m2-dual-gateway-concurrent-idempotency", a.m2DualGatewayConcurrentIdempotency},
 	}
 	for _, test := range cases {
 		log.event("case_start", test.name)

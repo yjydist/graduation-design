@@ -45,11 +45,11 @@ D0 最小网络, D0 最小协议与 M1 直接访问已建立 Fabric `procurement
 ### 3. C 网关 order.create 事务与双实例并发幂等
 
 - **数据表扩展 (`internal/gateway/schema.go`)**:
-  - 新增 `orders` 表: 主键 `(deployment_id, order_id)`, 唯一约束 `UNIQUE (deployment_id, actor, task_id, idempotency_key)`, 记录 `quote_id`, `principal_domain`, `authorization_mode`, `currency`, `amount_minor`, `status` (`CREATED`), `creation_decision_id`, `created_at`.
-  - 新增 `client_actions` 意图锁表: 按 `(deployment_id, actor, intent_id)` 与 `(deployment_id, actor, task_id, action, idempotency_key)` 记录客户端发送前的原请求, `request_hash`, `send_revision`, `status` (`OUTCOME_UNKNOWN` / `COMPLETED` / `FAILED`), `challenge_ids` 与 `order_id`.
+  - 新增 `orders` 表: 主键 `(deployment_id, order_id)`, 唯一约束 `UNIQUE (deployment_id, actor, task_id, idempotency_key)`, 记录 `quote_id`, `task_id`, `actor`, `supplier_id`, `product_id`, `quantity`, `currency`, `total_amount_minor`, `idempotency_key`, `status` (`CREATED`), `created_at`, `decision_id`.
+  - 新增 `client_actions` 意图锁表: 主键 `(deployment_id, action_id)`, 唯一约束 `UNIQUE (deployment_id, actor, task_id, action, idempotency_key)`, 记录 `request_hash`, `challenge_id`, `quote_id`, `order_id`, `decision_id`, `status` (`PENDING` / `SUBMITTED` / `COMPLETED` / `FAILED`), `created_at` 与 `updated_at`.
 - **锁后复核与策略分支 (`internal/gateway/execute.go` & `internal/policy`)**:
-  - `validateAccessRequestSchema` 区分 `quote.read` (`quoteId == null`, `amountMinor == 0`) 与 `order.create` (`quoteId != ""`, `amountMinor > 0`, 资源为 `orders`).
-  - `order.create` 在 `READ COMMITTED` 事务中按固定加锁顺序锁定: `challenges (FOR UPDATE)` -> `business_keys` -> `quotes (FOR SHARE)` -> `trusted_contexts (FOR SHARE)` -> `fabric_head (FOR SHARE)`.
+  - `validateExecuteSchema` 区分 `quote.read` (`quoteId == null`, `amountMinor == 0`) 与 `order.create` (`quoteId != ""`, `amountMinor > 0`, 资源为 `orders`).
+  - `order.create` 在 `READ COMMITTED` 事务中按固定加锁顺序锁定: `challenges (FOR UPDATE)` -> `business_keys (FOR UPDATE)` -> `trusted_contexts (FOR SHARE)` -> `catalog_prices (FOR SHARE)` -> `quotes (FOR UPDATE)` -> `fabric_head (FOR SHARE)`.
   - 锁后依次核验: (1) `fabric_head` 一致性 (若检测到 `G1` 撤销块 `r` 已应用或高度推进则回滚并重验, 采用 `r` 后在路径状态核验返回 `403 ANCESTOR_INACTIVE`); (2) 报价归属 (`quote.actor == req.Actor && quote.task_id == req.TaskID && quote.product_id == req.ProductID`), 报价未过期 (`decision_at < quote.valid_until`, 否则 `409 QUOTE_EXPIRED`), 请求总额与报价严格相等 (`req.AmountMinor == quote.total_amount_minor`, 否则 `409 AMOUNT_MISMATCH`); (3) 整条路径最小单笔上限 (`req.AmountMinor <= path.maxAmountMinor`, 1200 元下单超 `G2` 1000 元上限时返回 `403 AMOUNT_LIMIT_EXCEEDED`); (4) C 独立准入策略与环境 (`SUPPLIER_POLICY_DENIED` 或锁后 `ELEVATED`/`BLOCKED` 返回 `403 POLICY_DENIED`).
   - 双实例唯一订单: 两个监听在不同端口 (如 8103 与 8104) 的 C 网关实例连接同一 PostgreSQL 主库, 并发提交同 `(actor, taskId, "order.create", idempotencyKey)` 请求时通过 `business_keys` 与 `orders` 唯一索引协调锁等待, 保证仅创建一笔 `orders` 记录, 双方同摘要返回同一 `orderId`, 异摘要返回 `409 IDEMPOTENCY_CONFLICT`.
 
@@ -98,5 +98,5 @@ flowchart TB
 | --- | --- |
 | 引入三个官方 Go SDK (`modelcontextprotocol/go-sdk`, `openai-go`, `anthropic-sdk-go`) 增大 `go.mod` 与构建体积 | 使用 `go mod tidy` 精确锁定版本并运行离线 `go test -count=1 ./...` 与 `CGO_ENABLED=0` 交叉编译确认无构建回归; `chaincode/registry` 仍仅依赖 `fabric-chaincode-go` 与 `internal/fabricapi`, 不引入智能体依赖. |
 | 真实 LLM 在 F07 (1200 元超额) 时可能自主识别超额而直接拒绝对工具的调用, 导致未触达网关拦截分支 | 在 F07 设计两条互补的真实 LLM 用例: (1) 正常任务由 `B1` 智能体自主决策识别超限拒绝下单; (2) 提示词诱导分支要求 `B1` 尝试提交 `Q1200` 订单以实测触发网关 `403 AMOUNT_LIMIT_EXCEEDED`, 两者均验证主库无新订单生成. |
-| 双网关实例 (8103/8104) 并发访问共享 PostgreSQL 时可能出现死锁或重放竞争 | 保持两实例均严格遵循 `challenges -> business_keys -> quotes -> trusted_contexts -> fabric_head` 的固定加锁顺序, 并使用带独立 `probeOne`/`probeTwo` 身份的探针隔离状态新鲜度租约. |
+| 双网关实例 (8103/8104) 并发访问共享 PostgreSQL 时可能出现死锁或重放竞争 | 保持两实例均严格遵循 `challenges -> business_keys -> trusted_contexts -> catalog_prices -> quotes -> fabric_head` 的固定加锁顺序, 并使用带独立 `probeOne`/`probeTwo` 身份的探针隔离状态新鲜度租约. |
 | `authregistry` 链码新增 `SetPurchasingAuthority`, `ProposeIdentityLink`/`ApproveIdentityLink`/`RevokeIdentityLink` 及 `BM` 校验需要升级已部署通道链码 | M2 验收支持通过部署新 `instanceId` 的干净重建或链码序列升级 (`sequence++`) 同步至三域 Peer, 并在证据 `manifest.json` 中精确记录 `sequence` 与包摘要. |

@@ -37,6 +37,19 @@ const (
 	ErrCodeGrantExpired               = "GRANT_EXPIRED"
 	ErrCodePayloadTooLarge            = "PAYLOAD_TOO_LARGE"
 	ErrCodeUnsupportedMediaType       = "UNSUPPORTED_MEDIA_TYPE"
+	ErrCodePurchasingAuthorityInvalid = "PURCHASING_AUTHORITY_INVALID"
+	ErrCodeDelegationExpansion        = "DELEGATION_EXPANSION"
+	ErrCodePathInvalid                = "PATH_INVALID"
+	ErrCodeAuthorizationModeMismatch  = "AUTHORIZATION_MODE_MISMATCH"
+	ErrCodeAncestorInactive           = "ANCESTOR_INACTIVE"
+	ErrCodeAmountLimitExceeded        = "AMOUNT_LIMIT_EXCEEDED"
+	ErrCodeQuoteScopeMismatch         = "QUOTE_SCOPE_MISMATCH"
+	ErrCodeQuoteExpired               = "QUOTE_EXPIRED"
+	ErrCodeAmountMismatch             = "AMOUNT_MISMATCH"
+	ErrCodeLinkProofInvalid           = "LINK_PROOF_INVALID"
+	ErrCodeLinkApprovalForbidden      = "LINK_APPROVAL_FORBIDDEN"
+	ErrCodeLinkProposalMismatch       = "LINK_PROPOSAL_MISMATCH"
+	ErrCodeLinkStateConflict          = "LINK_STATE_CONFLICT"
 )
 
 // Error represents a deterministic grad-auth-v1 protocol failure with a machine-readable code.

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode/utf16"
 
 	api "graduation-design/internal/fabricapi"
 	"graduation-design/internal/protocol"
@@ -306,16 +307,71 @@ func verifyAuthorizedMgmtCert(leaf *x509.Certificate, authorized []*x509.Certifi
 	return nil
 }
 
-// GrantDeliveryPackage bundles C -> U (or grantor -> grantee) root grant delivery materials
+// GrantDeliveryPackage bundles C/PA -> U (or grantor -> grantee) root or delegated grant delivery materials
 // verified prior to writing grant_outbox and wallet_receipts.
 type GrantDeliveryPackage struct {
-	DeploymentID           string            `json:"deploymentId"`
-	Recipient              string            `json:"recipient"`
-	GrantID                string            `json:"grantId"`
-	GrantJWS               string            `json:"grantJws"`
-	TaskSpec               protocol.TaskSpec `json:"taskSpec"`
-	ServicePresentation    string            `json:"servicePresentation"`
-	DomainCertificationJWS string            `json:"domainCertificationJws"`
+	DeploymentID           string                             `json:"deploymentId"`
+	Recipient              string                             `json:"recipient"`
+	GrantID                string                             `json:"grantId"`
+	GrantJWS               string                             `json:"grantJws"`
+	TaskSpec               protocol.TaskSpec                  `json:"taskSpec"`
+	ServicePresentation    string                             `json:"servicePresentation"`
+	DomainCertificationJWS string                             `json:"domainCertificationJws"`
+	AncestorGrants         []string                      `json:"ancestorGrants,omitempty"`
+	AncestorCredentials    []protocol.AncestorCredential `json:"ancestorCredentials,omitempty"`
+	TrustPaths             []protocol.TrustPathEntry     `json:"trustPaths,omitempty"`
+}
+
+// BuildAccessTrustPaths constructs a deduplicated, UTF-16 ascending trustPaths slice
+// ordered by credential issuer DID using domain certification JWS documents mapped by domainID.
+func BuildAccessTrustPaths(certJWSByDomain map[string]string, snap *protocol.SnapshotView, issuerDIDs ...string) ([]protocol.TrustPathEntry, error) {
+	if snap == nil {
+		return nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "snapshot view required to build trustPaths")
+	}
+	seen := make(map[string]struct{}, len(issuerDIDs))
+	unique := make([]string, 0, len(issuerDIDs))
+	for _, iss := range issuerDIDs {
+		if iss == "" {
+			continue
+		}
+		if _, ok := seen[iss]; ok {
+			continue
+		}
+		seen[iss] = struct{}{}
+		unique = append(unique, iss)
+	}
+	slices.SortFunc(unique, func(a, b string) int {
+		ua, ub := utf16.Encode([]rune(a)), utf16.Encode([]rune(b))
+		n := len(ua)
+		if len(ub) < n {
+			n = len(ub)
+		}
+		for i := 0; i < n; i++ {
+			if ua[i] < ub[i] {
+				return -1
+			}
+			if ua[i] > ub[i] {
+				return 1
+			}
+		}
+		return len(ua) - len(ub)
+	})
+	out := make([]protocol.TrustPathEntry, 0, len(unique))
+	for _, iss := range unique {
+		idRec, ok := snap.Identities[iss]
+		if !ok {
+			return nil, protocol.NewError(protocol.ErrCodeIssuerScopeInvalid, fmt.Sprintf("issuer identity %q not found in snapshot", iss))
+		}
+		certJWS := certJWSByDomain[idRec.Domain]
+		if certJWS == "" {
+			return nil, protocol.NewError(protocol.ErrCodeMaterialNotSynced, fmt.Sprintf("missing domain certification JWS for domain %q", idRec.Domain))
+		}
+		out = append(out, protocol.TrustPathEntry{
+			Issuer:              iss,
+			DomainCertification: certJWS,
+		})
+	}
+	return out, nil
 }
 
 // PackageDigest computes SHA-256(JCS(GrantDeliveryPackage)) as 64-char lowercase hex.
@@ -615,23 +671,20 @@ func (ds *DeliveryService) verifyGrantDeliveryPackage(
 	snap *protocol.SnapshotView,
 	pkg GrantDeliveryPackage,
 	rootPub *ecdsa.PublicKey,
-	issuerCPub *ecdsa.PublicKey,
+	grantorCredIssuerPub *ecdsa.PublicKey,
 	grantorPub *ecdsa.PublicKey,
 	now int64,
 ) error {
 	if snap == nil || pkg.DeploymentID != snap.DeploymentID {
 		return protocol.NewError(protocol.ErrCodeBindingMismatch, "snapshot deployment mismatch")
 	}
-	if pkg.DomainCertificationJWS == "" {
-		return protocol.NewError(protocol.ErrCodeMaterialNotSynced, "missing C domain certification JWS in package")
-	}
 	grant, ok := snap.Grants[pkg.GrantID]
 	if !ok || grant.DeploymentID != snap.DeploymentID || grant.Status != api.Active ||
 		now < grant.NBF || now >= grant.EXP {
 		return protocol.NewError(protocol.ErrCodeMaterialInvalid, fmt.Sprintf("grant %q missing, inactive, or expired", pkg.GrantID))
 	}
-	if grant.Parent != "" || grant.Mode != api.RP || grant.Grantee != pkg.Recipient {
-		return protocol.NewError(protocol.ErrCodeMaterialInvalid, "grant is not an active RP root grant for recipient")
+	if (grant.Mode != api.RP && grant.Mode != api.BM) || grant.Grantee != pkg.Recipient {
+		return protocol.NewError(protocol.ErrCodeMaterialInvalid, "grant is not an active RP/BM grant for recipient")
 	}
 	task, ok := snap.Tasks[grant.Task]
 	if !ok || task.DeploymentID != snap.DeploymentID || task.Status != api.Active ||
@@ -642,20 +695,61 @@ func (ds *DeliveryService) verifyGrantDeliveryPackage(
 	if err != nil || taskDig != task.Digest {
 		return protocol.NewError(protocol.ErrCodeBindingMismatch, "taskSpec digest mismatches ledger task anchor")
 	}
-	// Verify domain C certification against anchor and synced certification store.
-	certAnchor, err := verifyDomainCertAgainstSnap(snap, "C", pkg.DomainCertificationJWS, rootPub, now)
-	if err != nil {
-		return err
-	}
-	if _, err := ds.HasSyncedCertification(ctx, snap.DeploymentID, "C", certAnchor.ID, certAnchor.Digest); err != nil {
-		return err
-	}
 
-	// Verify C's grantor key and Grant JWS
+	// Verify grantor identity, mode-specific root/parent constraints, and grantor domain certification sync.
 	grantorID, ok := snap.Identities[grant.Issuer]
 	if !ok || grantorID.Status != api.Active || grantorID.KeyVersion != grant.IssuerKeyVersion {
 		return protocol.NewError(protocol.ErrCodeMaterialInvalid, "grantor identity missing or inactive")
 	}
+	if pkg.DomainCertificationJWS == "" {
+		return protocol.NewError(protocol.ErrCodeMaterialNotSynced, fmt.Sprintf("missing %s domain certification JWS in package", grantorID.Domain))
+	}
+	if grant.Parent == "" {
+		switch grant.Mode {
+		case api.RP:
+			if grantorID.Domain != "C" || grantorID.Kind != "SERVICE" {
+				return protocol.NewError(protocol.ErrCodeRootAuthorityInvalid, "RP root grantor must be a SERVICE in domain C")
+			}
+		case api.BM:
+			dom, ok := snap.Domains[task.Domain]
+			if !ok || dom.Status != api.Active || dom.PurchasingAuthority != grant.Issuer ||
+				grantorID.Domain != task.Domain || grantorID.Kind != "SERVICE" {
+				return protocol.NewError(protocol.ErrCodePurchasingAuthorityInvalid, "BM root grantor is not active purchasingAuthority for task domain")
+			}
+		}
+	} else {
+		parentGrant, ok := snap.Grants[grant.Parent]
+		if !ok || parentGrant.DeploymentID != snap.DeploymentID || parentGrant.Status != api.Active ||
+			now < parentGrant.NBF || now >= parentGrant.EXP || parentGrant.Grantee != grant.Issuer {
+			return protocol.NewError(protocol.ErrCodeAncestorInactive, fmt.Sprintf("parent grant %q missing, inactive, or grantee mismatch", grant.Parent))
+		}
+		if len(pkg.AncestorGrants) > 0 {
+			for i, ancRaw := range pkg.AncestorGrants {
+				prelim, err := protocol.ParseCompactJWS(ancRaw, protocol.TypGrantDelegation)
+				if err != nil {
+					return err
+				}
+				var ancClaims protocol.GrantClaims
+				if err := protocol.DecodeStrictJSON(prelim.PayloadBytes, &ancClaims); err != nil {
+					return err
+				}
+				ancOnChain, ok := snap.Grants[ancClaims.ID]
+				if !ok || ancOnChain.Status != api.Active || now < ancOnChain.NBF || now >= ancOnChain.EXP {
+					return protocol.NewError(protocol.ErrCodeAncestorInactive, fmt.Sprintf("ancestor grant[%d] %q missing or inactive", i, ancClaims.ID))
+				}
+			}
+		}
+	}
+
+	certAnchor, err := verifyDomainCertAgainstSnap(snap, grantorID.Domain, pkg.DomainCertificationJWS, rootPub, now)
+	if err != nil {
+		return err
+	}
+	if _, err := ds.HasSyncedCertification(ctx, snap.DeploymentID, grantorID.Domain, certAnchor.ID, certAnchor.Digest); err != nil {
+		return err
+	}
+
+	// Verify grantor's Grant JWS.
 	pg, err := protocol.ParseAndVerifyGrant(pkg.GrantJWS, grantorPub, grantorID.KeyID)
 	if err != nil {
 		return err
@@ -665,25 +759,29 @@ func (ds *DeliveryService) verifyGrantDeliveryPackage(
 		return protocol.NewError(protocol.ErrCodeBindingMismatch, "grant JWS claims or digest mismatch ledger anchor")
 	}
 
-	// Verify IC-issued C service minimal SD-JWT presentation
-	vc, err := protocol.VerifySDJWTCredential(pkg.ServicePresentation, issuerCPub, "", grantorID.PublicKey, false)
+	// Verify grantor's minimal SD-JWT presentation.
+	vc, err := protocol.VerifySDJWTCredential(pkg.ServicePresentation, grantorCredIssuerPub, "", grantorID.PublicKey, false)
 	if err != nil {
 		return err
 	}
 	credAnchor, ok := snap.Credentials[vc.Claims.ID]
 	if !ok || credAnchor.Status != api.Active || credAnchor.Digest != vc.AnchorDigest ||
 		now < credAnchor.NBF || now >= credAnchor.EXP || credAnchor.Subject != grant.Issuer {
-		return protocol.NewError(protocol.ErrCodeCredentialStatusInvalid, "C service credential anchor invalid or inactive")
+		return protocol.NewError(protocol.ErrCodeCredentialStatusInvalid, "grantor credential anchor invalid or inactive")
 	}
 	if vc.Claims.ID != grant.IssuerCredential {
-		if vc.Role != "supplier-service" {
-			return protocol.NewError(protocol.ErrCodeIssuerScopeInvalid, "service presentation credential mismatches grant.issuerCredentialId")
+		if vc.Role != "supplier-service" && vc.Role != "RESOURCE_AUTHORITY" && vc.Role != "PURCHASING_AUTHORITY" {
+			return protocol.NewError(protocol.ErrCodeIssuerScopeInvalid, "grantor presentation credential mismatches grant.issuerCredentialId")
 		}
-	} else if vc.Role != "supplier-service" && vc.Role != grantorID.Kind {
-		return protocol.NewError(protocol.ErrCodeIssuerScopeInvalid, fmt.Sprintf("unexpected service credential role %q", vc.Role))
+	} else if vc.Role != "supplier-service" && vc.Role != "purchasing-authority" &&
+		vc.Role != "procurement-authority" && vc.Role != "procurement-owner" &&
+		vc.Role != "procurement-agent" && vc.Role != "broker-agent" &&
+		vc.Role != "RESOURCE_AUTHORITY" && vc.Role != "PURCHASING_AUTHORITY" && vc.Role != grantorID.Kind {
+		return protocol.NewError(protocol.ErrCodeIssuerScopeInvalid, fmt.Sprintf("unexpected grantor credential role %q", vc.Role))
 	}
-	if !slices.Contains(vc.Claims.CredentialSubject.SD, protocol.DisclosureDigest(strings.Split(pkg.ServicePresentation, "~")[1])) {
-		return protocol.NewError(protocol.ErrCodeInvalidDisclosure, "invalid service disclosure")
+	parts := strings.Split(pkg.ServicePresentation, "~")
+	if len(parts) < 2 || parts[1] == "" || !slices.Contains(vc.Claims.CredentialSubject.SD, protocol.DisclosureDigest(parts[1])) {
+		return protocol.NewError(protocol.ErrCodeInvalidDisclosure, "invalid grantor disclosure")
 	}
 	return nil
 }

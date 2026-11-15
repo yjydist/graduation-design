@@ -18,7 +18,7 @@ import (
 // Run is the Fabric ledgerctl entry point.
 func Run(args []string, output io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: ledgerctl {deploy|seed|check|inspect|invoke|operation|verify}")
+		return fmt.Errorf("usage: ledgerctl {deploy|seed|check|inspect|invoke|operation|verify|mcp}")
 	}
 	command := args[0]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
@@ -33,7 +33,7 @@ func Run(args []string, output io.Writer) error {
 		defaultTimeout = 5 * time.Minute
 	}
 	timeout := flags.Duration("timeout", defaultTimeout, "overall command timeout")
-	var grant, height, role, key, method, input, evidence string
+	var grant, height, role, key, method, input, evidence, gatewayURL string
 	var interval, lifetime time.Duration
 	var retryInitialization bool
 	switch command {
@@ -58,6 +58,8 @@ func Run(args []string, output io.Writer) error {
 	case "deploy":
 		flags.BoolVar(&retryInitialization, "retry-initialization", false, "allow a new operation after a rejected unsigned initialization")
 	case "seed":
+	case "mcp":
+		flags.StringVar(&gatewayURL, "gateway", os.Getenv("GATEWAY_URL"), "gateway HTTP base URL (defaults to GATEWAY_URL or http://127.0.0.1:8103)")
 	default:
 		return fmt.Errorf("unknown Fabric command %q", command)
 	}
@@ -98,6 +100,9 @@ func Run(args []string, output io.Writer) error {
 		return err
 	}
 	defer db.Close()
+	if command == "mcp" {
+		return runMCPCmd(ctx, i, *d, db, gatewayURL)
+	}
 	if command == "check" || command == "inspect" {
 		if grant == "" {
 			var f fixtures

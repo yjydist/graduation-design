@@ -128,24 +128,48 @@ allow if {
 
 // BuildDefaultBundle builds a deterministic signed-ready OPA policy bundle map and computes policyDigest = SHA256(JCS(manifest)).
 func BuildDefaultBundle(depID, serviceDID, policyVersion string, root api.RootRecord, policyDeadline *int64) (map[string][]byte, string, error) {
+	roles := RolesConfig{
+		AcceptedAuthorizationModes: []string{api.RP, protocol.ModeBuyerMandate},
+		AcceptedAuthorityRoles:     []string{"procurement-authority", "PURCHASING_AUTHORITY"},
+		AcceptedBuyerDomains:       []string{"A"},
+		AcceptedServiceRoles:       []string{"supplier-service", "RESOURCE_AUTHORITY", "SERVICE", "ResourceOwner"},
+	}
+	resources := ResourcesConfig{
+		AllowedActions:    []string{"quote.read", "order.create"},
+		AllowedProductIDs: []string{"urn:grad:product:P1", "urn:grad:product:P2"},
+		MaxQuantity:       10,
+		PolicyDeadline:    policyDeadline,
+	}
+	return BuildCustomBundle(depID, serviceDID, policyVersion, root, roles, resources)
+}
+
+// BuildCustomBundle builds a deterministic OPA policy bundle map using custom roles and resources configs.
+func BuildCustomBundle(
+	depID, serviceDID, policyVersion string,
+	root api.RootRecord,
+	roles RolesConfig,
+	resources ResourcesConfig,
+) (map[string][]byte, string, error) {
 	if depID == "" || serviceDID == "" || policyVersion == "" {
 		return nil, "", protocol.NewError(protocol.ErrCodeInvalidSchema, "deploymentId, serviceDid, and policyVersion required")
 	}
-	rolesBytes, err := protocol.MarshalJCS(RolesConfig{
-		AcceptedAuthorizationModes: []string{api.RP, protocol.ModeBuyerMandate},
-		AcceptedAuthorityRoles:     []string{"procurement-authority"},
-		AcceptedBuyerDomains:       []string{"A"},
-		AcceptedServiceRoles:       []string{"supplier-service", "SERVICE", "ResourceOwner"},
-	})
+	if roles.AcceptedAuthorizationModes == nil {
+		roles.AcceptedAuthorizationModes = []string{}
+	}
+	if roles.AcceptedAuthorityRoles == nil {
+		roles.AcceptedAuthorityRoles = []string{}
+	}
+	if roles.AcceptedBuyerDomains == nil {
+		roles.AcceptedBuyerDomains = []string{}
+	}
+	if roles.AcceptedServiceRoles == nil {
+		roles.AcceptedServiceRoles = []string{}
+	}
+	rolesBytes, err := protocol.MarshalJCS(roles)
 	if err != nil {
 		return nil, "", err
 	}
-	resourcesBytes, err := protocol.MarshalJCS(ResourcesConfig{
-		AllowedActions:    []string{"quote.read", "order.create"},
-		AllowedProductIDs: []string{"urn:grad:product:P1"},
-		MaxQuantity:       10,
-		PolicyDeadline:    policyDeadline,
-	})
+	resourcesBytes, err := protocol.MarshalJCS(resources)
 	if err != nil {
 		return nil, "", err
 	}

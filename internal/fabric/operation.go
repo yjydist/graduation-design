@@ -370,7 +370,10 @@ func endorsementFailure(err error) string {
 	reason := ""
 	if errors.As(err, &e) {
 		for _, d := range e.Details() {
-			for _, c := range []string{"UNAUTHORIZED", "INVALID_STRUCTURE", "MISSING_DEPENDENCY", "STATE_CHANGED", "INVALID_STATE", "ID_ALREADY_USED"} {
+			for _, c := range []string{
+				"UNAUTHORIZED", "INVALID_STRUCTURE", "MISSING_DEPENDENCY", "STATE_CHANGED", "INVALID_STATE", "ID_ALREADY_USED",
+				"PURCHASING_AUTHORITY_INVALID", "LINK_PROOF_INVALID", "LINK_APPROVAL_FORBIDDEN", "LINK_PROPOSAL_MISMATCH", "LINK_STATE_CONFLICT",
+			} {
 				if strings.HasSuffix(d.Message, "D0:"+c) && strings.Contains(d.Message, "chaincode response") {
 					if reason != "" && reason != c {
 						return "ENDORSEMENT_REJECTED"

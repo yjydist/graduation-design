@@ -28,12 +28,17 @@ var (
 )
 
 const (
-	badInput = "INVALID_STRUCTURE"
-	denied   = "UNAUTHORIZED"
-	stale    = "STATE_CHANGED"
-	missing  = "MISSING_DEPENDENCY"
-	invalid  = "INVALID_STATE"
-	used     = "ID_ALREADY_USED"
+	badInput              = "INVALID_STRUCTURE"
+	denied                = "UNAUTHORIZED"
+	stale                 = "STATE_CHANGED"
+	missing               = "MISSING_DEPENDENCY"
+	invalid               = "INVALID_STATE"
+	used                  = "ID_ALREADY_USED"
+	paInvalid             = "PURCHASING_AUTHORITY_INVALID"
+	linkProofInvalid      = "LINK_PROOF_INVALID"
+	linkApprovalForbidden = "LINK_APPROVAL_FORBIDDEN"
+	linkProposalMismatch  = "LINK_PROPOSAL_MISMATCH"
+	linkStateConflict     = "LINK_STATE_CONFLICT"
 )
 
 type registry struct{}
@@ -113,8 +118,16 @@ func invoke(stub shim.ChaincodeStubInterface, method string, arg []byte) ([]byte
 		err = dispatch(arg, tx.certify)
 	case "SetDomainStatus":
 		err = dispatch(arg, tx.setDomainStatus)
+	case "SetPurchasingAuthority":
+		err = dispatch(arg, tx.setPurchasingAuthority)
 	case "RegisterIdentity":
 		err = dispatch(arg, tx.registerIdentity)
+	case "ProposeIdentityLink":
+		err = dispatch(arg, tx.proposeIdentityLink)
+	case "ApproveIdentityLink":
+		err = dispatch(arg, tx.approveIdentityLink)
+	case "RevokeIdentityLink":
+		err = dispatch(arg, tx.revokeIdentityLink)
 	case "RegisterCredential":
 		err = dispatch(arg, tx.registerCredential)
 	case "RegisterTask":

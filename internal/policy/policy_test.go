@@ -263,3 +263,59 @@ func TestPolicyDeterministicEvalAndFailClosed(t *testing.T) {
 		t.Fatalf("expected strict builtin error to fail closed with ErrCodePolicyDenied, got dec=%+v err=%v", dec, err)
 	}
 }
+
+func TestPolicyM2DualModeOrderCreateAndSupplierRejection(t *testing.T) {
+	ctx := context.Background()
+	root := testRootRecord()
+	depID := "dep-policy-m2"
+	serviceDID := "did:web:c.example.test"
+	deadline := int64(1800000000)
+
+	files, digest, err := BuildDefaultBundle(depID, serviceDID, DefaultPolicyVersion, root, &deadline)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle, err := VerifyAndLoadBundle(files, depID, serviceDID, root, digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// order.create in BM mode: NORMAL allowed, ELEVATED/BLOCKED denied.
+	bmOrder := SupplierFacts{
+		AuthorizationMode: protocol.ModeBuyerMandate, BuyerDomain: "A", AuthorityRole: "procurement-authority",
+		ServiceDID: serviceDID, ServiceRole: "supplier-service", ProductID: "urn:grad:product:P2", Quantity: 1,
+		Action: "order.create", AmountMinor: 80000, MaxPathAmountMinor: 100000, NowUnix: deadline - 10,
+		VerifiedCrypto: true, TaskActive: true, PathActive: true, ContextFresh: true,
+		ContextRiskLevel: "NORMAL", WithinTimeAndBounds: true,
+	}
+	if dec, err := bundle.EvaluateFacts(ctx, bmOrder); err != nil || !dec.Allow {
+		t.Fatalf("expected BM order.create NORMAL allow, got dec=%+v err=%v", dec, err)
+	}
+	bmElevated := bmOrder
+	bmElevated.ContextRiskLevel = "ELEVATED"
+	if dec, err := bundle.EvaluateFacts(ctx, bmElevated); dec.Allow || !protocol.HasCode(err, protocol.ErrCodePolicyDenied) {
+		t.Fatalf("expected BM order.create ELEVATED -> POLICY_DENIED, got dec=%+v err=%v", dec, err)
+	}
+
+	// Custom supplier bundle excluding BUYER_MANDATE -> SUPPLIER_POLICY_DENIED even with valid PA root.
+	rpOnlyRoles := RolesConfig{
+		AcceptedAuthorizationModes: []string{protocol.ModeResourcePreauthorized},
+		AcceptedAuthorityRoles:     []string{},
+		AcceptedBuyerDomains:       []string{"A"},
+		AcceptedServiceRoles:       []string{"supplier-service"},
+	}
+	rpResources := ResourcesConfig{
+		AllowedActions: []string{"quote.read", "order.create"}, AllowedProductIDs: []string{"urn:grad:product:P1", "urn:grad:product:P2"}, MaxQuantity: 10, PolicyDeadline: &deadline,
+	}
+	rpFiles, rpDig, err := BuildCustomBundle(depID, serviceDID, "1.0.1", root, rpOnlyRoles, rpResources)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rpBundle, err := VerifyAndLoadBundle(rpFiles, depID, serviceDID, root, rpDig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dec, err := rpBundle.EvaluateFacts(ctx, bmOrder); dec.Allow || !protocol.HasCode(err, protocol.ErrCodeSupplierPolicyDenied) {
+		t.Fatalf("expected BM under RP-only supplier policy -> SUPPLIER_POLICY_DENIED, got dec=%+v err=%v", dec, err)
+	}
+}

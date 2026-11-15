@@ -254,6 +254,7 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 		Credentials:         make(map[string]api.Credential),
 		Tasks:               make(map[string]api.Task),
 		Grants:              make(map[string]api.Grant),
+		Links:               make(map[string]api.IdentityLink),
 	}
 
 	certJWSByID := make(map[string]string)
@@ -301,6 +302,51 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 				return nil, err
 			}
 			snapView.Grants[rec.ID] = rec
+		case "link":
+			var rec api.IdentityLink
+			if err := json.Unmarshal(raw, &rec); err != nil {
+				return nil, err
+			}
+			snapView.Links[rec.ID] = rec
+		}
+	}
+
+	// Load any identity links at the same REPEATABLE READ snapshot height so dual-domain link state is visible.
+	linkRows, err := tx.Query(ctx, "SELECT value FROM fabric_current WHERE deployment=$1 AND key LIKE 'link/%'", sp.deploymentID)
+	if err == nil {
+		var links []api.IdentityLink
+		for linkRows.Next() {
+			var raw []byte
+			if err := linkRows.Scan(&raw); err == nil {
+				var l api.IdentityLink
+				if json.Unmarshal(raw, &l) == nil && l.ID != "" {
+					snapView.Links[l.ID] = l
+					links = append(links, l)
+				}
+			}
+		}
+		linkRows.Close()
+		for _, l := range links {
+			for _, domID := range []string{l.SourceDomain, l.TargetDomain} {
+				if _, exists := snapView.Domains[domID]; !exists && domID != "" {
+					if dRaw, dErr := loadOptionalCurrent(ctx, tx, sp.deploymentID, api.Key("domain", domID)); dErr == nil && len(dRaw) > 0 {
+						var dom api.Domain
+						if json.Unmarshal(dRaw, &dom) == nil {
+							snapView.Domains[dom.ID] = dom
+						}
+					}
+				}
+			}
+			for _, subID := range []string{l.SourceSubject, l.TargetSubject} {
+				if _, exists := snapView.Identities[subID]; !exists && subID != "" {
+					if iRaw, iErr := loadOptionalCurrent(ctx, tx, sp.deploymentID, api.Key("identity", subID)); iErr == nil && len(iRaw) > 0 {
+						var id api.Identity
+						if json.Unmarshal(iRaw, &id) == nil {
+							snapView.Identities[id.ID] = id
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -309,6 +355,21 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 		var paID api.Identity
 		if json.Unmarshal(paRaw, &paID) == nil {
 			snapView.Identities[paID.ID] = paID
+		}
+	}
+
+	// Ensure every loaded domain also has its active certification record available for delivery/protocol checks.
+	for _, dom := range snapView.Domains {
+		if dom.Certification == "" {
+			continue
+		}
+		if _, exists := snapView.Certifications[dom.Certification]; !exists {
+			if cRaw, cErr := loadOptionalCurrent(ctx, tx, sp.deploymentID, api.Key("certification", dom.Certification)); cErr == nil && len(cRaw) > 0 {
+				var cert api.Certification
+				if json.Unmarshal(cRaw, &cert) == nil && cert.ID != "" {
+					snapView.Certifications[cert.ID] = cert
+				}
+			}
 		}
 	}
 

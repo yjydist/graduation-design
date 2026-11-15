@@ -315,7 +315,7 @@ func TestAccessEvidencePackageFullVerifyAndSingleFieldTampers(t *testing.T) {
 			didIB: {Bound: api.Bound{DeploymentID: depID}, ID: didIB, Domain: "B", DocumentDigest: digIB, KeyID: didIB + "#key-1", KeyVersion: 1, PublicKey: pubIB, Version: api.Version{Status: api.Active, Revision: 1}},
 			didB1: {Bound: api.Bound{DeploymentID: depID}, ID: didB1, Domain: "B", DocumentDigest: digB1, KeyID: didB1 + "#key-1", KeyVersion: 1, PublicKey: pubB1, Version: api.Version{Status: api.Active, Revision: 1}},
 			didIC: {Bound: api.Bound{DeploymentID: depID}, ID: didIC, Domain: "C", DocumentDigest: digIC, KeyID: didIC + "#key-1", KeyVersion: 1, PublicKey: pubIC, Version: api.Version{Status: api.Active, Revision: 1}},
-			didC:  {Bound: api.Bound{DeploymentID: depID}, ID: didC, Domain: "C", DocumentDigest: digC, KeyID: didC + "#key-1", KeyVersion: 1, PublicKey: pubC, Version: api.Version{Status: api.Active, Revision: 1}},
+			didC:  {Bound: api.Bound{DeploymentID: depID}, ID: didC, Domain: "C", Kind: "SERVICE", DocumentDigest: digC, KeyID: didC + "#key-1", KeyVersion: 1, PublicKey: pubC, Version: api.Version{Status: api.Active, Revision: 1}},
 		},
 		Credentials: map[string]api.Credential{
 			credU.ID:  credU,
@@ -545,4 +545,314 @@ func toggleLastB64Char(s string) string {
 		return "B"
 	}
 	return "A"
+}
+
+func TestM2TwoHopEvidenceVerificationRPAndBM(t *testing.T) {
+	ctx := t.Context()
+	now := time.Now().UTC().Truncate(time.Second)
+	nbf, exp := now.Add(-10*time.Minute).Unix(), now.Add(time.Hour).Unix()
+	depID := strings.Repeat("cc", 32)
+	resID := "urn:grad:resource:C:orders"
+
+	ca, err := GenerateTestCA(now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	caPool, err := ParseTestCAPublic(ca.CertPEM)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certs := make(map[string]*HostTLSCert, len(ControlledTestDomains))
+	for _, host := range ControlledTestDomains {
+		hc, err := ca.IssueHostCert(host, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		certs[host] = hc
+	}
+
+	privT, pubT, _ := GenerateP256KeyPair()
+	privIA, pubIA, _ := GenerateP256KeyPair()
+	privIB, pubIB, _ := GenerateP256KeyPair()
+	privIC, pubIC, _ := GenerateP256KeyPair()
+	privPA, pubPA, _ := GenerateP256KeyPair()
+	privU, pubU, _ := GenerateP256KeyPair()
+	privA1, pubA1, _ := GenerateP256KeyPair()
+	privB1, pubB1, _ := GenerateP256KeyPair()
+	_, pubUinB, _ := GenerateP256KeyPair()
+	privC, pubC, _ := GenerateP256KeyPair()
+
+	didT := "did:web:t.local"
+	didIA, didU, didPA, didA1 := "did:web:a.local:issuer", "did:web:a.local:u", "did:web:a.local:pa", "did:web:a.local:a1"
+	didIB, didB1, didUinB := "did:web:b.local:issuer", "did:web:b.local:b1", "did:web:b.local:u-in-b"
+	didIC, didC := "did:web:c.local:issuer", "did:web:c.local:supplier"
+
+	docs := map[string][]byte{}
+	makeDoc := func(did, pub string) string {
+		d, err := NewDIDDocument(did, did+"#key-1", pub, KeyPurposeAuthentication, KeyPurposeAssertionMethod)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, err := MarshalJCS(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		dig, err := d.Digest()
+		if err != nil {
+			t.Fatal(err)
+		}
+		docs[did] = raw
+		return dig
+	}
+	digT := makeDoc(didT, pubT)
+	digIA, digU, digPA, digA1 := makeDoc(didIA, pubIA), makeDoc(didU, pubU), makeDoc(didPA, pubPA), makeDoc(didA1, pubA1)
+	digIB, digB1, digUinB := makeDoc(didIB, pubIB), makeDoc(didB1, pubB1), makeDoc(didUinB, pubUinB)
+	digIC, digC := makeDoc(didIC, pubIC), makeDoc(didC, pubC)
+
+	srv, err := NewDIDWebServer(certs, docs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Close()
+
+	dids, err := NewDIDWebResolver(caPool, srv.Routes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dids.RegisterPreseed(RootPreseed{
+		DID: didT, KeyID: didT + "#key-1", KeyVersion: 1, PublicKeyHex: pubT, DIDDocumentDigest: digT, RawDocument: docs[didT],
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	issueCert := func(id, domID, domDID, issDID string) (string, api.Domain, api.Certification) {
+		scopes := []IssuerScope{{ID: issDID, AppKeyVersion: 1, CredentialTypes: []string{CredentialTypeEnterpriseIdentity}, ClaimNames: []string{"domain", "role"}}}
+		jws, dig, err := SignDomainAuthorityCredential(privT, didT+"#key-1", &DomainAuthorityCredential{
+			Type: []string{CredentialTypeVC, CredentialTypeDomainAuthority}, ID: id, DeploymentID: depID,
+			Issuer: didT, Iss: didT, Sub: domDID, IssuerKeyVersion: 1,
+			ValidFrom: time.Unix(nbf, 0).UTC().Format(time.RFC3339), ValidUntil: time.Unix(exp, 0).UTC().Format(time.RFC3339),
+			NBF: nbf, EXP: exp, CredentialStatus: CredentialStatus{ID: id, Type: StatusTypeDomainCertification},
+			CredentialSubject: DomainAuthoritySubject{ID: domDID, DomainID: domID, IdentityIssuers: scopes},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		dom := api.Domain{Bound: api.Bound{DeploymentID: depID}, ID: domID, DID: domDID, Issuers: []string{issDID}, Certification: id, Version: api.Version{Status: api.Active, Revision: 2}}
+		if domID == "A" {
+			dom.PurchasingAuthority = didPA
+		}
+		cert := api.Certification{Bound: api.Bound{DeploymentID: depID}, ID: id, Domain: domID, RootKeyVersion: 1, Digest: dig, Scopes: []api.Scope{{ID: issDID, KeyVersion: 1, Types: []string{CredentialTypeEnterpriseIdentity}, Claims: []string{"domain", "role"}}}, Interval: api.Interval{NBF: nbf, EXP: exp}, Version: api.Version{Status: api.Active, Revision: 1}}
+		return jws, dom, cert
+	}
+	certAJWS, domA, certA := issueCert("urn:grad:cert:A-v1", "A", "did:web:a.local", didIA)
+	certBJWS, domB, certB := issueCert("urn:grad:cert:B-v1", "B", "did:web:b.local", didIB)
+	certCJWS, domC, certC := issueCert("urn:grad:cert:C-v1", "C", "did:web:c.local", didIC)
+
+	issueCred := func(id, issDID, subDID, domID, role, subPub string, issPriv *ecdsa.PrivateKey) (*SignedSDJWTCredential, api.Credential) {
+		jwk, err := AppPublicKeyToJWK(subPub)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, err := IssueEnterpriseIdentityCredential(issPriv, issDID+"#key-1", EnterpriseIdentityCredential{
+			Type: []string{CredentialTypeVC, CredentialTypeEnterpriseIdentity}, ID: id, DeploymentID: depID,
+			Issuer: issDID, Iss: issDID, Sub: subDID, IssuerKeyVersion: 1, AppKeyVersion: 1,
+			ValidFrom: time.Unix(nbf, 0).UTC().Format(time.RFC3339), ValidUntil: time.Unix(exp, 0).UTC().Format(time.RFC3339),
+			NBF: nbf, EXP: exp, CredentialStatus: CredentialStatus{ID: id, Type: StatusTypeCredential},
+			Cnf: ConfirmationKey{JWK: jwk}, CredentialSubject: SDJWTCredentialSubject{ID: subDID},
+		}, domID, role, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s, api.Credential{
+			Bound: api.Bound{DeploymentID: depID}, ID: id, Issuer: issDID, Subject: subDID,
+			IssuerKeyVersion: 1, SubjectKeyVersion: 1, Type: CredentialTypeEnterpriseIdentity,
+			ClaimNames: []string{"domain", "role"}, Digest: s.AnchorDigest,
+			Interval: api.Interval{NBF: nbf, EXP: exp}, Version: api.Version{Status: api.Active, Revision: 1},
+		}
+	}
+	sdPA, credPA := issueCred("urn:grad:credential:PA-v1", didIA, didPA, "A", "procurement-authority", pubPA, privIA)
+	sdU, credU := issueCred("urn:grad:credential:U-v1", didIA, didU, "A", "USER", pubU, privIA)
+	sdA1, credA1 := issueCred("urn:grad:credential:A1-v1", didIA, didA1, "A", "AGENT", pubA1, privIA)
+	sdB1, credB1 := issueCred("urn:grad:credential:B1-v1", didIB, didB1, "B", "AGENT", pubB1, privIB)
+	_, credUinB := issueCred("urn:grad:credential:UinB-v1", didIB, didUinB, "B", "USER", pubUinB, privIB)
+	sdC, credC := issueCred("urn:grad:credential:C-v1", didIC, didC, "C", "supplier-service", pubC, privIC)
+
+	spec := TaskSpec{
+		SupplierID: "urn:grad:supplier:C", ProductID: "urn:grad:product:P1", MaxQuantity: 1, Currency: "CNY",
+		Resources: []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
+		Actions: []string{"order.create", "quote.read"}, Description: "M2 verification",
+	}
+	specDig, _ := spec.Digest()
+
+	makeChain := func(mode, taskID, g0ID, g1ID, g2ID, rootDID, rootCredID string, rootPriv *ecdsa.PrivateKey) (api.Task, map[string]api.Grant, []string) {
+		tRec := api.Task{
+			Bound: api.Bound{DeploymentID: depID}, ID: taskID, Creator: didU, CreatorCredential: credU.ID, CreatorKeyVersion: 1,
+			Domain: "A", Mode: mode, Resource: resID, Digest: specDig, Interval: api.Interval{NBF: nbf, EXP: exp}, Version: api.Version{Status: api.Active, Revision: 1},
+		}
+		g0C := GrantClaims{
+			ID: g0ID, SchemaVersion: SchemaVersion, DeploymentID: depID, RootID: g0ID, TaskID: taskID, AuthorizationMode: mode,
+			PrincipalDomain: "A", ResourceID: resID, Issuer: rootDID, Grantee: didU, IssuerKeyVersion: 1, GranteeKeyVersion: 1,
+			IssuerCredentialID: rootCredID, GranteeCredentialID: credU.ID, Resources: spec.Resources, Actions: spec.Actions,
+			Suppliers: []string{spec.SupplierID}, Aud: "https://c.local", Currency: "CNY", MaxAmountMinor: 500000, NBF: nbf, EXP: exp, RemainingDepth: 2,
+		}
+		g0JWS, g0Dig, _ := SignGrant(rootPriv, rootDID+"#key-1", &g0C)
+		g1C := GrantClaims{
+			ID: g1ID, SchemaVersion: SchemaVersion, DeploymentID: depID, ParentID: &g0ID, ParentDigest: &g0Dig, RootID: g0ID,
+			TaskID: taskID, AuthorizationMode: mode, PrincipalDomain: "A", ResourceID: resID, Issuer: didU, Grantee: didA1,
+			IssuerKeyVersion: 1, GranteeKeyVersion: 1, IssuerCredentialID: credU.ID, GranteeCredentialID: credA1.ID,
+			Resources: spec.Resources, Actions: spec.Actions, Suppliers: []string{spec.SupplierID}, Aud: "https://c.local",
+			Currency: "CNY", MaxAmountMinor: 500000, NBF: nbf, EXP: exp, RemainingDepth: 1,
+		}
+		g1JWS, g1Dig, _ := SignGrant(privU, didU+"#key-1", &g1C)
+		g2C := GrantClaims{
+			ID: g2ID, SchemaVersion: SchemaVersion, DeploymentID: depID, ParentID: &g1ID, ParentDigest: &g1Dig, RootID: g0ID,
+			TaskID: taskID, AuthorizationMode: mode, PrincipalDomain: "A", ResourceID: resID, Issuer: didA1, Grantee: didB1,
+			IssuerKeyVersion: 1, GranteeKeyVersion: 1, IssuerCredentialID: credA1.ID, GranteeCredentialID: credB1.ID,
+			Resources: spec.Resources, Actions: spec.Actions, Suppliers: []string{spec.SupplierID}, Aud: "https://c.local",
+			Currency: "CNY", MaxAmountMinor: 100000, NBF: nbf, EXP: exp, RemainingDepth: 0,
+		}
+		g2JWS, g2Dig, _ := SignGrant(privA1, didA1+"#key-1", &g2C)
+		grants := map[string]api.Grant{
+			g0ID: {Bound: api.Bound{DeploymentID: depID}, ID: g0ID, Schema: SchemaVersion, Root: g0ID, Task: taskID, Mode: mode, Domain: "A", Resource: resID, Issuer: rootDID, Grantee: didU, IssuerKeyVersion: 1, GranteeKeyVersion: 1, IssuerCredential: rootCredID, GranteeCredential: credU.ID, Depth: 2, Digest: g0Dig, Interval: api.Interval{NBF: nbf, EXP: exp}, Version: api.Version{Status: api.Active, Revision: 1}},
+			g1ID: {Bound: api.Bound{DeploymentID: depID}, ID: g1ID, Schema: SchemaVersion, Parent: g0ID, ParentDigest: g0Dig, Root: g0ID, Task: taskID, Mode: mode, Domain: "A", Resource: resID, Issuer: didU, Grantee: didA1, IssuerKeyVersion: 1, GranteeKeyVersion: 1, IssuerCredential: credU.ID, GranteeCredential: credA1.ID, Depth: 1, Digest: g1Dig, Interval: api.Interval{NBF: nbf, EXP: exp}, Version: api.Version{Status: api.Active, Revision: 1}},
+			g2ID: {Bound: api.Bound{DeploymentID: depID}, ID: g2ID, Schema: SchemaVersion, Parent: g1ID, ParentDigest: g1Dig, Root: g0ID, Task: taskID, Mode: mode, Domain: "A", Resource: resID, Issuer: didA1, Grantee: didB1, IssuerKeyVersion: 1, GranteeKeyVersion: 1, IssuerCredential: credA1.ID, GranteeCredential: credB1.ID, Depth: 0, Digest: g2Dig, Interval: api.Interval{NBF: nbf, EXP: exp}, Version: api.Version{Status: api.Active, Revision: 1}},
+		}
+		return tRec, grants, []string{g0JWS, g1JWS, g2JWS}
+	}
+
+	rpTaskID, rpG0, rpG1, rpG2 := strings.Repeat("11", 32), strings.Repeat("21", 32), strings.Repeat("22", 32), strings.Repeat("23", 32)
+	bmTaskID, bmG0, bmG1, bmG2 := strings.Repeat("31", 32), strings.Repeat("41", 32), strings.Repeat("42", 32), strings.Repeat("43", 32)
+	rpTask, rpGrants, rpJWS := makeChain(ModeResourcePreauthorized, rpTaskID, rpG0, rpG1, rpG2, didC, credC.ID, privC)
+	bmTask, bmGrants, bmJWS := makeChain(ModeBuyerMandate, bmTaskID, bmG0, bmG1, bmG2, didPA, credPA.ID, privPA)
+
+	allGrants := map[string]api.Grant{}
+	for k, v := range rpGrants {
+		allGrants[k] = v
+	}
+	for k, v := range bmGrants {
+		allGrants[k] = v
+	}
+	snap := &SnapshotView{
+		Height: 100, Now: now, ClockError: api.ClockError, DeploymentID: depID,
+		Root:           api.RootRecord{DID: didT, DocumentDigest: digT, KeyID: didT + "#key-1", KeyVersion: 1, PublicKey: pubT},
+		Domains:        map[string]api.Domain{"A": domA, "B": domB, "C": domC},
+		Certifications: map[string]api.Certification{certA.ID: certA, certB.ID: certB, certC.ID: certC},
+		Identities: map[string]api.Identity{
+			didIA: {Bound: api.Bound{DeploymentID: depID}, ID: didIA, Domain: "A", Kind: "ISSUER", DocumentDigest: digIA, KeyID: didIA + "#key-1", KeyVersion: 1, PublicKey: pubIA, Version: api.Version{Status: api.Active, Revision: 1}},
+			didU:  {Bound: api.Bound{DeploymentID: depID}, ID: didU, Domain: "A", Kind: "USER", DocumentDigest: digU, KeyID: didU + "#key-1", KeyVersion: 1, PublicKey: pubU, Version: api.Version{Status: api.Active, Revision: 1}},
+			didPA: {Bound: api.Bound{DeploymentID: depID}, ID: didPA, Domain: "A", Kind: "SERVICE", DocumentDigest: digPA, KeyID: didPA + "#key-1", KeyVersion: 1, PublicKey: pubPA, Version: api.Version{Status: api.Active, Revision: 1}},
+			didA1: {Bound: api.Bound{DeploymentID: depID}, ID: didA1, Domain: "A", Kind: "AGENT", DocumentDigest: digA1, KeyID: didA1 + "#key-1", KeyVersion: 1, PublicKey: pubA1, Version: api.Version{Status: api.Active, Revision: 1}},
+			didIB: {Bound: api.Bound{DeploymentID: depID}, ID: didIB, Domain: "B", Kind: "ISSUER", DocumentDigest: digIB, KeyID: didIB + "#key-1", KeyVersion: 1, PublicKey: pubIB, Version: api.Version{Status: api.Active, Revision: 1}},
+			didB1: {Bound: api.Bound{DeploymentID: depID}, ID: didB1, Domain: "B", Kind: "AGENT", DocumentDigest: digB1, KeyID: didB1 + "#key-1", KeyVersion: 1, PublicKey: pubB1, Version: api.Version{Status: api.Active, Revision: 1}},
+			didUinB: {Bound: api.Bound{DeploymentID: depID}, ID: didUinB, Domain: "B", Kind: "USER", DocumentDigest: digUinB, KeyID: didUinB + "#key-1", KeyVersion: 1, PublicKey: pubUinB, Version: api.Version{Status: api.Active, Revision: 1}},
+			didIC: {Bound: api.Bound{DeploymentID: depID}, ID: didIC, Domain: "C", Kind: "ISSUER", DocumentDigest: digIC, KeyID: didIC + "#key-1", KeyVersion: 1, PublicKey: pubIC, Version: api.Version{Status: api.Active, Revision: 1}},
+			didC:  {Bound: api.Bound{DeploymentID: depID}, ID: didC, Domain: "C", Kind: "SERVICE", DocumentDigest: digC, KeyID: didC + "#key-1", KeyVersion: 1, PublicKey: pubC, Version: api.Version{Status: api.Active, Revision: 1}},
+		},
+		Credentials: map[string]api.Credential{
+			credPA.ID: credPA, credU.ID: credU, credA1.ID: credA1, credB1.ID: credB1, credUinB.ID: credUinB, credC.ID: credC,
+		},
+		Tasks:  map[string]api.Task{rpTaskID: rpTask, bmTaskID: bmTask},
+		Grants: allGrants,
+	}
+
+	nonce, _ := GenerateNonce()
+	chal := ChallengeContext{ChallengeID: "m2-ch-1", Nonce: nonce, Audience: "https://c.local", IssuedAt: now.Unix(), ExpiresAt: exp}
+	qID := "urn:grad:quote:Q800"
+
+	// 1. RP 2-hop C -> U -> A1 -> B1 succeeds.
+	rpPkg := AccessEvidencePackage{
+		Request: AccessRequest{
+			SchemaVersion: SchemaVersion, DeploymentID: depID, Actor: didB1, PrincipalDomain: "A",
+			AuthorizationMode: ModeResourcePreauthorized, TaskID: rpTaskID, Audience: "https://c.local",
+			Resource: resID, Action: "order.create", SupplierID: spec.SupplierID, QuoteID: &qID,
+			ProductID: spec.ProductID, Quantity: 1, Currency: "CNY", AmountMinor: 80000, IdempotencyKey: "m2-rp-001",
+		},
+		TaskSpec: spec,
+		AncestorCredentials: []AncestorCredential{
+			{CredentialID: credA1.ID, Presentation: sdA1.PresentationPrefix},
+			{CredentialID: credC.ID, Presentation: sdC.PresentationPrefix},
+			{CredentialID: credU.ID, Presentation: sdU.PresentationPrefix},
+		},
+		Grants: rpJWS,
+		TrustPaths: []TrustPathEntry{
+			{Issuer: didIA, DomainCertification: certAJWS},
+			{Issuer: didIB, DomainCertification: certBJWS},
+			{Issuer: didIC, DomainCertification: certCJWS},
+		},
+	}
+	if _, _, err := AssembleAccessEvidencePackage(&rpPkg, sdB1.PresentationPrefix, didB1+"#key-1", privB1, chal, now.Unix(), false); err != nil {
+		t.Fatal(err)
+	}
+	rpRes, err := VerifyAccessEvidencePackage(ctx, &rpPkg, snap, dids, chal)
+	if err != nil {
+		t.Fatalf("RP 2-hop verify failed: %v", err)
+	}
+	if rpRes.MinMaxAmountMinor != 100000 || rpRes.RootAuthorityRole != "supplier-service" {
+		t.Fatalf("unexpected RP result limits/role: %+v", rpRes)
+	}
+
+	// 2. BM 2-hop PA -> U -> A1 -> B1 succeeds with deduplicated TrustPaths (didIA, didIB only).
+	bmPkg := AccessEvidencePackage{
+		Request: AccessRequest{
+			SchemaVersion: SchemaVersion, DeploymentID: depID, Actor: didB1, PrincipalDomain: "A",
+			AuthorizationMode: ModeBuyerMandate, TaskID: bmTaskID, Audience: "https://c.local",
+			Resource: resID, Action: "order.create", SupplierID: spec.SupplierID, QuoteID: &qID,
+			ProductID: spec.ProductID, Quantity: 1, Currency: "CNY", AmountMinor: 80000, IdempotencyKey: "m2-bm-001",
+		},
+		TaskSpec: spec,
+		AncestorCredentials: []AncestorCredential{
+			{CredentialID: credA1.ID, Presentation: sdA1.PresentationPrefix},
+			{CredentialID: credPA.ID, Presentation: sdPA.PresentationPrefix},
+			{CredentialID: credU.ID, Presentation: sdU.PresentationPrefix},
+		},
+		Grants: bmJWS,
+		TrustPaths: []TrustPathEntry{
+			{Issuer: didIA, DomainCertification: certAJWS},
+			{Issuer: didIB, DomainCertification: certBJWS},
+		},
+	}
+	if _, _, err := AssembleAccessEvidencePackage(&bmPkg, sdB1.PresentationPrefix, didB1+"#key-1", privB1, chal, now.Unix(), false); err != nil {
+		t.Fatal(err)
+	}
+	bmRes, err := VerifyAccessEvidencePackage(ctx, &bmPkg, snap, dids, chal)
+	if err != nil {
+		t.Fatalf("BM 2-hop verify failed: %v", err)
+	}
+	if bmRes.MinMaxAmountMinor != 100000 || bmRes.RootAuthorityRole != "procurement-authority" {
+		t.Fatalf("unexpected BM result limits/role: %+v", bmRes)
+	}
+
+	// 3. Clearing Domain A PurchasingAuthority rejects BM with PURCHASING_AUTHORITY_INVALID.
+	noPASnap := *snap
+	domANoPA := domA
+	domANoPA.PurchasingAuthority = ""
+	noPASnap.Domains = map[string]api.Domain{"A": domANoPA, "B": domB, "C": domC}
+	if _, err := VerifyAccessEvidencePackage(ctx, &bmPkg, &noPASnap, dids, chal); !HasCode(err, ErrCodePurchasingAuthorityInvalid) {
+		t.Fatalf("expected PURCHASING_AUTHORITY_INVALID, got %v", err)
+	}
+
+	// 4. Suspended ancestor grant G1 rejects with ANCESTOR_INACTIVE.
+	suspSnap := *snap
+	suspGrants := map[string]api.Grant{}
+	for k, v := range allGrants {
+		suspGrants[k] = v
+	}
+	g1Susp := suspGrants[bmG1]
+	g1Susp.Status = api.Suspended
+	suspGrants[bmG1] = g1Susp
+	suspSnap.Grants = suspGrants
+	if _, err := VerifyAccessEvidencePackage(ctx, &bmPkg, &suspSnap, dids, chal); !HasCode(err, ErrCodeAncestorInactive) {
+		t.Fatalf("expected ANCESTOR_INACTIVE, got %v", err)
+	}
+
+	// 5. order.create at 120000 (> G2 100000) defers amount check from VerifyAccessEvidencePackage to gateway executeInTx,
+	// whereas quote.read > MaxAmountMinor rejects immediately with AMOUNT_LIMIT_EXCEEDED.
+	overPkg := bmPkg
+	overPkg.Request.AmountMinor = 120000
+	if _, _, err := AssembleAccessEvidencePackage(&overPkg, sdB1.PresentationPrefix, didB1+"#key-1", privB1, chal, now.Unix(), false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyAccessEvidencePackage(ctx, &overPkg, snap, dids, chal); err != nil {
+		t.Fatalf("expected order.create over-limit check to be deferred to gateway executeInTx, got %v", err)
+	}
 }

@@ -46,7 +46,7 @@ func (s *Server) handleExecute(w http.ResponseWriter, r *http.Request) {
 		writeMappedError(w, r, nil, err)
 		return
 	}
-	if err := validateQuoteReadSchema(pkg, s.cfg.DeploymentID, s.cfg.Audience); err != nil {
+	if err := validateExecuteSchema(pkg, s.cfg.DeploymentID, s.cfg.Audience); err != nil {
 		writeMappedError(w, r, nil, err)
 		return
 	}
@@ -94,7 +94,7 @@ func (s *Server) handleExecute(w http.ResponseWriter, r *http.Request) {
 	writeErrorResponse(w, r, http.StatusConflict, protocol.ErrCodeStateChanged, nil, "checkpoint changed across maximum retries")
 }
 
-func validateQuoteReadSchema(pkg *protocol.AccessEvidencePackage, expectedDepID, expectedAudience string) error {
+func validateExecuteSchema(pkg *protocol.AccessEvidencePackage, expectedDepID, expectedAudience string) error {
 	if pkg == nil {
 		return protocol.NewError(protocol.ErrCodeInvalidSchema, "missing AccessEvidencePackage")
 	}
@@ -105,20 +105,32 @@ func validateQuoteReadSchema(pkg *protocol.AccessEvidencePackage, expectedDepID,
 	if !idempotencyKeyRe.MatchString(req.IdempotencyKey) {
 		return protocol.NewError(protocol.ErrCodeInvalidSchema, "idempotencyKey must match ^[A-Za-z0-9_-]{1,64}$")
 	}
-	if req.Action != "quote.read" {
-		return protocol.NewError(protocol.ErrCodeInvalidSchema, fmt.Sprintf("resource gateway currently only supports quote.read, got %q", req.Action))
-	}
-	if req.Resource != "quotes" && req.Resource != "urn:grad:resource:quotes" && req.Resource != "urn:grad:resource:C:quotes" {
-		return protocol.NewError(protocol.ErrCodeInvalidSchema, fmt.Sprintf("quote.read requires quotes resource, got %q", req.Resource))
-	}
-	if req.QuoteID != nil {
-		return protocol.NewError(protocol.ErrCodeInvalidSchema, "quote.read requires quoteId == null")
-	}
-	if req.AmountMinor != 0 {
-		return protocol.NewError(protocol.ErrCodeInvalidSchema, "quote.read requires amountMinor == 0")
+	switch req.Action {
+	case "quote.read":
+		if req.Resource != "quotes" && req.Resource != "urn:grad:resource:quotes" && req.Resource != "urn:grad:resource:C:quotes" {
+			return protocol.NewError(protocol.ErrCodeInvalidSchema, fmt.Sprintf("quote.read requires quotes resource, got %q", req.Resource))
+		}
+		if req.QuoteID != nil {
+			return protocol.NewError(protocol.ErrCodeInvalidSchema, "quote.read requires quoteId == null")
+		}
+		if req.AmountMinor != 0 {
+			return protocol.NewError(protocol.ErrCodeInvalidSchema, "quote.read requires amountMinor == 0")
+		}
+	case "order.create":
+		if req.Resource != "orders" && req.Resource != "urn:grad:resource:orders" && req.Resource != "urn:grad:resource:C:orders" {
+			return protocol.NewError(protocol.ErrCodeInvalidSchema, fmt.Sprintf("order.create requires orders resource, got %q", req.Resource))
+		}
+		if req.QuoteID == nil || strings.TrimSpace(*req.QuoteID) == "" {
+			return protocol.NewError(protocol.ErrCodeInvalidSchema, "order.create requires non-empty quoteId")
+		}
+		if req.AmountMinor <= 0 {
+			return protocol.NewError(protocol.ErrCodeInvalidSchema, "order.create requires amountMinor > 0")
+		}
+	default:
+		return protocol.NewError(protocol.ErrCodeInvalidSchema, fmt.Sprintf("resource gateway supports quote.read and order.create, got %q", req.Action))
 	}
 	if req.Quantity <= 0 {
-		return protocol.NewError(protocol.ErrCodeInvalidSchema, "quote.read requires quantity > 0")
+		return protocol.NewError(protocol.ErrCodeInvalidSchema, fmt.Sprintf("%s requires quantity > 0", req.Action))
 	}
 	if expectedDepID != "" && req.DeploymentID != expectedDepID {
 		return protocol.NewError(protocol.ErrCodeBindingMismatch, fmt.Sprintf("request deploymentId %q != %q", req.DeploymentID, expectedDepID))
@@ -295,14 +307,16 @@ func verifyRootAuthority(snap *protocol.SnapshotView, verified *protocol.Verifie
 		if rootGrant.Issuer != serviceDID {
 			return protocol.NewError(protocol.ErrCodeRootAuthorityInvalid, fmt.Sprintf("RP root issuer %q != service DID %q", rootGrant.Issuer, serviceDID))
 		}
-		if rootCred.Role != "supplier-service" && rootCred.Role != "SERVICE" && rootCred.Role != "ResourceOwner" {
+		if rootCred.Role != "supplier-service" && rootCred.Role != "RESOURCE_AUTHORITY" && rootCred.Role != "SERVICE" && rootCred.Role != "ResourceOwner" {
 			return protocol.NewError(protocol.ErrCodeRootAuthorityInvalid, fmt.Sprintf("RP root role %q is not an authorized resource service role", rootCred.Role))
 		}
 		return nil
 	case protocol.ModeBuyerMandate:
 		dom, ok := snap.Domains[rootGrant.PrincipalDomain]
-		if !ok || rootCred.Domain != dom.ID || rootCred.Role != "procurement-authority" {
-			return protocol.NewError(protocol.ErrCodeRootAuthorityInvalid, "BM root issuer does not hold active procurement-authority credential in principalDomain")
+		if !ok || dom.Status != api.Active || dom.PurchasingAuthority != rootGrant.Issuer ||
+			rootCred.Domain != dom.ID || (rootCred.Role != "procurement-authority" && rootCred.Role != "PURCHASING_AUTHORITY") {
+			msg := "BM root issuer does not hold active purchasingAuthority credential in principalDomain"
+			return protocol.WrapError(protocol.ErrCodePurchasingAuthorityInvalid, msg, protocol.NewError(protocol.ErrCodeRootAuthorityInvalid, msg))
 		}
 		return nil
 	default:
@@ -421,6 +435,32 @@ func (s *Server) executeInTx(
 	}
 	if catSupplierID != pre.pkg.Request.SupplierID || catCurrency != pre.pkg.Request.Currency {
 		return nil, false, protocol.NewError(protocol.ErrCodeTaskScopeMismatch, "catalog price supplier/currency mismatches request")
+	}
+
+	// Step 4b: For fresh order.create, lock referenced quote row IN PLACE prior to locking fabric_head.
+	var lockedQuote QuoteDTO
+	quoteFound := false
+	isFreshOrder := pre.pkg.Request.Action == "order.create" && !(existingStatus == "COMPLETED" && existingResourceID != nil && *existingResourceID != "")
+	if isFreshOrder {
+		targetQuoteID := ""
+		if pre.pkg.Request.QuoteID != nil {
+			targetQuoteID = *pre.pkg.Request.QuoteID
+		}
+		err = tx.QueryRow(ctx, `SELECT
+			quote_id, task_id, actor, supplier_id, product_id, quantity, currency,
+			unit_price_minor, total_amount_minor, issued_at, valid_until
+			FROM quotes WHERE deployment_id=$1 AND quote_id=$2 FOR UPDATE`,
+			s.cfg.DeploymentID, targetQuoteID,
+		).Scan(
+			&lockedQuote.QuoteID, &lockedQuote.TaskID, &lockedQuote.Actor, &lockedQuote.SupplierID, &lockedQuote.ProductID,
+			&lockedQuote.Quantity, &lockedQuote.Currency, &lockedQuote.UnitPriceMinor, &lockedQuote.TotalAmountMinor,
+			&lockedQuote.IssuedAt, &lockedQuote.ValidUntil,
+		)
+		if err == nil {
+			quoteFound = true
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "lock referenced quote row", err)
+		}
 	}
 
 	// Optional deterministic concurrency hook before locking fabric_head FOR SHARE.
@@ -569,6 +609,33 @@ func (s *Server) executeInTx(
 		}
 	}
 
+	if isFreshOrder {
+		req := pre.pkg.Request
+		var failedQ string
+		if req.QuoteID != nil {
+			failedQ = *req.QuoteID
+		}
+		if !quoteFound || lockedQuote.TaskID != req.TaskID || lockedQuote.Actor != req.Actor ||
+			lockedQuote.SupplierID != req.SupplierID || lockedQuote.ProductID != req.ProductID ||
+			lockedQuote.Quantity != req.Quantity || lockedQuote.Currency != req.Currency {
+			out, err := recordDeny(protocol.ErrCodeQuoteScopeMismatch, fmt.Sprintf("quote %q missing or scope mismatches actor/task/product/quantity/currency", failedQ), &failedQ)
+			return out, false, err
+		}
+		if decisionSec >= lockedQuote.ValidUntil {
+			out, err := recordDeny(protocol.ErrCodeQuoteExpired, fmt.Sprintf("quote %q expired at %d (decisionAt=%d)", lockedQuote.QuoteID, lockedQuote.ValidUntil, decisionSec), &lockedQuote.QuoteID)
+			return out, false, err
+		}
+		if req.AmountMinor != lockedQuote.TotalAmountMinor {
+			out, err := recordDeny(protocol.ErrCodeAmountMismatch, fmt.Sprintf("request amountMinor %d != quote %q totalAmountMinor %d", req.AmountMinor, lockedQuote.QuoteID, lockedQuote.TotalAmountMinor), &lockedQuote.QuoteID)
+			return out, false, err
+		}
+		if req.AmountMinor > pre.verified.MinMaxAmountMinor {
+			leafID := pre.verified.Grants[len(pre.verified.Grants)-1].Claims.ID
+			out, err := recordDeny(protocol.ErrCodeAmountLimitExceeded, fmt.Sprintf("order amountMinor %d exceeds grant path maxAmountMinor %d", req.AmountMinor, pre.verified.MinMaxAmountMinor), &leafID)
+			return out, false, err
+		}
+	}
+
 	// Step 7: Final OPA deterministic policy evaluation using locked context + actual time.
 	serviceCred := pre.verified.LeafCredential
 	if rootIssuerCredID := pre.verified.Grants[0].Claims.IssuerCredentialID; rootIssuerCredID != serviceCred.Claims.ID {
@@ -576,18 +643,22 @@ func (s *Server) executeInTx(
 			serviceCred = c
 		}
 	}
+	authorityRole := serviceCred.Role
 	serviceRole := serviceCred.Role
+	if pre.pkg.Request.AuthorizationMode == protocol.ModeBuyerMandate {
+		serviceRole = "supplier-service"
+	}
 	facts := policy.SupplierFacts{
 		AuthorizationMode:   pre.pkg.Request.AuthorizationMode,
 		BuyerDomain:         pre.pkg.Request.PrincipalDomain,
-		AuthorityRole:       serviceCred.Role,
+		AuthorityRole:       authorityRole,
 		ServiceDID:          s.cfg.ServiceDID,
 		ServiceRole:         serviceRole,
 		ProductID:           pre.pkg.Request.ProductID,
 		Quantity:            pre.pkg.Request.Quantity,
 		Action:              pre.pkg.Request.Action,
 		AmountMinor:         pre.pkg.Request.AmountMinor,
-		MaxPathAmountMinor:  pre.verified.Grants[len(pre.verified.Grants)-1].Claims.MaxAmountMinor,
+		MaxPathAmountMinor:  pre.verified.MinMaxAmountMinor,
 		NowUnix:             decisionSec,
 		VerifiedCrypto:      true,
 		TaskActive:          true,
@@ -606,54 +677,115 @@ func (s *Server) executeInTx(
 		return out, false, err
 	}
 
-	// Step 8: Atomic ALLOW commit (either create new quote or reuse original quote on same-key retry).
-	var quote QuoteDTO
-	if existingStatus == "COMPLETED" && existingResourceID != nil && *existingResourceID != "" {
-		err := tx.QueryRow(ctx, `SELECT
-			quote_id, task_id, actor, supplier_id, product_id, quantity, currency,
-			unit_price_minor, total_amount_minor, issued_at, valid_until
-			FROM quotes WHERE deployment_id=$1 AND quote_id=$2`,
-			s.cfg.DeploymentID, *existingResourceID,
-		).Scan(
-			&quote.QuoteID, &quote.TaskID, &quote.Actor, &quote.SupplierID, &quote.ProductID,
-			&quote.Quantity, &quote.Currency, &quote.UnitPriceMinor, &quote.TotalAmountMinor,
-			&quote.IssuedAt, &quote.ValidUntil,
-		)
-		if err != nil {
-			return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "load idempotent existing quote", err)
+	// Step 8: Atomic ALLOW commit (either create new quote/order or reuse existing on same-key retry).
+	var (
+		quoteDTO          *QuoteDTO
+		orderDTO          *OrderDTO
+		quoteIDPtr        *string
+		orderIDPtr        *string
+		createdResourceID string
+	)
+	switch pre.pkg.Request.Action {
+	case "quote.read":
+		var quote QuoteDTO
+		if existingStatus == "COMPLETED" && existingResourceID != nil && *existingResourceID != "" {
+			err := tx.QueryRow(ctx, `SELECT
+				quote_id, task_id, actor, supplier_id, product_id, quantity, currency,
+				unit_price_minor, total_amount_minor, issued_at, valid_until
+				FROM quotes WHERE deployment_id=$1 AND quote_id=$2`,
+				s.cfg.DeploymentID, *existingResourceID,
+			).Scan(
+				&quote.QuoteID, &quote.TaskID, &quote.Actor, &quote.SupplierID, &quote.ProductID,
+				&quote.Quantity, &quote.Currency, &quote.UnitPriceMinor, &quote.TotalAmountMinor,
+				&quote.IssuedAt, &quote.ValidUntil,
+			)
+			if err != nil {
+				return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "load idempotent existing quote", err)
+			}
+		} else {
+			qty := pre.pkg.Request.Quantity
+			if unitPriceMinor > 0 && qty > math.MaxInt64/unitPriceMinor {
+				return nil, false, protocol.NewError(protocol.ErrCodeInvalidSchema, "quote total amount overflow")
+			}
+			totalAmount := unitPriceMinor * qty
+			validUntil := decisionSec + 300
+			if task.Interval.EXP < validUntil {
+				validUntil = task.Interval.EXP
+			}
+			quote = QuoteDTO{
+				QuoteID:          "urn:grad:quote:" + newUUID(),
+				TaskID:           pre.pkg.Request.TaskID,
+				Actor:            pre.pkg.Request.Actor,
+				SupplierID:       pre.pkg.Request.SupplierID,
+				ProductID:        pre.pkg.Request.ProductID,
+				Quantity:         qty,
+				Currency:         catCurrency,
+				UnitPriceMinor:   unitPriceMinor,
+				TotalAmountMinor: totalAmount,
+				IssuedAt:         decisionSec,
+				ValidUntil:       validUntil,
+			}
+			if _, err := tx.Exec(ctx, `INSERT INTO quotes(
+				deployment_id, quote_id, task_id, actor, supplier_id, product_id,
+				quantity, currency, unit_price_minor, total_amount_minor, issued_at, valid_until, decision_id
+			) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+				s.cfg.DeploymentID, quote.QuoteID, quote.TaskID, quote.Actor, quote.SupplierID, quote.ProductID,
+				quote.Quantity, quote.Currency, quote.UnitPriceMinor, quote.TotalAmountMinor, quote.IssuedAt, quote.ValidUntil, decID,
+			); err != nil {
+				return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "insert quote", err)
+			}
 		}
-	} else {
-		qty := pre.pkg.Request.Quantity
-		if unitPriceMinor > 0 && qty > math.MaxInt64/unitPriceMinor {
-			return nil, false, protocol.NewError(protocol.ErrCodeInvalidSchema, "quote total amount overflow")
+		quoteDTO = &quote
+		createdResourceID = quote.QuoteID
+		quoteIDCopy := quote.QuoteID
+		quoteIDPtr = &quoteIDCopy
+	case "order.create":
+		var order OrderDTO
+		if existingStatus == "COMPLETED" && existingResourceID != nil && *existingResourceID != "" {
+			err := tx.QueryRow(ctx, `SELECT
+				order_id, quote_id, task_id, actor, supplier_id, product_id, quantity, currency,
+				total_amount_minor, idempotency_key, status, created_at
+				FROM orders WHERE deployment_id=$1 AND order_id=$2`,
+				s.cfg.DeploymentID, *existingResourceID,
+			).Scan(
+				&order.OrderID, &order.QuoteID, &order.TaskID, &order.Actor, &order.SupplierID, &order.ProductID,
+				&order.Quantity, &order.Currency, &order.TotalAmountMinor, &order.IdempotencyKey,
+				&order.Status, &order.CreatedAt,
+			)
+			if err != nil {
+				return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "load idempotent existing order", err)
+			}
+		} else {
+			order = OrderDTO{
+				OrderID:          "urn:grad:order:" + newUUID(),
+				QuoteID:          lockedQuote.QuoteID,
+				TaskID:           pre.pkg.Request.TaskID,
+				Actor:            pre.pkg.Request.Actor,
+				SupplierID:       pre.pkg.Request.SupplierID,
+				ProductID:        pre.pkg.Request.ProductID,
+				Quantity:         pre.pkg.Request.Quantity,
+				Currency:         lockedQuote.Currency,
+				TotalAmountMinor: lockedQuote.TotalAmountMinor,
+				IdempotencyKey:   pre.pkg.Request.IdempotencyKey,
+				Status:           "CREATED",
+				CreatedAt:        decisionSec,
+			}
+			if _, err := tx.Exec(ctx, `INSERT INTO orders(
+				deployment_id, order_id, quote_id, task_id, actor, supplier_id, product_id,
+				quantity, currency, total_amount_minor, idempotency_key, status, created_at, decision_id
+			) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+				s.cfg.DeploymentID, order.OrderID, order.QuoteID, order.TaskID, order.Actor, order.SupplierID, order.ProductID,
+				order.Quantity, order.Currency, order.TotalAmountMinor, order.IdempotencyKey, order.Status, order.CreatedAt, decID,
+			); err != nil {
+				return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "insert order", err)
+			}
 		}
-		totalAmount := unitPriceMinor * qty
-		validUntil := decisionSec + 300
-		if task.Interval.EXP < validUntil {
-			validUntil = task.Interval.EXP
-		}
-		quote = QuoteDTO{
-			QuoteID:          "urn:grad:quote:" + newUUID(),
-			TaskID:           pre.pkg.Request.TaskID,
-			Actor:            pre.pkg.Request.Actor,
-			SupplierID:       pre.pkg.Request.SupplierID,
-			ProductID:        pre.pkg.Request.ProductID,
-			Quantity:         qty,
-			Currency:         catCurrency,
-			UnitPriceMinor:   unitPriceMinor,
-			TotalAmountMinor: totalAmount,
-			IssuedAt:         decisionSec,
-			ValidUntil:       validUntil,
-		}
-		if _, err := tx.Exec(ctx, `INSERT INTO quotes(
-			deployment_id, quote_id, task_id, actor, supplier_id, product_id,
-			quantity, currency, unit_price_minor, total_amount_minor, issued_at, valid_until, decision_id
-		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-			s.cfg.DeploymentID, quote.QuoteID, quote.TaskID, quote.Actor, quote.SupplierID, quote.ProductID,
-			quote.Quantity, quote.Currency, quote.UnitPriceMinor, quote.TotalAmountMinor, quote.IssuedAt, quote.ValidUntil, decID,
-		); err != nil {
-			return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "insert quote", err)
-		}
+		orderDTO = &order
+		createdResourceID = order.OrderID
+		orderIDCopy := order.OrderID
+		orderIDPtr = &orderIDCopy
+		qIDCopy := order.QuoteID
+		quoteIDPtr = &qIDCopy
 	}
 
 	if _, err := tx.Exec(ctx, `UPDATE challenges SET consumed_at=$1, decision_id=$2
@@ -663,7 +795,6 @@ func (s *Server) executeInTx(
 		return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "consume challenge on allow", err)
 	}
 
-	quoteIDCopy := quote.QuoteID
 	if err := insertDecisionRow(ctx, tx, DecisionRecord{
 		DeploymentID:          s.cfg.DeploymentID,
 		DecisionID:            decID,
@@ -675,7 +806,8 @@ func (s *Server) executeInTx(
 		IdempotencyKey:        pre.pkg.Request.IdempotencyKey,
 		Outcome:               "ALLOW",
 		Code:                  "ALLOW",
-		QuoteID:               &quoteIDCopy,
+		QuoteID:               quoteIDPtr,
+		OrderID:               orderIDPtr,
 		BlockNumber:           pre.view.BlockNumber,
 		BlockHash:             pre.view.BlockHash,
 		RevocationEpoch:       pre.view.RevocationEpoch,
@@ -706,7 +838,7 @@ func (s *Server) executeInTx(
 
 	if _, err := tx.Exec(ctx, `UPDATE business_keys SET status='COMPLETED', resource_id=$1, decision_id=$2, updated_at=NOW()
 		WHERE deployment_id=$3 AND actor=$4 AND task_id=$5 AND action=$6 AND idempotency_key=$7`,
-		quote.QuoteID, decID, s.cfg.DeploymentID, pre.pkg.Request.Actor, pre.pkg.Request.TaskID, pre.pkg.Request.Action, pre.pkg.Request.IdempotencyKey,
+		createdResourceID, decID, s.cfg.DeploymentID, pre.pkg.Request.Actor, pre.pkg.Request.TaskID, pre.pkg.Request.Action, pre.pkg.Request.IdempotencyKey,
 	); err != nil {
 		return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "finalize business key", err)
 	}
@@ -720,7 +852,8 @@ func (s *Server) executeInTx(
 		resp: ExecuteResponse{
 			DecisionID: decID,
 			Code:       "ALLOW",
-			Quote:      &quote,
+			Quote:      quoteDTO,
+			Order:      orderDTO,
 		},
 	}, false, nil
 }
@@ -744,21 +877,21 @@ func insertDecisionRow(ctx context.Context, tx pgx.Tx, d DecisionRecord) error {
 	}
 	_, err := tx.Exec(ctx, `INSERT INTO decisions(
 		deployment_id, decision_id, request_id, challenge_id, actor, task_id, action, idempotency_key,
-		outcome, code, reason, quote_id, block_number, block_hash, revocation_epoch,
+		outcome, code, reason, quote_id, order_id, block_number, block_hash, revocation_epoch,
 		probe_tx_id, probe_block, probe_sent_at, probe_deadline, probe_sent_mono_ns, probe_deadline_mono_ns, decision_at,
 		root_did, root_key_version, domain_id, certification_id, certification_digest, domain_revision,
 		identity_issuer, policy_digest, context_version, context_risk_level, context_observed_at,
 		context_access_deadline, effective_deadline, grant_path, failed_object_id
 	) VALUES(
 		$1,$2,$3,$4,$5,$6,$7,$8,
-		$9,$10,$11,$12,$13,$14,$15,
-		$16,$17,$18,$19,$20,$21,$22,
-		$23,$24,$25,$26,$27,$28,
-		$29,$30,$31,$32,$33,
-		$34,$35,$36,$37
+		$9,$10,$11,$12,$13,$14,$15,$16,
+		$17,$18,$19,$20,$21,$22,$23,
+		$24,$25,$26,$27,$28,$29,
+		$30,$31,$32,$33,$34,
+		$35,$36,$37,$38
 	)`,
 		d.DeploymentID, d.DecisionID, d.RequestID, d.ChallengeID, d.Actor, d.TaskID, d.Action, d.IdempotencyKey,
-		d.Outcome, d.Code, reasonPtr, d.QuoteID, d.BlockNumber, d.BlockHash, d.RevocationEpoch,
+		d.Outcome, d.Code, reasonPtr, d.QuoteID, d.OrderID, d.BlockNumber, d.BlockHash, d.RevocationEpoch,
 		d.ProbeTxID, d.ProbeBlock, d.ProbeSentAt, d.ProbeDeadline, d.ProbeSentMonoNs, d.ProbeDeadlineMonoNs, d.DecisionAt,
 		d.RootDID, d.RootKeyVersion, domPtr, certPtr, certDigPtr, d.DomainRevision,
 		idIssPtr, d.PolicyDigest, d.ContextVersion, d.ContextRiskLevel, d.ContextObservedAt,
@@ -797,18 +930,31 @@ func httpStatusForCode(code string) int {
 	case protocol.ErrCodeChallengeReplay,
 		protocol.ErrCodeIdempotencyConflict,
 		protocol.ErrCodeStateChanged,
-		protocol.ErrCodeDeliveryConflict:
+		protocol.ErrCodeDeliveryConflict,
+		protocol.ErrCodeQuoteExpired,
+		protocol.ErrCodeAmountMismatch,
+		protocol.ErrCodeLinkStateConflict:
 		return http.StatusConflict
 	case protocol.ErrCodePolicyDenied,
 		protocol.ErrCodeSupplierPolicyDenied,
 		protocol.ErrCodeRootAuthorityInvalid,
+		protocol.ErrCodePurchasingAuthorityInvalid,
+		protocol.ErrCodeDelegationExpansion,
+		protocol.ErrCodePathInvalid,
+		protocol.ErrCodeAuthorizationModeMismatch,
+		protocol.ErrCodeAncestorInactive,
+		protocol.ErrCodeAmountLimitExceeded,
+		protocol.ErrCodeQuoteScopeMismatch,
 		protocol.ErrCodeTaskScopeMismatch,
 		protocol.ErrCodeTaskInactive,
 		protocol.ErrCodeGrantExpired,
 		protocol.ErrCodeGrantChainInvalid,
 		protocol.ErrCodeCredentialStatusInvalid,
 		protocol.ErrCodeDomainCertificationInvalid,
-		protocol.ErrCodeIssuerScopeInvalid:
+		protocol.ErrCodeIssuerScopeInvalid,
+		protocol.ErrCodeLinkApprovalForbidden,
+		protocol.ErrCodeLinkProposalMismatch,
+		protocol.ErrCodeLinkProofInvalid:
 		return http.StatusForbidden
 	case protocol.ErrCodeStateUnavailable,
 		protocol.ErrCodeStateStale,

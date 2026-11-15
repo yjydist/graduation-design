@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -467,4 +468,112 @@ func decodeStrictBase64URLAny(s string) ([]byte, error) {
 		return nil, NewError(ErrCodeInvalidSchema, "non-canonical base64url encoding")
 	}
 	return b, nil
+}
+
+const IdentityLinkProofTyp = "grad-link-proof+jwt"
+
+// IdentityLinkProposal models the canonical cross-domain identity link proposal signed by both endpoints.
+type IdentityLinkProposal struct {
+	DeploymentID            string `json:"deploymentId"`
+	ExpiresAt               int64  `json:"expiresAt"`
+	ID                      string `json:"id"`
+	ProposedAt              int64  `json:"proposedAt"`
+	SourceAccountCommitment string `json:"sourceAccountCommitment"`
+	SourceDomain            string `json:"sourceDomain"`
+	SourceKeyID             string `json:"sourceKeyId"`
+	SourceKeyVersion        uint64 `json:"sourceKeyVersion"`
+	SourceSubject           string `json:"sourceSubject"`
+	TargetAccountCommitment string `json:"targetAccountCommitment"`
+	TargetDomain            string `json:"targetDomain"`
+	TargetKeyID             string `json:"targetKeyId"`
+	TargetKeyVersion        uint64 `json:"targetKeyVersion"`
+	TargetSubject           string `json:"targetSubject"`
+}
+
+// Digest returns SHA-256(JCS(p)) as 64-char lowercase hex and its canonical bytes.
+func (p IdentityLinkProposal) Digest() ([]byte, string, error) {
+	if p.ID == "" || p.SourceDomain == "" || p.TargetDomain == "" || p.SourceDomain == p.TargetDomain ||
+		p.SourceSubject == "" || p.TargetSubject == "" || p.SourceSubject == p.TargetSubject ||
+		!IsHexDigest(p.DeploymentID, false) || !IsHexDigest(p.SourceAccountCommitment, false) ||
+		!IsHexDigest(p.TargetAccountCommitment, false) || p.SourceKeyVersion == 0 || p.TargetKeyVersion == 0 ||
+		p.ProposedAt <= 0 || p.ExpiresAt <= p.ProposedAt {
+		return nil, "", NewError(ErrCodeLinkProofInvalid, "invalid IdentityLinkProposal fields")
+	}
+	raw, err := MarshalJCS(p)
+	if err != nil {
+		return nil, "", err
+	}
+	sum := sha256.Sum256(raw)
+	return raw, hex.EncodeToString(sum[:]), nil
+}
+
+// IdentityLinkProofBundle carries both endpoints' ES256 PoP signatures over an IdentityLinkProposal.
+type IdentityLinkProofBundle struct {
+	Proposal       IdentityLinkProposal `json:"proposal"`
+	ProposalDigest string               `json:"proposalDigest"`
+	SourceProofJWS string               `json:"sourceProofJws"`
+	TargetProofJWS string               `json:"targetProofJws"`
+}
+
+// SignIdentityLinkProofBundle signs source and target application-key PoPs for a dual-domain identity link.
+func SignIdentityLinkProofBundle(
+	proposal IdentityLinkProposal,
+	srcPriv *ecdsa.PrivateKey,
+	dstPriv *ecdsa.PrivateKey,
+) (*IdentityLinkProofBundle, error) {
+	if srcPriv == nil || dstPriv == nil {
+		return nil, NewError(ErrCodeLinkProofInvalid, "both source and target private keys are required")
+	}
+	raw, dig, err := proposal.Digest()
+	if err != nil {
+		return nil, err
+	}
+	srcJWS, _, err := SignCompactJWS(srcPriv, IdentityLinkProofTyp, proposal.SourceKeyID, raw)
+	if err != nil {
+		return nil, err
+	}
+	dstJWS, _, err := SignCompactJWS(dstPriv, IdentityLinkProofTyp, proposal.TargetKeyID, raw)
+	if err != nil {
+		return nil, err
+	}
+	return &IdentityLinkProofBundle{
+		Proposal:       proposal,
+		ProposalDigest: dig,
+		SourceProofJWS: srcJWS,
+		TargetProofJWS: dstJWS,
+	}, nil
+}
+
+// Verify checks both endpoints' PoP signatures and proposal digest consistency.
+func (b *IdentityLinkProofBundle) Verify(srcPub, dstPub *ecdsa.PublicKey) error {
+	if b == nil {
+		return NewError(ErrCodeLinkProofInvalid, "nil IdentityLinkProofBundle")
+	}
+	raw, dig, err := b.Proposal.Digest()
+	if err != nil {
+		return err
+	}
+	if b.ProposalDigest != dig {
+		return NewError(ErrCodeLinkProposalMismatch, "proposalDigest mismatch")
+	}
+	for _, check := range []struct {
+		jws string
+		pub *ecdsa.PublicKey
+		kid string
+	}{
+		{b.SourceProofJWS, srcPub, b.Proposal.SourceKeyID},
+		{b.TargetProofJWS, dstPub, b.Proposal.TargetKeyID},
+	} {
+		parsed, err := ParseCompactJWS(check.jws, IdentityLinkProofTyp)
+		if err != nil {
+			return WrapError(ErrCodeLinkProofInvalid, "parse link proof JWS", err)
+		}
+		if err := parsed.Verify(check.pub, check.kid); err != nil {
+			return WrapError(ErrCodeLinkProofInvalid, "verify link proof signature", err)
+		}
+		if !bytes.Equal(parsed.PayloadBytes, raw) {
+			return NewError(ErrCodeLinkProofInvalid, "link proof payload mismatches canonical proposal")
+		}
+	}
+	return nil
 }

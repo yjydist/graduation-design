@@ -85,17 +85,52 @@ type SnapshotView struct {
 	Credentials         map[string]api.Credential
 	Tasks               map[string]api.Task
 	Grants              map[string]api.Grant
+	Links               map[string]api.IdentityLink
+}
+
+// IsIdentityLinkEffective returns true iff linkID exists and is effectively active at the snapshot height and time.
+func (s *SnapshotView) IsIdentityLinkEffective(linkID string) bool {
+	if s == nil || len(s.Links) == 0 {
+		return false
+	}
+	l, ok := s.Links[linkID]
+	if !ok || l.Status != api.Active || !l.EffectiveActive {
+		return false
+	}
+	now := s.Now.UTC().Unix()
+	if now < l.ProposedAt || now >= l.ExpiresAt {
+		return false
+	}
+	srcDom, ok := s.Domains[l.SourceDomain]
+	if !ok || srcDom.Status != api.Active {
+		return false
+	}
+	dstDom, ok := s.Domains[l.TargetDomain]
+	if !ok || dstDom.Status != api.Active {
+		return false
+	}
+	srcID, ok := s.Identities[l.SourceSubject]
+	if !ok || srcID.Status != api.Active || srcID.KeyVersion != l.SourceKeyVersion || srcID.AccountCommitment != l.SourceAccountCommitment {
+		return false
+	}
+	dstID, ok := s.Identities[l.TargetSubject]
+	if !ok || dstID.Status != api.Active || dstID.KeyVersion != l.TargetKeyVersion || dstID.AccountCommitment != l.TargetAccountCommitment {
+		return false
+	}
+	return true
 }
 
 // VerifiedEvidenceResult summarizes verified cryptographic bindings recovered from an AccessEvidencePackage.
 type VerifiedEvidenceResult struct {
-	Bindings       PackageBindings
-	LeafCredential *VerifiedIdentityCredential
-	AncestorCreds  map[string]*VerifiedIdentityCredential
-	Grants         []*ParsedGrant
-	TrustPathCerts map[string]*DomainAuthorityCredential
-	KBClaims       KBJWTClaims
-	TaskSpecDigest string
+	Bindings          PackageBindings
+	LeafCredential    *VerifiedIdentityCredential
+	AncestorCreds     map[string]*VerifiedIdentityCredential
+	Grants            []*ParsedGrant
+	TrustPathCerts    map[string]*DomainAuthorityCredential
+	KBClaims          KBJWTClaims
+	TaskSpecDigest    string
+	MinMaxAmountMinor int64
+	RootAuthorityRole string
 }
 
 type evidenceAncEntry struct {
@@ -344,8 +379,12 @@ func VerifyAccessEvidencePackage(
 	if task.Digest != taskDigest {
 		return nil, NewError(ErrCodeBindingMismatch, fmt.Sprintf("taskSpecDigest %s mismatches anchored %s", taskDigest, task.Digest))
 	}
-	if task.Mode != pkg.Request.AuthorizationMode || task.Domain != pkg.Request.PrincipalDomain {
-		return nil, NewError(ErrCodeGrantChainInvalid, "request authorizationMode/principalDomain mismatches anchored task")
+	if task.Mode != pkg.Request.AuthorizationMode {
+		msg := fmt.Sprintf("request authorizationMode %q mismatches anchored task mode %q", pkg.Request.AuthorizationMode, task.Mode)
+		return nil, WrapError(ErrCodeAuthorizationModeMismatch, msg, NewError(ErrCodeGrantChainInvalid, msg))
+	}
+	if task.Domain != pkg.Request.PrincipalDomain {
+		return nil, NewError(ErrCodeGrantChainInvalid, "request principalDomain mismatches anchored task")
 	}
 	if err := checkRequestInTaskSpec(&pkg.Request, &pkg.TaskSpec); err != nil {
 		return nil, err
@@ -393,8 +432,15 @@ func VerifyAccessEvidencePackage(
 			return nil, err
 		}
 		onChainGrant, ok := snap.Grants[pg.Claims.ID]
-		if !ok || onChainGrant.DeploymentID != snap.DeploymentID || onChainGrant.Status != api.Active || !onChainGrant.Interval.Current(now, intervalMargin) {
-			return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant %q missing, inactive, or expired at snapshot height %d", pg.Claims.ID, snap.Height))
+		if !ok || onChainGrant.DeploymentID != snap.DeploymentID || !onChainGrant.Interval.Current(now, intervalMargin) {
+			return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant %q missing or expired at snapshot height %d", pg.Claims.ID, snap.Height))
+		}
+		if onChainGrant.Status != api.Active {
+			if i < len(pkg.Grants)-1 {
+				msg := fmt.Sprintf("ancestor grant %q status %q != ACTIVE at snapshot height %d", pg.Claims.ID, onChainGrant.Status, snap.Height)
+				return nil, WrapError(ErrCodeAncestorInactive, msg, NewError(ErrCodeGrantChainInvalid, msg))
+			}
+			return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant %q inactive at snapshot height %d", pg.Claims.ID, snap.Height))
 		}
 		if err := matchGrantAnchor(&pg.Claims, pg.Digest, onChainGrant); err != nil {
 			return nil, err
@@ -407,12 +453,44 @@ func VerifyAccessEvidencePackage(
 
 	rootGrant := parsedGrants[0]
 	leafGrant := parsedGrants[len(parsedGrants)-1]
+	rootIssuerID, ok := snap.Identities[rootGrant.Claims.Issuer]
+	if !ok {
+		return nil, NewError(ErrCodeRootAuthorityInvalid, fmt.Sprintf("root grant issuer %q missing at snapshot height %d", rootGrant.Claims.Issuer, snap.Height))
+	}
+	switch rootGrant.Claims.AuthorizationMode {
+	case ModeBuyerMandate:
+		rootDom, ok := snap.Domains[rootGrant.Claims.PrincipalDomain]
+		if !ok || rootDom.Status != api.Active ||
+			rootDom.PurchasingAuthority == "" ||
+			rootDom.PurchasingAuthority != rootGrant.Claims.Issuer ||
+			rootIssuerID.Domain != rootGrant.Claims.PrincipalDomain ||
+			rootIssuerID.Kind != "SERVICE" {
+			msg := fmt.Sprintf("BM root issuer %q is not active purchasingAuthority for domain %q", rootGrant.Claims.Issuer, rootGrant.Claims.PrincipalDomain)
+			return nil, WrapError(ErrCodePurchasingAuthorityInvalid, msg, NewError(ErrCodeRootAuthorityInvalid, msg))
+		}
+	case ModeResourcePreauthorized:
+		if rootIssuerID.Domain != "C" || rootIssuerID.Kind != "SERVICE" {
+			return nil, NewError(ErrCodeRootAuthorityInvalid, fmt.Sprintf("RP root issuer %q must be a SERVICE in domain C", rootGrant.Claims.Issuer))
+		}
+	default:
+		return nil, NewError(ErrCodeAuthorizationModeMismatch, fmt.Sprintf("unsupported authorizationMode %q", rootGrant.Claims.AuthorizationMode))
+	}
 	if rootGrant.Claims.TaskID != task.ID || rootGrant.Claims.ResourceID != task.Resource ||
-		rootGrant.Claims.AuthorizationMode != task.Mode || rootGrant.Claims.PrincipalDomain != task.Domain {
-		return nil, NewError(ErrCodeGrantChainInvalid, "root grant task/resource/mode/domain mismatches anchored task")
+		rootGrant.Claims.PrincipalDomain != task.Domain {
+		return nil, NewError(ErrCodeGrantChainInvalid, "root grant task/resource/domain mismatches anchored task")
+	}
+	if rootGrant.Claims.AuthorizationMode != task.Mode {
+		msg := fmt.Sprintf("root grant authorizationMode %q mismatches anchored task mode %q", rootGrant.Claims.AuthorizationMode, task.Mode)
+		return nil, WrapError(ErrCodeAuthorizationModeMismatch, msg, NewError(ErrCodeGrantChainInvalid, msg))
 	}
 	if !rootGrant.Claims.NBFWithin(task.Interval) {
 		return nil, NewError(ErrCodeGrantChainInvalid, "root grant validity window exceeds anchored task interval")
+	}
+	minMaxAmountMinor := parsedGrants[0].Claims.MaxAmountMinor
+	for _, g := range parsedGrants[1:] {
+		if g.Claims.MaxAmountMinor < minMaxAmountMinor {
+			minMaxAmountMinor = g.Claims.MaxAmountMinor
+		}
 	}
 	if err := checkRequestInGrant(&pkg.Request, &leafGrant.Claims); err != nil {
 		return nil, err
@@ -685,14 +763,21 @@ func VerifyAccessEvidencePackage(
 		return nil, NewError(ErrCodeBindingMismatch, "KB-JWT urn:grad:binding digests mismatch recomputed evidence bindings")
 	}
 
+	rootAuthorityRole := ""
+	if rc := credByID[rootGrant.Claims.IssuerCredentialID]; rc != nil {
+		rootAuthorityRole = rc.Role
+	}
+
 	return &VerifiedEvidenceResult{
-		Bindings:       *bindings,
-		LeafCredential: leafVerCred,
-		AncestorCreds:  ancestorVerCreds,
-		Grants:         parsedGrants,
-		TrustPathCerts: trustByIssuer,
-		KBClaims:       kbClaims,
-		TaskSpecDigest: taskDigest,
+		Bindings:          *bindings,
+		LeafCredential:    leafVerCred,
+		AncestorCreds:     ancestorVerCreds,
+		Grants:            parsedGrants,
+		TrustPathCerts:    trustByIssuer,
+		KBClaims:          kbClaims,
+		TaskSpecDigest:    taskDigest,
+		MinMaxAmountMinor: minMaxAmountMinor,
+		RootAuthorityRole: rootAuthorityRole,
 	}, nil
 }
 
@@ -725,8 +810,9 @@ func checkRequestInGrant(req *AccessRequest, g *GrantClaims) error {
 	if req.Audience != g.Aud || req.Currency != g.Currency {
 		return NewError(ErrCodeBindingMismatch, "request audience/currency mismatches leaf grant")
 	}
-	if req.AmountMinor > g.MaxAmountMinor {
-		return NewError(ErrCodeBindingMismatch, fmt.Sprintf("request amountMinor %d exceeds grant maxAmountMinor %d", req.AmountMinor, g.MaxAmountMinor))
+	if req.Action != "order.create" && req.AmountMinor > g.MaxAmountMinor {
+		msg := fmt.Sprintf("request amountMinor %d exceeds grant maxAmountMinor %d", req.AmountMinor, g.MaxAmountMinor)
+		return WrapError(ErrCodeAmountLimitExceeded, msg, NewError(ErrCodeBindingMismatch, msg))
 	}
 	if !slices.Contains(g.Resources, req.Resource) || !slices.Contains(g.Actions, req.Action) || !slices.Contains(g.Suppliers, req.SupplierID) {
 		return NewError(ErrCodeGrantChainInvalid, "request resource/action/supplier outside leaf grant scope")

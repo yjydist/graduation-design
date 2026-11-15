@@ -1,0 +1,14 @@
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/RejectHeaderOnlyAuditorAndForgedReceipt
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/HistoricalRevokedCredentialAndMissingEvidence
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/StoppedIntentRejectsCurrentRevision
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/DurableOutboxSurvivesRestartAndLostAcknowledgement
+--- PASS: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR (0.24s)
+    --- PASS: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/RejectHeaderOnlyAuditorAndForgedReceipt (0.00s)
+    --- PASS: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/HistoricalRevokedCredentialAndMissingEvidence (0.03s)
+    --- PASS: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/StoppedIntentRejectsCurrentRevision (0.00s)
+    --- PASS: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/DurableOutboxSurvivesRestartAndLostAcknowledgement (0.01s)
+=== RUN   TestStoppedIntentSerializesFinalDispatch
+--- PASS: TestStoppedIntentSerializesFinalDispatch (0.12s)
+PASS
+ok  	graduation-design/internal/gateway	0.907s

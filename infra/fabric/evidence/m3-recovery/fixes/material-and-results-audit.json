@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "publicFilesScanned": 849,
+  "privateKeysFound": 0,
+  "configuredAPIKeysFound": 0,
+  "agentRawCredentialsOrDisclosuresFound": 0,
+  "fullRun": "run-a297ef63438bdd10",
+  "authoritativeE6Run": "supplemental/run-c0de4231e976a55c",
+  "authoritativeManagementRun": "supplemental/run-48e2661bcc4b7434"
+}

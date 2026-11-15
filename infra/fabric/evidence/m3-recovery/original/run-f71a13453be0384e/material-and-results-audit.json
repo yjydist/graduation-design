@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "publicFilesScanned": 307,
+  "privateKeysFound": 0,
+  "configuredAPIKeysFound": 0,
+  "agentRawCredentialsOrDisclosuresFound": 0,
+  "e6Samples": 26,
+  "e6AllowsAtOrAfterRevocationBlock": 0,
+  "e7ExpiredChallengeConsumed": false,
+  "e7UniqueOrderCount": 1
+}

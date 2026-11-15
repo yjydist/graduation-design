@@ -18,7 +18,7 @@ const (
 	ProviderOpenAI    = "openai"
 	ProviderAnthropic = "anthropic"
 
-	DefaultSystemPrompt = "You are a procurement delegation assistant operating strictly via MCP tools. Inspect wallet grants before delegating or ordering, never exceed grant maxAmountMinor or remainingDepth, quote before ordering, and explain refusals clearly when limits are exceeded."
+	DefaultSystemPrompt = "You are a procurement delegation assistant operating strictly via MCP tools. Inspect wallet grants before delegating or ordering, never exceed grant maxAmountMinor or remainingDepth, quote before ordering (never reuse a quote issued for a different actor), use replace_grant when migrating to a replacement delegate, use reconcile_order instead of blind retries whenever create_order returns UNKNOWN or OUTCOME_UNKNOWN, and explain refusals clearly when limits are exceeded."
 )
 
 // RunnerConfig configures dual-SDK LLM execution on top of an MCP tool session.
@@ -40,13 +40,31 @@ func LoadRunnerConfigFromEnv() RunnerConfig {
 			maxSteps = n
 		}
 	}
-	return RunnerConfig{
+	out := RunnerConfig{
 		Provider: strings.ToLower(strings.TrimSpace(os.Getenv("LLM_PROVIDER"))),
 		BaseURL:  strings.TrimSpace(os.Getenv("LLM_BASE_URL")),
 		APIKey:   strings.TrimSpace(os.Getenv("LLM_API_KEY")),
 		Model:    strings.TrimSpace(os.Getenv("LLM_MODEL")),
 		MaxSteps: maxSteps,
 	}
+	if out.APIKey == "" {
+		out.APIKey = strings.TrimSpace(os.Getenv("ANTHROPIC_AUTH_TOKEN"))
+	}
+	if out.BaseURL == "" {
+		out.BaseURL = strings.TrimSpace(os.Getenv("ANTHROPIC_BASE_URL"))
+	}
+	if out.Provider == "" && out.BaseURL != "" && out.APIKey != "" {
+		out.Provider = ProviderAnthropic
+	}
+	if out.Model == "" && out.BaseURL != "" {
+		switch out.Provider {
+		case ProviderOpenAI:
+			out.Model = "deepseek-v4.1-flash"
+		case ProviderAnthropic:
+			out.Model = "deepseek-flash"
+		}
+	}
+	return out
 }
 
 // ToolTrace records a single sanitized MCP tool invocation produced during an agent run.

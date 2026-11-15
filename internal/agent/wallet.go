@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"graduation-design/internal/gateway"
 	"graduation-design/internal/protocol"
 )
 
@@ -65,6 +66,8 @@ type GrantBundle struct {
 	AncestorCredentials []protocol.AncestorCredential
 	TrustPaths          []protocol.TrustPathEntry
 	Anchored            bool
+	Revision            uint64
+	Replaced            bool
 }
 
 // SanitizedGrantView exposes safe delegation metadata to MCP clients and LLMs without raw tokens or salts.
@@ -87,22 +90,27 @@ type SanitizedGrantView struct {
 	NBF               int64    `json:"nbf"`
 	EXP               int64    `json:"exp"`
 	Anchored          bool     `json:"anchored"`
+	Replaced          bool     `json:"replaced,omitempty"`
 	TrustPathCount    int      `json:"trustPathCount"`
 	AncestorCount     int      `json:"ancestorCount"`
 }
 
 // ClientActionView summarizes an order execution intent lock for inspection without sensitive secrets.
 type ClientActionView struct {
-	ActionID       string `json:"actionId"`
-	Actor          string `json:"actor"`
-	TaskID         string `json:"taskId"`
-	Action         string `json:"action"`
-	IdempotencyKey string `json:"idempotencyKey"`
-	Status         string `json:"status"`
-	ChallengeID    string `json:"challengeId,omitempty"`
-	QuoteID        string `json:"quoteId,omitempty"`
-	OrderID        string `json:"orderId,omitempty"`
-	DecisionID     string `json:"decisionId,omitempty"`
+	ActionID       string   `json:"actionId"`
+	Actor          string   `json:"actor"`
+	TaskID         string   `json:"taskId"`
+	Action         string   `json:"action"`
+	IdempotencyKey string   `json:"idempotencyKey"`
+	Status         string   `json:"status"`
+	SendRevision   int64    `json:"sendRevision"`
+	ChallengeID    string   `json:"challengeId,omitempty"`
+	ChallengeIDs   []string `json:"challengeIds,omitempty"`
+	QuoteID        string   `json:"quoteId,omitempty"`
+	OrderID        string   `json:"orderId,omitempty"`
+	DecisionID     string   `json:"decisionId,omitempty"`
+	CaseID         string   `json:"caseId,omitempty"`
+	Outcome        string   `json:"outcome,omitempty"`
 }
 
 // QuoteSummary remembers quote fields internally so create_order can construct deterministic requests.
@@ -136,32 +144,62 @@ type AnchorChildGrantResult struct {
 	AncestorCredentials []protocol.AncestorCredential
 }
 
+// ReplaceGrantRequest provides inputs from replace_grant when atomically revoking an old child grant
+// and issuing a replacement child grant to a new delegate (such as B2).
+type ReplaceGrantRequest struct {
+	OldGrantID       string
+	OldGrantRevision uint64
+	OldGrantDigest   string
+	NewClaims        protocol.GrantClaims
+	NewRawGrantJWS   string
+	NewGrantDigest   string
+	IssuerActor      string
+	NewGranteeDID    string
+	Reason           string
+}
+
+// ReplaceGrantResult returns the anchored trust paths and materials delivered to the new delegate.
+type ReplaceGrantResult struct {
+	Anchored            bool
+	TrustPaths          []protocol.TrustPathEntry
+	AncestorCredentials []protocol.AncestorCredential
+}
+
 // WalletConfig configures WalletContext.
 type WalletConfig struct {
-	DeploymentID    string
-	GatewayURL      string
-	Audience        string
-	SupplierID      string
-	SupplierDID     string
-	DefaultTaskSpec protocol.TaskSpec
-	Currency        string
-	DB              *pgxpool.Pool
-	HTTPClient      *http.Client
-	HTTPHandler     http.Handler
-	Now             func() time.Time
-	AnchorChildFunc func(ctx context.Context, req AnchorChildGrantRequest) (*AnchorChildGrantResult, error)
+	DeploymentID     string
+	GatewayURL       string
+	Audience         string
+	SupplierID       string
+	SupplierDID      string
+	DefaultTaskSpec  protocol.TaskSpec
+	Currency         string
+	AuditorDID       string
+	RecoveryDID      string
+	DB               *pgxpool.Pool
+	HTTPClient       *http.Client
+	RecoveryClient   *http.Client
+	AuditClient      *http.Client
+	ReceiptClient    *http.Client
+	ReceiptDelivery  func(context.Context, gateway.OrderOutcomeReceipt) (*gateway.OrderOutcomeReceiptResponse, error)
+	HTTPHandler      http.Handler
+	Now              func() time.Time
+	AnchorChildFunc  func(ctx context.Context, req AnchorChildGrantRequest) (*AnchorChildGrantResult, error)
+	ReplaceGrantFunc func(ctx context.Context, req ReplaceGrantRequest) (*ReplaceGrantResult, error)
 }
 
 // WalletContext isolates actor private keys and SD-JWT credentials behind an MCP tool boundary.
 type WalletContext struct {
-	mu        sync.Mutex
-	cfg       WalletConfig
-	signers   map[string]*actorSigner
-	grants    []*GrantBundle
-	quotes    map[string]QuoteSummary
-	actions   map[string]*ClientActionView
-	actionSeq int
-	secrets   []string
+	mu             sync.Mutex
+	sendMu         sync.Mutex
+	cfg            WalletConfig
+	signers        map[string]*actorSigner
+	grants         []*GrantBundle
+	quotes         map[string]QuoteSummary
+	actions        map[string]*ClientActionView
+	actionRequests map[string]protocol.AccessRequest
+	actionSeq      int
+	secrets        []string
 }
 
 // NewWalletContext validates cfg and returns an empty isolated WalletContext.
@@ -185,10 +223,11 @@ func NewWalletContext(cfg WalletConfig) (*WalletContext, error) {
 		cfg.HTTPClient = &http.Client{Timeout: 30 * time.Second}
 	}
 	return &WalletContext{
-		cfg:     cfg,
-		signers: make(map[string]*actorSigner),
-		quotes:  make(map[string]QuoteSummary),
-		actions: make(map[string]*ClientActionView),
+		cfg:            cfg,
+		signers:        make(map[string]*actorSigner),
+		quotes:         make(map[string]QuoteSummary),
+		actions:        make(map[string]*ClientActionView),
+		actionRequests: make(map[string]protocol.AccessRequest),
 	}, nil
 }
 
@@ -253,7 +292,7 @@ func (w *WalletContext) AddGrantBundle(bundle GrantBundle) error {
 	}
 	if bundle.Digest == "" {
 		sum := sha256.Sum256([]byte(bundle.RawGrantJWS))
-		bundle.Digest = base64.RawURLEncoding.EncodeToString(sum[:])
+		bundle.Digest = hex.EncodeToString(sum[:])
 	}
 	if len(bundle.ChainRawGrants) == 0 {
 		bundle.ChainRawGrants = []string{bundle.RawGrantJWS}
@@ -317,6 +356,7 @@ func (b *GrantBundle) view() SanitizedGrantView {
 		NBF:               b.Claims.NBF,
 		EXP:               b.Claims.EXP,
 		Anchored:          b.Anchored,
+		Replaced:          b.Replaced,
 		TrustPathCount:    len(b.TrustPaths),
 		AncestorCount:     len(b.AncestorCredentials),
 	}
@@ -336,6 +376,9 @@ func (w *WalletContext) findGrantLocked(actorDID, grantID, taskID, mode string) 
 	}
 	var matches []*GrantBundle
 	for _, g := range w.grants {
+		if g.Replaced {
+			continue
+		}
 		if g.Claims.Grantee != actorDID {
 			continue
 		}

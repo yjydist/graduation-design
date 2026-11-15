@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -325,6 +326,7 @@ type DIDWebResolver struct {
 	hostRoutes   map[string]string
 	preseeded    map[string]RootPreseed
 	requirePreID bool
+	archived     map[string]json.RawMessage
 }
 
 // NewDIDWebResolver creates a resolver pinned to caPool and routing specified host:port targets
@@ -488,7 +490,16 @@ func (r *DIDWebResolver) ResolveDID(ctx context.Context, did string, exp DIDReso
 	if exp.ExpectedKeyVersion == 0 && exp.ExpectedKeyID != "" {
 		return nil, nil, "", NewError(ErrCodeInvalidSchema, "expected key version must be >= 1")
 	}
-	raw, err := r.ResolveRawURL(ctx, u.String())
+	var raw []byte
+	if r.archived != nil {
+		var ok bool
+		raw, ok = r.archived[did]
+		if !ok {
+			return nil, nil, "", NewError(ErrCodeMaterialNotSynced, "historical DID document unavailable")
+		}
+	} else {
+		raw, err = r.ResolveRawURL(ctx, u.String())
+	}
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -536,4 +547,16 @@ func CheckVersionedKeyID(did, keyID string, keyVersion uint64) error {
 		}
 	}
 	return nil
+}
+
+// NewArchivedDIDResolver never fetches current DID documents during historical replay.
+func NewArchivedDIDResolver(documents map[string]json.RawMessage, root RootPreseed) (*DIDWebResolver, error) {
+	r := &DIDWebResolver{archived: documents, preseeded: make(map[string]RootPreseed)}
+	if len(root.RawDocument) == 0 {
+		return nil, NewError(ErrCodeMaterialNotSynced, "historical T root document missing")
+	}
+	if _, err := r.RegisterPreseed(root); err != nil {
+		return nil, err
+	}
+	return r, nil
 }

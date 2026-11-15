@@ -1,0 +1,200 @@
+
+Gá ˜{∆4ç˛ŸıäÉ˝ª˚ÒÑ¶ﬁ8∑ò◊!û}ë0›9 Er˝ˇr;ëeﬂHÊ≈'±Óg”ò[Së0›∫∑e—«n9ÜÏS
+Û)
+®)
+¢
+qª€Â◊òÅùú"procurement*@2b5c3b7cf302e1ce3bbddf1e0077898a5331a43492e4b61e7a4a57ebdf5b4caa:authregistry¨
+è
+AMspÜ-----BEGIN CERTIFICATE-----
+MIICDzCCAbWgAwIBAgIQfj3pcKF9rK2Aw9Y0ZmOC9DAKBggqhkjOPQQDAjBhMQsw
+CQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZy
+YW5jaXNjbzEQMA4GA1UEChMHYS5sb2NhbDETMBEGA1UEAxMKY2EuYS5sb2NhbDAe
+Fw0yNjExMTUwODIyMDBaFw0zNjExMTIwODIyMDBaMGMxCzAJBgNVBAYTAlVTMRMw
+EQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMQ8wDQYD
+VQQLEwZjbGllbnQxFjAUBgNVBAMMDVVzZXI1QGEubG9jYWwwWTATBgcqhkjOPQIB
+BggqhkjOPQMBBwNCAAQxJb5KemX4225eFKiMHG7PxQ4ruAKgysiUXa39dSDAxrO4
+3PN+zR09DE6HSl432uuLqIhc9Cce2W85vN3Eio3io00wSzAOBgNVHQ8BAf8EBAMC
+B4AwDAYDVR0TAQH/BAIwADArBgNVHSMEJDAigCACATzdYo9peJHca6i9a7hkXj2/
+LdMPDzIcQ1hI+P22ujAKBggqhkjOPQQDAgNIADBFAiEAzvWDVQ1IllCvDl5eNBcz
+QmjXka68INWumyuaqtTVpVsCIDxl02FmGeVj5sXn9DFeim2+yz4gBsfKaRXTovvg
+ny4w
+-----END CERTIFICATE-----
+∫\ˇznÃó»:ÿR/¯?îÉ—ûÃæ~ïTÄ"
+˝!
+¨
+è
+AMspÜ-----BEGIN CERTIFICATE-----
+MIICDzCCAbWgAwIBAgIQfj3pcKF9rK2Aw9Y0ZmOC9DAKBggqhkjOPQQDAjBhMQsw
+CQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZy
+YW5jaXNjbzEQMA4GA1UEChMHYS5sb2NhbDETMBEGA1UEAxMKY2EuYS5sb2NhbDAe
+Fw0yNjExMTUwODIyMDBaFw0zNjExMTIwODIyMDBaMGMxCzAJBgNVBAYTAlVTMRMw
+EQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMQ8wDQYD
+VQQLEwZjbGllbnQxFjAUBgNVBAMMDVVzZXI1QGEubG9jYWwwWTATBgcqhkjOPQIB
+BggqhkjOPQMBBwNCAAQxJb5KemX4225eFKiMHG7PxQ4ruAKgysiUXa39dSDAxrO4
+3PN+zR09DE6HSl432uuLqIhc9Cce2W85vN3Eio3io00wSzAOBgNVHQ8BAf8EBAMC
+B4AwDAYDVR0TAQH/BAIwADArBgNVHSMEJDAigCACATzdYo9peJHca6i9a7hkXj2/
+LdMPDzIcQ1hI+P22ujAKBggqhkjOPQQDAgNIADBFAiEAzvWDVQ1IllCvDl5eNBcz
+QmjXka68INWumyuaqtTVpVsCIDxl02FmGeVj5sXn9DFeim2+yz4gBsfKaRXTovvg
+ny4w
+-----END CERTIFICATE-----
+∫\ˇznÃó»:ÿR/¯?îÉ—ûÃæ~ïTÀ
+Æ
+´
+®authregistryï
+SuspendGrant
+Ñ{"deploymentId":"04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406","id":"f355533f620d13457172acdecf236d788e5da1fc19fd9ac164ea1a900e3a2e5a","expectedRevision":1,"expectedDigest":"b09de9c053d9461d7469d236a4cf91afa23385bed81b3971ffa62c8a35943caa"}ó
+⁄
+ ˚≤˜Ê~¢ê9Û¸#Ô£lQ$»âe-C≠'<ÃJÑµ
+ò=
+
+_lifecycle/
+-
+'namespaces/fields/authregistry/Sequence÷
+
+authregistry≈
+
+N
+Hbinding/d11bcbb85b2561e8aadfc8b980c4d5d196f974c67168065380d1bac58f41728d
+
+	bootstrap
+M
+Fgrant/6ed43e2eca3d4c63d482441cd3e77874016460f20e9c099df41bdc84eef7ecf3Ç
+O
+Iidentity/d2ab3fc072b6a3fcfedfdcaed3ca13de34c2fde6d5f04462d83863c9f3d5794b¡
+Fgrant/6ed43e2eca3d4c63d482441cd3e77874016460f20e9c099df41bdc84eef7ecf3ˆ{"deploymentId":"04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406","grantId":"f355533f620d13457172acdecf236d788e5da1fc19fd9ac164ea1a900e3a2e5a","schemaVersion":"grad-auth-v1","parentId":"a0f4b974be10f8078587d34f0ca7d5a43e622ad53a51827cd8877b25ed74b358","parentDigest":"87947649e685a23a965ed913e53347b16fe66600015905837f143bb395c5be96","rootId":"a0f4b974be10f8078587d34f0ca7d5a43e622ad53a51827cd8877b25ed74b358","taskId":"e82a94196c1e83562abbe39a04f3f53f819d468560181da841080b0d2926b888","authorizationMode":"RESOURCE_PREAUTHORIZED","principalDomain":"A","resourceId":"67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2","issuer":"did:web:a.local:u","grantee":"did:web:a.local:a1","issuerKeyVersion":1,"granteeKeyVersion":1,"issuerCredentialId":"urn:grad:credential:U-v1","granteeCredentialId":"urn:grad:credential:A1-v1","remainingDepth":1,"digest":"b09de9c053d9461d7469d236a4cf91afa23385bed81b3971ffa62c8a35943caa","nbf":1794727756,"exp":1794817756,"status":"SUSPENDED","revision":2}»"authregistry1.0⁄
+è
+CMspÜ-----BEGIN CERTIFICATE-----
+MIICDTCCAbSgAwIBAgIQZs2lG3K4e3osYE05VUykLjAKBggqhkjOPQQDAjBhMQsw
+CQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZy
+YW5jaXNjbzEQMA4GA1UEChMHYy5sb2NhbDETMBEGA1UEAxMKY2EuYy5sb2NhbDAe
+Fw0yNjExMTUwODIyMDBaFw0zNjExMTIwODIyMDBaMGIxCzAJBgNVBAYTAlVTMRMw
+EQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMQ0wCwYD
+VQQLEwRwZWVyMRcwFQYDVQQDEw5wZWVyLWMuYy5sb2NhbDBZMBMGByqGSM49AgEG
+CCqGSM49AwEHA0IABLwkSm8uUnr96NBhU8x3xBrMbOQ45HhA4IOSuNLTuJfnAvJa
+iB2zDlbPS0M32/4prr3CqloYG/F/cC84X7j6d3ejTTBLMA4GA1UdDwEB/wQEAwIH
+gDAMBgNVHRMBAf8EAjAAMCsGA1UdIwQkMCKAIGLShA+KMD7wUeRaQsPdGeCLCkwr
+2MOukKLzu3x+rsjMMAoGCCqGSM49BAMCA0cAMEQCIDvX+Tip9A1n1pwljjJvSlvK
+mazS2KbVgCkJ3H0dGlt/AiA+zEhwQQaqkRfAqtYlbpbTTZHn7ANOEcJCNIPFO4QQ
+GQ==
+-----END CERTIFICATE-----
+F0D :†{∞¿ÿâ‘˜7ÏÇÁƒü]ÌÃó®›ºªiﬁ˘6kÄ ]ÖÚ‰}≠◊hj¬ı¯bDÅ˚≠ı[{ !N˙f!’Ú£,⁄
+è
+AMspÜ-----BEGIN CERTIFICATE-----
+MIICDTCCAbSgAwIBAgIQAN+ggzNTG5Jsm1kBbo40qjAKBggqhkjOPQQDAjBhMQsw
+CQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZy
+YW5jaXNjbzEQMA4GA1UEChMHYS5sb2NhbDETMBEGA1UEAxMKY2EuYS5sb2NhbDAe
+Fw0yNjExMTUwODIyMDBaFw0zNjExMTIwODIyMDBaMGIxCzAJBgNVBAYTAlVTMRMw
+EQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMQ0wCwYD
+VQQLEwRwZWVyMRcwFQYDVQQDEw5wZWVyLWEuYS5sb2NhbDBZMBMGByqGSM49AgEG
+CCqGSM49AwEHA0IABOHN4BHO3ob/oDemx9P0Cto5wmiwwqKj9b0j7FUMIEGobvTH
+2lrI7GtLYFeJo4+LQHyY+c0yZKZFHPvRc33AhHKjTTBLMA4GA1UdDwEB/wQEAwIH
+gDAMBgNVHRMBAf8EAjAAMCsGA1UdIwQkMCKAIAIBPN1ij2l4kdxrqL1ruGRePb8t
+0w8PMhxDWEj4/ba6MAoGCCqGSM49BAMCA0cAMEQCIEtYamXFH7onbHYTC1O3qRfB
+7QIynDe7vs/n4mYghsJWAiAVilbs7eNHogmfGdNOLrEa1+/yH+Dy8O2CWv3dwJST
+jg==
+-----END CERTIFICATE-----
+F0D D`”˛å3‡^V˙2UÔqu˚´…‹∑€`v√8uhì◊ˆ8é \Ëi>Ò|æeö&Ü˘éÕ±Ç+{ËÚ‰=oÁ◊U%Á˚‰“F0D 6‚ÿ‰5ì}_ú⁄€ÉÙÛÓçvÚ~©Ó80±ÌhÚS \|·Ø~ßFD!≥6Ë.fVπwı£ÀÏ%Ó⁄TN?ö
+Û)
+®)
+¢
+qª€Â◊‡≈üü"procurement*@debb88d096fe71328d181f7653a1745a1e847509ad861b1c9ec485f9e0c37c29:authregistry¨
+è
+AMspÜ-----BEGIN CERTIFICATE-----
+MIICDzCCAbWgAwIBAgIQfj3pcKF9rK2Aw9Y0ZmOC9DAKBggqhkjOPQQDAjBhMQsw
+CQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZy
+YW5jaXNjbzEQMA4GA1UEChMHYS5sb2NhbDETMBEGA1UEAxMKY2EuYS5sb2NhbDAe
+Fw0yNjExMTUwODIyMDBaFw0zNjExMTIwODIyMDBaMGMxCzAJBgNVBAYTAlVTMRMw
+EQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMQ8wDQYD
+VQQLEwZjbGllbnQxFjAUBgNVBAMMDVVzZXI1QGEubG9jYWwwWTATBgcqhkjOPQIB
+BggqhkjOPQMBBwNCAAQxJb5KemX4225eFKiMHG7PxQ4ruAKgysiUXa39dSDAxrO4
+3PN+zR09DE6HSl432uuLqIhc9Cce2W85vN3Eio3io00wSzAOBgNVHQ8BAf8EBAMC
+B4AwDAYDVR0TAQH/BAIwADArBgNVHSMEJDAigCACATzdYo9peJHca6i9a7hkXj2/
+LdMPDzIcQ1hI+P22ujAKBggqhkjOPQQDAgNIADBFAiEAzvWDVQ1IllCvDl5eNBcz
+QmjXka68INWumyuaqtTVpVsCIDxl02FmGeVj5sXn9DFeim2+yz4gBsfKaRXTovvg
+ny4w
+-----END CERTIFICATE-----
+Ê4ÃÈSV¿Eﬂâ6+,ﬂ«Z›ö:∞Ä"
+˝!
+¨
+è
+AMspÜ-----BEGIN CERTIFICATE-----
+MIICDzCCAbWgAwIBAgIQfj3pcKF9rK2Aw9Y0ZmOC9DAKBggqhkjOPQQDAjBhMQsw
+CQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZy
+YW5jaXNjbzEQMA4GA1UEChMHYS5sb2NhbDETMBEGA1UEAxMKY2EuYS5sb2NhbDAe
+Fw0yNjExMTUwODIyMDBaFw0zNjExMTIwODIyMDBaMGMxCzAJBgNVBAYTAlVTMRMw
+EQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMQ8wDQYD
+VQQLEwZjbGllbnQxFjAUBgNVBAMMDVVzZXI1QGEubG9jYWwwWTATBgcqhkjOPQIB
+BggqhkjOPQMBBwNCAAQxJb5KemX4225eFKiMHG7PxQ4ruAKgysiUXa39dSDAxrO4
+3PN+zR09DE6HSl432uuLqIhc9Cce2W85vN3Eio3io00wSzAOBgNVHQ8BAf8EBAMC
+B4AwDAYDVR0TAQH/BAIwADArBgNVHSMEJDAigCACATzdYo9peJHca6i9a7hkXj2/
+LdMPDzIcQ1hI+P22ujAKBggqhkjOPQQDAgNIADBFAiEAzvWDVQ1IllCvDl5eNBcz
+QmjXka68INWumyuaqtTVpVsCIDxl02FmGeVj5sXn9DFeim2+yz4gBsfKaRXTovvg
+ny4w
+-----END CERTIFICATE-----
+Ê4ÃÈSV¿Eﬂâ6+,ﬂ«Z›ö:∞À
+Æ
+´
+®authregistryï
+SuspendGrant
+Ñ{"deploymentId":"04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406","id":"f355533f620d13457172acdecf236d788e5da1fc19fd9ac164ea1a900e3a2e5a","expectedRevision":1,"expectedDigest":"b09de9c053d9461d7469d236a4cf91afa23385bed81b3971ffa62c8a35943caa"}ó
+⁄
+ ©°{í°Ÿ
+íT˚µ‰Ü04ïì¥Ëm÷áñVg[éµ
+ò=
+
+_lifecycle/
+-
+'namespaces/fields/authregistry/Sequence÷
+
+authregistry≈
+
+N
+Hbinding/d11bcbb85b2561e8aadfc8b980c4d5d196f974c67168065380d1bac58f41728d
+
+	bootstrap
+M
+Fgrant/6ed43e2eca3d4c63d482441cd3e77874016460f20e9c099df41bdc84eef7ecf3Ç
+O
+Iidentity/d2ab3fc072b6a3fcfedfdcaed3ca13de34c2fde6d5f04462d83863c9f3d5794b¡
+Fgrant/6ed43e2eca3d4c63d482441cd3e77874016460f20e9c099df41bdc84eef7ecf3ˆ{"deploymentId":"04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406","grantId":"f355533f620d13457172acdecf236d788e5da1fc19fd9ac164ea1a900e3a2e5a","schemaVersion":"grad-auth-v1","parentId":"a0f4b974be10f8078587d34f0ca7d5a43e622ad53a51827cd8877b25ed74b358","parentDigest":"87947649e685a23a965ed913e53347b16fe66600015905837f143bb395c5be96","rootId":"a0f4b974be10f8078587d34f0ca7d5a43e622ad53a51827cd8877b25ed74b358","taskId":"e82a94196c1e83562abbe39a04f3f53f819d468560181da841080b0d2926b888","authorizationMode":"RESOURCE_PREAUTHORIZED","principalDomain":"A","resourceId":"67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2","issuer":"did:web:a.local:u","grantee":"did:web:a.local:a1","issuerKeyVersion":1,"granteeKeyVersion":1,"issuerCredentialId":"urn:grad:credential:U-v1","granteeCredentialId":"urn:grad:credential:A1-v1","remainingDepth":1,"digest":"b09de9c053d9461d7469d236a4cf91afa23385bed81b3971ffa62c8a35943caa","nbf":1794727756,"exp":1794817756,"status":"SUSPENDED","revision":2}»"authregistry1.0⁄
+è
+CMspÜ-----BEGIN CERTIFICATE-----
+MIICDTCCAbSgAwIBAgIQZs2lG3K4e3osYE05VUykLjAKBggqhkjOPQQDAjBhMQsw
+CQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZy
+YW5jaXNjbzEQMA4GA1UEChMHYy5sb2NhbDETMBEGA1UEAxMKY2EuYy5sb2NhbDAe
+Fw0yNjExMTUwODIyMDBaFw0zNjExMTIwODIyMDBaMGIxCzAJBgNVBAYTAlVTMRMw
+EQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMQ0wCwYD
+VQQLEwRwZWVyMRcwFQYDVQQDEw5wZWVyLWMuYy5sb2NhbDBZMBMGByqGSM49AgEG
+CCqGSM49AwEHA0IABLwkSm8uUnr96NBhU8x3xBrMbOQ45HhA4IOSuNLTuJfnAvJa
+iB2zDlbPS0M32/4prr3CqloYG/F/cC84X7j6d3ejTTBLMA4GA1UdDwEB/wQEAwIH
+gDAMBgNVHRMBAf8EAjAAMCsGA1UdIwQkMCKAIGLShA+KMD7wUeRaQsPdGeCLCkwr
+2MOukKLzu3x+rsjMMAoGCCqGSM49BAMCA0cAMEQCIDvX+Tip9A1n1pwljjJvSlvK
+mazS2KbVgCkJ3H0dGlt/AiA+zEhwQQaqkRfAqtYlbpbTTZHn7ANOEcJCNIPFO4QQ
+GQ==
+-----END CERTIFICATE-----
+F0D ø8ï’#∆!80ÄœˆZw´dÓdL{uﬂ;°$%¶Õ )†úø˝Ô#Hù—wŸÌ˜∏˘≈x=¸◊d ⁄⁄
+è
+AMspÜ-----BEGIN CERTIFICATE-----
+MIICDTCCAbSgAwIBAgIQAN+ggzNTG5Jsm1kBbo40qjAKBggqhkjOPQQDAjBhMQsw
+CQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZy
+YW5jaXNjbzEQMA4GA1UEChMHYS5sb2NhbDETMBEGA1UEAxMKY2EuYS5sb2NhbDAe
+Fw0yNjExMTUwODIyMDBaFw0zNjExMTIwODIyMDBaMGIxCzAJBgNVBAYTAlVTMRMw
+EQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMQ0wCwYD
+VQQLEwRwZWVyMRcwFQYDVQQDEw5wZWVyLWEuYS5sb2NhbDBZMBMGByqGSM49AgEG
+CCqGSM49AwEHA0IABOHN4BHO3ob/oDemx9P0Cto5wmiwwqKj9b0j7FUMIEGobvTH
+2lrI7GtLYFeJo4+LQHyY+c0yZKZFHPvRc33AhHKjTTBLMA4GA1UdDwEB/wQEAwIH
+gDAMBgNVHRMBAf8EAjAAMCsGA1UdIwQkMCKAIAIBPN1ij2l4kdxrqL1ruGRePb8t
+0w8PMhxDWEj4/ba6MAoGCCqGSM49BAMCA0cAMEQCIEtYamXFH7onbHYTC1O3qRfB
+7QIynDe7vs/n4mYghsJWAiAVilbs7eNHogmfGdNOLrEa1+/yH+Dy8O2CWv3dwJST
+jg==
+-----END CERTIFICATE-----
+F0D I7JO0édè¬∂*Ú^èÎhr<ò`8q‡m$Ky SõôÍs˛∞érΩì„	Î|Á⁄˘ãﬁNVâºÜà\F0D JœÿÕì¶Á”µ¡ÍÚºb9TΩ$ì§fº,ŒπˇŒÀ«æ 5¡Ïk.?0©Î∑x}i
+¶ypä(	·óvÛı
+∆
+
+ á0gG0E! µômÏUµﬂÄÏœ/|˛•ùÎYéú±„Œ¶o”ŒçyO8 K´ı8r:#ÿ^ˇ“bë˝=˜ÇKyaIGÊø≠p˚Ù@»Ú'>W’∏£WôkÙ,xÙÿî…fF0D x ÈãÜYXÔº«Ê”öBÙ!Ÿ)·8òÜîí5[ÉÎ¢–Wì 9ÌGêSË˙5⁄Á^Æ≈@q ?’5ç‡$Çñ¯Œîu»**ÜtÕü±LêÜ-¥S|çÀlfF0D jñ¢›˚qóAÑb™Ätäñ…=_TÔZÀâÂ`‘˚õ> ?b·ÎètßÛf^˘3ﬁ˚Ωì‰À>Ø‹bq!¢a@≈UÌ%gL…¬òÂÔ∆ÕµçZ¬±úPXÜ
+ 
+ 
+ 
+"
+ ~Dh#ˇ¥2t$ÃÂ•_91t…ˇÚ˛¿Û¢qvÑ

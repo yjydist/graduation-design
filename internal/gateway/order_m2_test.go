@@ -191,7 +191,7 @@ func newM2GatewayHarness(t *testing.T) *m2GatewayHarness {
 	makeID := func(id, dom, kind, dig, pub string) api.Identity {
 		return api.Identity{
 			Bound: api.Bound{DeploymentID: depID}, ID: id, Domain: dom, Kind: kind,
-			Management: api.Management{MSPID: dom + "Msp", Fingerprint: api.Digest([]byte("mgmt:" + id + ":" + tag))},
+			Management:     api.Management{MSPID: dom + "Msp", Fingerprint: api.Digest([]byte("mgmt:" + id + ":" + tag))},
 			DocumentDigest: dig, KeyID: id + "#key-1", KeyVersion: 1, PublicKey: pub,
 			AccountCommitment: api.Digest([]byte("acct:" + depID + ":" + id)),
 			Version:           api.Version{Status: api.Active, Revision: 1},
@@ -370,6 +370,8 @@ func newM2GatewayHarness(t *testing.T) *m2GatewayHarness {
 
 	t.Cleanup(func() {
 		bg := context.Background()
+		_, _ = pool.Exec(bg, `DELETE FROM decision_evidence WHERE deployment_id=$1`, depID)
+		_, _ = pool.Exec(bg, `DELETE FROM order_outcome_outbox WHERE deployment_id=$1`, depID)
 		_, _ = pool.Exec(bg, `DELETE FROM orders WHERE deployment_id=$1`, depID)
 		_, _ = pool.Exec(bg, `DELETE FROM client_actions WHERE deployment_id=$1`, depID)
 		_, _ = pool.Exec(bg, `DELETE FROM quotes WHERE deployment_id=$1`, depID)

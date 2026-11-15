@@ -41,6 +41,7 @@ type ProbeInfo struct {
 	Deadline       time.Time
 	SentMonoNs     int64
 	DeadlineMonoNs int64
+	CheckedMonoNs  int64
 }
 
 // ConsistentSnapshot holds a fixed-height ledger snapshot and its verified checkpoint/probe metadata.
@@ -55,8 +56,14 @@ type ConsistentSnapshot struct {
 
 // StateSource provides fixed-height consistent snapshots and monotonic probe freshness checks.
 type StateSource interface {
-	IsProbeFresh() (ProbeInfo, error)
+	IsProbeFresh(original ...ProbeInfo) (ProbeInfo, error)
 	AssembleSnapshot(ctx context.Context, leafGrantID string, now time.Time) (*ConsistentSnapshot, error)
+}
+
+// HistoricalStateSource is optionally implemented by StateSource backends that support historical replay and deactivation lookup.
+type HistoricalStateSource interface {
+	AssembleHistoricalSnapshot(ctx context.Context, leafGrantID string, blockNo int64, now time.Time) (*ConsistentSnapshot, error)
+	FindInactiveBlock(ctx context.Context, kind, id string, afterBlock int64) (int64, string, bool, error)
 }
 
 // MaterialChecker verifies synced domain certifications before resource access.
@@ -71,6 +78,10 @@ type Config struct {
 	Delivery         MaterialChecker
 	DIDs             *protocol.DIDWebResolver
 	Policy           *policy.VerifiedBundle
+	PolicyArchive    map[string]*policy.VerifiedBundle
+	SignatureCache   *protocol.SignatureCache
+	AuditorDIDs      []string
+	VerifierID       string
 	DeploymentID     string
 	ServiceDID       string
 	Audience         string
@@ -216,10 +227,15 @@ type ClientActionRecord struct {
 	Action         string
 	IdempotencyKey string
 	RequestHash    string
+	RequestJSON    string
+	SendRevision   int64
 	ChallengeID    string
+	ChallengeIDs   []string
 	QuoteID        string
 	OrderID        string
 	DecisionID     string
+	CaseID         string
+	Outcome        string
 	Status         string
 	CreatedAt      int64
 	UpdatedAt      int64
@@ -231,6 +247,39 @@ type ExecuteResponse struct {
 	Code       string    `json:"code"`
 	Quote      *QuoteDTO `json:"quote,omitempty"`
 	Order      *OrderDTO `json:"order,omitempty"`
+}
+
+func scanClientActionRow(row pgx.Row) (*ClientActionRecord, error) {
+	var rec ClientActionRecord
+	var chalID, quoteID, orderID, decID, caseID, outcome *string
+	err := row.Scan(
+		&rec.DeploymentID, &rec.ActionID, &rec.Actor, &rec.TaskID, &rec.Action, &rec.IdempotencyKey,
+		&rec.RequestHash, &rec.RequestJSON, &rec.SendRevision,
+		&chalID, &rec.ChallengeIDs, &quoteID, &orderID, &decID, &caseID, &outcome,
+		&rec.Status, &rec.CreatedAt, &rec.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if chalID != nil {
+		rec.ChallengeID = *chalID
+	}
+	if quoteID != nil {
+		rec.QuoteID = *quoteID
+	}
+	if orderID != nil {
+		rec.OrderID = *orderID
+	}
+	if decID != nil {
+		rec.DecisionID = *decID
+	}
+	if caseID != nil {
+		rec.CaseID = *caseID
+	}
+	if outcome != nil {
+		rec.Outcome = *outcome
+	}
+	return &rec, nil
 }
 
 // BeginClientAction records a local agent intent row idempotently prior to sending order.create.
@@ -245,8 +294,8 @@ func BeginClientAction(
 	}
 	actionID := "urn:grad:action:" + newUUID()
 	_, err := db.Exec(ctx, `INSERT INTO client_actions(
-		deployment_id, action_id, actor, task_id, action, idempotency_key, request_hash, status, created_at, updated_at
-	) VALUES($1,$2,$3,$4,$5,$6,$7,'PENDING',$8,$8)
+		deployment_id, action_id, actor, task_id, action, idempotency_key, request_hash, send_revision, status, created_at, updated_at
+	) VALUES($1,$2,$3,$4,$5,$6,$7,1,'PENDING',$8,$8)
 	ON CONFLICT(deployment_id, actor, task_id, action, idempotency_key) DO NOTHING`,
 		deploymentID, actionID, actor, taskID, action, idempotencyKey, requestHash, nowSec,
 	)
@@ -272,34 +321,16 @@ func GetClientActionByKey(
 	if db == nil {
 		return nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "db pool required")
 	}
-	var rec ClientActionRecord
-	var chalID, quoteID, orderID, decID *string
-	err := db.QueryRow(ctx, `SELECT
-		deployment_id, action_id, actor, task_id, action, idempotency_key, request_hash,
-		challenge_id, quote_id, order_id, decision_id, status, created_at, updated_at
+	row := db.QueryRow(ctx, `SELECT
+		deployment_id, action_id, actor, task_id, action, idempotency_key,
+		request_hash, request_json, send_revision,
+		challenge_id, challenge_ids, quote_id, order_id, decision_id, case_id, outcome,
+		status, created_at, updated_at
 		FROM client_actions
 		WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND action=$4 AND idempotency_key=$5`,
 		deploymentID, actor, taskID, action, idempotencyKey,
-	).Scan(
-		&rec.DeploymentID, &rec.ActionID, &rec.Actor, &rec.TaskID, &rec.Action, &rec.IdempotencyKey, &rec.RequestHash,
-		&chalID, &quoteID, &orderID, &decID, &rec.Status, &rec.CreatedAt, &rec.UpdatedAt,
 	)
-	if err != nil {
-		return nil, err
-	}
-	if chalID != nil {
-		rec.ChallengeID = *chalID
-	}
-	if quoteID != nil {
-		rec.QuoteID = *quoteID
-	}
-	if orderID != nil {
-		rec.OrderID = *orderID
-	}
-	if decID != nil {
-		rec.DecisionID = *decID
-	}
-	return &rec, nil
+	return scanClientActionRow(row)
 }
 
 // UpdateClientAction updates the status/challenge/resource references of a client_actions row.
@@ -315,6 +346,7 @@ func UpdateClientAction(
 	_, err := db.Exec(ctx, `UPDATE client_actions
 		SET status=$1,
 		    challenge_id=COALESCE(NULLIF($2,''), challenge_id),
+		    challenge_ids=CASE WHEN $2 <> '' AND NOT ($2 = ANY(challenge_ids)) THEN array_append(challenge_ids, $2) ELSE challenge_ids END,
 		    quote_id=COALESCE(NULLIF($3,''), quote_id),
 		    order_id=COALESCE(NULLIF($4,''), order_id),
 		    decision_id=COALESCE(NULLIF($5,''), decision_id),
@@ -323,6 +355,118 @@ func UpdateClientAction(
 		status, challengeID, quoteID, orderID, decisionID, nowSec, deploymentID, actionID,
 	)
 	return err
+}
+
+// RecordClientActionChallenge atomically binds a new challenge attempt to an active send_revision
+// and moves the intent to OUTCOME_UNKNOWN before the network call is sent.
+// Stale workers holding an outdated send_revision are rejected with STATE_CHANGED.
+func RecordClientActionChallenge(
+	ctx context.Context,
+	db *pgxpool.Pool,
+	deploymentID, actionID string,
+	expectedSendRevision int64,
+	challengeID, requestJSON string,
+	nowSec int64,
+) (*ClientActionRecord, error) {
+	if db == nil {
+		return nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "db pool required")
+	}
+	row := db.QueryRow(ctx, `UPDATE client_actions
+		SET status='OUTCOME_UNKNOWN',
+		    challenge_id=COALESCE(NULLIF($1,''), challenge_id),
+		    challenge_ids=CASE WHEN $1 <> '' AND NOT ($1 = ANY(challenge_ids)) THEN array_append(challenge_ids, $1) ELSE challenge_ids END,
+		    request_json=COALESCE(NULLIF($2,''), request_json),
+		    updated_at=$3
+		WHERE deployment_id=$4 AND action_id=$5 AND send_revision=$6
+		  AND status IN ('PENDING', 'OUTCOME_UNKNOWN', 'FAILED') AND COALESCE(case_id,'') = ''
+		RETURNING deployment_id, action_id, actor, task_id, action, idempotency_key,
+			request_hash, request_json, send_revision,
+			challenge_id, challenge_ids, quote_id, order_id, decision_id, case_id, outcome,
+			status, created_at, updated_at`,
+		challengeID, requestJSON, nowSec, deploymentID, actionID, expectedSendRevision,
+	)
+	rec, err := scanClientActionRow(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, protocol.NewError(protocol.ErrCodeStateChanged, "client action send_revision mismatch or already stopped/finalized")
+	}
+	if err != nil {
+		return nil, protocol.WrapError(protocol.ErrCodeStateUnavailable, "record client action challenge", err)
+	}
+	return rec, nil
+}
+
+// DispatchClientAction serializes the final network send with the stop transition.
+// A successful stop cannot race a worker between its check and dispatch.
+func DispatchClientAction(ctx context.Context, db *pgxpool.Pool, deploymentID, actionID string, revision int64, send func() error) error {
+	tx, err := db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+	var current int64
+	var status string
+	var caseID *string
+	err = tx.QueryRow(ctx, `SELECT send_revision,status,case_id FROM client_actions WHERE deployment_id=$1 AND action_id=$2 FOR UPDATE`, deploymentID, actionID).Scan(&current, &status, &caseID)
+	if err != nil {
+		return err
+	}
+	if current != revision || (caseID != nil && *caseID != "") || (status != "PENDING" && status != "OUTCOME_UNKNOWN" && status != "FAILED") {
+		return protocol.NewError(protocol.ErrCodeStateChanged, "client action is stopped, stale or finalized")
+	}
+	if err = send(); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// StopClientActionSend atomically increments send_revision and locks the client_actions intent into
+// OUTCOME_UNKNOWN so delayed workers with older sendRevision values cannot dispatch further retries.
+func StopClientActionSend(
+	ctx context.Context,
+	db *pgxpool.Pool,
+	deploymentID, actor, taskID, action, idempotencyKey, caseID, requestJSON string,
+	nowSec int64,
+) (*ClientActionRecord, error) {
+	if db == nil {
+		return nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "db pool required")
+	}
+	requestedCaseID := caseID
+	if caseID == "" {
+		caseID = "urn:grad:case:" + newUUID()
+	}
+	row := db.QueryRow(ctx, `UPDATE client_actions
+		SET send_revision = CASE WHEN COALESCE(case_id, '') = '' THEN send_revision + 1 ELSE send_revision END,
+		    status = 'OUTCOME_UNKNOWN',
+		    case_id = COALESCE(NULLIF(case_id,''), NULLIF($1,'')),
+		    request_json = COALESCE(NULLIF($2,''), request_json),
+		    updated_at = $3
+		WHERE deployment_id=$4 AND actor=$5 AND task_id=$6 AND action=$7 AND idempotency_key=$8
+		  AND status IN ('PENDING', 'OUTCOME_UNKNOWN', 'FAILED')
+		  AND (COALESCE(case_id,'') = '' OR NULLIF($9,'') IS NULL OR case_id = $9)
+		RETURNING deployment_id, action_id, actor, task_id, action, idempotency_key,
+			request_hash, request_json, send_revision,
+			challenge_id, challenge_ids, quote_id, order_id, decision_id, case_id, outcome,
+			status, created_at, updated_at`,
+		caseID, requestJSON, nowSec, deploymentID, actor, taskID, action, idempotencyKey, requestedCaseID,
+	)
+	rec, err := scanClientActionRow(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		existing, getErr := GetClientActionByKey(ctx, db, deploymentID, actor, taskID, action, idempotencyKey)
+		if errors.Is(getErr, pgx.ErrNoRows) {
+			return nil, protocol.NewError(protocol.ErrCodeInvalidSchema, "client action not found")
+		}
+		if getErr != nil {
+			return nil, protocol.WrapError(protocol.ErrCodeStateUnavailable, "load client action on stop send", getErr)
+		}
+		if requestedCaseID != "" && existing.CaseID != "" && existing.CaseID != requestedCaseID {
+			return nil, protocol.NewError(protocol.ErrCodeIdempotencyConflict, fmt.Sprintf("client action already bound to caseId %s", existing.CaseID))
+		}
+		return nil, protocol.NewError(protocol.ErrCodeStateChanged, fmt.Sprintf("client action already in terminal state %s", existing.Status))
+	}
+	if err != nil {
+		return nil, protocol.WrapError(protocol.ErrCodeStateUnavailable, "stop client action send", err)
+	}
+	return rec, nil
 }
 
 // NewServer constructs a configured gateway Server.
@@ -352,6 +496,9 @@ func NewServer(cfg Config) (*Server, error) {
 	s.mux.HandleFunc("POST /v1/auth/challenges", s.withRequestID(s.handleCreateChallenge))
 	s.mux.HandleFunc("POST /v1/contexts/{taskId}", s.withRequestID(s.handleUpdateContext))
 	s.mux.HandleFunc("POST /v1/access/execute", s.withRequestID(s.handleExecute))
+	s.mux.HandleFunc("POST /v1/internal/order-outcome-cases", s.withRequestID(s.handleRegisterOrderOutcomeCase))
+	s.mux.HandleFunc("POST /v1/audit/order-outcomes", s.withRequestID(s.handleAuditOrderOutcome))
+	s.mux.HandleFunc("POST /v1/internal/order-outcome-receipts", s.withRequestID(s.handleDeliverOrderOutcomeReceipt))
 	s.mux.HandleFunc("GET /v1/decisions/{id}", s.withRequestID(s.handleGetDecision))
 	s.mux.HandleFunc("GET /v1/health/ready", s.withRequestID(s.handleReady))
 	return s, nil

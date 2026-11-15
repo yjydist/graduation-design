@@ -1,0 +1,61 @@
+--- a/internal/gateway/order_m3_test.go
++++ b/internal/gateway/order_m3_test.go
+@@ -472,6 +472,36 @@
+ 		t.Fatalf("audit mutated business tables!")
+ 	}
+ 
++
++	t.Run("VerifyRejectHeaderOnlyAuditor", func(t *testing.T) {
++		r := callJSONEndpoint(t, h2, http.MethodPost, "/v1/audit/order-outcomes",
++			map[string]string{"X-Caller-Role":"C_AUDITOR", "X-Caller-DID":auditor2}, gateway.AuditOrderOutcomeRequest{CaseID:stopped.CaseID})
++		if r.Code != http.StatusForbidden { t.Errorf("unverified caller with self-asserted auditor headers: expected 403, got %d", r.Code) }
++	})
++	t.Run("VerifyAuditDurableReceipt", func(t *testing.T) {
++		var n int
++		if err := h.pool.QueryRow(ctx, `SELECT count(*) FROM order_outcome_receipts WHERE deployment_id=$1 AND case_id=$2`, h.depID,stopped.CaseID).Scan(&n); err != nil {t.Fatal(err)}
++		if n == 0 { t.Error("audit committed but no durable receipt exists before delivery") }
++	})
++	t.Run("VerifyHistoricalRevokedCredential", func(t *testing.T) {
++		key := api.Key("credential", h.rp.g1.IssuerCredential)
++		var raw []byte
++		if err := h.pool.QueryRow(ctx, `SELECT value FROM fabric_version WHERE deployment=$1 AND key=$2 AND block_no=1`, h.depID,key).Scan(&raw); err != nil {t.Fatal(err)}
++		defer func(){_,_ = h.pool.Exec(ctx, `UPDATE fabric_version SET value=$1 WHERE deployment=$2 AND key=$3 AND block_no=1`,raw,h.depID,key)}()
++		var c api.Credential
++		if err := json.Unmarshal(raw,&c); err != nil {t.Fatal(err)}
++		c.Status=api.Revoked; changed,_:=json.Marshal(c)
++		if _,err := h.pool.Exec(ctx, `UPDATE fabric_version SET value=$1 WHERE deployment=$2 AND key=$3 AND block_no=1`,changed,h.depID,key); err != nil {t.Fatal(err)}
++		r:=callJSONEndpoint(t,h2,http.MethodPost,"/v1/audit/order-outcomes",map[string]string{"X-Caller-Role":"C_AUDITOR","X-Caller-DID":auditor2},gateway.AuditOrderOutcomeRequest{CaseID:stopped.CaseID})
++		var got gateway.AuditOrderOutcomeResponse
++		if err:=json.Unmarshal(r.Body.Bytes(),&got);err!=nil {t.Fatal(err)}
++		if got.HistoricalStatus=="MATCHED" {t.Error("revoked credential at historical h incorrectly returned MATCHED")}
++	})
++	t.Run("VerifyStoppedIntentRejectsNewWorker", func(t *testing.T) {
++		_,err:=gateway.RecordClientActionChallenge(ctx,h.pool,h.depID,stopped.ActionID,stopped.SendRevision,ch1.ChallengeID,string(orderRaw),currentSec.Load())
++		if err==nil {t.Error("stopped intent accepts a new worker holding current sendRevision")}
++	})
++
+ 	// 7. Deliver receipt to B -> RECONCILED, idempotent replay, conflict rejection, late UNKNOWN ignored.
+ 	cHeaders := map[string]string{"X-Caller-Role": "C_AUDIT_SERVICE", "X-Caller-DID": auditor2}
+ 	deliv1 := callJSONEndpoint(t, h1, http.MethodPost, "/v1/internal/order-outcome-receipts", cHeaders, auditResp.Receipt)
+--- a/internal/fabric/operation_m3_test.go
++++ b/internal/fabric/operation_m3_test.go
+@@ -398,3 +398,19 @@
+ 	}
+ 
+ }
++
++func TestVerifyManagementHTTPActuallySubmits(t *testing.T) {
++ pool:=testPgPool(t); ctx:=t.Context();depID:=strings.Repeat("e",64)
++ defer func(){_,_=pool.Exec(ctx,`DELETE FROM operations WHERE deployment_id=$1`,depID)}()
++ calls:=make(chan struct{},1)
++ svc:=NewManagementOperationService(pool,depID,api.Management{}, &verificationBackend{calls:calls})
++ req:=httptest.NewRequest(http.MethodPost,"/v1/management/RotateIdentity",strings.NewReader(`{"id":"did:web:a.local:u","expectedRevision":2}`))
++ req.Header.Set("Idempotency-Key","verify-http-submit")
++ req.Header.Set("X-Caller-MSPID","AMsp"); req.Header.Set("X-Caller-Fingerprint",strings.Repeat("a",64))
++ rec:=httptest.NewRecorder();svc.Handler().ServeHTTP(rec,req)
++ if rec.Code!=http.StatusAccepted {t.Fatalf("expected accepted request, got %d %s",rec.Code,rec.Body.String())}
++ select {case <-calls: case <-time.After(100*time.Millisecond):t.Error("HTTP returned 202 but never invoked configured SubmitAsync backend")}
++}
++type verificationBackend struct {calls chan struct{}}
++func (b *verificationBackend) CurrentRevision(context.Context,string,json.RawMessage)(uint64,bool,error){return 2,true,nil}
++func (b *verificationBackend) SubmitAsync(ctx context.Context,key,id string,caller api.Management,method string,input json.RawMessage,onUpdate func(string,string,string,int64,string,*string,*string,bool)error){b.calls<-struct{}{}}

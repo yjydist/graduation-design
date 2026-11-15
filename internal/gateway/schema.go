@@ -8,6 +8,25 @@ import (
 )
 
 const gatewaySchemaSQL = `
+CREATE TABLE IF NOT EXISTS order_outcome_outbox (
+ deployment_id TEXT NOT NULL,
+ case_id TEXT NOT NULL,
+ send_revision BIGINT NOT NULL,
+ check_no BIGINT NOT NULL,
+ receipt_json JSONB NOT NULL,
+ delivered_at BIGINT,
+ attempts BIGINT NOT NULL DEFAULT 0,
+ last_error TEXT NOT NULL DEFAULT '',
+ PRIMARY KEY(deployment_id,case_id,send_revision,check_no)
+);
+CREATE TABLE IF NOT EXISTS decision_evidence (
+ deployment_id TEXT NOT NULL,
+ decision_id TEXT NOT NULL,
+ package_json JSONB NOT NULL,
+ did_documents JSONB NOT NULL,
+ PRIMARY KEY(deployment_id,decision_id)
+);
+
 CREATE TABLE IF NOT EXISTS challenges (
 	deployment_id TEXT NOT NULL,
 	challenge_id TEXT NOT NULL,
@@ -148,18 +167,88 @@ CREATE TABLE IF NOT EXISTS client_actions (
 	action TEXT NOT NULL,
 	idempotency_key TEXT NOT NULL,
 	request_hash TEXT NOT NULL,
+	request_json TEXT NOT NULL DEFAULT '',
+	send_revision BIGINT NOT NULL DEFAULT 1,
 	challenge_id TEXT,
+	challenge_ids TEXT[] NOT NULL DEFAULT '{}',
 	quote_id TEXT,
 	order_id TEXT,
 	decision_id TEXT,
-	status TEXT NOT NULL CHECK (status IN ('PENDING', 'SUBMITTED', 'COMPLETED', 'FAILED')),
+	case_id TEXT,
+	outcome TEXT,
+	status TEXT NOT NULL CHECK (status IN ('PENDING', 'OUTCOME_UNKNOWN', 'SUBMITTED', 'COMPLETED', 'RECONCILED', 'FAILED')),
 	created_at BIGINT NOT NULL,
 	updated_at BIGINT NOT NULL,
 	PRIMARY KEY (deployment_id, action_id),
 	UNIQUE (deployment_id, actor, task_id, action, idempotency_key)
 );
 
+ALTER TABLE client_actions ADD COLUMN IF NOT EXISTS request_json TEXT NOT NULL DEFAULT '';
+ALTER TABLE client_actions ADD COLUMN IF NOT EXISTS send_revision BIGINT NOT NULL DEFAULT 1;
+ALTER TABLE client_actions ADD COLUMN IF NOT EXISTS challenge_ids TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE client_actions ADD COLUMN IF NOT EXISTS case_id TEXT;
+ALTER TABLE client_actions ADD COLUMN IF NOT EXISTS outcome TEXT;
+DO $$
+BEGIN
+	ALTER TABLE client_actions DROP CONSTRAINT IF EXISTS client_actions_status_check;
+	ALTER TABLE client_actions ADD CONSTRAINT client_actions_status_check
+		CHECK (status IN ('PENDING', 'OUTCOME_UNKNOWN', 'SUBMITTED', 'COMPLETED', 'RECONCILED', 'FAILED'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS order_outcome_cases (
+	deployment_id TEXT NOT NULL,
+	case_id TEXT NOT NULL,
+	actor TEXT NOT NULL,
+	task_id TEXT NOT NULL,
+	idempotency_key TEXT NOT NULL,
+	send_revision BIGINT NOT NULL,
+	request_json TEXT NOT NULL,
+	request_hash TEXT NOT NULL,
+	challenge_ids TEXT[] NOT NULL DEFAULT '{}',
+	created_at BIGINT NOT NULL,
+	PRIMARY KEY (deployment_id, case_id),
+	UNIQUE (deployment_id, actor, task_id, idempotency_key)
+);
+
+CREATE TABLE IF NOT EXISTS order_outcome_audits (
+	deployment_id TEXT NOT NULL,
+	case_id TEXT NOT NULL,
+	check_no BIGINT NOT NULL,
+	send_revision BIGINT NOT NULL,
+	actor TEXT NOT NULL,
+	task_id TEXT NOT NULL,
+	idempotency_key TEXT NOT NULL,
+	request_hash TEXT NOT NULL,
+	outcome TEXT NOT NULL CHECK (outcome IN ('CREATED', 'NOT_CREATED', 'UNKNOWN')),
+	order_id TEXT,
+	creation_decision_id TEXT,
+	historical_status TEXT NOT NULL CHECK (historical_status IN ('MATCHED', 'INCOMPLETE', 'MISMATCH', 'NO_DECISION')),
+	historical_reason TEXT,
+	verifier_id TEXT NOT NULL DEFAULT '',
+	audit_at BIGINT NOT NULL,
+	PRIMARY KEY (deployment_id, case_id, check_no)
+);
+
+CREATE TABLE IF NOT EXISTS order_outcome_receipts (
+	deployment_id TEXT NOT NULL,
+	case_id TEXT NOT NULL,
+	check_no BIGINT NOT NULL,
+	send_revision BIGINT NOT NULL,
+	actor TEXT NOT NULL,
+	task_id TEXT NOT NULL,
+	request_hash TEXT NOT NULL,
+	outcome TEXT NOT NULL CHECK (outcome IN ('CREATED', 'NOT_CREATED', 'UNKNOWN')),
+	order_id TEXT,
+	creation_decision_id TEXT,
+	historical_status TEXT NOT NULL CHECK (historical_status IN ('MATCHED', 'INCOMPLETE', 'MISMATCH', 'NO_DECISION')),
+	received_at BIGINT NOT NULL,
+	PRIMARY KEY (deployment_id, case_id, send_revision, check_no)
+);
+
 ALTER TABLE decisions ADD COLUMN IF NOT EXISTS order_id TEXT;
+ALTER TABLE decision_evidence ADD COLUMN IF NOT EXISTS checked_mono_ns BIGINT;
+ALTER TABLE order_outcome_receipts ADD COLUMN IF NOT EXISTS audit_at BIGINT NOT NULL DEFAULT 0;
 `
 
 const (
@@ -180,8 +269,20 @@ func EnsureSchema(ctx context.Context, db *pgxpool.Pool, deploymentID, supplierI
 	if db == nil {
 		return fmt.Errorf("gateway database pool is required")
 	}
-	if _, err := db.Exec(ctx, gatewaySchemaSQL); err != nil {
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+	// Share the Fabric schema lock across processes initializing the same database.
+	if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock(376602444033251)"); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, gatewaySchemaSQL); err != nil {
 		return fmt.Errorf("create gateway schema: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
 	}
 	if deploymentID == "" {
 		return nil

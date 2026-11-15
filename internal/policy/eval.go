@@ -33,6 +33,7 @@ type SupplierFacts struct {
 	ContextFresh        bool
 	ContextRiskLevel    string
 	WithinTimeAndBounds bool
+	Attributes          map[string]string
 }
 
 // EvalTask is the task status object passed into OPA input.
@@ -68,13 +69,14 @@ type EvalConstraints struct {
 
 // OPAInput defines the strict schema input evaluated by package procurement.
 type OPAInput struct {
-	Verified           bool            `json:"verified"`
-	SupplierAcceptance bool            `json:"supplierAcceptance"`
-	Task               EvalTask        `json:"task"`
-	Path               EvalPath        `json:"path"`
-	Request            EvalRequest     `json:"request"`
-	Context            EvalContext     `json:"context"`
-	Constraints        EvalConstraints `json:"constraints"`
+	Verified           bool              `json:"verified"`
+	SupplierAcceptance bool              `json:"supplierAcceptance"`
+	Task               EvalTask          `json:"task"`
+	Path               EvalPath          `json:"path"`
+	Request            EvalRequest       `json:"request"`
+	Context            EvalContext       `json:"context"`
+	Constraints        EvalConstraints   `json:"constraints"`
+	Attributes         map[string]string `json:"attributes,omitempty"`
 }
 
 // Decision captures the deterministic policy evaluation output.
@@ -137,6 +139,7 @@ func (b *VerifiedBundle) BuildInput(f SupplierFacts) (OPAInput, error) {
 		Request:            EvalRequest{Action: f.Action, ProductID: f.ProductID, Quantity: f.Quantity, AmountMinor: f.AmountMinor},
 		Context:            EvalContext{Fresh: f.ContextFresh, RiskLevel: f.ContextRiskLevel},
 		Constraints:        EvalConstraints{WithinBounds: f.WithinTimeAndBounds, BeforeDeadline: beforePolicyDeadline},
+		Attributes:         f.Attributes,
 	}, nil
 }
 

@@ -1,0 +1,1 @@
+{"actions":["order.create","quote.read"],"currency":"CNY","description":"P1 x 1","maxQuantity":1,"productId":"urn:grad:product:P1","resources":["urn:grad:resource:C:orders","urn:grad:resource:C:quotes"],"supplierId":"urn:grad:supplier:C"}

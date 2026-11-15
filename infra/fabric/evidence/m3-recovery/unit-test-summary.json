@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "command": "mise exec -- go test -count=1 -timeout=3m -json ./...",
+  "passedPackages": [
+    "graduation-design/chaincode/registry",
+    "graduation-design/internal/fabricapi",
+    "graduation-design/internal/policy",
+    "graduation-design/internal/protocol",
+    "graduation-design/internal/agent",
+    "graduation-design/internal/gateway",
+    "graduation-design/internal/fabric"
+  ],
+  "passedTopLevelTests": 60,
+  "passedTestsAndSubtests": 121,
+  "skippedTests": [
+    "TestInterruptedInitialization",
+    "TestDeploymentResumesAfterCommittedInitialization",
+    "TestM3LiveAcceptance"
+  ],
+  "packagesWithoutTests": [
+    "graduation-design/cmd/ledgerctl"
+  ]
+}

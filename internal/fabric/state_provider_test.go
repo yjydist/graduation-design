@@ -11,6 +11,32 @@ import (
 	"graduation-design/internal/protocol"
 )
 
+func TestPostLockProbePreservesOriginalDeadline(t *testing.T) {
+	start := time.Now()
+	now := start.Add(4 * time.Second)
+	old := ProbeSnapshot{TxID: "old", SentAt: start, Deadline: start.Add(5 * time.Second), SentMonoNs: 1, DeadlineMonoNs: 5000000001}
+	rt := &online{ready: true, timeLimit: 5 * time.Second, attempts: map[string]time.Time{"old": start}}
+	sp := &StateProvider{runtime: rt, monoClock: func() time.Time { return now }, lastProbe: &old}
+	got, err := sp.IsProbeFresh(old)
+	if err != nil || got.TxID != old.TxID || !got.Deadline.Equal(old.Deadline) || got.DeadlineMonoNs != old.DeadlineMonoNs {
+		t.Fatalf("post-lock check lost original probe evidence: %+v, %v", got, err)
+	}
+	newProbe := ProbeSnapshot{TxID: "new", SentAt: now, Deadline: now.Add(5 * time.Second)}
+	rt.attempts["new"] = now
+	sp.lastProbe = &newProbe
+	now = old.Deadline
+	if _, err := sp.IsProbeFresh(old); !protocol.HasCode(err, protocol.ErrCodeStateStale) {
+		t.Fatalf("new probe extended original request deadline: %v", err)
+	}
+	if got, err := sp.IsProbeFresh(); err != nil || got.TxID != "new" {
+		t.Fatalf("new request should use its own fresh probe: %+v, %v", got, err)
+	}
+	rt.ready = false
+	if _, err := sp.IsProbeFresh(newProbe); !protocol.HasCode(err, protocol.ErrCodeStateUnavailable) {
+		t.Fatalf("disconnected runtime accepted a fresh deadline: %v", err)
+	}
+}
+
 func seedSyntheticViewRows(t *testing.T, sp *StateProvider, dep *deployment, f *fixtures, certCJWS string, blockNo int64, blockHash string) {
 	t.Helper()
 	ctx := t.Context()

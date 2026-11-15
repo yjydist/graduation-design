@@ -1,0 +1,4 @@
+{
+  "status": "FAIL",
+  "reason": "预检用例使用夹具中的零 revision, 已改为从可信 Peer 读取当前 revision."
+}

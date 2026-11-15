@@ -21,6 +21,8 @@ const (
 	DeploymentPurpose = "grad-fabric-deployment-v1"
 	// RegistrationChallengePurpose is the fixed purpose for registration challenges.
 	RegistrationChallengePurpose = "grad-identity-registration-v1"
+	// RecoveryChallengePurpose is the fixed purpose for ordinary management account recovery challenges.
+	RecoveryChallengePurpose = "grad-identity-recovery-v1"
 	// ManagementProofTyp is the JOSE typ for application-key management proofs.
 	ManagementProofTyp = "grad-management-proof+jwt"
 
@@ -413,6 +415,175 @@ func (b *ManagementDualProofBundle) Verify() error {
 	// 2. Verify ES256 application JWS proof over JCS(challenge).
 	if err := VerifyDetachedJWSES256(b.AppJWSProtected, challengeJCS, b.AppJWSSignature, appPub, ManagementProofTyp, b.Challenge.AppKeyID); err != nil {
 		return err
+	}
+	return nil
+}
+
+// RecoveryChallenge models the canonical dual-proof challenge object for ordinary management recovery.
+type RecoveryChallenge struct {
+	AccountCommitment     string             `json:"accountCommitment"`
+	ChallengeID           string             `json:"challengeId"`
+	DeploymentID          string             `json:"deploymentId"`
+	DIDDocumentDigest     string             `json:"didDocumentDigest"`
+	DomainID              string             `json:"domainId"`
+	ExpectedKeyVersion    uint64             `json:"expectedKeyVersion"`
+	ExpectedRevision      uint64             `json:"expectedRevision"`
+	ExpiresAt             int64              `json:"expiresAt"`
+	IssuedAt              int64              `json:"issuedAt"`
+	NewAppKeyID           string             `json:"newAppKeyId"`
+	NewAppKeyVersion      uint64             `json:"newAppKeyVersion"`
+	NewAppPublicKey       string             `json:"newAppPublicKey"`
+	NewManagementIdentity ManagementIdentity `json:"newManagementIdentity"`
+	Nonce                 string             `json:"nonce"`
+	OldManagementIdentity ManagementIdentity `json:"oldManagementIdentity"`
+	Purpose               string             `json:"purpose"`
+	SubjectID             string             `json:"subjectId"`
+}
+
+// RecoveryDualProofBundle captures the new management certificate signature and new app-key JWS proof.
+type RecoveryDualProofBundle struct {
+	Challenge                   RecoveryChallenge `json:"challenge"`
+	ChallengeSha256             string            `json:"challengeSha256"`
+	Deployment                  DeploymentBinding `json:"deployment"`
+	DeploymentID                string            `json:"deploymentId"`
+	NewAppJWSProtected          string            `json:"newAppJwsProtected"`
+	NewAppJWSSignature          string            `json:"newAppJwsSignature"`
+	NewManagementCertificateDER string            `json:"newManagementCertificateDer"`
+	NewManagementSignatureDER   string            `json:"newManagementSignatureDer"`
+}
+
+// SignRecoveryDualProofBundle signs both new management certificate and new application key proofs over JCS(challenge).
+func SignRecoveryDualProofBundle(
+	dep DeploymentBinding,
+	chal RecoveryChallenge,
+	newMgmtCertDER []byte,
+	newMgmtPriv *ecdsa.PrivateKey,
+	newAppPriv *ecdsa.PrivateKey,
+) (*RecoveryDualProofBundle, error) {
+	if newMgmtPriv == nil || newMgmtPriv.Curve != elliptic.P256() {
+		return nil, NewError(ErrCodeRecoveryProofInvalid, "new management private key must be ECDSA P-256")
+	}
+	if newAppPriv == nil || newAppPriv.Curve != elliptic.P256() {
+		return nil, NewError(ErrCodeRecoveryProofInvalid, "new application private key must be ECDSA P-256")
+	}
+	depID, err := dep.ComputeID()
+	if err != nil {
+		return nil, err
+	}
+	chal.DeploymentID = depID
+	chal.Purpose = RecoveryChallengePurpose
+	chal.NewManagementIdentity.CertificateSha256 = DigestBytes(newMgmtCertDER)
+
+	chalJCS, err := MarshalJCS(chal)
+	if err != nil {
+		return nil, err
+	}
+	chalSum := sha256.Sum256(chalJCS)
+	chalHex := hex.EncodeToString(chalSum[:])
+
+	mgmtSigDER, err := ecdsa.SignASN1(rand.Reader, newMgmtPriv, chalSum[:])
+	if err != nil {
+		return nil, err
+	}
+	compact, _, err := SignCompactJWS(newAppPriv, ManagementProofTyp, chal.NewAppKeyID, chalJCS)
+	if err != nil {
+		return nil, err
+	}
+	parts := strings.Split(compact, ".")
+	if len(parts) != 3 {
+		return nil, NewError(ErrCodeRecoveryProofInvalid, "internal error splitting new application proof JWS")
+	}
+	bundle := &RecoveryDualProofBundle{
+		Challenge:                   chal,
+		ChallengeSha256:             chalHex,
+		Deployment:                  dep,
+		DeploymentID:                depID,
+		NewAppJWSProtected:          parts[0],
+		NewAppJWSSignature:          parts[2],
+		NewManagementCertificateDER: base64.RawURLEncoding.EncodeToString(newMgmtCertDER),
+		NewManagementSignatureDER:   base64.RawURLEncoding.EncodeToString(mgmtSigDER),
+	}
+	if err := bundle.Verify(); err != nil {
+		return nil, err
+	}
+	return bundle, nil
+}
+
+// Verify checks deployment binding, challenge digest, canonical nonce, 300s TTL cap,
+// and dual proofs for both the new management X.509 certificate and new application key.
+func (b *RecoveryDualProofBundle) Verify() error {
+	if b == nil {
+		return NewError(ErrCodeInvalidSchema, "nil RecoveryDualProofBundle")
+	}
+	derivedDepID, err := b.Deployment.ComputeID()
+	if err != nil {
+		return err
+	}
+	if b.DeploymentID != derivedDepID || b.Challenge.DeploymentID != derivedDepID {
+		return NewError(ErrCodeBindingMismatch, fmt.Sprintf("deploymentId mismatch: computed %s", derivedDepID))
+	}
+	if b.Challenge.Purpose != RecoveryChallengePurpose {
+		return NewError(ErrCodeInvalidSchema, fmt.Sprintf("unexpected challenge purpose %q", b.Challenge.Purpose))
+	}
+	if _, err := ValidateNonce(b.Challenge.Nonce); err != nil {
+		return err
+	}
+	if b.Challenge.ExpiresAt <= b.Challenge.IssuedAt || b.Challenge.ExpiresAt-b.Challenge.IssuedAt > 300 {
+		return NewError(ErrCodeRecoveryProofInvalid, "recovery challenge TTL must be in (0, 300] seconds")
+	}
+	if b.Challenge.ExpectedRevision == 0 || b.Challenge.ExpectedKeyVersion == 0 ||
+		b.Challenge.NewAppKeyVersion != b.Challenge.ExpectedKeyVersion+1 ||
+		!strings.HasPrefix(b.Challenge.NewAppKeyID, b.Challenge.SubjectID+"#") {
+		return NewError(ErrCodeRecoveryProofInvalid, "invalid expectedRevision, expectedKeyVersion, or newAppKeyId")
+	}
+	if !IsHexDigest(b.Challenge.AccountCommitment, false) || !IsHexDigest(b.Challenge.DIDDocumentDigest, false) {
+		return NewError(ErrCodeRecoveryProofInvalid, "invalid hex digest in recovery challenge")
+	}
+	if !IsHexDigest(b.Challenge.OldManagementIdentity.CertificateSha256, false) || b.Challenge.OldManagementIdentity.MSPID == "" ||
+		!IsHexDigest(b.Challenge.NewManagementIdentity.CertificateSha256, false) || b.Challenge.NewManagementIdentity.MSPID == "" ||
+		b.Challenge.NewManagementIdentity == b.Challenge.OldManagementIdentity {
+		return NewError(ErrCodeRecoveryProofInvalid, "invalid old/new managementIdentity in recovery challenge")
+	}
+	appPub, _, err := ParseAppPublicKey(b.Challenge.NewAppPublicKey)
+	if err != nil {
+		return WrapError(ErrCodeRecoveryProofInvalid, "invalid newAppPublicKey", err)
+	}
+
+	chalJCS, err := MarshalJCS(b.Challenge)
+	if err != nil {
+		return err
+	}
+	chalSum := sha256.Sum256(chalJCS)
+	chalHex := hex.EncodeToString(chalSum[:])
+	if b.ChallengeSha256 != chalHex {
+		return NewError(ErrCodeChallengeMismatch, fmt.Sprintf("recovery challengeSha256 mismatch: computed %s, got %s", chalHex, b.ChallengeSha256))
+	}
+
+	certDER, err := base64.RawURLEncoding.DecodeString(b.NewManagementCertificateDER)
+	if err != nil {
+		return WrapError(ErrCodeRecoveryProofInvalid, "decode newManagementCertificateDer", err)
+	}
+	if DigestBytes(certDER) != b.Challenge.NewManagementIdentity.CertificateSha256 {
+		return NewError(ErrCodeBindingMismatch, "new management certificate SHA-256 fingerprint mismatch")
+	}
+	cert, err := x509.ParseCertificate(certDER)
+	if err != nil {
+		return WrapError(ErrCodeRecoveryProofInvalid, "parse new management certificate", err)
+	}
+	mgmtPub, ok := cert.PublicKey.(*ecdsa.PublicKey)
+	if !ok || mgmtPub.Curve != elliptic.P256() {
+		return NewError(ErrCodeRecoveryProofInvalid, "new management certificate must carry P-256 ECDSA key")
+	}
+	mgmtSigDER, err := base64.RawURLEncoding.DecodeString(b.NewManagementSignatureDER)
+	if err != nil {
+		return WrapError(ErrCodeRecoveryProofInvalid, "decode newManagementSignatureDer", err)
+	}
+	if !ecdsa.VerifyASN1(mgmtPub, chalSum[:], mgmtSigDER) {
+		return NewError(ErrCodeRecoveryProofInvalid, "new management ASN.1 DER signature verification failed")
+	}
+
+	if err := VerifyDetachedJWSES256(b.NewAppJWSProtected, chalJCS, b.NewAppJWSSignature, appPub, ManagementProofTyp, b.Challenge.NewAppKeyID); err != nil {
+		return WrapError(ErrCodeRecoveryProofInvalid, "verify new application key JWS proof", err)
 	}
 	return nil
 }

@@ -171,6 +171,10 @@ func verify(ctx context.Context, dir, out string) (report *verification, err err
 		{"m2-agent-mcp-rp-and-bm-orders", a.m2AgentMCPRPAndBMOrders},
 		{"m2-revocation-and-postlock-order-guards", a.m2RevocationAndPostLockOrderGuards},
 		{"m2-dual-gateway-concurrent-idempotency", a.m2DualGatewayConcurrentIdempotency},
+		{"m3-authority-identity-and-lifecycle", a.m3AuthorityIdentityAndLifecycle},
+		{"m3-agent-b2-replacement-and-reconcile", a.m3AgentB2ReplacementAndReconcile},
+		{"m3-revocation-window-e6", a.m3RevocationWindowE6},
+		{"m3-fault-injection-e7", a.m3FaultInjectionE7},
 	}
 	for _, test := range cases {
 		log.event("case_start", test.name)

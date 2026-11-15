@@ -1,0 +1,7 @@
+=== RUN   TestM3LiveAcceptance
+=== RUN   TestM3LiveAcceptance/management
+    verify_m3_test.go:56: evidence: /Users/yjydist/Desktop/graduation-design/.local/fabric-m3-fix-final/m3-regression/run-29052300a930995d
+--- PASS: TestM3LiveAcceptance (1.48s)
+    --- PASS: TestM3LiveAcceptance/management (1.47s)
+PASS
+ok  	graduation-design/internal/fabric	1.851s

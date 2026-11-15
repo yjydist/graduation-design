@@ -1,15 +1,20 @@
 package fabric
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	api "graduation-design/internal/fabricapi"
+	"graduation-design/internal/protocol"
+	"graduation-design/internal/serviceauth"
 
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	gw "github.com/hyperledger/fabric-protos-go-apiv2/gateway"
@@ -47,6 +52,8 @@ CREATE TABLE IF NOT EXISTS operations (
     updated_at timestamptz NOT NULL DEFAULT NOW(),
     PRIMARY KEY (deployment_id, operation_key)
 );
+ALTER TABLE operations ADD COLUMN IF NOT EXISTS request_json BYTEA;
+ALTER TABLE operations ADD COLUMN IF NOT EXISTS delivered BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE TABLE IF NOT EXISTS registration_challenges (
     challenge_id text PRIMARY KEY,
     deployment_id text NOT NULL,
@@ -56,6 +63,29 @@ CREATE TABLE IF NOT EXISTS registration_challenges (
     domain_id text NOT NULL,
     subject_id text NOT NULL,
     app_key_id text NOT NULL,
+    nonce text NOT NULL UNIQUE,
+    challenge_json jsonb NOT NULL,
+    issued_at bigint NOT NULL,
+    expires_at bigint NOT NULL,
+    consumed boolean NOT NULL DEFAULT FALSE,
+    consumed_by_operation_id text,
+    consumed_at bigint
+);
+CREATE TABLE IF NOT EXISTS recovery_challenges (
+    challenge_id text PRIMARY KEY,
+    deployment_id text NOT NULL,
+    challenge_sha256 text NOT NULL,
+    domain_id text NOT NULL,
+    subject_id text NOT NULL,
+    account_commitment text NOT NULL,
+    old_msp_id text NOT NULL,
+    old_certificate_sha256 text NOT NULL,
+    new_msp_id text NOT NULL,
+    new_certificate_sha256 text NOT NULL,
+    expected_revision bigint NOT NULL,
+    expected_key_version bigint NOT NULL,
+    new_app_key_id text NOT NULL,
+    new_app_key_version bigint NOT NULL,
     nonce text NOT NULL UNIQUE,
     challenge_json jsonb NOT NULL,
     issued_at bigint NOT NULL,
@@ -373,6 +403,8 @@ func endorsementFailure(err error) string {
 			for _, c := range []string{
 				"UNAUTHORIZED", "INVALID_STRUCTURE", "MISSING_DEPENDENCY", "STATE_CHANGED", "INVALID_STATE", "ID_ALREADY_USED",
 				"PURCHASING_AUTHORITY_INVALID", "LINK_PROOF_INVALID", "LINK_APPROVAL_FORBIDDEN", "LINK_PROPOSAL_MISMATCH", "LINK_STATE_CONFLICT",
+				"TRUST_MANAGEMENT_FORBIDDEN", "IDENTITY_MANAGEMENT_FORBIDDEN", "IDENTITY_RECOVERY_FORBIDDEN", "IDENTITY_STATE_CONFLICT",
+				"RECOVERY_PROOF_INVALID", "TASK_STATE_CONFLICT", "GRANT_STATE_CONFLICT", "ALREADY_REVOKED",
 			} {
 				if strings.HasSuffix(d.Message, "D0:"+c) && strings.Contains(d.Message, "chaincode response") {
 					if reason != "" && reason != c {
@@ -562,4 +594,365 @@ func (op *operation) confirm(commit *outcome) {
 		code := "COMMIT_INVALID"
 		op.Status, op.FailureCode = "FAILED", &code
 	}
+}
+
+// OperationView represents the HTTP JSON view returned by POST management operations and GET /v1/operations/{id}.
+type OperationView struct {
+	OperationID    string  `json:"operationId"`
+	OperationKey   string  `json:"operationKey"`
+	Method         string  `json:"method"`
+	TxID           string  `json:"txId"`
+	Stage          string  `json:"stage"`
+	Status         string  `json:"status"`
+	ErrorCode      *string `json:"errorCode"`
+	ValidationCode *string `json:"validationCode"`
+	BlockNumber    int64   `json:"blockNumber"`
+	BlockHash      string  `json:"blockHash,omitempty"`
+	Delivered      bool    `json:"delivered"`
+}
+
+// OperationSubmitBackend executes endorse/broadcast/commit recovery steps on behalf of ManagementOperationService.
+type OperationSubmitBackend interface {
+	CurrentRevision(ctx context.Context, method string, input json.RawMessage) (uint64, bool, error)
+	SubmitAsync(ctx context.Context, opKey, opID string, caller api.Management, method string, input json.RawMessage, onUpdate func(stage, status string, txID string, blockNo int64, blockHash string, valCode, failCode *string, delivered bool) error)
+}
+
+// ManagementOperationService provides synchronous pre-acceptance version checks, idempotent 202 acceptance,
+// GET /v1/operations/{id} status projection, and DUPLICATE_TXID-safe commit outcome recording.
+type ManagementOperationService struct {
+	db           *pgxpool.Pool
+	deploymentID string
+	rootMgmt     api.Management
+	backend      OperationSubmitBackend
+
+	mu                    sync.RWMutex
+	suppressVisibilityIDs map[string]bool
+	deliveredOps          map[string]bool
+	running               map[string]bool
+}
+
+// NewManagementOperationService creates a ManagementOperationService bound to db and deploymentID.
+func NewManagementOperationService(db *pgxpool.Pool, deploymentID string, rootMgmt api.Management, backend OperationSubmitBackend) *ManagementOperationService {
+	return &ManagementOperationService{
+		db:                    db,
+		deploymentID:          deploymentID,
+		rootMgmt:              rootMgmt,
+		backend:               backend,
+		suppressVisibilityIDs: make(map[string]bool),
+		deliveredOps:          make(map[string]bool),
+		running:               make(map[string]bool),
+	}
+}
+
+// SetVisibilitySuppressed temporarily hides final commit status for opID so GET /v1/operations/{id} reports PENDING (S101).
+func (s *ManagementOperationService) SetVisibilitySuppressed(opID string, hidden bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if hidden {
+		s.suppressVisibilityIDs[opID] = true
+	} else {
+		delete(s.suppressVisibilityIDs, opID)
+	}
+}
+
+// MarkDelivered records whether post-confirmation material delivery executed (must remain false on FAILED ops).
+func (s *ManagementOperationService) MarkDelivered(opID string, delivered bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.deliveredOps[opID] = delivered
+}
+
+// IsDelivered reports whether post-confirmation material delivery ran for opID.
+func (s *ManagementOperationService) IsDelivered(opID string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.deliveredOps[opID]
+}
+
+// Accept submits a management operation with pre-acceptance expectedRevision check and idempotency deduplication.
+// Returns HTTP status (202 on accept/exact retry, 403/409 on rejection), view (when 202), and error (when rejected).
+func (s *ManagementOperationService) Accept(
+	ctx context.Context,
+	opKey string,
+	caller api.Management,
+	method string,
+	input json.RawMessage,
+	triggerBackend bool,
+) (int, *OperationView, error) {
+	if s == nil || s.db == nil {
+		return http.StatusServiceUnavailable, nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "operation store unavailable")
+	}
+	if opKey == "" || method == "" {
+		return http.StatusBadRequest, nil, protocol.NewError(protocol.ErrCodeInvalidSchema, "operationKey and method required")
+	}
+	// Trust management endpoints are restricted to T (boot.Root.Management) at the HTTP boundary (S85).
+	if (method == "CertifyDomain" || method == "RevokeCertification" || method == "SetDomainStatus" || method == "UpdateAuthorityIdentity") &&
+		s.rootMgmt.Valid() && caller != s.rootMgmt {
+		return http.StatusForbidden, nil, protocol.NewError(protocol.ErrCodeTrustManagementForbidden, fmt.Sprintf("caller %s not permitted for %s", caller, method))
+	}
+
+	var compactBuf bytes.Buffer
+	if err := json.Compact(&compactBuf, input); err != nil {
+		return http.StatusBadRequest, nil, protocol.WrapError(protocol.ErrCodeInvalidSchema, "invalid JSON payload", err)
+	}
+	canonInput := compactBuf.Bytes()
+	mat, err := json.Marshal([]string{s.deploymentID, caller.String(), api.Channel, api.Registry, method, string(canonInput)})
+	if err != nil {
+		return http.StatusBadRequest, nil, err
+	}
+	payloadHash := api.Digest(mat)
+
+	// 1. Check idempotency record first so exact retries still return 202 with original operationId even after completion/failure.
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		return http.StatusServiceUnavailable, nil, err
+	}
+	defer tx.Rollback(context.Background())
+
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, s.deploymentID+":"+opKey); err != nil {
+		return http.StatusServiceUnavailable, nil, err
+	}
+	var existing OperationView
+	var existingPayloadHash string
+	var existingBlockNo int64
+	err = tx.QueryRow(ctx, `SELECT operation_id, method, tx_id, stage, status, validation_code, failure_code, block_no, block_hash, payload_hash
+		FROM operations WHERE deployment_id=$1 AND operation_key=$2 FOR UPDATE`,
+		s.deploymentID, opKey).
+		Scan(&existing.OperationID, &existing.Method, &existing.TxID, &existing.Stage, &existing.Status,
+			&existing.ValidationCode, &existing.ErrorCode, &existingBlockNo, &existing.BlockHash, &existingPayloadHash)
+	if err == nil {
+		if existingPayloadHash != payloadHash {
+			return http.StatusConflict, nil, protocol.NewError(protocol.ErrCodeIdempotencyConflict, fmt.Sprintf("operationKey %q reused with different payload", opKey))
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return http.StatusServiceUnavailable, nil, err
+		}
+		existing.OperationKey = opKey
+		existing.BlockNumber = existingBlockNo
+		if existing.Status != "FAILED" {
+			existing.ErrorCode = nil
+		}
+		existing.Delivered = s.IsDelivered(existing.OperationID)
+		if triggerBackend && existing.Status == "PENDING" && s.backend != nil {
+			s.dispatch(opKey, existing.OperationID, caller, method, canonInput)
+		}
+		return http.StatusAccepted, &existing, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return http.StatusServiceUnavailable, nil, err
+	}
+
+	// 2. Pre-acceptance expectedRevision check BEFORE inserting operations row or creating proposal (S100).
+	if s.backend != nil {
+		var revCheck struct {
+			ExpectedRevision *uint64 `json:"expectedRevision"`
+		}
+		_ = json.Unmarshal(canonInput, &revCheck)
+		if revCheck.ExpectedRevision != nil && *revCheck.ExpectedRevision > 0 {
+			curRev, found, rErr := s.backend.CurrentRevision(ctx, method, canonInput)
+			if rErr != nil {
+				return http.StatusServiceUnavailable, nil, rErr
+			}
+			if found && curRev != *revCheck.ExpectedRevision {
+				return http.StatusConflict, nil, protocol.NewError(protocol.ErrCodeStateChanged,
+					fmt.Sprintf("pre-acceptance revision conflict: expected %d, current %d", *revCheck.ExpectedRevision, curRev))
+			}
+		}
+	}
+
+	opID := s.deploymentID + ":" + opKey
+	txID := "pending:" + api.Digest([]byte(opID))[:24]
+	if _, err := tx.Exec(ctx, `INSERT INTO operations(
+		deployment_id, operation_key, operation_id, caller_msp_id, caller_fingerprint,
+		method, tx_id, block_no, block_hash, stage, status, validation_code, failure_code, payload_hash, request_json, updated_at
+	) VALUES($1,$2,$3,$4,$5,$6,$7,0,'','ACCEPT','PENDING',NULL,NULL,$8,$9,NOW())`,
+		s.deploymentID, opKey, opID, caller.MSPID, caller.Fingerprint, method, txID, payloadHash, canonInput); err != nil {
+		return http.StatusServiceUnavailable, nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return http.StatusServiceUnavailable, nil, err
+	}
+
+	if triggerBackend && s.backend != nil {
+		s.dispatch(opKey, opID, caller, method, canonInput)
+	}
+
+	return http.StatusAccepted, &OperationView{
+		OperationID:  opID,
+		OperationKey: opKey,
+		Method:       method,
+		TxID:         txID,
+		Stage:        "ACCEPT",
+		Status:       "PENDING",
+	}, nil
+}
+
+// RecordOutcome updates an operation row monotonically while protecting terminal VALID/CONFIRMED
+// outcomes against late DUPLICATE_TXID overwrites (S101).
+func (s *ManagementOperationService) RecordOutcome(
+	ctx context.Context,
+	opID, stage, statusStr, txID string,
+	blockNo int64,
+	blockHash string,
+	valCode, failCode *string,
+	delivered bool,
+) error {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+
+	var curStatus string
+	var curVal *string
+	err = tx.QueryRow(ctx, `SELECT status, validation_code FROM operations WHERE deployment_id=$1 AND operation_id=$2 FOR UPDATE`,
+		s.deploymentID, opID).Scan(&curStatus, &curVal)
+	if err != nil {
+		return err
+	}
+	// DUPLICATE_TXID must never overwrite an existing terminal outcome (or revert VALID -> INVALID) (S101).
+	if (curStatus == "CONFIRMED" || curStatus == "FAILED") && valCode != nil && *valCode == "DUPLICATE_TXID" {
+		return tx.Commit(ctx)
+	}
+	if (curStatus == "FAILED" && statusStr == "PENDING") || (curStatus == "CONFIRMED" && statusStr != "CONFIRMED") {
+		return tx.Commit(ctx)
+	}
+	// Normalize failureCode per S100/S101 when failureCode not explicitly set.
+	if statusStr == "FAILED" && failCode == nil {
+		mapped := "COMMIT_INVALID"
+		if valCode != nil && *valCode == "MVCC_READ_CONFLICT" {
+			mapped = "STATE_CHANGED"
+		} else if stage == "ENDORSE" {
+			mapped = "ENDORSEMENT_REJECTED"
+		}
+		failCode = &mapped
+	}
+	if _, err := tx.Exec(ctx, `UPDATE operations SET
+		stage=$3, status=$4, tx_id=CASE WHEN $5<>'' THEN $5 ELSE tx_id END,
+		block_no=$6, block_hash=$7, validation_code=$8, failure_code=$9, delivered=delivered OR $10, updated_at=NOW()
+		WHERE deployment_id=$1 AND operation_id=$2`,
+		s.deploymentID, opID, stage, statusStr, txID, blockNo, blockHash, valCode, failCode, statusStr == "CONFIRMED" && delivered); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	if statusStr == "CONFIRMED" && delivered {
+		s.MarkDelivered(opID, true)
+	}
+	return nil
+}
+
+// GetOperation returns HTTP 200 status for opID, masking terminal fields as PENDING/null while visibility is hidden (S101).
+func (s *ManagementOperationService) GetOperation(ctx context.Context, opID string) (*OperationView, error) {
+	if s == nil || s.db == nil {
+		return nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "operation store unavailable")
+	}
+	var out OperationView
+	err := s.db.QueryRow(ctx, `SELECT operation_id, operation_key, method, tx_id, stage, status, validation_code, failure_code, block_no, block_hash, delivered
+		FROM operations WHERE deployment_id=$1 AND operation_id=$2`,
+		s.deploymentID, opID).
+		Scan(&out.OperationID, &out.OperationKey, &out.Method, &out.TxID, &out.Stage, &out.Status,
+			&out.ValidationCode, &out.ErrorCode, &out.BlockNumber, &out.BlockHash, &out.Delivered)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, protocol.NewError(protocol.ErrCodeChallengeUnknown, fmt.Sprintf("unknown operationId %q", opID))
+	}
+	if err != nil {
+		return nil, err
+	}
+	s.mu.RLock()
+	hidden := s.suppressVisibilityIDs[opID]
+	s.mu.RUnlock()
+	if hidden {
+		out.Status = "PENDING"
+		out.Stage = "SUBMIT"
+		out.ErrorCode = nil
+		out.ValidationCode = nil
+		out.BlockNumber = 0
+		out.BlockHash = ""
+		out.Delivered = false
+		return &out, nil
+	}
+	if out.Status != "FAILED" {
+		out.ErrorCode = nil
+	}
+	out.Delivered = out.Delivered || s.IsDelivered(opID)
+	return &out, nil
+}
+
+// Handler exposes POST /v1/management/{method} (202/403/409) and GET /v1/operations/{operationId} (200/404).
+func (s *ManagementOperationService) Handler() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/operations/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		opID := strings.TrimPrefix(r.URL.Path, "/v1/operations/")
+		if opID == "" {
+			http.Error(w, "missing operationId", http.StatusBadRequest)
+			return
+		}
+		view, err := s.GetOperation(r.Context(), opID)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_ = json.NewEncoder(w).Encode(map[string]any{"errorCode": "OPERATION_UNKNOWN", "message": err.Error()})
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(view)
+	})
+	mux.HandleFunc("/v1/management/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		method := strings.TrimPrefix(r.URL.Path, "/v1/management/")
+		opKey := r.Header.Get("Idempotency-Key")
+		id, authenticated := serviceauth.Caller(r)
+		caller := api.Management{MSPID: id.MSPID, Fingerprint: id.Fingerprint}
+		if resolver, ok := s.backend.(interface {
+			ManagementForFingerprint(string) (api.Management, bool)
+		}); ok {
+			caller, authenticated = resolver.ManagementForFingerprint(id.Fingerprint)
+			authenticated = authenticated && id.Fingerprint != "" && (r.TLS != nil || id.Role != "")
+		}
+		if !authenticated || !caller.Valid() {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string]string{"errorCode": "IDENTITY_MANAGEMENT_FORBIDDEN"})
+			return
+		}
+		if s.backend == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+
+		var raw json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]any{"errorCode": protocol.ErrCodeInvalidSchema, "message": err.Error()})
+			return
+		}
+		code, view, err := s.Accept(r.Context(), opKey, caller, method, raw, true)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(code)
+		if err != nil {
+			errCode := protocol.ErrCodeInvalidSchema
+			var pe *protocol.Error
+			if errors.As(err, &pe) && pe.Code != "" {
+				errCode = pe.Code
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"errorCode": errCode, "message": err.Error()})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(view)
+	})
+	return mux
 }

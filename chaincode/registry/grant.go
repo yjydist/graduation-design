@@ -40,6 +40,35 @@ func (tx transaction) registerTask(t api.Task) error {
 	return tx.put(key, t)
 }
 
+func (tx transaction) cancelTask(m api.Mutation) error {
+	if !tx.bound(m.Bound) || !api.IsDigest(m.ID) || m.ExpectedRevision == 0 {
+		return reject(badInput)
+	}
+	key := api.Key("task", m.ID)
+	t, err := get[api.Task](tx.stub, key)
+	if err != nil {
+		return err
+	}
+	creator, err := get[api.Identity](tx.stub, api.Key("identity", t.Creator))
+	if err != nil {
+		return err
+	}
+	isCreator := tx.match(creator.Management, binding{Domain: creator.Domain, Subject: creator.ID, Role: creator.Kind}) == nil
+	isResource := tx.caller == tx.boot.ResourceManagement
+	if !isCreator && !isResource {
+		return reject(denied)
+	}
+	if t.Status != api.Active {
+		return reject(taskStateConflict)
+	}
+	if t.Revision != m.ExpectedRevision || (m.ExpectedDigest != "" && t.Digest != m.ExpectedDigest) {
+		return reject(stale)
+	}
+	t.Status = api.Cancelled
+	t.Revision++
+	return tx.put(key, t)
+}
+
 func (tx transaction) registerGrant(g api.Grant) error {
 	if err := tx.checkGrant(g); err != nil {
 		return err
@@ -197,6 +226,65 @@ func (tx transaction) revoke(m api.Mutation) error {
 	if err != nil {
 		return err
 	}
+	return tx.put(api.Key("grant", g.ID), g)
+}
+
+func (tx transaction) grantByIssuer(m api.Mutation) (api.Grant, api.Identity, error) {
+	if !tx.bound(m.Bound) || !api.IsDigest(m.ID) || m.ExpectedRevision == 0 {
+		return api.Grant{}, api.Identity{}, reject(badInput)
+	}
+	g, err := get[api.Grant](tx.stub, api.Key("grant", m.ID))
+	if err != nil {
+		return g, api.Identity{}, err
+	}
+	iss, err := get[api.Identity](tx.stub, api.Key("identity", g.Issuer))
+	if err != nil {
+		return g, api.Identity{}, err
+	}
+	if err := tx.match(iss.Management, binding{Domain: iss.Domain, Subject: iss.ID, Role: iss.Kind}); err != nil {
+		return g, iss, err
+	}
+	if g.Revision != m.ExpectedRevision || (m.ExpectedDigest != "" && g.Digest != m.ExpectedDigest) {
+		return g, iss, reject(stale)
+	}
+	return g, iss, nil
+}
+
+func (tx transaction) suspendGrant(m api.Mutation) error {
+	g, _, err := tx.grantByIssuer(m)
+	if err != nil {
+		return err
+	}
+	if g.Status == api.Revoked {
+		return reject(alreadyRevoked)
+	}
+	if g.Status != api.Active {
+		return reject(grantStateConflict)
+	}
+	g.Status = api.Suspended
+	g.Revision++
+	return tx.put(api.Key("grant", g.ID), g)
+}
+
+func (tx transaction) resumeGrant(m api.Mutation) error {
+	g, iss, err := tx.grantByIssuer(m)
+	if err != nil {
+		return err
+	}
+	if g.Status == api.Revoked {
+		return reject(alreadyRevoked)
+	}
+	if g.Status != api.Suspended {
+		return reject(grantStateConflict)
+	}
+	if _, _, err := tx.activeDomain(iss.Domain); err != nil {
+		return err
+	}
+	if iss.Status != api.Active || !tx.current(g.Interval) {
+		return reject(invalid)
+	}
+	g.Status = api.Active
+	g.Revision++
 	return tx.put(api.Key("grant", g.ID), g)
 }
 

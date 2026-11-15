@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"slices"
 	"strings"
 
@@ -104,7 +105,17 @@ func (tx transaction) certify(input api.Certify) error {
 	if d.Revision != input.ExpectedRevision || d.Certification != input.ExpectedCertification {
 		return reject(stale)
 	}
-	if d.Status != api.Pending || d.Certification != "" {
+	switch d.Status {
+	case api.Pending:
+		if d.Certification != "" {
+			return reject(invalid)
+		}
+		d.Status = api.Active
+	case api.Active, api.Suspended:
+		if d.Certification == "" {
+			return reject(invalid)
+		}
+	default:
 		return reject(invalid)
 	}
 	if len(c.Scopes) != len(d.Issuers) {
@@ -125,12 +136,89 @@ func (tx transaction) certify(input api.Certify) error {
 		return err
 	}
 	c.Version = api.Version{Status: api.Active, Revision: 1}
-	d.Status, d.Certification = api.Active, c.ID
+	d.Certification = c.ID
 	d.Revision++
 	if err := tx.put(key, c); err != nil {
 		return err
 	}
 	return tx.put(domainKey, d)
+}
+
+func (tx transaction) revokeCertification(m api.Mutation) error {
+	if tx.caller != tx.boot.Root.Management {
+		return reject(trustMgmtForbidden)
+	}
+	if !tx.bound(m.Bound) || m.ID == "" || m.ExpectedRevision == 0 {
+		return reject(badInput)
+	}
+	key := api.Key("certification", m.ID)
+	c, err := get[api.Certification](tx.stub, key)
+	if err != nil {
+		return err
+	}
+	if c.Status == api.Revoked {
+		return reject(alreadyRevoked)
+	}
+	if c.Revision != m.ExpectedRevision || (m.ExpectedDigest != "" && c.Digest != m.ExpectedDigest) {
+		return reject(stale)
+	}
+	c.Status = api.Revoked
+	c.Revision++
+	return tx.put(key, c)
+}
+
+func (tx transaction) updateAuthorityIdentity(in api.AuthorityIdentityUpdateInput) error {
+	if tx.caller != tx.boot.Root.Management {
+		return reject(trustMgmtForbidden)
+	}
+	if !tx.bound(in.Bound) || in.ID == "" || in.ExpectedRevision == 0 || in.ExpectedKeyVersion == 0 {
+		return reject(badInput)
+	}
+	key := api.Key("identity", in.ID)
+	i, err := get[api.Identity](tx.stub, key)
+	if err != nil {
+		return err
+	}
+	if i.Kind != "DOMAIN" && i.Kind != "ISSUER" {
+		return reject(identityMgmtForbidden)
+	}
+	if i.Status == api.Revoked {
+		return reject(identityStateConflict)
+	}
+	if i.Revision != in.ExpectedRevision || i.KeyVersion != in.ExpectedKeyVersion {
+		return reject(stale)
+	}
+	if !in.Management.Valid() || in.Management.MSPID != i.Domain+"Msp" ||
+		!api.IsDigest(in.DocumentDigest) || !api.ValidAppKey(i.ID, in.KeyID, in.PublicKey, i.KeyVersion+1) {
+		return reject(badInput)
+	}
+	if in.Management != i.Management {
+		if err := tx.bind(in.Management, binding{Domain: i.Domain, Subject: i.ID, Role: i.Kind}); err != nil {
+			return err
+		}
+		if err := tx.stub.DelState(api.Key("binding", i.Management.String())); err != nil {
+			return err
+		}
+		if i.Kind == "DOMAIN" {
+			dKey := api.Key("domain", i.Domain)
+			d, err := get[api.Domain](tx.stub, dKey)
+			if err != nil {
+				return err
+			}
+			d.Admin = in.Management
+			d.Revision++
+			if err := tx.put(dKey, d); err != nil {
+				return err
+			}
+		}
+	}
+	i.Management = in.Management
+	i.DocumentDigest = in.DocumentDigest
+	i.KeyID = in.KeyID
+	i.PublicKey = in.PublicKey
+	i.KeyVersion++
+	i.Revision++
+	return tx.put(key, i)
 }
 
 func validSet(s []string) bool {
@@ -381,13 +469,158 @@ func (tx transaction) storeIdentity(i api.Identity) error {
 		return reject(badInput)
 	}
 	key := api.Key("identity", i.ID)
-	if err := tx.vacant(key); err != nil {
+	raw, err := tx.stub.GetState(key)
+	if err != nil {
 		return err
+	}
+	if raw != nil {
+		var prev api.Identity
+		if err := json.Unmarshal(raw, &prev); err == nil && prev.Status == api.Revoked {
+			return reject(identityStateConflict)
+		}
+		return reject(used)
 	}
 	if err := tx.bind(i.Management, binding{Domain: i.Domain, Subject: i.ID, Role: i.Kind}); err != nil {
 		return err
 	}
 	i.Version = api.Version{Status: api.Active, Revision: 1}
+	return tx.put(key, i)
+}
+
+func (tx transaction) setIdentityStatus(in api.IdentityStatusInput) error {
+	if !tx.bound(in.Bound) || in.ID == "" || in.ExpectedRevision == 0 ||
+		(in.Status != api.Active && in.Status != api.Suspended && in.Status != api.Revoked) {
+		return reject(badInput)
+	}
+	key := api.Key("identity", in.ID)
+	i, err := get[api.Identity](tx.stub, key)
+	if err != nil {
+		return err
+	}
+	switch i.Kind {
+	case "DOMAIN", "ISSUER":
+		if tx.caller != tx.boot.Root.Management {
+			return reject(identityMgmtForbidden)
+		}
+	case "USER", "AGENT", "SERVICE":
+		if tx.caller == tx.boot.Root.Management {
+			return reject(identityMgmtForbidden)
+		}
+		d, err := get[api.Domain](tx.stub, api.Key("domain", i.Domain))
+		if err != nil {
+			return err
+		}
+		isSelf := tx.match(i.Management, binding{Domain: i.Domain, Subject: i.ID, Role: i.Kind}) == nil
+		isRegistrar := tx.match(d.Registrar, binding{Domain: d.ID, Role: "REGISTRAR"}) == nil
+		if in.Status == api.Active {
+			if !isRegistrar {
+				return reject(identityMgmtForbidden)
+			}
+		} else {
+			if !isSelf && !isRegistrar {
+				return reject(identityMgmtForbidden)
+			}
+		}
+	default:
+		return reject(badInput)
+	}
+	if i.Status == api.Revoked || i.Status == in.Status {
+		return reject(identityStateConflict)
+	}
+	if i.Revision != in.ExpectedRevision {
+		return reject(stale)
+	}
+	if in.Status == api.Active && (i.Kind == "USER" || i.Kind == "AGENT" || i.Kind == "SERVICE") {
+		if _, _, err := tx.activeDomain(i.Domain); err != nil {
+			return err
+		}
+	}
+	i.Status = in.Status
+	i.Revision++
+	return tx.put(key, i)
+}
+
+func (tx transaction) rotateIdentity(in api.RotateIdentityInput) error {
+	if !tx.bound(in.Bound) || in.ID == "" || in.ExpectedRevision == 0 || in.ExpectedKeyVersion == 0 {
+		return reject(badInput)
+	}
+	key := api.Key("identity", in.ID)
+	i, err := get[api.Identity](tx.stub, key)
+	if err != nil {
+		return err
+	}
+	if i.Kind != "USER" && i.Kind != "AGENT" && i.Kind != "SERVICE" {
+		return reject(identityMgmtForbidden)
+	}
+	if err := tx.match(i.Management, binding{Domain: i.Domain, Subject: i.ID, Role: i.Kind}); err != nil {
+		return reject(identityMgmtForbidden)
+	}
+	if i.Status != api.Active {
+		return reject(identityStateConflict)
+	}
+	if _, _, err := tx.activeDomain(i.Domain); err != nil {
+		return err
+	}
+	if i.Revision != in.ExpectedRevision || i.KeyVersion != in.ExpectedKeyVersion {
+		return reject(stale)
+	}
+	if !api.IsDigest(in.DocumentDigest) || !api.ValidAppKey(i.ID, in.KeyID, in.PublicKey, i.KeyVersion+1) {
+		return reject(badInput)
+	}
+	i.DocumentDigest = in.DocumentDigest
+	i.KeyID = in.KeyID
+	i.PublicKey = in.PublicKey
+	i.KeyVersion++
+	i.Revision++
+	return tx.put(key, i)
+}
+
+func (tx transaction) recoverIdentity(in api.RecoverIdentityInput) error {
+	if !tx.bound(in.Bound) || in.ID == "" || in.ExpectedRevision == 0 || in.ExpectedKeyVersion == 0 {
+		return reject(badInput)
+	}
+	key := api.Key("identity", in.ID)
+	i, err := get[api.Identity](tx.stub, key)
+	if err != nil {
+		return err
+	}
+	if i.Kind != "USER" && i.Kind != "AGENT" && i.Kind != "SERVICE" {
+		return reject(identityRecoveryForbidden)
+	}
+	d, err := get[api.Domain](tx.stub, api.Key("domain", i.Domain))
+	if err != nil {
+		return err
+	}
+	if err := tx.match(d.Registrar, binding{Domain: d.ID, Role: "REGISTRAR"}); err != nil {
+		return reject(identityRecoveryForbidden)
+	}
+	if _, _, err := tx.activeDomain(i.Domain); err != nil {
+		return err
+	}
+	if i.Status != api.Active && i.Status != api.Suspended {
+		return reject(identityStateConflict)
+	}
+	if i.Revision != in.ExpectedRevision || i.KeyVersion != in.ExpectedKeyVersion {
+		return reject(stale)
+	}
+	if in.AccountCommitment != i.AccountCommitment || in.OldManagement != i.Management ||
+		!in.NewManagement.Valid() || in.NewManagement.MSPID != i.Domain+"Msp" ||
+		in.NewManagement == in.OldManagement || !api.IsDigest(in.DocumentDigest) ||
+		!api.ValidAppKey(i.ID, in.KeyID, in.PublicKey, i.KeyVersion+1) {
+		return reject(recoveryProofInvalid)
+	}
+	if err := tx.bind(in.NewManagement, binding{Domain: i.Domain, Subject: i.ID, Role: i.Kind}); err != nil {
+		return err
+	}
+	if err := tx.stub.DelState(api.Key("binding", i.Management.String())); err != nil {
+		return err
+	}
+	i.Management = in.NewManagement
+	i.DocumentDigest = in.DocumentDigest
+	i.KeyID = in.KeyID
+	i.PublicKey = in.PublicKey
+	i.KeyVersion++
+	i.Revision++
 	return tx.put(key, i)
 }
 
@@ -476,6 +709,33 @@ func (tx transaction) registerCredential(c api.Credential) error {
 		return err
 	}
 	c.Version = api.Version{Status: api.Active, Revision: 1}
+	return tx.put(key, c)
+}
+
+func (tx transaction) revokeCredential(m api.Mutation) error {
+	if !tx.bound(m.Bound) || m.ID == "" || m.ExpectedRevision == 0 {
+		return reject(badInput)
+	}
+	key := api.Key("credential", m.ID)
+	c, err := get[api.Credential](tx.stub, key)
+	if err != nil {
+		return err
+	}
+	iss, err := get[api.Identity](tx.stub, api.Key("identity", c.Issuer))
+	if err != nil {
+		return err
+	}
+	if err := tx.match(iss.Management, binding{Domain: iss.Domain, Subject: iss.ID, Role: "ISSUER"}); err != nil {
+		return err
+	}
+	if c.Status == api.Revoked {
+		return reject(alreadyRevoked)
+	}
+	if c.Revision != m.ExpectedRevision || (m.ExpectedDigest != "" && c.Digest != m.ExpectedDigest) {
+		return reject(stale)
+	}
+	c.Status = api.Revoked
+	c.Revision++
 	return tx.put(key, c)
 }
 

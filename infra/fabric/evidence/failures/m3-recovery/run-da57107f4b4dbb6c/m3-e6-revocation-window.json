@@ -1,0 +1,286 @@
+{
+  "allowCount": 12,
+  "deltaStateMs": 5000,
+  "denyCount": 21,
+  "probeIntervalMs": 20,
+  "revocationBlockR": 149,
+  "revocationTxId": "d92ed67224d8fa12f9123fd3fd19fc184dffdf4faa8fe610c8bda0d8b482914d",
+  "revokedGrantId": "192d75c0be2c1fcfb215a094a43cb63a4836baf320ad320ff48fc649abd552c7",
+  "samples": [
+    {
+      "seq": 1,
+      "submittedAtUnixMs": 1794728048977,
+      "respondedAtUnixMs": 1794728048992,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 147,
+      "decisionAtUnixSec": 1794728048,
+      "probeDeadlineUnixSec": 1794728053
+    },
+    {
+      "seq": 2,
+      "submittedAtUnixMs": 1794728049000,
+      "respondedAtUnixMs": 1794728049016,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 147,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728053
+    },
+    {
+      "seq": 3,
+      "submittedAtUnixMs": 1794728049025,
+      "respondedAtUnixMs": 1794728049053,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 148,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 4,
+      "submittedAtUnixMs": 1794728049061,
+      "respondedAtUnixMs": 1794728049077,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 148,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 5,
+      "submittedAtUnixMs": 1794728049086,
+      "respondedAtUnixMs": 1794728049099,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 148,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 6,
+      "submittedAtUnixMs": 1794728049105,
+      "respondedAtUnixMs": 1794728049116,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 148,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 7,
+      "submittedAtUnixMs": 1794728049121,
+      "respondedAtUnixMs": 1794728049133,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 148,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 8,
+      "submittedAtUnixMs": 1794728049139,
+      "respondedAtUnixMs": 1794728049150,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 148,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 9,
+      "submittedAtUnixMs": 1794728049156,
+      "respondedAtUnixMs": 1794728049167,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 148,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 10,
+      "submittedAtUnixMs": 1794728049173,
+      "respondedAtUnixMs": 1794728049185,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 148,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 11,
+      "submittedAtUnixMs": 1794728049193,
+      "respondedAtUnixMs": 1794728049204,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 148,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 12,
+      "submittedAtUnixMs": 1794728049213,
+      "respondedAtUnixMs": 1794728049224,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 148,
+      "decisionAtUnixSec": 1794728049,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 13,
+      "submittedAtUnixMs": 1794728049233,
+      "respondedAtUnixMs": 1794728049255,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 14,
+      "submittedAtUnixMs": 1794728049261,
+      "respondedAtUnixMs": 1794728049267,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 15,
+      "submittedAtUnixMs": 1794728049273,
+      "respondedAtUnixMs": 1794728049280,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 16,
+      "submittedAtUnixMs": 1794728049295,
+      "respondedAtUnixMs": 1794728049301,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 17,
+      "submittedAtUnixMs": 1794728049315,
+      "respondedAtUnixMs": 1794728049322,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 18,
+      "submittedAtUnixMs": 1794728049336,
+      "respondedAtUnixMs": 1794728049342,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 19,
+      "submittedAtUnixMs": 1794728049355,
+      "respondedAtUnixMs": 1794728049361,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 20,
+      "submittedAtUnixMs": 1794728049375,
+      "respondedAtUnixMs": 1794728049382,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 21,
+      "submittedAtUnixMs": 1794728049395,
+      "respondedAtUnixMs": 1794728049402,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 22,
+      "submittedAtUnixMs": 1794728049415,
+      "respondedAtUnixMs": 1794728049423,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 23,
+      "submittedAtUnixMs": 1794728049435,
+      "respondedAtUnixMs": 1794728049442,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 24,
+      "submittedAtUnixMs": 1794728049455,
+      "respondedAtUnixMs": 1794728049462,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 25,
+      "submittedAtUnixMs": 1794728049475,
+      "respondedAtUnixMs": 1794728049482,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 26,
+      "submittedAtUnixMs": 1794728049495,
+      "respondedAtUnixMs": 1794728049502,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 27,
+      "submittedAtUnixMs": 1794728049515,
+      "respondedAtUnixMs": 1794728049521,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 28,
+      "submittedAtUnixMs": 1794728049537,
+      "respondedAtUnixMs": 1794728049545,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 29,
+      "submittedAtUnixMs": 1794728049555,
+      "respondedAtUnixMs": 1794728049561,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 30,
+      "submittedAtUnixMs": 1794728049575,
+      "respondedAtUnixMs": 1794728049583,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 31,
+      "submittedAtUnixMs": 1794728049596,
+      "respondedAtUnixMs": 1794728049604,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 32,
+      "submittedAtUnixMs": 1794728049615,
+      "respondedAtUnixMs": 1794728049621,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    },
+    {
+      "seq": 33,
+      "submittedAtUnixMs": 1794728049635,
+      "respondedAtUnixMs": 1794728049641,
+      "statusCode": 403,
+      "probeDeadlineUnixSec": 1794728054
+    }
+  ],
+  "tAdoptUnixMs": 1794728049338,
+  "tApplyUnixMs": 1794728049331,
+  "tFirstDenyUnixMs": 1794728049255,
+  "tLastAllowUnixMs": 1794728049224,
+  "tSubmitUnixMs": 1794728049067,
+  "tValidUnixMs": 1794728049243,
+  "totalProbes": 33,
+  "windowAfterValidMs": 0
+}

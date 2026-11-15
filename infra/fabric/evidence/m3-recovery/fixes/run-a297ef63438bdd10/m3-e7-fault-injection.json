@@ -1,0 +1,15 @@
+{
+  "networkFaultCases": [
+    "sorter-and-peer-failures",
+    "chaincode-outage-and-recovery",
+    "restart-keeps-checkpoint"
+  ],
+  "ordersAdded": 1,
+  "preparedHoldTxId": "796edcf35b3d07742c119dfb51ad5439cde875c9cae9b4445f6dbe5e6e62486a",
+  "s66ExpiredAt": 1794731519,
+  "s66ExpiredConsumed": false,
+  "s66ExpiredStatus": 401,
+  "s66WinnerExpiresAt": 1794731521,
+  "s66WinnerStatus": 200,
+  "s91PostLockStatus": 403
+}

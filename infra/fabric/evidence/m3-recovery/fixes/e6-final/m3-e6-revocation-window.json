@@ -1,0 +1,317 @@
+{
+  "allowCount": 13,
+  "deltaStateMs": 5000,
+  "denyCount": 21,
+  "probeIntervalMs": 20,
+  "revocationBlockR": 241,
+  "revocationTxId": "cd8ecbf4ed1fe1cdcd5a6e9374ff67032f10c95d3365f2fc3d88a4508b1932ec",
+  "revokedGrantId": "f67dfef15a9307bcc2afb80d3cdab34a0c942598d50fdc532d2329b635bf23cf",
+  "samples": [
+    {
+      "seq": 1,
+      "submittedAtUnixMs": 1794731635162,
+      "respondedAtUnixMs": 1794731635178,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 2,
+      "submittedAtUnixMs": 1794731635187,
+      "respondedAtUnixMs": 1794731635201,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 3,
+      "submittedAtUnixMs": 1794731635208,
+      "respondedAtUnixMs": 1794731635223,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 4,
+      "submittedAtUnixMs": 1794731635230,
+      "respondedAtUnixMs": 1794731635244,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 5,
+      "submittedAtUnixMs": 1794731635252,
+      "respondedAtUnixMs": 1794731635268,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 6,
+      "submittedAtUnixMs": 1794731635276,
+      "respondedAtUnixMs": 1794731635293,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 7,
+      "submittedAtUnixMs": 1794731635301,
+      "respondedAtUnixMs": 1794731635313,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 8,
+      "submittedAtUnixMs": 1794731635319,
+      "respondedAtUnixMs": 1794731635331,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 9,
+      "submittedAtUnixMs": 1794731635338,
+      "respondedAtUnixMs": 1794731635350,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 10,
+      "submittedAtUnixMs": 1794731635357,
+      "respondedAtUnixMs": 1794731635369,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 11,
+      "submittedAtUnixMs": 1794731635377,
+      "respondedAtUnixMs": 1794731635389,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 12,
+      "submittedAtUnixMs": 1794731635397,
+      "respondedAtUnixMs": 1794731635409,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 13,
+      "submittedAtUnixMs": 1794731635417,
+      "respondedAtUnixMs": 1794731635432,
+      "statusCode": 200,
+      "decision": "ALLOW",
+      "decisionBlock": 240,
+      "decisionAtUnixSec": 1794731635,
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 14,
+      "submittedAtUnixMs": 1794731635439,
+      "respondedAtUnixMs": 1794731635446,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731639
+    },
+    {
+      "seq": 15,
+      "submittedAtUnixMs": 1794731635459,
+      "respondedAtUnixMs": 1794731635465,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 16,
+      "submittedAtUnixMs": 1794731635479,
+      "respondedAtUnixMs": 1794731635488,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 17,
+      "submittedAtUnixMs": 1794731635499,
+      "respondedAtUnixMs": 1794731635505,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 18,
+      "submittedAtUnixMs": 1794731635520,
+      "respondedAtUnixMs": 1794731635529,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 19,
+      "submittedAtUnixMs": 1794731635537,
+      "respondedAtUnixMs": 1794731635544,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 20,
+      "submittedAtUnixMs": 1794731635559,
+      "respondedAtUnixMs": 1794731635566,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 21,
+      "submittedAtUnixMs": 1794731635579,
+      "respondedAtUnixMs": 1794731635586,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 22,
+      "submittedAtUnixMs": 1794731635600,
+      "respondedAtUnixMs": 1794731635607,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 23,
+      "submittedAtUnixMs": 1794731635619,
+      "respondedAtUnixMs": 1794731635626,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 24,
+      "submittedAtUnixMs": 1794731635639,
+      "respondedAtUnixMs": 1794731635646,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 25,
+      "submittedAtUnixMs": 1794731635660,
+      "respondedAtUnixMs": 1794731635668,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 26,
+      "submittedAtUnixMs": 1794731635682,
+      "respondedAtUnixMs": 1794731635690,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 27,
+      "submittedAtUnixMs": 1794731635699,
+      "respondedAtUnixMs": 1794731635707,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 28,
+      "submittedAtUnixMs": 1794731635719,
+      "respondedAtUnixMs": 1794731635726,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 29,
+      "submittedAtUnixMs": 1794731635749,
+      "respondedAtUnixMs": 1794731635760,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 30,
+      "submittedAtUnixMs": 1794731635769,
+      "respondedAtUnixMs": 1794731635778,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 31,
+      "submittedAtUnixMs": 1794731635786,
+      "respondedAtUnixMs": 1794731635793,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 32,
+      "submittedAtUnixMs": 1794731635800,
+      "respondedAtUnixMs": 1794731635807,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 33,
+      "submittedAtUnixMs": 1794731635819,
+      "respondedAtUnixMs": 1794731635826,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    },
+    {
+      "seq": 34,
+      "submittedAtUnixMs": 1794731635839,
+      "respondedAtUnixMs": 1794731635846,
+      "statusCode": 403,
+      "errorCode": "ANCESTOR_INACTIVE",
+      "probeDeadlineUnixSec": 1794731640
+    }
+  ],
+  "tAdoptUnixMs": 1794731635531,
+  "tApplyUnixMs": 1794731635437,
+  "tFirstDenyUnixMs": 1794731635446,
+  "tLastAllowUnixMs": 1794731635432,
+  "tSubmitUnixMs": 1794731635251,
+  "tValidUnixMs": 1794731635432,
+  "totalProbes": 34,
+  "windowAfterValidMs": 0
+}

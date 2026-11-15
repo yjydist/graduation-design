@@ -1,0 +1,17 @@
+{
+  "allowCount": 14,
+  "deltaStateMs": 5000,
+  "denyCount": 21,
+  "probeIntervalMs": 20,
+  "revocationBlockR": 146,
+  "revocationTxId": "954cd6898033fea73c3c0a046ec4b6dcc52f553793e6b5a2f2af66834a078a22",
+  "revokedGrantId": "ca9b96c0d7f92260a4ce92ad858aba058adab677c78c6db8d3f37e35f063cd61",
+  "tAdoptUnixMs": 1794727243327,
+  "tApplyUnixMs": 1794727243320,
+  "tFirstDenyUnixMs": 1794727243249,
+  "tLastAllowUnixMs": 1794727243217,
+  "tSubmitUnixMs": 1794727243040,
+  "tValidUnixMs": 1794727243230,
+  "totalProbes": 35,
+  "windowAfterValidMs": 0
+}

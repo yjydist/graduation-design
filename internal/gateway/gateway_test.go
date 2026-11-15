@@ -63,6 +63,9 @@ func openTestPool(t *testing.T) *pgxpool.Pool {
 		t.Skipf("ping postgres: %v", err)
 	}
 	t.Cleanup(pool.Close)
+	if err := fabric.EnsureStateSchema(t.Context(), pool); err != nil {
+		t.Fatal(err)
+	}
 	return pool
 }
 
@@ -490,6 +493,8 @@ func newGatewayTestHarness(t *testing.T) *gatewayTestHarness {
 
 	t.Cleanup(func() {
 		bg := context.Background()
+		_, _ = pool.Exec(bg, `DELETE FROM decision_evidence WHERE deployment_id=$1`, depID)
+		_, _ = pool.Exec(bg, `DELETE FROM order_outcome_outbox WHERE deployment_id=$1`, depID)
 		_, _ = pool.Exec(bg, `DELETE FROM quotes WHERE deployment_id=$1`, depID)
 		_, _ = pool.Exec(bg, `DELETE FROM decisions WHERE deployment_id=$1`, depID)
 		_, _ = pool.Exec(bg, `DELETE FROM business_keys WHERE deployment_id=$1`, depID)

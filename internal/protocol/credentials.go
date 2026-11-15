@@ -99,6 +99,10 @@ func ParseAndVerifyDomainAuthorityCredential(compact string, rootPub *ecdsa.Publ
 	if err := parsed.Verify(rootPub, wantRootKeyID); err != nil {
 		return nil, "", err
 	}
+	return decodeAndValidateDomainAuthorityParsed(parsed)
+}
+
+func decodeAndValidateDomainAuthorityParsed(parsed *ParsedJWS) (*DomainAuthorityCredential, string, error) {
 	var cred DomainAuthorityCredential
 	if err := DecodeStrictJSON(parsed.PayloadBytes, &cred); err != nil {
 		return nil, "", err
@@ -398,33 +402,11 @@ func VerifySDJWTCredential(
 	expectedHolderPubHex string,
 	requireKBJWT bool,
 ) (*VerifiedIdentityCredential, error) {
-	if sdJWT == "" || len(sdJWT) > MaxJSONBytes {
-		return nil, NewError(ErrCodeInvalidSchema, "SD-JWT empty or exceeds max length")
+	parts, issuerJWT, disclosures, kbJWT, err := splitAndCheckSDJWT(sdJWT, requireKBJWT)
+	if err != nil {
+		return nil, err
 	}
-	for i := 0; i < len(sdJWT); i++ {
-		if sdJWT[i] > 0x7F {
-			return nil, NewError(ErrCodeInvalidSchema, "SD-JWT contains non-ASCII character")
-		}
-	}
-	tildeIdx := strings.IndexByte(sdJWT, '~')
-	if tildeIdx < 0 {
-		return nil, NewError(ErrCodeInvalidDisclosure, "SD-JWT presentation must contain '~' separator and disclosures")
-	}
-	parts := strings.Split(sdJWT, "~")
-	if len(parts) < 3 {
-		return nil, NewError(ErrCodeInvalidDisclosure, "SD-JWT presentation must contain issuer JWT, disclosures, and final KB slot")
-	}
-	issuerJWT := parts[0]
-	kbJWT := parts[len(parts)-1]
-	disclosures := parts[1 : len(parts)-1]
-
-	if requireKBJWT && kbJWT == "" {
-		return nil, NewError(ErrCodeInvalidSchema, "leaf SD-JWT presentation must include KB-JWT")
-	}
-	if !requireKBJWT && kbJWT != "" {
-		return nil, NewError(ErrCodeInvalidSchema, "ancestor credential presentation must end with '~' without KB-JWT")
-	}
-
+	_ = parts
 	parsed, err := ParseCompactJWS(issuerJWT, TypEnterpriseIdentityCredential)
 	if err != nil {
 		return nil, err
@@ -432,6 +414,45 @@ func VerifySDJWTCredential(
 	if err := parsed.Verify(issuerPub, wantIssuerKeyID); err != nil {
 		return nil, err
 	}
+	return verifySDJWTPayloadAndDisclosures(sdJWT, parsed, disclosures, kbJWT, expectedHolderPubHex)
+}
+
+func splitAndCheckSDJWT(sdJWT string, requireKBJWT bool) ([]string, string, []string, string, error) {
+	if sdJWT == "" || len(sdJWT) > MaxJSONBytes {
+		return nil, "", nil, "", NewError(ErrCodeInvalidSchema, "SD-JWT empty or exceeds max length")
+	}
+	for i := 0; i < len(sdJWT); i++ {
+		if sdJWT[i] > 0x7F {
+			return nil, "", nil, "", NewError(ErrCodeInvalidSchema, "SD-JWT contains non-ASCII character")
+		}
+	}
+	if !strings.ContainsRune(sdJWT, '~') {
+		return nil, "", nil, "", NewError(ErrCodeInvalidDisclosure, "SD-JWT presentation must contain '~' separator and disclosures")
+	}
+	parts := strings.Split(sdJWT, "~")
+	if len(parts) < 3 {
+		return nil, "", nil, "", NewError(ErrCodeInvalidDisclosure, "SD-JWT presentation must contain issuer JWT, disclosures, and final KB slot")
+	}
+	issuerJWT := parts[0]
+	kbJWT := parts[len(parts)-1]
+	disclosures := parts[1 : len(parts)-1]
+
+	if requireKBJWT && kbJWT == "" {
+		return nil, "", nil, "", NewError(ErrCodeInvalidSchema, "leaf SD-JWT presentation must include KB-JWT")
+	}
+	if !requireKBJWT && kbJWT != "" {
+		return nil, "", nil, "", NewError(ErrCodeInvalidSchema, "ancestor credential presentation must end with '~' without KB-JWT")
+	}
+	return parts, issuerJWT, disclosures, kbJWT, nil
+}
+
+func verifySDJWTPayloadAndDisclosures(
+	sdJWT string,
+	parsed *ParsedJWS,
+	disclosures []string,
+	kbJWT string,
+	expectedHolderPubHex string,
+) (*VerifiedIdentityCredential, error) {
 
 	var claims EnterpriseIdentityCredential
 	if err := DecodeStrictJSON(parsed.PayloadBytes, &claims); err != nil {

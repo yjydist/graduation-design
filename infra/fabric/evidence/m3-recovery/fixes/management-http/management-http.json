@@ -1,0 +1,55 @@
+{
+  "confirmed": {
+    "operationId": "7b55f6558af1093c23171d2969f6d36c9401970ee101500c9d85f9739b7b4612:run-5f6001554eebaf79/http-mvcc-2",
+    "operationKey": "run-5f6001554eebaf79/http-mvcc-2",
+    "method": "SuspendGrant",
+    "txId": "35077b8304ab9934ed938e12f14250ee832030fdf8320c9ebfc2ea4a67a297a6",
+    "stage": "COMMIT",
+    "status": "CONFIRMED",
+    "errorCode": null,
+    "validationCode": "VALID",
+    "blockNumber": 234,
+    "blockHash": "e613945564a53a276354fdbcf910df6939dda7c8d368708c6d424027b9119ec9",
+    "delivered": false
+  },
+  "mvccConflict": {
+    "operationId": "7b55f6558af1093c23171d2969f6d36c9401970ee101500c9d85f9739b7b4612:run-5f6001554eebaf79/http-mvcc-1",
+    "operationKey": "run-5f6001554eebaf79/http-mvcc-1",
+    "method": "SuspendGrant",
+    "txId": "a89f5a84c50e71361ae136b9ab1adf231af35a31a891f6392d957554c5ef26c5",
+    "stage": "COMMIT",
+    "status": "FAILED",
+    "errorCode": "STATE_CHANGED",
+    "validationCode": "MVCC_READ_CONFLICT",
+    "blockNumber": 234,
+    "blockHash": "e613945564a53a276354fdbcf910df6939dda7c8d368708c6d424027b9119ec9",
+    "delivered": false
+  },
+  "pending": {
+    "operationId": "7b55f6558af1093c23171d2969f6d36c9401970ee101500c9d85f9739b7b4612:run-5f6001554eebaf79/http-mvcc-1",
+    "operationKey": "run-5f6001554eebaf79/http-mvcc-1",
+    "method": "SuspendGrant",
+    "txId": "a89f5a84c50e71361ae136b9ab1adf231af35a31a891f6392d957554c5ef26c5",
+    "stage": "SUBMIT",
+    "status": "PENDING",
+    "errorCode": null,
+    "validationCode": null,
+    "blockNumber": 0,
+    "delivered": false
+  },
+  "preflightStatus": 409,
+  "recovered": {
+    "operationId": "7b55f6558af1093c23171d2969f6d36c9401970ee101500c9d85f9739b7b4612:run-5f6001554eebaf79/http-restart",
+    "operationKey": "run-5f6001554eebaf79/http-restart",
+    "method": "SuspendGrant",
+    "txId": "06f9d519990d562dd85ce5fe2a2f01870d6024387b2420134401667926453207",
+    "stage": "COMMIT",
+    "status": "CONFIRMED",
+    "errorCode": null,
+    "validationCode": "VALID",
+    "blockNumber": 236,
+    "blockHash": "332a2e5d104311b01f8dc5d44bc9fe9990591994834f783e57a8d36d0f679189",
+    "delivered": false
+  },
+  "sameOriginalTxId": true
+}

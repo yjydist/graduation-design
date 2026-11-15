@@ -71,6 +71,7 @@ func SignGrant(priv *ecdsa.PrivateKey, issuerKeyID string, claims *GrantClaims) 
 
 // ParseAndVerifyGrant parses a compact Grant JWS, verifies its ES256 signature under issuerPub/wantKid,
 // and validates all structural constraints.
+// ParseAndVerifyGrant verifies the compact Grant JWS signature and structure.
 func ParseAndVerifyGrant(compact string, issuerPub *ecdsa.PublicKey, wantIssuerKeyID string) (*ParsedGrant, error) {
 	parsed, err := ParseCompactJWS(compact, TypGrantDelegation)
 	if err != nil {
@@ -79,6 +80,10 @@ func ParseAndVerifyGrant(compact string, issuerPub *ecdsa.PublicKey, wantIssuerK
 	if err := parsed.Verify(issuerPub, wantIssuerKeyID); err != nil {
 		return nil, err
 	}
+	return decodeAndValidateGrantParsed(compact, parsed)
+}
+
+func decodeAndValidateGrantParsed(compact string, parsed *ParsedJWS) (*ParsedGrant, error) {
 	var claims GrantClaims
 	if err := DecodeStrictJSON(parsed.PayloadBytes, &claims); err != nil {
 		return nil, err

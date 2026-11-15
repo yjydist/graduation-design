@@ -1,0 +1,61 @@
+{
+  "command": "mise exec -- go test -json -count=1 ./...",
+  "exitCode": 0,
+  "packages": [
+    {
+      "Package": "graduation-design/cmd/ledgerctl",
+      "Action": "skip",
+      "Elapsed": 0
+    },
+    {
+      "Package": "graduation-design/chaincode/registry",
+      "Action": "pass",
+      "Elapsed": 0.434
+    },
+    {
+      "Package": "graduation-design/internal/fabricapi",
+      "Action": "pass",
+      "Elapsed": 0.084
+    },
+    {
+      "Package": "graduation-design/internal/policy",
+      "Action": "pass",
+      "Elapsed": 0.198
+    },
+    {
+      "Package": "graduation-design/internal/protocol",
+      "Action": "pass",
+      "Elapsed": 0.212
+    },
+    {
+      "Package": "graduation-design/internal/agent",
+      "Action": "pass",
+      "Elapsed": 1.821
+    },
+    {
+      "Package": "graduation-design/internal/gateway",
+      "Action": "pass",
+      "Elapsed": 2.094
+    },
+    {
+      "Package": "graduation-design/internal/fabric",
+      "Action": "pass",
+      "Elapsed": 2.6710000000000003
+    }
+  ],
+  "passedTestsIncludingSubtests": 121,
+  "skippedTests": [
+    {
+      "package": "graduation-design/internal/fabric",
+      "test": "TestInterruptedInitialization"
+    },
+    {
+      "package": "graduation-design/internal/fabric",
+      "test": "TestDeploymentResumesAfterCommittedInitialization"
+    },
+    {
+      "package": "graduation-design/internal/fabric",
+      "test": "TestM3LiveAcceptance"
+    }
+  ]
+}

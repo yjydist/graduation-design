@@ -1,0 +1,130 @@
+{
+  "asyncMgmtConfirmedStatus": "CONFIRMED",
+  "domainBRenewedCertId": "urn:grad:cert:B:m3-run-a297ef63",
+  "domainBRenewedCertJWS": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6dC5sb2NhbCNrZXktMSIsInR5cCI6InZjK2p3dCJ9.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLHsiQHZvY2FiIjoiaHR0cHM6Ly9ncmFkLWF1dGguZXhhbXBsZS50ZXN0L3ZvY2FiIyJ9XSwiY3JlZGVudGlhbFN0YXR1cyI6eyJpZCI6InVybjpncmFkOmNlcnQ6QjptMy1ydW4tYTI5N2VmNjMiLCJ0eXBlIjoiUmVnaXN0cnlEb21haW5DZXJ0aWZpY2F0aW9uU3RhdHVzIn0sImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImRvbWFpbklkIjoiQiIsImlkIjoiZGlkOndlYjpiLmxvY2FsIiwiaWRlbnRpdHlJc3N1ZXJzIjpbeyJhcHBLZXlWZXJzaW9uIjoxLCJjbGFpbU5hbWVzIjpbImRvbWFpbiIsInJvbGUiXSwiY3JlZGVudGlhbFR5cGVzIjpbIkVudGVycHJpc2VJZGVudGl0eUNyZWRlbnRpYWwiXSwiaWQiOiJkaWQ6d2ViOmIubG9jYWw6aXNzdWVyIn1dfSwiZGVwbG95bWVudElkIjoiMDRiYTAxZTFmZDQ4OGZiZmExMWNiYjA5MDFiZjRiM2M1Yjg0NjZkMWE0ZTE4NTkxYTgxZDkyZjdlNmVlMjQwNiIsImV4cCI6MTc5NDgxNzc1NiwiaWQiOiJ1cm46Z3JhZDpjZXJ0OkI6bTMtcnVuLWEyOTdlZjYzIiwiaXNzIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyS2V5VmVyc2lvbiI6MSwibmJmIjoxNzk0NzI3ODQ3LCJzdWIiOiJkaWQ6d2ViOmIubG9jYWwiLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiRG9tYWluQXV0aG9yaXR5Q3JlZGVudGlhbCJdLCJ2YWxpZEZyb20iOiIyMDI2LTExLTE1VDA3OjMwOjQ3WiIsInZhbGlkVW50aWwiOiIyMDI2LTExLTE2VDA4OjI5OjE2WiJ9.3zL3Ppb8YFBoFfhnb9yEoStZ7qZN2AJUy2ZKYrepJ__is4qjdG5W6vLV2KTV1vInd1OD6Xc6Z8W5E8H15Bnbhw",
+  "domainBStatusRestored": true,
+  "ephemeralRecoveredIdentity": {
+    "deploymentId": "04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406",
+    "subjectId": "did:web:b.local:m3-eph-run-a297",
+    "domainId": "B",
+    "kind": "AGENT",
+    "managementIdentity": {
+      "mspId": "BMsp",
+      "certificateSha256": "8ca69a0cea51aa79fe148b623fb3df41b3519ecceac5eae2bdad44dacfd22ddb"
+    },
+    "didDocumentDigest": "04498acde421a01c134ba98d37b0570c3e78374e718d69672d9da4011568bd27",
+    "appKeyId": "did:web:b.local:m3-eph-run-a297#key-3",
+    "appKeyVersion": 3,
+    "appPublicKey": "04784f5fd019e4731d4fde046c20c19a47ec2fefb3e6ff2bbb064260197c94bc721d4e70691c2bc21c8247017a769dd97e453a8c9482746b65c1bb484815c70e89",
+    "accountCommitment": "5db8d481a4559f6e7c5c459099baaa1a609db58c532580a12cfce4f56f9a4353",
+    "status": "SUSPENDED",
+    "revision": 6
+  },
+  "grantSuspendResumeExpKept": true,
+  "managementHTTP": {
+    "confirmed": {
+      "operationId": "04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406:run-a297ef63438bdd10/http-mvcc-1",
+      "operationKey": "run-a297ef63438bdd10/http-mvcc-1",
+      "method": "SuspendGrant",
+      "txId": "2b5c3b7cf302e1ce3bbddf1e0077898a5331a43492e4b61e7a4a57ebdf5b4caa",
+      "stage": "COMMIT",
+      "status": "CONFIRMED",
+      "errorCode": null,
+      "validationCode": "VALID",
+      "blockNumber": 135,
+      "blockHash": "6b96292c671d035751f4ba4ef63b6f059619c94e23a4b963a9c335c9416f28c6",
+      "delivered": false
+    },
+    "mvccConflict": {
+      "operationId": "04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406:run-a297ef63438bdd10/http-mvcc-2",
+      "operationKey": "run-a297ef63438bdd10/http-mvcc-2",
+      "method": "SuspendGrant",
+      "txId": "debb88d096fe71328d181f7653a1745a1e847509ad861b1c9ec485f9e0c37c29",
+      "stage": "COMMIT",
+      "status": "FAILED",
+      "errorCode": "STATE_CHANGED",
+      "validationCode": "MVCC_READ_CONFLICT",
+      "blockNumber": 135,
+      "blockHash": "6b96292c671d035751f4ba4ef63b6f059619c94e23a4b963a9c335c9416f28c6",
+      "delivered": false
+    },
+    "pending": {
+      "operationId": "04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406:run-a297ef63438bdd10/http-mvcc-1",
+      "operationKey": "run-a297ef63438bdd10/http-mvcc-1",
+      "method": "SuspendGrant",
+      "txId": "2b5c3b7cf302e1ce3bbddf1e0077898a5331a43492e4b61e7a4a57ebdf5b4caa",
+      "stage": "SUBMIT",
+      "status": "PENDING",
+      "errorCode": null,
+      "validationCode": null,
+      "blockNumber": 0,
+      "delivered": false
+    },
+    "preflightStatus": 409,
+    "recovered": {
+      "operationId": "04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406:run-a297ef63438bdd10/http-restart",
+      "operationKey": "run-a297ef63438bdd10/http-restart",
+      "method": "SuspendGrant",
+      "txId": "9f61c894b17704a2c1d19d5b760869c23041e3563789449a1f6639ff451c28ef",
+      "stage": "COMMIT",
+      "status": "CONFIRMED",
+      "errorCode": null,
+      "validationCode": "VALID",
+      "blockNumber": 137,
+      "blockHash": "a652623544faec9edcc1df1958dca392f0cb524a69028de4d844a39da42b2b2f",
+      "delivered": false
+    },
+    "sameOriginalTxId": true
+  },
+  "offlineAndCacheChecks": {
+    "b1SignatureCacheHits": 19,
+    "b1SignatureCacheMisses": 8,
+    "f14OfflineTHits": 0,
+    "s81StaleCode": 403,
+    "s84MaterialMissingCode": 503,
+    "s93DisclosedCode": 403
+  },
+  "recoveryDualProof": {
+    "challenge": {
+      "accountCommitment": "5db8d481a4559f6e7c5c459099baaa1a609db58c532580a12cfce4f56f9a4353",
+      "challengeId": "rec-run-a297",
+      "deploymentId": "04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406",
+      "didDocumentDigest": "04498acde421a01c134ba98d37b0570c3e78374e718d69672d9da4011568bd27",
+      "domainId": "B",
+      "expectedKeyVersion": 2,
+      "expectedRevision": 5,
+      "expiresAt": 1794731747,
+      "issuedAt": 1794731447,
+      "newAppKeyId": "did:web:b.local:m3-eph-run-a297#key-3",
+      "newAppKeyVersion": 3,
+      "newAppPublicKey": "04784f5fd019e4731d4fde046c20c19a47ec2fefb3e6ff2bbb064260197c94bc721d4e70691c2bc21c8247017a769dd97e453a8c9482746b65c1bb484815c70e89",
+      "newManagementIdentity": {
+        "certificateSha256": "8ca69a0cea51aa79fe148b623fb3df41b3519ecceac5eae2bdad44dacfd22ddb",
+        "mspId": "BMsp"
+      },
+      "nonce": "NcVk74FU7QzU9VIjHiCLlkySsOaJSCUnj2xpZ_SbM3s",
+      "oldManagementIdentity": {
+        "certificateSha256": "60da4978b7bf286693437246c71cbb8b93f32d76b14eb5cbda4191c8943a79e4",
+        "mspId": "BMsp"
+      },
+      "purpose": "grad-identity-recovery-v1",
+      "subjectId": "did:web:b.local:m3-eph-run-a297"
+    },
+    "challengeSha256": "0cb4b1390eca2d7713a67ba0d8ed9d9c5d960cafdd0046a8808a4c07adf014e9",
+    "deployment": {
+      "channelId": "procurement",
+      "genesisHash": "71c34fb90ce72034f828f8be6d03e08618648c18a48d5ea2c652f9f431c408e1",
+      "instanceId": "a4bf7e97d1a76172bf4843b1454ded78edfec955566bc82ad70a86747eaf09e0",
+      "purpose": "grad-fabric-deployment-v1",
+      "registryName": "authregistry",
+      "schemaVersion": "grad-auth-v1"
+    },
+    "deploymentId": "04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406",
+    "newAppJwsProtected": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6Yi5sb2NhbDptMy1lcGgtcnVuLWEyOTcja2V5LTMiLCJ0eXAiOiJncmFkLW1hbmFnZW1lbnQtcHJvb2Yrand0In0",
+    "newAppJwsSignature": "ps2J7eA4mqBREshK-YkpUuHtbwTU53mvQbuAQg1agHp1PwyxtBBDg4kYQHQud9fJZ70Ler5qF9Pt7NyHZuYiFA",
+    "newManagementCertificateDer": "MIICEDCCAbagAwIBAgIRAL1W9IL4MS2hUX_tS1KUBQAwCgYIKoZIzj0EAwIwYTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xEDAOBgNVBAoTB2IubG9jYWwxEzARBgNVBAMTCmNhLmIubG9jYWwwHhcNMjYxMTE1MDgyMjAwWhcNMzYxMTEyMDgyMjAwWjBjMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNjbzEPMA0GA1UECxMGY2xpZW50MRYwFAYDVQQDDA1Vc2VyOUBiLmxvY2FsMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKzAtFWOQ8RlO4dC65p0iLFvw5BJQkK3Mrx4EF-L1x4gs18YTjeqLLkYuNhFUzG86W8KC8d_CcMiSlom6tEEZWqNNMEswDgYDVR0PAQH_BAQDAgeAMAwGA1UdEwEB_wQCMAAwKwYDVR0jBCQwIoAgaODg32ef8KKi3zHwAVrxpQXcA8Zt1xPNYF3FzjEjmuIwCgYIKoZIzj0EAwIDSAAwRQIhANEC685XbJLa87hFC7h_UbmBTfrD3zDCKbNcdXotl3xzAiA8-Bjv5ywMcWSV6yln8w0jKnNyqhV_qACSIRFgFlUHhA",
+    "newManagementSignatureDer": "MEUCIQDTgjB5aGFTao4UT0BCeDLZZTepUb8WIuXurEv9zt1o7gIgKn2nMcoM0TwM5Z-6JV1wTTMWtc-T8TcCKaN7iemOKcg"
+  },
+  "s85Forbidden": true,
+  "taskCancelled": "e82a94196c1e83562abbe39a04f3f53f819d468560181da841080b0d2926b888"
+}

@@ -78,6 +78,9 @@ func openTestPool(t *testing.T) *pgxpool.Pool {
 		t.Skipf("ping postgres: %v", err)
 	}
 	t.Cleanup(pool.Close)
+	if err := fabric.EnsureStateSchema(t.Context(), pool); err != nil {
+		t.Fatal(err)
+	}
 	return pool
 }
 
@@ -209,9 +212,9 @@ func newAgentTestHarness(t *testing.T) *agentTestHarness {
 		}}
 		jws, dig, err := protocol.SignDomainAuthorityCredential(privT, rootRec.KeyID, &protocol.DomainAuthorityCredential{
 			Type: []string{protocol.CredentialTypeVC, protocol.CredentialTypeDomainAuthority},
-			ID: certID, DeploymentID: depID, Issuer: didT, Iss: didT, Sub: domDID,
+			ID:   certID, DeploymentID: depID, Issuer: didT, Iss: didT, Sub: domDID,
 			IssuerKeyVersion: 1, ValidFrom: vf, ValidUntil: vu, NBF: nbf, EXP: exp,
-			CredentialStatus: protocol.CredentialStatus{ID: certID, Type: protocol.StatusTypeDomainCertification},
+			CredentialStatus:  protocol.CredentialStatus{ID: certID, Type: protocol.StatusTypeDomainCertification},
 			CredentialSubject: protocol.DomainAuthoritySubject{ID: domDID, DomainID: domID, IdentityIssuers: scopes},
 		})
 		if err != nil {
@@ -239,7 +242,7 @@ func newAgentTestHarness(t *testing.T) *agentTestHarness {
 	makeID := func(did, domID, kind, keyID, pub, dig string) api.Identity {
 		return api.Identity{
 			Bound: api.Bound{DeploymentID: depID}, ID: did, Domain: domID, Kind: kind,
-			Management: api.Management{MSPID: domID + "MSP", Fingerprint: strings.Repeat("4", 64)},
+			Management:     api.Management{MSPID: domID + "MSP", Fingerprint: strings.Repeat("4", 64)},
 			DocumentDigest: dig, KeyID: keyID, KeyVersion: 1, PublicKey: pub,
 			AccountCommitment: api.Digest([]byte("acct:" + did)),
 			Version:           api.Version{Status: api.Active, Revision: 1},
@@ -262,10 +265,10 @@ func newAgentTestHarness(t *testing.T) *agentTestHarness {
 		}
 		sd, err := protocol.IssueEnterpriseIdentityCredential(priv, iss+"#key-1", protocol.EnterpriseIdentityCredential{
 			Type: []string{protocol.CredentialTypeVC, protocol.CredentialTypeEnterpriseIdentity},
-			ID: credID, DeploymentID: depID, Issuer: iss, Iss: iss, Sub: sub,
+			ID:   credID, DeploymentID: depID, Issuer: iss, Iss: iss, Sub: sub,
 			IssuerKeyVersion: 1, AppKeyVersion: 1, ValidFrom: vf, ValidUntil: vu, NBF: nbf, EXP: exp,
-			CredentialStatus: protocol.CredentialStatus{ID: credID, Type: protocol.StatusTypeCredential},
-			Cnf:              protocol.ConfirmationKey{JWK: jwk},
+			CredentialStatus:  protocol.CredentialStatus{ID: credID, Type: protocol.StatusTypeCredential},
+			Cnf:               protocol.ConfirmationKey{JWK: jwk},
 			CredentialSubject: protocol.SDJWTCredentialSubject{ID: sub},
 		}, dom, role, nil)
 		if err != nil {
@@ -423,6 +426,8 @@ func newAgentTestHarness(t *testing.T) *agentTestHarness {
 
 	t.Cleanup(func() {
 		bg := context.Background()
+		_, _ = pool.Exec(bg, `DELETE FROM decision_evidence WHERE deployment_id=$1`, depID)
+		_, _ = pool.Exec(bg, `DELETE FROM order_outcome_outbox WHERE deployment_id=$1`, depID)
 		_, _ = pool.Exec(bg, `DELETE FROM client_actions WHERE deployment_id=$1`, depID)
 		_, _ = pool.Exec(bg, `DELETE FROM orders WHERE deployment_id=$1`, depID)
 		_, _ = pool.Exec(bg, `DELETE FROM quotes WHERE deployment_id=$1`, depID)
@@ -499,7 +504,7 @@ func newAgentTestHarness(t *testing.T) *agentTestHarness {
 				IssuerCredential: req.Claims.IssuerCredentialID, GranteeCredential: req.Claims.GranteeCredentialID,
 				Depth: uint8(req.Claims.RemainingDepth), Digest: req.GrantDigest,
 				Interval: api.Interval{NBF: req.Claims.NBF, EXP: req.Claims.EXP},
-				Version: api.Version{Status: api.Active, Revision: 1},
+				Version:  api.Version{Status: api.Active, Revision: 1},
 			}
 			raw, _ := json.Marshal(gChain)
 			if _, eErr := pool.Exec(ctx, `INSERT INTO fabric_current(deployment, key, value) VALUES($1,$2,$3)
@@ -638,7 +643,7 @@ func TestMCPInMemoryToolsDelegationClientActionsAndRedaction(t *testing.T) {
 		parent string
 		child  string
 	}{
-		{api.RP, h.taskRP, api.Digest([]byte("rp-g1:"+strings.TrimPrefix(h.depID, ""))), ""},
+		{api.RP, h.taskRP, api.Digest([]byte("rp-g1:" + strings.TrimPrefix(h.depID, ""))), ""},
 	} {
 		_ = tc
 	}

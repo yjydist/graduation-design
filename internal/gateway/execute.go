@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -210,8 +211,13 @@ func (s *Server) runPrecheck(
 	snap := view.Snapshot
 
 	// 3. Require synced DomainAuthorityCertification JWS for active domains in the snapshot.
+	// Inactive (SUSPENDED/REVOKED) domains proceed to step 4 so VerifyAccessEvidencePackageWithCache
+	// emits 403 DOMAIN_INACTIVE cleanly instead of masking suspension as MATERIAL_NOT_SYNCED.
 	if s.cfg.Delivery != nil {
 		for domID, dom := range snap.Domains {
+			if dom.Status != api.Active {
+				continue
+			}
 			cert, ok := snap.Certifications[dom.Certification]
 			if !ok {
 				return nil, protocol.NewError(protocol.ErrCodeMaterialNotSynced, fmt.Sprintf("active certification %q missing for domain %q", dom.Certification, domID))
@@ -222,8 +228,8 @@ func (s *Server) runPrecheck(
 		}
 	}
 
-	// 4. Full cryptographic evidence + chain verification on consistent snapshot.
-	verified, err := protocol.VerifyAccessEvidencePackage(ctx, pkg, snap, s.cfg.DIDs, chalCtx)
+	// 4. Full cryptographic evidence + chain verification on consistent snapshot (with optional B1 signature cache).
+	verified, err := protocol.VerifyAccessEvidencePackageWithCache(ctx, pkg, snap, s.cfg.DIDs, chalCtx, s.cfg.SignatureCache)
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +501,7 @@ func (s *Server) executeInTx(
 		decisionSec = s.cfg.NowFn().Unix()
 	}
 
-	probe, err := s.cfg.State.IsProbeFresh()
+	probe, err := s.cfg.State.IsProbeFresh(pre.view.Probe)
 	if err != nil {
 		return nil, false, err
 	}
@@ -648,6 +654,16 @@ func (s *Server) executeInTx(
 	if pre.pkg.Request.AuthorizationMode == protocol.ModeBuyerMandate {
 		serviceRole = "supplier-service"
 	}
+	var disclosedAttrs map[string]string
+	for k, v := range pre.verified.LeafCredential.Disclosed {
+		if k == "domain" || k == "role" {
+			continue
+		}
+		if disclosedAttrs == nil {
+			disclosedAttrs = make(map[string]string)
+		}
+		disclosedAttrs[k] = v
+	}
 	facts := policy.SupplierFacts{
 		AuthorizationMode:   pre.pkg.Request.AuthorizationMode,
 		BuyerDomain:         pre.pkg.Request.PrincipalDomain,
@@ -666,6 +682,7 @@ func (s *Server) executeInTx(
 		ContextFresh:        decisionSec < ctxDeadline,
 		ContextRiskLevel:    ctxRiskLevel,
 		WithinTimeAndBounds: decisionSec < effectiveDeadline,
+		Attributes:          disclosedAttrs,
 	}
 	policyDec, policyErr := s.cfg.Policy.EvaluateFacts(ctx, facts)
 	if !policyDec.Allow || policyErr != nil {
@@ -836,6 +853,19 @@ func (s *Server) executeInTx(
 		return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "insert allow decision", err)
 	}
 
+	// Archive the original verified inputs atomically with the first decision and order.
+	evidenceJSON, err := json.Marshal(pre.pkg)
+	if err != nil {
+		return nil, false, err
+	}
+	docsJSON, err := json.Marshal(pre.verified.DIDDocuments)
+	if err != nil {
+		return nil, false, err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO decision_evidence(deployment_id,decision_id,package_json,did_documents,checked_mono_ns) VALUES($1,$2,$3,$4,$5)`, s.cfg.DeploymentID, decID, evidenceJSON, docsJSON, probe.CheckedMonoNs); err != nil {
+		return nil, false, err
+	}
+
 	if _, err := tx.Exec(ctx, `UPDATE business_keys SET status='COMPLETED', resource_id=$1, decision_id=$2, updated_at=NOW()
 		WHERE deployment_id=$3 AND actor=$4 AND task_id=$5 AND action=$6 AND idempotency_key=$7`,
 		createdResourceID, decID, s.cfg.DeploymentID, pre.pkg.Request.Actor, pre.pkg.Request.TaskID, pre.pkg.Request.Action, pre.pkg.Request.IdempotencyKey,
@@ -916,7 +946,7 @@ func httpStatusForCode(code string) int {
 		return http.StatusRequestEntityTooLarge
 	case protocol.ErrCodeUnsupportedMediaType:
 		return http.StatusUnsupportedMediaType
-	case protocol.ErrCodeInvalidSchema, protocol.ErrCodeInvalidDisclosure:
+	case protocol.ErrCodeInvalidSchema, protocol.ErrCodeInvalidDisclosure, protocol.ErrCodeRecoveryProofInvalid:
 		return http.StatusBadRequest
 	case protocol.ErrCodeSignatureInvalid,
 		protocol.ErrCodeHolderMismatch,
@@ -933,7 +963,10 @@ func httpStatusForCode(code string) int {
 		protocol.ErrCodeDeliveryConflict,
 		protocol.ErrCodeQuoteExpired,
 		protocol.ErrCodeAmountMismatch,
-		protocol.ErrCodeLinkStateConflict:
+		protocol.ErrCodeLinkStateConflict,
+		protocol.ErrCodeIdentityStateConflict,
+		protocol.ErrCodeTaskStateConflict,
+		protocol.ErrCodeGrantStateConflict:
 		return http.StatusConflict
 	case protocol.ErrCodePolicyDenied,
 		protocol.ErrCodeSupplierPolicyDenied,
@@ -948,9 +981,17 @@ func httpStatusForCode(code string) int {
 		protocol.ErrCodeTaskScopeMismatch,
 		protocol.ErrCodeTaskInactive,
 		protocol.ErrCodeGrantExpired,
+		protocol.ErrCodeGrantInactive,
 		protocol.ErrCodeGrantChainInvalid,
 		protocol.ErrCodeCredentialStatusInvalid,
 		protocol.ErrCodeDomainCertificationInvalid,
+		protocol.ErrCodeDomainInactive,
+		protocol.ErrCodeKeyVersionStale,
+		protocol.ErrCodeIdentityInactive,
+		protocol.ErrCodeIdentityManagementForbidden,
+		protocol.ErrCodeIdentityRecoveryForbidden,
+		protocol.ErrCodeTrustManagementForbidden,
+		protocol.ErrCodeAuditForbidden,
 		protocol.ErrCodeIssuerScopeInvalid,
 		protocol.ErrCodeLinkApprovalForbidden,
 		protocol.ErrCodeLinkProposalMismatch,

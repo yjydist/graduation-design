@@ -1,0 +1,150 @@
+{
+  "runId": "run-da57107f4b4dbb6c",
+  "evidenceDir": ".local/fabric-evidence/run-da57107f4b4dbb6c",
+  "deploymentId": "8dca3458f3874b21b73fb873377cc0b4d0ff4cbd82ff880f91da798b1bc2226d",
+  "scope": "Fabric D0 verifiable protocol anchors, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-15T07:32:09.114452Z",
+  "finishedAt": "2026-11-15T07:34:40.105Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "initialization-resume",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "credential-validity-boundaries",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "shared-view-concurrent-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "checkpoint-query-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "chaincode-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "protocol-encoding-and-vectors",
+      "pass": true
+    },
+    {
+      "name": "did-web-and-context-pinning",
+      "pass": true
+    },
+    {
+      "name": "verifiable-evidence-and-tamper-rejection",
+      "pass": true
+    },
+    {
+      "name": "registration-and-material-delivery",
+      "pass": true
+    },
+    {
+      "name": "direct-access-quote-and-idempotency",
+      "pass": true
+    },
+    {
+      "name": "wrong-leaf-key-rejected",
+      "pass": true
+    },
+    {
+      "name": "probe-expiry-state-stale",
+      "pass": true
+    },
+    {
+      "name": "post-lock-blocked-no-quote",
+      "pass": true
+    },
+    {
+      "name": "exact-second-deadline-rejection",
+      "pass": true
+    },
+    {
+      "name": "m2-dual-roots-and-identity-link",
+      "pass": true
+    },
+    {
+      "name": "m2-agent-mcp-rp-and-bm-orders",
+      "pass": true
+    },
+    {
+      "name": "m2-revocation-and-postlock-order-guards",
+      "pass": true
+    },
+    {
+      "name": "m2-dual-gateway-concurrent-idempotency",
+      "pass": true
+    },
+    {
+      "name": "m3-authority-identity-and-lifecycle",
+      "pass": false,
+      "error": "MISSING_DEPENDENCY: grant/b437e256db14a62a382aecb2368b91d9383a10f87f983d2baf8e9dc4c8bfa084 at block 129"
+    },
+    {
+      "name": "m3-agent-b2-replacement-and-reconcile",
+      "pass": false,
+      "error": "MISSING_DEPENDENCY: grant/e218ffa057b8a81138c34bc9ae4b7f0da1d120d0bd1a5e50f74242166123b66c at block 142"
+    },
+    {
+      "name": "m3-revocation-window-e6",
+      "pass": true
+    },
+    {
+      "name": "m3-fault-injection-e7",
+      "pass": true
+    }
+  ],
+  "error": "m3-authority-identity-and-lifecycle: MISSING_DEPENDENCY: grant/b437e256db14a62a382aecb2368b91d9383a10f87f983d2baf8e9dc4c8bfa084 at block 129\nm3-agent-b2-replacement-and-reconcile: MISSING_DEPENDENCY: grant/e218ffa057b8a81138c34bc9ae4b7f0da1d120d0bd1a5e50f74242166123b66c at block 142"
+}

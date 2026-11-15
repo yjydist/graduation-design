@@ -1,0 +1,6 @@
+=== RUN   TestManagementHTTPDispatchAndDurableRestart
+--- PASS: TestManagementHTTPDispatchAndDurableRestart (0.02s)
+=== RUN   TestManagementRecoveryDoesNotBlockOtherOriginalRequests
+--- PASS: TestManagementRecoveryDoesNotBlockOtherOriginalRequests (0.02s)
+PASS
+ok  	graduation-design/internal/fabric	0.806s

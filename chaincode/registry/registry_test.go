@@ -48,6 +48,10 @@ func (m *memStub) PutState(key string, val []byte) error {
 	m.state[key] = append([]byte(nil), val...)
 	return nil
 }
+func (m *memStub) DelState(key string) error {
+	delete(m.state, key)
+	return nil
+}
 
 func makeSerializedCaller(t *testing.T, mspID, cn string) ([]byte, api.Management) {
 	t.Helper()
@@ -627,5 +631,475 @@ func TestIdentityLinkDualDomainStateMachine(t *testing.T) {
 		ApprovedAt:       h.now.Unix(),
 	})); err == nil || !strings.Contains(err.Error(), linkStateConflict) {
 		t.Fatalf("expected LINK_STATE_CONFLICT after revocation, got %v", err)
+	}
+}
+
+func TestM3DomainCertRenewalRevocationAndAuthorityUpdate(t *testing.T) {
+	h := newRegistryHarness(t)
+	nbf := h.now.Add(-time.Hour).Unix()
+	exp := h.now.Add(24 * time.Hour).Unix()
+
+	// 1. Atomic same-key domain cert renewal & claim scope shrink on ACTIVE domain B (F15, S82, S93).
+	domB, err := get[api.Domain](h.stub, api.Key("domain", "B"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if domB.Revision != 2 || domB.Certification != "urn:grad:cert:B" {
+		t.Fatalf("unexpected initial domain B state: %+v", domB)
+	}
+
+	// Non-T caller rejected with TRUST_MANAGEMENT_FORBIDDEN on RevokeCertification / UpdateAuthorityIdentity and UNAUTHORIZED on CertifyDomain (S85).
+	h.stub.creator = h.bAdmin
+	if _, err := invoke(h.stub, "RevokeCertification", mustJSON(t, api.Mutation{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "urn:grad:cert:B",
+		ExpectedRevision: 1,
+	})); err == nil || !strings.Contains(err.Error(), trustMgmtForbidden) {
+		t.Fatalf("expected TRUST_MANAGEMENT_FORBIDDEN, got %v", err)
+	}
+	if _, err := invoke(h.stub, "UpdateAuthorityIdentity", mustJSON(t, api.AuthorityIdentityUpdateInput{
+		Bound: api.Bound{DeploymentID: h.depID},
+		ID:    "did:web:b.local:ib",
+	})); err == nil || !strings.Contains(err.Error(), trustMgmtForbidden) {
+		t.Fatalf("expected TRUST_MANAGEMENT_FORBIDDEN, got %v", err)
+	}
+
+	// Stale expectedCertificationId or expectedRevision fails with STATE_CHANGED (S82).
+	h.stub.creator = h.tCreator
+	certB2 := api.Certify{
+		Certification: api.Certification{
+			Bound:          api.Bound{DeploymentID: h.depID},
+			ID:             "urn:grad:cert:B:v2",
+			Domain:         "B",
+			RootKeyVersion: 1,
+			Digest:         api.Digest([]byte("cert:B:v2")),
+			Scopes: []api.Scope{{
+				ID:         "did:web:b.local:ib",
+				KeyVersion: 1,
+				Types:      []string{"EnterpriseIdentityCredential"},
+				Claims:     []string{"domain", "role"},
+			}},
+			Interval: api.Interval{NBF: nbf, EXP: exp},
+		},
+		ExpectedRevision:      2,
+		ExpectedCertification: "urn:grad:cert:WRONG",
+	}
+	if _, err := invoke(h.stub, "CertifyDomain", mustJSON(t, certB2)); err == nil || !strings.Contains(err.Error(), stale) {
+		t.Fatalf("expected STATE_CHANGED on stale expectedCertificationId, got %v", err)
+	}
+	certB2.ExpectedCertification = "urn:grad:cert:B"
+	if _, err := invoke(h.stub, "CertifyDomain", mustJSON(t, certB2)); err != nil {
+		t.Fatalf("CertifyDomain atomic same-key renewal: %v", err)
+	}
+	domB, err = get[api.Domain](h.stub, api.Key("domain", "B"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if domB.Revision != 3 || domB.Certification != "urn:grad:cert:B:v2" || domB.Status != api.Active {
+		t.Fatalf("unexpected domain B after atomic renewal: %+v", domB)
+	}
+
+	// 2. Suspend domain B and resume while cert is valid (S89).
+	if _, err := invoke(h.stub, "SetDomainStatus", mustJSON(t, api.DomainStatus{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "B",
+		ExpectedRevision: 3,
+		Status:           api.Suspended,
+	})); err != nil {
+		t.Fatalf("suspend domain B: %v", err)
+	}
+	if _, err := invoke(h.stub, "SetDomainStatus", mustJSON(t, api.DomainStatus{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "B",
+		ExpectedRevision: 4,
+		Status:           api.Active,
+	})); err != nil {
+		t.Fatalf("resume domain B: %v", err)
+	}
+
+	// 3. Rotate IB key via UpdateAuthorityIdentity (F15, S81), then re-certify B with keyVersion=2.
+	ibBefore, err := get[api.Identity](h.stub, api.Key("identity", "did:web:b.local:ib"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, ibPub2 := makeAppKey(t, "did:web:b.local:ib")
+	_, ibNewMgmt := makeSerializedCaller(t, "BMsp", "ib-v2")
+	if _, err := invoke(h.stub, "UpdateAuthorityIdentity", mustJSON(t, api.AuthorityIdentityUpdateInput{
+		Bound:              api.Bound{DeploymentID: h.depID},
+		ID:                 "did:web:b.local:ib",
+		ExpectedRevision:   ibBefore.Revision,
+		ExpectedKeyVersion: ibBefore.KeyVersion,
+		Management:         ibNewMgmt,
+		DocumentDigest:     api.Digest([]byte("doc:ib:v2")),
+		KeyID:              "did:web:b.local:ib#key-2",
+		PublicKey:          ibPub2,
+	})); err != nil {
+		t.Fatalf("UpdateAuthorityIdentity IB: %v", err)
+	}
+	// Attempting CertifyDomain while still specifying old IB KeyVersion=1 must fail.
+	certB3Bad := api.Certify{
+		Certification: api.Certification{
+			Bound:          api.Bound{DeploymentID: h.depID},
+			ID:             "urn:grad:cert:B:v3-bad",
+			Domain:         "B",
+			RootKeyVersion: 1,
+			Digest:         api.Digest([]byte("cert:B:v3-bad")),
+			Scopes: []api.Scope{{
+				ID:         "did:web:b.local:ib",
+				KeyVersion: 1,
+				Types:      []string{"EnterpriseIdentityCredential"},
+				Claims:     []string{"domain", "role"},
+			}},
+			Interval: api.Interval{NBF: nbf, EXP: exp},
+		},
+		ExpectedRevision:      5,
+		ExpectedCertification: "urn:grad:cert:B:v2",
+	}
+	if _, err := invoke(h.stub, "CertifyDomain", mustJSON(t, certB3Bad)); err == nil || !strings.Contains(err.Error(), badInput) {
+		t.Fatalf("expected INVALID_STRUCTURE when cert references stale IB KeyVersion, got %v", err)
+	}
+	// Re-certify B with IB KeyVersion=2 succeeds.
+	certB3 := certB3Bad
+	certB3.Certification.ID = "urn:grad:cert:B:v3"
+	certB3.Certification.Digest = api.Digest([]byte("cert:B:v3"))
+	certB3.Certification.Scopes[0].KeyVersion = 2
+	if _, err := invoke(h.stub, "CertifyDomain", mustJSON(t, certB3)); err != nil {
+		t.Fatalf("CertifyDomain with IB keyVersion=2: %v", err)
+	}
+
+	// 4. RevokeCertification is irreversible; suspended domain cannot resume once its certification is REVOKED; REVOKED domain cannot be resumed (S78, S89).
+	if _, err := invoke(h.stub, "RevokeCertification", mustJSON(t, api.Mutation{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "urn:grad:cert:B:v3",
+		ExpectedRevision: 1,
+	})); err != nil {
+		t.Fatalf("RevokeCertification: %v", err)
+	}
+	if _, err := invoke(h.stub, "SetDomainStatus", mustJSON(t, api.DomainStatus{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "B",
+		ExpectedRevision: 6,
+		Status:           api.Suspended,
+	})); err != nil {
+		t.Fatalf("suspend domain B after cert revoke: %v", err)
+	}
+	if _, err := invoke(h.stub, "SetDomainStatus", mustJSON(t, api.DomainStatus{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "B",
+		ExpectedRevision: 7,
+		Status:           api.Active,
+	})); err == nil || !strings.Contains(err.Error(), invalid) {
+		t.Fatalf("expected INVALID_STATE resuming domain whose cert is REVOKED, got %v", err)
+	}
+	if _, err := invoke(h.stub, "SetDomainStatus", mustJSON(t, api.DomainStatus{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "B",
+		ExpectedRevision: 7,
+		Status:           api.Revoked,
+	})); err != nil {
+		t.Fatalf("revoke domain B: %v", err)
+	}
+	if _, err := invoke(h.stub, "SetDomainStatus", mustJSON(t, api.DomainStatus{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "B",
+		ExpectedRevision: 8,
+		Status:           api.Active,
+	})); err == nil || !strings.Contains(err.Error(), invalid) {
+		t.Fatalf("expected INVALID_STATE resuming REVOKED domain, got %v", err)
+	}
+}
+
+func TestM3IdentityLifecycleRotateAndRecover(t *testing.T) {
+	h := newRegistryHarness(t)
+
+	// 1. Self suspends A1; self, domainA admin, registrarB cannot resume; only registrarA can resume (S94).
+	h.stub.creator = h.aA1
+	if _, err := invoke(h.stub, "SetIdentityStatus", mustJSON(t, api.IdentityStatusInput{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "did:web:a.local:a1",
+		ExpectedRevision: 1,
+		Status:           api.Suspended,
+	})); err != nil {
+		t.Fatalf("self suspend A1: %v", err)
+	}
+	for _, attempt := range []struct {
+		name    string
+		creator []byte
+	}{
+		{"self", h.aA1},
+		{"domain-admin", h.aAdmin},
+		{"cross-domain-registrar", h.bReg},
+	} {
+		h.stub.creator = attempt.creator
+		if _, err := invoke(h.stub, "SetIdentityStatus", mustJSON(t, api.IdentityStatusInput{
+			Bound:            api.Bound{DeploymentID: h.depID},
+			ID:               "did:web:a.local:a1",
+			ExpectedRevision: 2,
+			Status:           api.Active,
+		})); err == nil || !strings.Contains(err.Error(), identityMgmtForbidden) {
+			t.Fatalf("expected IDENTITY_MANAGEMENT_FORBIDDEN for %s resuming A1, got %v", attempt.name, err)
+		}
+	}
+	// Same-status transition (SUSPENDED -> SUSPENDED) returns IDENTITY_STATE_CONFLICT.
+	h.stub.creator = h.aReg
+	if _, err := invoke(h.stub, "SetIdentityStatus", mustJSON(t, api.IdentityStatusInput{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "did:web:a.local:a1",
+		ExpectedRevision: 2,
+		Status:           api.Suspended,
+	})); err == nil || !strings.Contains(err.Error(), identityStateConflict) {
+		t.Fatalf("expected IDENTITY_STATE_CONFLICT on repeat SUSPENDED, got %v", err)
+	}
+	// Registrar A resumes A1 -> ACTIVE.
+	if _, err := invoke(h.stub, "SetIdentityStatus", mustJSON(t, api.IdentityStatusInput{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "did:web:a.local:a1",
+		ExpectedRevision: 2,
+		Status:           api.Active,
+	})); err != nil {
+		t.Fatalf("registrarA resume A1: %v", err)
+	}
+
+	// Non-T caller cannot manage bootstrap authority IA/IB/IC (S94).
+	h.stub.creator = h.aReg
+	if _, err := invoke(h.stub, "SetIdentityStatus", mustJSON(t, api.IdentityStatusInput{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "did:web:a.local:ia",
+		ExpectedRevision: 1,
+		Status:           api.Suspended,
+	})); err == nil || !strings.Contains(err.Error(), identityMgmtForbidden) {
+		t.Fatalf("expected IDENTITY_MANAGEMENT_FORBIDDEN for registrarA managing IA, got %v", err)
+	}
+
+	// 2. RotateIdentity increments KeyVersion and Revision.
+	_, a1Pub2 := makeAppKey(t, "did:web:a.local:a1")
+	h.stub.creator = h.aA1
+	if _, err := invoke(h.stub, "RotateIdentity", mustJSON(t, api.RotateIdentityInput{
+		Bound:              api.Bound{DeploymentID: h.depID},
+		ID:                 "did:web:a.local:a1",
+		ExpectedRevision:   3,
+		ExpectedKeyVersion: 1,
+		DocumentDigest:     api.Digest([]byte("doc:a1:v2")),
+		KeyID:              "did:web:a.local:a1#key-2",
+		PublicKey:          a1Pub2,
+	})); err != nil {
+		t.Fatalf("RotateIdentity A1: %v", err)
+	}
+
+	// 3. RecoverIdentity on SUSPENDED ordinary identity preserves SUSPENDED status and atomically swaps binding (S95, S97).
+	b1Before, err := get[api.Identity](h.stub, api.Key("identity", "did:web:b.local:b1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.stub.creator = h.bReg
+	if _, err := invoke(h.stub, "SetIdentityStatus", mustJSON(t, api.IdentityStatusInput{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "did:web:b.local:b1",
+		ExpectedRevision: b1Before.Revision,
+		Status:           api.Suspended,
+	})); err != nil {
+		t.Fatalf("suspend B1 before recovery: %v", err)
+	}
+	b1NewCreator, b1NewMgmt := makeSerializedCaller(t, "BMsp", "b1-recovered")
+	_, b1Pub2 := makeAppKey(t, "did:web:b.local:b1")
+	if _, err := invoke(h.stub, "RecoverIdentity", mustJSON(t, api.RecoverIdentityInput{
+		Bound:              api.Bound{DeploymentID: h.depID},
+		ID:                 "did:web:b.local:b1",
+		ExpectedRevision:   b1Before.Revision + 1,
+		ExpectedKeyVersion: b1Before.KeyVersion,
+		AccountCommitment:  b1Before.AccountCommitment,
+		OldManagement:      b1Before.Management,
+		NewManagement:      b1NewMgmt,
+		DocumentDigest:     api.Digest([]byte("doc:b1:recovered")),
+		KeyID:              "did:web:b.local:b1#key-2",
+		PublicKey:          b1Pub2,
+	})); err != nil {
+		t.Fatalf("RecoverIdentity on SUSPENDED B1: %v", err)
+	}
+	b1After, err := get[api.Identity](h.stub, api.Key("identity", "did:web:b.local:b1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b1After.Status != api.Suspended || b1After.KeyVersion != 2 || b1After.Management != b1NewMgmt || b1After.AccountCommitment != b1Before.AccountCommitment {
+		t.Fatalf("unexpected B1 after RecoverIdentity: %+v", b1After)
+	}
+	// Registrar must still resume B1 -> ACTIVE before B1 can rotate/operate again (S97).
+	h.stub.creator = b1NewCreator
+	if _, err := invoke(h.stub, "RotateIdentity", mustJSON(t, api.RotateIdentityInput{
+		Bound:              api.Bound{DeploymentID: h.depID},
+		ID:                 "did:web:b.local:b1",
+		ExpectedRevision:   b1After.Revision,
+		ExpectedKeyVersion: b1After.KeyVersion,
+		DocumentDigest:     api.Digest([]byte("doc:b1:v3")),
+		KeyID:              "did:web:b.local:b1#key-3",
+		PublicKey:          b1Pub2,
+	})); err == nil || !strings.Contains(err.Error(), identityStateConflict) {
+		t.Fatalf("expected IDENTITY_STATE_CONFLICT rotating SUSPENDED B1 after recovery, got %v", err)
+	}
+	// Old management certificate can no longer manage B1 (S95).
+	h.stub.creator = h.bB1
+	if _, err := invoke(h.stub, "SetIdentityStatus", mustJSON(t, api.IdentityStatusInput{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "did:web:b.local:b1",
+		ExpectedRevision: b1After.Revision,
+		Status:           api.Revoked,
+	})); err == nil || !strings.Contains(err.Error(), identityMgmtForbidden) {
+		t.Fatalf("expected IDENTITY_MANAGEMENT_FORBIDDEN for old B1 cert after recovery, got %v", err)
+	}
+
+	// 4. Revoke B1 then verify RecoverIdentity, RotateIdentity, SetIdentityStatus, and RegisterIdentity re-use all return IDENTITY_STATE_CONFLICT (S97).
+	h.stub.creator = h.bReg
+	if _, err := invoke(h.stub, "SetIdentityStatus", mustJSON(t, api.IdentityStatusInput{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "did:web:b.local:b1",
+		ExpectedRevision: b1After.Revision,
+		Status:           api.Revoked,
+	})); err != nil {
+		t.Fatalf("revoke B1: %v", err)
+	}
+	_, b1ThirdMgmt := makeSerializedCaller(t, "BMsp", "b1-3")
+	if _, err := invoke(h.stub, "RecoverIdentity", mustJSON(t, api.RecoverIdentityInput{
+		Bound:              api.Bound{DeploymentID: h.depID},
+		ID:                 "did:web:b.local:b1",
+		ExpectedRevision:   b1After.Revision + 1,
+		ExpectedKeyVersion: b1After.KeyVersion,
+		AccountCommitment:  b1After.AccountCommitment,
+		OldManagement:      b1NewMgmt,
+		NewManagement:      b1ThirdMgmt,
+		DocumentDigest:     api.Digest([]byte("doc:b1:v3")),
+		KeyID:              "did:web:b.local:b1#key-3",
+		PublicKey:          b1Pub2,
+	})); err == nil || !strings.Contains(err.Error(), identityStateConflict) {
+		t.Fatalf("expected IDENTITY_STATE_CONFLICT recovering REVOKED B1, got %v", err)
+	}
+	b1Revoked := b1After
+	b1Revoked.Management = b1ThirdMgmt
+	b1Revoked.KeyID = "did:web:b.local:b1#key-1"
+	b1Revoked.KeyVersion = 1
+	if _, err := invoke(h.stub, "RegisterIdentity", mustJSON(t, b1Revoked)); err == nil || !strings.Contains(err.Error(), identityStateConflict) {
+		t.Fatalf("expected IDENTITY_STATE_CONFLICT re-registering REVOKED DID, got %v", err)
+	}
+}
+
+func TestM3CredentialTaskAndGrantLifecycle(t *testing.T) {
+	h := newRegistryHarness(t)
+	nbf := h.now.Add(-time.Hour).Unix()
+	exp := h.now.Add(24 * time.Hour).Unix()
+
+	taskRP := api.Task{
+		Bound:             api.Bound{DeploymentID: h.depID},
+		ID:                api.Digest([]byte("task-m3-rp")),
+		Creator:           "did:web:a.local:u",
+		CreatorCredential: "cred-U",
+		CreatorKeyVersion: 1,
+		Domain:            "A",
+		Mode:              api.RP,
+		Resource:          api.Digest([]byte("resource:c")),
+		Digest:            api.Digest([]byte("task-m3-rp-spec")),
+		Interval:          api.Interval{NBF: nbf, EXP: exp},
+	}
+	h.stub.creator = h.aU
+	if _, err := invoke(h.stub, "RegisterTask", mustJSON(t, taskRP)); err != nil {
+		t.Fatalf("RegisterTask: %v", err)
+	}
+	g0 := api.Grant{
+		Bound:             api.Bound{DeploymentID: h.depID},
+		ID:                api.Digest([]byte("g0-m3")),
+		Schema:            api.Schema,
+		Root:              api.Digest([]byte("g0-m3")),
+		Task:              taskRP.ID,
+		Mode:              api.RP,
+		Domain:            "A",
+		Resource:          taskRP.Resource,
+		Issuer:            "did:web:c.local:supplier",
+		Grantee:           "did:web:a.local:u",
+		IssuerKeyVersion:  1,
+		GranteeKeyVersion: 1,
+		IssuerCredential:  "cred-C",
+		GranteeCredential: "cred-U",
+		Depth:             1,
+		Digest:            api.Digest([]byte("g0-m3-jws")),
+		Interval:          api.Interval{NBF: nbf, EXP: exp},
+	}
+	h.stub.creator = h.cSvc
+	if _, err := invoke(h.stub, "RegisterGrant", mustJSON(t, g0)); err != nil {
+		t.Fatalf("RegisterGrant G0: %v", err)
+	}
+
+	// SuspendGrant -> ResumeGrant preserves original EXP (E3).
+	if _, err := invoke(h.stub, "SuspendGrant", mustJSON(t, api.Mutation{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               g0.ID,
+		ExpectedRevision: 1,
+		ExpectedDigest:   g0.Digest,
+	})); err != nil {
+		t.Fatalf("SuspendGrant: %v", err)
+	}
+	g0Susp, err := get[api.Grant](h.stub, api.Key("grant", g0.ID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g0Susp.Status != api.Suspended || g0Susp.EXP != exp {
+		t.Fatalf("unexpected suspended grant: %+v", g0Susp)
+	}
+	if _, err := invoke(h.stub, "ResumeGrant", mustJSON(t, api.Mutation{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               g0.ID,
+		ExpectedRevision: 2,
+		ExpectedDigest:   g0.Digest,
+	})); err != nil {
+		t.Fatalf("ResumeGrant: %v", err)
+	}
+	g0Resumed, err := get[api.Grant](h.stub, api.Key("grant", g0.ID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g0Resumed.Status != api.Active || g0Resumed.EXP != exp {
+		t.Fatalf("unexpected resumed grant: %+v", g0Resumed)
+	}
+
+	// CancelTask is terminal CANCELLED and rejects repeat cancel with TASK_STATE_CONFLICT.
+	h.stub.creator = h.aU
+	if _, err := invoke(h.stub, "CancelTask", mustJSON(t, api.Mutation{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               taskRP.ID,
+		ExpectedRevision: 1,
+		ExpectedDigest:   taskRP.Digest,
+	})); err != nil {
+		t.Fatalf("CancelTask: %v", err)
+	}
+	if _, err := invoke(h.stub, "CancelTask", mustJSON(t, api.Mutation{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               taskRP.ID,
+		ExpectedRevision: 2,
+		ExpectedDigest:   taskRP.Digest,
+	})); err == nil || !strings.Contains(err.Error(), taskStateConflict) {
+		t.Fatalf("expected TASK_STATE_CONFLICT on repeat CancelTask, got %v", err)
+	}
+
+	// RevokeCredential works even when issuer's domain B is REVOKED (S89).
+	h.stub.creator = h.tCreator
+	if _, err := invoke(h.stub, "SetDomainStatus", mustJSON(t, api.DomainStatus{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "B",
+		ExpectedRevision: 2,
+		Status:           api.Revoked,
+	})); err != nil {
+		t.Fatalf("revoke domain B: %v", err)
+	}
+	h.stub.creator = h.bIB
+	if _, err := invoke(h.stub, "RevokeCredential", mustJSON(t, api.Mutation{
+		Bound:            api.Bound{DeploymentID: h.depID},
+		ID:               "cred-B1",
+		ExpectedRevision: 1,
+	})); err != nil {
+		t.Fatalf("RevokeCredential while domain B revoked: %v", err)
+	}
+	credB1, err := get[api.Credential](h.stub, api.Key("credential", "cred-B1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if credB1.Status != api.Revoked || credB1.Revision != 2 {
+		t.Fatalf("unexpected cred-B1 after RevokeCredential: %+v", credB1)
 	}
 }

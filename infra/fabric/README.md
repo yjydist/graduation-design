@@ -63,4 +63,18 @@ mise run fabric:rebuild -- .local/fabric-init-committed-test 17220
 FABRIC_INIT_COMMITTED_TEST_DIR="$PWD/.local/fabric-init-committed-test" mise exec -- go test -v -count=1 ./internal/fabric -run '^TestDeploymentResumesAfterCommittedInitialization$'
 ```
 
+M3 定点回归通过 `FABRIC_M3_TEST_DIR` 显式指定已部署并完成 `seed` 的实验实例. 可选择 `offline`, `agent`, `e6`, `faults` 或 `management` 子测试定位失败; `authority` 会修改域认证和管理证书绑定, 应使用干净实例. 定点回归的事件和结果保存到实例目录的 `m3-regression/`, 完整联合验收仍使用 `ledger:verify`.
+
+```bash
+FABRIC_M3_TEST_DIR="$PWD/.local/fabric-d0" mise exec -- go test -v -count=1 -timeout=5m ./internal/fabric -run 'TestM3LiveAcceptance/(agent|e6|faults|management)$'
+```
+
 三个业务组织与实验运维分别对应四个排序身份. 当前容器均由同一宿主和运维控制, 停机仅检验容器级故障和连续恢复. D0 的管理交易使用真实 Fabric 证书和背书, 应用层已切换为持久化 P-256 应用密钥, 测试 CA `did:web` 解析, 固定 W3C VC v2 本地上下文摘要与真实 ES256/SD-JWT 凭证和 `AccessEvidencePackage` 出示; 业务服务端点, 策略求值与订单实验的判据见[实验计划](../../docs/experiments/实验计划.md).
+
+## 4 管理与核账服务装配
+
+管理服务库入口 NewFabricManagementOperationService 连接已有部署与原交易日志. 宿主在验证客户端证书的 TLS 服务上挂载 Handler, 并运行 RunRecovery, 启动时恢复已受理的待定请求. management 定点回归使用真实 mTLS HTTP, 两笔背书竞争, 原块校验及保留 txID 的重启恢复.
+
+外部 ledgerctl mcp 的核账工具分别从 RECOVERY_MTLS_CERT/RECOVERY_MTLS_KEY/RECOVERY_MTLS_CA, AUDIT_MTLS_CERT/AUDIT_MTLS_KEY/AUDIT_MTLS_CA 和 RECEIPT_MTLS_CERT/RECEIPT_MTLS_KEY/RECEIPT_MTLS_CA 读取三个服务客户端的证书, 私钥与服务端 CA 文件路径. 客户端证书用 DID URI 和角色 OU 绑定恢复, 审计和回执服务, 通过 HTTPS 网关连接; X-Caller-* 头不能认证身份. 未配置认证客户端时, 核账工具保留 UNKNOWN 并返回配置错误. 进程内验收由宿主显式装配三个固定身份的通道.
+
+核账 C 服务在同一事务保存审计记录和 order_outcome_outbox. 嵌入式宿主用 DeliverStoredReceipt 交付该原回执, 服务重启或响应丢失时用 DeliverPendingReceipts 继续投递, 接收端按原 caseId/sendRevision/checkNo 和全部内容去重. decision_evidence 保存原出示和 DID 文档供历史复核, 这些数据库材料不属于公开证据导出.

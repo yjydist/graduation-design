@@ -1,0 +1,18 @@
+{
+  "blockCount": 256,
+  "checks": [
+    "contiguous block numbers",
+    "parent hash chain",
+    "raw data hash",
+    "ASN.1 header hash",
+    "indexed transaction ID and validation code"
+  ],
+  "status": "PASS",
+  "transactionCount": 286,
+  "validationCodes": {
+    "DUPLICATE_TXID": 1,
+    "ENDORSEMENT_POLICY_FAILURE": 3,
+    "MVCC_READ_CONFLICT": 5,
+    "VALID": 277
+  }
+}

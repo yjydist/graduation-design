@@ -2,8 +2,18 @@ package protocol
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/hex"
+	"encoding/json"
+	"math/big"
 	"strings"
 	"testing"
+	"time"
 )
 
 const vectorTaskSpecJSON = `{
@@ -197,5 +207,135 @@ func TestManagementDualProofVectorAndTampering(t *testing.T) {
 	tamperedApp.AppJWSSignature = "A" + tamperedApp.AppJWSSignature[1:]
 	if err := tamperedApp.Verify(); !HasCode(err, ErrCodeSignatureInvalid) {
 		t.Fatalf("expected SIGNATURE_INVALID after mutating appJwsSignature, got %v", err)
+	}
+}
+
+func TestM3RecoveryDualProofAndDIDCanonicalVectors(t *testing.T) {
+	now := time.Now().UTC()
+	dep := DeploymentBinding{
+		Purpose:       DeploymentPurpose,
+		SchemaVersion: SchemaVersion,
+		ChannelID:     "procurement",
+		RegistryName:  "authregistry",
+		GenesisHash:   strings.Repeat("1", 64),
+		InstanceID:    strings.Repeat("2", 64),
+	}
+	depID, err := dep.ComputeID()
+	if err != nil {
+		t.Fatalf("ComputeID: %v", err)
+	}
+
+	// Verify DIDDocument digest invariance under JSON whitespace / key-order permutation (S98)
+	_, pubHex, err := GenerateP256KeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc, err := NewDIDDocument("did:web:a.local:u", "did:web:a.local:u#key-2", pubHex, KeyPurposeAssertionMethod, KeyPurposeAuthentication)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docDigest1, err := doc.Digest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonicalDocBytes, err := MarshalJCS(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generic map[string]any
+	if err := json.Unmarshal(canonicalDocBytes, &generic); err != nil {
+		t.Fatal(err)
+	}
+	indentedBytes, err := json.MarshalIndent(generic, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, parsedDigest, err := ParseDIDDocument(indentedBytes); err != nil {
+		t.Fatalf("ParseDIDDocument failed on indented doc: %v", err)
+	} else if parsedDigest != docDigest1 {
+		t.Fatalf("whitespace/key-order invariance broken: %s != %s", parsedDigest, docDigest1)
+	}
+
+	// Self-signed new management cert & app key for RecoveryDualProofBundle (S95, S96, S103)
+	mgmtPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(42),
+		Subject:      pkix.Name{CommonName: "u-recovered"},
+		NotBefore:    now.Add(-time.Hour),
+		NotAfter:     now.Add(24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+	}
+	mgmtDER, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &mgmtPriv.PublicKey, mgmtPriv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgmtSum := sha256.Sum256(mgmtDER)
+	newAppPriv, newAppPubHex, err := GenerateP256KeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	nonce, err := GenerateNonce()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(nonce) != ChallengeNonceLen {
+		t.Fatalf("expected canonical 43-char nonce, got %d", len(nonce))
+	}
+
+	chal := RecoveryChallenge{
+		Purpose:               RecoveryChallengePurpose,
+		ChallengeID:           "rec-chal-001",
+		DeploymentID:          depID,
+		DomainID:              "A",
+		SubjectID:             "did:web:a.local:u",
+		AccountCommitment:     strings.Repeat("4", 64),
+		OldManagementIdentity: ManagementIdentity{MSPID: "AMsp", CertificateSha256: strings.Repeat("a", 64)},
+		NewManagementIdentity: ManagementIdentity{MSPID: "AMsp", CertificateSha256: hex.EncodeToString(mgmtSum[:])},
+		ExpectedRevision:      1,
+		ExpectedKeyVersion:    1,
+		NewAppKeyID:           "did:web:a.local:u#key-2",
+		NewAppKeyVersion:      2,
+		NewAppPublicKey:       newAppPubHex,
+		DIDDocumentDigest:     docDigest1,
+		Nonce:                 nonce,
+		IssuedAt:              now.Unix(),
+		ExpiresAt:             now.Unix() + 120,
+	}
+
+	bundle, err := SignRecoveryDualProofBundle(dep, chal, mgmtDER, mgmtPriv, newAppPriv)
+	if err != nil {
+		t.Fatalf("SignRecoveryDualProofBundle: %v", err)
+	}
+	if err := bundle.Verify(); err != nil {
+		t.Fatalf("RecoveryDualProofBundle.Verify failed on valid bundle: %v", err)
+	}
+
+	// Negative 1: mutate new application key proof
+	badApp := *bundle
+	badApp.NewAppJWSSignature = "B" + badApp.NewAppJWSSignature[1:]
+	if err := badApp.Verify(); !HasCode(err, ErrCodeRecoveryProofInvalid) {
+		t.Fatalf("expected RECOVERY_PROOF_INVALID on mutated app signature, got %v", err)
+	}
+
+	// Negative 2: mutate challengeId -> BINDING_MISMATCH; mutate subjectId -> RECOVERY_PROOF_INVALID
+	badSub := *bundle
+	badSub.Challenge.SubjectID = "did:web:a.local:other"
+	if err := badSub.Verify(); !HasCode(err, ErrCodeRecoveryProofInvalid) {
+		t.Fatalf("expected RECOVERY_PROOF_INVALID on mutated subjectId, got %v", err)
+	}
+	badChalID := *bundle
+	badChalID.Challenge.ChallengeID = "rec-chal-tampered"
+	if err := badChalID.Verify(); !HasCode(err, ErrCodeChallengeMismatch) {
+		t.Fatalf("expected CHALLENGE_MISMATCH on mutated challengeId, got %v", err)
+	}
+
+	// Negative 3: TTL > 300s rejected
+	badTTL := chal
+	badTTL.ExpiresAt = badTTL.IssuedAt + 301
+	if _, err := SignRecoveryDualProofBundle(dep, badTTL, mgmtDER, mgmtPriv, newAppPriv); !HasCode(err, ErrCodeRecoveryProofInvalid) {
+		t.Fatalf("expected RECOVERY_PROOF_INVALID for TTL > 300s, got %v", err)
 	}
 }

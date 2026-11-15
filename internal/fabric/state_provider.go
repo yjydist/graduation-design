@@ -59,8 +59,14 @@ type StateProvider struct {
 
 	mu          sync.RWMutex
 	staticProbe *ProbeSnapshot
+	lastProbe   *ProbeSnapshot
 	monoClock   func() time.Time
 	afterRoot   func() error
+}
+
+// EnsureStateSchema initializes the durable registry and block-view tables before a provider is used.
+func EnsureStateSchema(ctx context.Context, db *pgxpool.Pool) error {
+	return initSchema(ctx, db, operationsSchema+viewSchema)
 }
 
 // NewStateProvider constructs a StateProvider from a verified deployment and optional online probe runtime.
@@ -112,16 +118,35 @@ func (sp *StateProvider) SetMonoClock(fn func() time.Time) {
 }
 
 // IsProbeFresh validates that an active original probe lease has not reached its monotonic deadline.
-func (sp *StateProvider) IsProbeFresh() (ProbeSnapshot, error) {
+func (sp *StateProvider) IsProbeFresh(original ...ProbeSnapshot) (ProbeSnapshot, error) {
 	sp.mu.RLock()
 	clock := sp.monoClock
 	rt := sp.runtime
 	staticP := sp.staticProbe
+	last := sp.lastProbe
 	sp.mu.RUnlock()
 	if clock == nil {
 		clock = time.Now
 	}
 	nowMono := clock()
+	probe := staticP
+	if rt != nil {
+		probe = last
+	}
+	if len(original) > 0 {
+		probe = &original[0]
+	} else if rt != nil && sp.db != nil && (probe == nil || !nowMono.Before(probe.Deadline)) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		view, err := sp.AssembleProtocolSnapshot(ctx, "", nowMono)
+		if err != nil {
+			return ProbeSnapshot{}, err
+		}
+		probe = &view.Probe
+	}
+	if probe == nil || probe.TxID == "" || !nowMono.Before(probe.Deadline) {
+		return ProbeSnapshot{}, protocol.NewError(protocol.ErrCodeStateStale, "no unexpired original probe lease")
+	}
 
 	if rt != nil {
 		rt.mu.Lock()
@@ -134,25 +159,40 @@ func (sp *StateProvider) IsProbeFresh() (ProbeSnapshot, error) {
 			}
 			return ProbeSnapshot{}, protocol.NewError(protocol.ErrCodeStateUnavailable, msg)
 		}
-	}
-	if staticP != nil {
-		if !nowMono.Before(staticP.Deadline) {
-			return ProbeSnapshot{}, protocol.NewError(protocol.ErrCodeStateStale, "original probe monotonic deadline reached")
+		rt.mu.Lock()
+		sent, exists := rt.attempts[probe.TxID]
+		rt.mu.Unlock()
+		if !exists || !sent.Equal(probe.SentAt) || !sent.Add(rt.timeLimit).Equal(probe.Deadline) {
+			return ProbeSnapshot{}, protocol.NewError(protocol.ErrCodeStateStale, "original probe is not from this runtime")
 		}
-		adopted := *staticP
+	}
+	if staticP != nil || rt != nil {
+		adopted := *probe
 		adopted.AdoptedAt = nowMono
+		adopted.AdoptedMonoNs = probe.SentMonoNs + nowMono.Sub(probe.SentAt).Nanoseconds()
 		return adopted, nil
 	}
-	if rt == nil {
-		return ProbeSnapshot{}, protocol.NewError(protocol.ErrCodeStateStale, "no active original probe lease")
-	}
-	return ProbeSnapshot{}, nil
+	return ProbeSnapshot{}, protocol.NewError(protocol.ErrCodeStateStale, "no active original probe lease")
 }
 
 // AssembleProtocolSnapshot reads fabric_head and all grant-chain protocol dependencies in one
 // PostgreSQL REPEATABLE READ read-only transaction, checking original probe freshness without
 // falling back to querying Peer latest state.
 func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrantID string, now time.Time) (*ConsistentProtocolView, error) {
+	return sp.assembleAtHeight(ctx, leafGrantID, nil, now)
+}
+
+// AssembleHistoricalProtocolSnapshot reconstructs an immutable historical SnapshotView at blockNo
+// AssembleHistoricalProtocolSnapshot assembles the protocol snapshot at an exact historical block height
+// inside a single REPEATABLE READ transaction after verifying continuous replayed block history up to blockNo.
+func (sp *StateProvider) AssembleHistoricalProtocolSnapshot(ctx context.Context, leafGrantID string, blockNo uint64, now time.Time) (*ConsistentProtocolView, error) {
+	if blockNo == 0 {
+		return nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "HISTORY_UNAVAILABLE: blockNo must be >= 1")
+	}
+	return sp.assembleAtHeight(ctx, leafGrantID, &blockNo, now)
+}
+
+func (sp *StateProvider) assembleAtHeight(ctx context.Context, leafGrantID string, historicalBlock *uint64, now time.Time) (*ConsistentProtocolView, error) {
 	if sp == nil || sp.db == nil {
 		return nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "state provider database is nil")
 	}
@@ -185,8 +225,20 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 		clock = time.Now
 	}
 
+	d := &deployment{DeploymentID: sp.deploymentID, Bootstrap: sp.boot, BootstrapDigest: sp.bootDigest}
+	v := view{db: sp.db, d: d}
+
+	mode := "online"
+	snapPoint := h
 	var probeSnap ProbeSnapshot
-	if rt != nil {
+	if historicalBlock != nil {
+		mode = "historical"
+		snapPoint.Number = *historicalBlock
+		if err := v.historicalPoint(ctx, tx, &snapPoint, h); err != nil {
+			return nil, mapViewErr(err)
+		}
+		hook = nil
+	} else if rt != nil {
 		lease, epoch, lErr := rt.lease(ctx, tx, h)
 		if lErr != nil {
 			return nil, mapViewErr(lErr)
@@ -215,11 +267,10 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 		return nil, protocol.NewError(protocol.ErrCodeStateStale, "STATE_STALE: no active original probe lease")
 	}
 
-	d := &deployment{DeploymentID: sp.deploymentID, Bootstrap: sp.boot, BootstrapDigest: sp.bootDigest}
 	s := &snapshot{
 		DeploymentID: sp.deploymentID,
-		Mode:         "online",
-		point:        h,
+		Mode:         mode,
+		point:        snapPoint,
 		GrantID:      leafGrantID,
 		Records:      map[string]json.RawMessage{},
 	}
@@ -242,7 +293,7 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 
 	// Decode assembled records into protocol.SnapshotView
 	snapView := &protocol.SnapshotView{
-		Height:              h.Number,
+		Height:              snapPoint.Number,
 		Now:                 now.UTC(),
 		ClockError:          api.ClockError,
 		ExactIntervalBounds: true,
@@ -312,12 +363,19 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 	}
 
 	// Load any identity links at the same REPEATABLE READ snapshot height so dual-domain link state is visible.
-	linkRows, err := tx.Query(ctx, "SELECT value FROM fabric_current WHERE deployment=$1 AND key LIKE 'link/%'", sp.deploymentID)
+	var linkRows pgx.Rows
+	if mode == "historical" {
+		linkRows, err = tx.Query(ctx, `SELECT DISTINCT ON (key) value FROM fabric_version
+			WHERE deployment=$1 AND key LIKE 'link/%' AND block_no <= $2
+			ORDER BY key, block_no DESC, tx_index DESC`, sp.deploymentID, snapPoint.Number)
+	} else {
+		linkRows, err = tx.Query(ctx, "SELECT value FROM fabric_current WHERE deployment=$1 AND key LIKE 'link/%'", sp.deploymentID)
+	}
 	if err == nil {
 		var links []api.IdentityLink
 		for linkRows.Next() {
 			var raw []byte
-			if err := linkRows.Scan(&raw); err == nil {
+			if err := linkRows.Scan(&raw); err == nil && len(raw) > 0 {
 				var l api.IdentityLink
 				if json.Unmarshal(raw, &l) == nil && l.ID != "" {
 					snapView.Links[l.ID] = l
@@ -329,7 +387,7 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 		for _, l := range links {
 			for _, domID := range []string{l.SourceDomain, l.TargetDomain} {
 				if _, exists := snapView.Domains[domID]; !exists && domID != "" {
-					if dRaw, dErr := loadOptionalCurrent(ctx, tx, sp.deploymentID, api.Key("domain", domID)); dErr == nil && len(dRaw) > 0 {
+					if dRaw, dErr := loadOptionalAt(ctx, tx, sp.deploymentID, api.Key("domain", domID), historicalBlock); dErr == nil && len(dRaw) > 0 {
 						var dom api.Domain
 						if json.Unmarshal(dRaw, &dom) == nil {
 							snapView.Domains[dom.ID] = dom
@@ -339,7 +397,7 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 			}
 			for _, subID := range []string{l.SourceSubject, l.TargetSubject} {
 				if _, exists := snapView.Identities[subID]; !exists && subID != "" {
-					if iRaw, iErr := loadOptionalCurrent(ctx, tx, sp.deploymentID, api.Key("identity", subID)); iErr == nil && len(iRaw) > 0 {
+					if iRaw, iErr := loadOptionalAt(ctx, tx, sp.deploymentID, api.Key("identity", subID), historicalBlock); iErr == nil && len(iRaw) > 0 {
 						var id api.Identity
 						if json.Unmarshal(iRaw, &id) == nil {
 							snapView.Identities[id.ID] = id
@@ -351,7 +409,7 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 	}
 
 	// Optional PA identity (not directly on RP grant path, needed when checking BM/authority presence)
-	if paRaw, err := loadOptionalCurrent(ctx, tx, sp.deploymentID, api.Key("identity", "did:web:a.local:pa")); err == nil && len(paRaw) > 0 {
+	if paRaw, err := loadOptionalAt(ctx, tx, sp.deploymentID, api.Key("identity", "did:web:a.local:pa"), historicalBlock); err == nil && len(paRaw) > 0 {
 		var paID api.Identity
 		if json.Unmarshal(paRaw, &paID) == nil {
 			snapView.Identities[paID.ID] = paID
@@ -364,7 +422,7 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 			continue
 		}
 		if _, exists := snapView.Certifications[dom.Certification]; !exists {
-			if cRaw, cErr := loadOptionalCurrent(ctx, tx, sp.deploymentID, api.Key("certification", dom.Certification)); cErr == nil && len(cRaw) > 0 {
+			if cRaw, cErr := loadOptionalAt(ctx, tx, sp.deploymentID, api.Key("certification", dom.Certification), historicalBlock); cErr == nil && len(cRaw) > 0 {
 				var cert api.Certification
 				if json.Unmarshal(cRaw, &cert) == nil && cert.ID != "" {
 					snapView.Certifications[cert.ID] = cert
@@ -396,18 +454,22 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	if rt != nil {
+	if historicalBlock == nil && rt != nil {
+		sp.mu.Lock()
+		copyProbe := probeSnap
+		sp.lastProbe = &copyProbe
+		sp.mu.Unlock()
 		rt.emit("adopt", &probeEvidence{
 			TxID: probeSnap.TxID, Identity: probeSnap.Identity, ProbeBlock: probeSnap.ProbeBlock,
-			View: h, Sent: probeSnap.SentAt, Deadline: probeSnap.Deadline, Adopted: probeSnap.AdoptedAt,
+			View: snapPoint, Sent: probeSnap.SentAt, Deadline: probeSnap.Deadline, Adopted: probeSnap.AdoptedAt,
 		})
 	}
 
 	return &ConsistentProtocolView{
 		DeploymentID: sp.deploymentID,
 		Checkpoint: Checkpoint{
-			Height:          int64(h.Number),
-			Hash:            h.Hash,
+			Height:          int64(snapPoint.Number),
+			Hash:            snapPoint.Hash,
 			RevocationEpoch: 0,
 		},
 		Probe:        probeSnap,
@@ -418,13 +480,52 @@ func (sp *StateProvider) AssembleProtocolSnapshot(ctx context.Context, leafGrant
 	}, nil
 }
 
-func loadOptionalCurrent(ctx context.Context, tx pgx.Tx, depID, key string) ([]byte, error) {
+func loadOptionalAt(ctx context.Context, tx pgx.Tx, depID, key string, historicalBlock *uint64) ([]byte, error) {
 	var raw []byte
-	err := tx.QueryRow(ctx, "SELECT value FROM fabric_current WHERE deployment=$1 AND key=$2", depID, key).Scan(&raw)
+	var err error
+	if historicalBlock != nil {
+		err = tx.QueryRow(ctx, `SELECT value FROM fabric_version WHERE deployment=$1 AND key=$2 AND block_no <= $3
+			ORDER BY block_no DESC, tx_index DESC LIMIT 1`, depID, key, *historicalBlock).Scan(&raw)
+	} else {
+		err = tx.QueryRow(ctx, "SELECT value FROM fabric_current WHERE deployment=$1 AND key=$2", depID, key).Scan(&raw)
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	return raw, err
+}
+
+// FindInactiveBlock searches fabric_version for the earliest VALID block >= afterBlock where (kind, id) entered SUSPENDED, REVOKED, or CANCELLED.
+func (sp *StateProvider) FindInactiveBlock(ctx context.Context, kind, id string, afterBlock int64) (int64, string, bool, error) {
+	if sp == nil || sp.db == nil {
+		return 0, "", false, protocol.NewError(protocol.ErrCodeStateUnavailable, "state provider database is nil")
+	}
+	if afterBlock < 1 {
+		afterBlock = 1
+	}
+	key := api.Key(kind, id)
+	rows, err := sp.db.Query(ctx, `SELECT block_no, tx_id, value FROM fabric_version
+		WHERE deployment=$1 AND key=$2 AND block_no >= $3
+		ORDER BY block_no ASC, tx_index ASC`, sp.deploymentID, key, afterBlock)
+	if err != nil {
+		return 0, "", false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var blk int64
+		var txID string
+		var raw []byte
+		if err := rows.Scan(&blk, &txID, &raw); err != nil {
+			return 0, "", false, err
+		}
+		var st struct {
+			Status string `json:"status"`
+		}
+		if json.Unmarshal(raw, &st) == nil && (st.Status == api.Suspended || st.Status == api.Revoked || st.Status == api.Cancelled) {
+			return blk, txID, true, nil
+		}
+	}
+	return 0, "", false, rows.Err()
 }
 
 func mapViewErr(err error) error {
@@ -434,7 +535,7 @@ func mapViewErr(err error) error {
 	if errors.Is(err, errStale) || strings.Contains(err.Error(), "STATE_STALE") {
 		return protocol.NewError(protocol.ErrCodeStateStale, err.Error())
 	}
-	if errors.Is(err, errUnavailable) || strings.Contains(err.Error(), "MISSING_DEPENDENCY") || strings.Contains(err.Error(), "DEPLOYMENT_MISMATCH") {
+	if errors.Is(err, errUnavailable) || strings.Contains(err.Error(), "MISSING_DEPENDENCY") || strings.Contains(err.Error(), "DEPLOYMENT_MISMATCH") || strings.Contains(err.Error(), "HISTORY_UNAVAILABLE") {
 		return protocol.NewError(protocol.ErrCodeStateUnavailable, err.Error())
 	}
 	if strings.Contains(err.Error(), "INVALID_STATE") {
@@ -452,8 +553,14 @@ type gatewayStateAdapter struct {
 	sp *StateProvider
 }
 
-func (a *gatewayStateAdapter) IsProbeFresh() (gateway.ProbeInfo, error) {
-	p, err := a.sp.IsProbeFresh()
+func (a *gatewayStateAdapter) IsProbeFresh(original ...gateway.ProbeInfo) (gateway.ProbeInfo, error) {
+	var probes []ProbeSnapshot
+	if len(original) > 0 {
+		p := original[0]
+		probes = []ProbeSnapshot{{TxID: p.TxID, ProbeBlock: p.ProbeBlock, SentAt: p.SentAt,
+			Deadline: p.Deadline, SentMonoNs: p.SentMonoNs, DeadlineMonoNs: p.DeadlineMonoNs}}
+	}
+	p, err := a.sp.IsProbeFresh(probes...)
 	if err != nil {
 		return gateway.ProbeInfo{}, err
 	}
@@ -464,6 +571,7 @@ func (a *gatewayStateAdapter) IsProbeFresh() (gateway.ProbeInfo, error) {
 		Deadline:       p.Deadline,
 		SentMonoNs:     p.SentMonoNs,
 		DeadlineMonoNs: p.DeadlineMonoNs,
+		CheckedMonoNs:  p.AdoptedMonoNs,
 	}, nil
 }
 
@@ -472,6 +580,25 @@ func (a *gatewayStateAdapter) AssembleSnapshot(ctx context.Context, leafGrantID 
 	if err != nil {
 		return nil, err
 	}
+	return toGatewayConsistentSnapshot(view), nil
+}
+
+func (a *gatewayStateAdapter) AssembleHistoricalSnapshot(ctx context.Context, leafGrantID string, blockNo int64, now time.Time) (*gateway.ConsistentSnapshot, error) {
+	if blockNo <= 0 {
+		return nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "HISTORY_UNAVAILABLE: blockNo must be >= 1")
+	}
+	view, err := a.sp.AssembleHistoricalProtocolSnapshot(ctx, leafGrantID, uint64(blockNo), now)
+	if err != nil {
+		return nil, err
+	}
+	return toGatewayConsistentSnapshot(view), nil
+}
+
+func (a *gatewayStateAdapter) FindInactiveBlock(ctx context.Context, kind, id string, afterBlock int64) (int64, string, bool, error) {
+	return a.sp.FindInactiveBlock(ctx, kind, id, afterBlock)
+}
+
+func toGatewayConsistentSnapshot(view *ConsistentProtocolView) *gateway.ConsistentSnapshot {
 	return &gateway.ConsistentSnapshot{
 		DeploymentID:    view.DeploymentID,
 		BlockNumber:     view.Checkpoint.Height,
@@ -486,5 +613,5 @@ func (a *gatewayStateAdapter) AssembleSnapshot(ctx context.Context, leafGrantID 
 			DeadlineMonoNs: view.Probe.DeadlineMonoNs,
 		},
 		Snapshot: view.Snapshot,
-	}, nil
+	}
 }

@@ -5,13 +5,94 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	api "graduation-design/internal/fabricapi"
 )
+
+// SignatureCacheKey uniquely indexes a statically verified JWS signature under B1 mode:
+// (SHA256(rawMaterialBytes), alg, appKeyId, appKeyVersion).
+type SignatureCacheKey struct {
+	MaterialDigest string `json:"materialDigest"`
+	Alg            string `json:"alg"`
+	KeyID          string `json:"keyId"`
+	KeyVersion     uint64 `json:"keyVersion"`
+}
+
+// SignatureCache provides concurrency-safe caching of static ECDSA JWS verifications.
+// Dynamic state (Identity.Status, Identity.KeyVersion, Domain.Status, Domain.Certification,
+// ClaimNames scope, Grant.Status, Task.Status, KB-JWT bindings) is NEVER cached or skipped.
+type SignatureCache struct {
+	mu      sync.RWMutex
+	entries map[SignatureCacheKey]string
+	hits    atomic.Int64
+	misses  atomic.Int64
+}
+
+// NewSignatureCache constructs a concurrency-safe B1 static JWS signature cache.
+func NewSignatureCache() *SignatureCache {
+	return &SignatureCache{entries: make(map[SignatureCacheKey]string)}
+}
+
+// Hits returns the number of cache lookups that avoided static ECDSA signature math.
+func (c *SignatureCache) Hits() int64 {
+	if c == nil {
+		return 0
+	}
+	return c.hits.Load()
+}
+
+// Misses returns the number of uncached static JWS signature verifications performed.
+func (c *SignatureCache) Misses() int64 {
+	if c == nil {
+		return 0
+	}
+	return c.misses.Load()
+}
+
+// ResetStats clears hit and miss counters while retaining cached signature entries.
+func (c *SignatureCache) ResetStats() {
+	if c == nil {
+		return
+	}
+	c.hits.Store(0)
+	c.misses.Store(0)
+}
+
+func (c *SignatureCache) lookup(key SignatureCacheKey) (string, bool) {
+	if c == nil {
+		return "", false
+	}
+	c.mu.RLock()
+	pubHex, ok := c.entries[key]
+	c.mu.RUnlock()
+	if ok {
+		c.hits.Add(1)
+	}
+	return pubHex, ok
+}
+
+func (c *SignatureCache) verifyJWS(key SignatureCacheKey, parsed *ParsedJWS, pub *ecdsa.PublicKey, wantKid, pubHex string, recordMiss bool) error {
+	if c != nil && recordMiss {
+		c.misses.Add(1)
+	}
+	if err := parsed.Verify(pub, wantKid); err != nil {
+		return err
+	}
+	if c != nil && pubHex != "" {
+		c.mu.Lock()
+		c.entries[key] = pubHex
+		c.mu.Unlock()
+	}
+	return nil
+}
 
 // AncestorCredential pairs an ancestor credential identifier with its SD-JWT ending in '~' (no KB-JWT).
 type AncestorCredential struct {
@@ -122,6 +203,7 @@ func (s *SnapshotView) IsIdentityLinkEffective(linkID string) bool {
 
 // VerifiedEvidenceResult summarizes verified cryptographic bindings recovered from an AccessEvidencePackage.
 type VerifiedEvidenceResult struct {
+	DIDDocuments      map[string]json.RawMessage
 	Bindings          PackageBindings
 	LeafCredential    *VerifiedIdentityCredential
 	AncestorCreds     map[string]*VerifiedIdentityCredential
@@ -323,6 +405,19 @@ func VerifyAccessEvidencePackage(
 	dids *DIDWebResolver,
 	challenge ChallengeContext,
 ) (*VerifiedEvidenceResult, error) {
+	return VerifyAccessEvidencePackageWithCache(ctx, pkg, snap, dids, challenge, nil)
+}
+
+// VerifyAccessEvidencePackageWithCache verifies pkg end-to-end against an immutable fixed-height Ledger SnapshotView,
+// using cache (B1 mode) solely to avoid repeated static ECDSA JWS math while always enforcing dynamic ledger state.
+func VerifyAccessEvidencePackageWithCache(
+	ctx context.Context,
+	pkg *AccessEvidencePackage,
+	snap *SnapshotView,
+	dids *DIDWebResolver,
+	challenge ChallengeContext,
+	cache *SignatureCache,
+) (*VerifiedEvidenceResult, error) {
 	if pkg == nil || snap == nil || dids == nil {
 		return nil, NewError(ErrCodeInvalidSchema, "package, snapshot, and DID resolver are required")
 	}
@@ -359,17 +454,23 @@ func VerifyAccessEvidencePackage(
 	}
 
 	// 2. Verify preseeded T root DID document and public key offline (and cross-check online if routed).
-	_, rootPub, err := dids.ResolvePreseededKey(snap.Root.DID, snap.Root.KeyID, snap.Root.KeyVersion, KeyPurposeAssertionMethod, snap.Root.PublicKey)
+	rootDoc, rootPub, err := dids.ResolvePreseededKey(snap.Root.DID, snap.Root.KeyID, snap.Root.KeyVersion, KeyPurposeAssertionMethod, snap.Root.PublicKey)
 	if err != nil {
 		return nil, err
 	}
+	documents := map[string]json.RawMessage{}
+	documents[snap.Root.DID], _ = json.Marshal(rootDoc)
 
 	// 3. Verify Task anchor and containment of Request within TaskSpec.
 	task, ok := snap.Tasks[pkg.Request.TaskID]
 	if !ok {
 		return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("task %q not found at snapshot height %d", pkg.Request.TaskID, snap.Height))
 	}
-	if task.DeploymentID != snap.DeploymentID || task.Status != api.Active || !task.Interval.Current(now, intervalMargin) {
+	if task.Status != api.Active {
+		msg := fmt.Sprintf("task %q status %q != ACTIVE at height %d", task.ID, task.Status, snap.Height)
+		return nil, WrapError(ErrCodeTaskInactive, msg, NewError(ErrCodeGrantChainInvalid, msg))
+	}
+	if task.DeploymentID != snap.DeploymentID || !task.Interval.Current(now, intervalMargin) {
 		return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("task %q inactive or expired at height %d", task.ID, snap.Height))
 	}
 	taskDigest, err := pkg.TaskSpec.Digest()
@@ -406,18 +507,36 @@ func VerifyAccessEvidencePackage(
 		if err := DecodeStrictJSON(prelim.PayloadBytes, &prelimClaims); err != nil {
 			return nil, err
 		}
+		sumG := sha256.Sum256([]byte(gRaw))
+		grantCacheKey := SignatureCacheKey{
+			MaterialDigest: hex.EncodeToString(sumG[:]),
+			Alg:            prelim.Header.Alg,
+			KeyID:          prelim.Header.Kid,
+			KeyVersion:     prelimClaims.IssuerKeyVersion,
+		}
+		cachedGrantPub, grantCached := cache.lookup(grantCacheKey)
+
 		issuerID, ok := snap.Identities[prelimClaims.Issuer]
-		if !ok || issuerID.DeploymentID != snap.DeploymentID || issuerID.Status != api.Active {
-			return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] issuer identity %q missing or inactive", i, prelimClaims.Issuer))
+		if !ok || issuerID.DeploymentID != snap.DeploymentID {
+			return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] issuer identity %q missing", i, prelimClaims.Issuer))
+		}
+		if issuerID.Status != api.Active {
+			msg := fmt.Sprintf("grant[%d] issuer identity %q status %q != ACTIVE", i, prelimClaims.Issuer, issuerID.Status)
+			return nil, WrapError(ErrCodeIdentityInactive, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if issuerID.KeyVersion != prelimClaims.IssuerKeyVersion {
-			return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant[%d] issuerKeyVersion %d != registered %d", i, prelimClaims.IssuerKeyVersion, issuerID.KeyVersion))
+			msg := fmt.Sprintf("grant[%d] issuerKeyVersion %d != registered %d", i, prelimClaims.IssuerKeyVersion, issuerID.KeyVersion)
+			return nil, WrapError(ErrCodeKeyVersionStale, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		issuerDom, ok := snap.Domains[issuerID.Domain]
-		if !ok || issuerDom.Status != api.Active {
-			return nil, NewError(ErrCodeDomainCertificationInvalid, fmt.Sprintf("grant[%d] issuer domain %q missing or inactive", i, issuerID.Domain))
+		if !ok {
+			return nil, NewError(ErrCodeDomainCertificationInvalid, fmt.Sprintf("grant[%d] issuer domain %q missing", i, issuerID.Domain))
 		}
-		_, issuerPub, _, err := dids.ResolveDID(ctx, issuerID.ID, DIDResolutionExpectation{
+		if issuerDom.Status != api.Active {
+			msg := fmt.Sprintf("grant[%d] issuer domain %q status %q != ACTIVE", i, issuerID.Domain, issuerDom.Status)
+			return nil, WrapError(ErrCodeDomainInactive, msg, NewError(ErrCodeDomainCertificationInvalid, msg))
+		}
+		issuerDoc, issuerPub, _, err := dids.ResolveDID(ctx, issuerID.ID, DIDResolutionExpectation{
 			ExpectedDigest:       issuerID.DocumentDigest,
 			ExpectedKeyID:        prelim.Header.Kid,
 			ExpectedKeyVersion:   issuerID.KeyVersion,
@@ -427,7 +546,13 @@ func VerifyAccessEvidencePackage(
 		if err != nil {
 			return nil, err
 		}
-		pg, err := ParseAndVerifyGrant(gRaw, issuerPub, prelim.Header.Kid)
+		documents[issuerID.ID], _ = json.Marshal(issuerDoc)
+		if !grantCached || cachedGrantPub != issuerID.PublicKey {
+			if err := cache.verifyJWS(grantCacheKey, prelim, issuerPub, prelim.Header.Kid, issuerID.PublicKey, !grantCached); err != nil {
+				return nil, err
+			}
+		}
+		pg, err := decodeAndValidateGrantParsed(gRaw, prelim)
 		if err != nil {
 			return nil, err
 		}
@@ -440,7 +565,8 @@ func VerifyAccessEvidencePackage(
 				msg := fmt.Sprintf("ancestor grant %q status %q != ACTIVE at snapshot height %d", pg.Claims.ID, onChainGrant.Status, snap.Height)
 				return nil, WrapError(ErrCodeAncestorInactive, msg, NewError(ErrCodeGrantChainInvalid, msg))
 			}
-			return nil, NewError(ErrCodeGrantChainInvalid, fmt.Sprintf("grant %q inactive at snapshot height %d", pg.Claims.ID, snap.Height))
+			msg := fmt.Sprintf("grant %q status %q != ACTIVE at snapshot height %d", pg.Claims.ID, onChainGrant.Status, snap.Height)
+			return nil, WrapError(ErrCodeGrantInactive, msg, NewError(ErrCodeGrantChainInvalid, msg))
 		}
 		if err := matchGrantAnchor(&pg.Claims, pg.Digest, onChainGrant); err != nil {
 			return nil, err
@@ -522,9 +648,9 @@ func VerifyAccessEvidencePackage(
 	}
 
 	verifyOneSDJWT := func(sdJWT string, requireKB bool) (*VerifiedIdentityCredential, *api.Identity, *api.Identity, error) {
-		issuerPart, _, found := strings.Cut(sdJWT, "~")
-		if !found || issuerPart == "" {
-			return nil, nil, nil, NewError(ErrCodeInvalidDisclosure, "SD-JWT missing '~' separator")
+		_, issuerPart, disclosures, kbJWT, err := splitAndCheckSDJWT(sdJWT, requireKB)
+		if err != nil {
+			return nil, nil, nil, err
 		}
 		prelim, err := ParseCompactJWS(issuerPart, TypEnterpriseIdentityCredential)
 		if err != nil {
@@ -534,15 +660,40 @@ func VerifyAccessEvidencePackage(
 		if err := DecodeStrictJSON(prelim.PayloadBytes, &prelimClaims); err != nil {
 			return nil, nil, nil, err
 		}
+		sumVC := sha256.Sum256([]byte(issuerPart))
+		vcCacheKey := SignatureCacheKey{
+			MaterialDigest: hex.EncodeToString(sumVC[:]),
+			Alg:            prelim.Header.Alg,
+			KeyID:          prelim.Header.Kid,
+			KeyVersion:     prelimClaims.IssuerKeyVersion,
+		}
+		cachedVCPub, vcCached := cache.lookup(vcCacheKey)
+
 		issuerID, ok := snap.Identities[prelimClaims.Issuer]
-		if !ok || issuerID.DeploymentID != snap.DeploymentID || issuerID.Status != api.Active || issuerID.KeyVersion != prelimClaims.IssuerKeyVersion {
-			return nil, nil, nil, NewError(ErrCodeIssuerScopeInvalid, fmt.Sprintf("credential issuer %q missing, inactive, or keyVersion mismatch", prelimClaims.Issuer))
+		if !ok || issuerID.DeploymentID != snap.DeploymentID {
+			return nil, nil, nil, NewError(ErrCodeIssuerScopeInvalid, fmt.Sprintf("credential issuer %q missing", prelimClaims.Issuer))
+		}
+		if issuerID.Status != api.Active {
+			msg := fmt.Sprintf("credential issuer %q status %q != ACTIVE", prelimClaims.Issuer, issuerID.Status)
+			return nil, nil, nil, WrapError(ErrCodeIdentityInactive, msg, NewError(ErrCodeIssuerScopeInvalid, msg))
+		}
+		if issuerID.KeyVersion != prelimClaims.IssuerKeyVersion {
+			msg := fmt.Sprintf("credential issuer %q keyVersion %d != registered %d", prelimClaims.Issuer, prelimClaims.IssuerKeyVersion, issuerID.KeyVersion)
+			return nil, nil, nil, WrapError(ErrCodeKeyVersionStale, msg, NewError(ErrCodeIssuerScopeInvalid, msg))
 		}
 		holderID, ok := snap.Identities[prelimClaims.Sub]
-		if !ok || holderID.DeploymentID != snap.DeploymentID || holderID.Status != api.Active || holderID.KeyVersion != prelimClaims.AppKeyVersion {
-			return nil, nil, nil, NewError(ErrCodeHolderMismatch, fmt.Sprintf("credential holder %q missing, inactive, or appKeyVersion mismatch", prelimClaims.Sub))
+		if !ok || holderID.DeploymentID != snap.DeploymentID {
+			return nil, nil, nil, NewError(ErrCodeHolderMismatch, fmt.Sprintf("credential holder %q missing", prelimClaims.Sub))
 		}
-		_, issuerPub, _, err := dids.ResolveDID(ctx, issuerID.ID, DIDResolutionExpectation{
+		if holderID.Status != api.Active {
+			msg := fmt.Sprintf("credential holder %q status %q != ACTIVE", prelimClaims.Sub, holderID.Status)
+			return nil, nil, nil, WrapError(ErrCodeIdentityInactive, msg, NewError(ErrCodeHolderMismatch, msg))
+		}
+		if holderID.KeyVersion != prelimClaims.AppKeyVersion {
+			msg := fmt.Sprintf("credential holder %q appKeyVersion %d != registered %d", prelimClaims.Sub, prelimClaims.AppKeyVersion, holderID.KeyVersion)
+			return nil, nil, nil, WrapError(ErrCodeKeyVersionStale, msg, NewError(ErrCodeHolderMismatch, msg))
+		}
+		issuerDoc, issuerPub, _, err := dids.ResolveDID(ctx, issuerID.ID, DIDResolutionExpectation{
 			ExpectedDigest:       issuerID.DocumentDigest,
 			ExpectedKeyID:        prelim.Header.Kid,
 			ExpectedKeyVersion:   issuerID.KeyVersion,
@@ -552,7 +703,13 @@ func VerifyAccessEvidencePackage(
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		verCred, err := VerifySDJWTCredential(sdJWT, issuerPub, prelim.Header.Kid, holderID.PublicKey, requireKB)
+		documents[issuerID.ID], _ = json.Marshal(issuerDoc)
+		if !vcCached || cachedVCPub != issuerID.PublicKey {
+			if err := cache.verifyJWS(vcCacheKey, prelim, issuerPub, prelim.Header.Kid, issuerID.PublicKey, !vcCached); err != nil {
+				return nil, nil, nil, err
+			}
+		}
+		verCred, err := verifySDJWTPayloadAndDisclosures(sdJWT, prelim, disclosures, kbJWT, holderID.PublicKey)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -647,7 +804,28 @@ func VerifyAccessEvidencePackage(
 	}
 
 	for _, tp := range pkg.TrustPaths {
-		parsedCert, certDigest, err := ParseAndVerifyDomainAuthorityCredential(tp.DomainCertification, rootPub, snap.Root.KeyID)
+		prelimCert, err := ParseCompactJWS(tp.DomainCertification, TypDomainAuthorityCredential)
+		if err != nil {
+			return nil, err
+		}
+		var peek struct {
+			IssuerKeyVersion uint64 `json:"issuerKeyVersion"`
+		}
+		_ = json.Unmarshal(prelimCert.PayloadBytes, &peek)
+		sumDC := sha256.Sum256([]byte(tp.DomainCertification))
+		certCacheKey := SignatureCacheKey{
+			MaterialDigest: hex.EncodeToString(sumDC[:]),
+			Alg:            prelimCert.Header.Alg,
+			KeyID:          prelimCert.Header.Kid,
+			KeyVersion:     peek.IssuerKeyVersion,
+		}
+		cachedCertPub, certCached := cache.lookup(certCacheKey)
+		if !certCached || cachedCertPub != snap.Root.PublicKey {
+			if err := cache.verifyJWS(certCacheKey, prelimCert, rootPub, snap.Root.KeyID, snap.Root.PublicKey, !certCached); err != nil {
+				return nil, err
+			}
+		}
+		parsedCert, certDigest, err := decodeAndValidateDomainAuthorityParsed(prelimCert)
 		if err != nil {
 			return nil, err
 		}
@@ -658,8 +836,15 @@ func VerifyAccessEvidencePackage(
 		certDigestCache[parsedCert.ID] = certDigest
 
 		dom, ok := snap.Domains[parsedCert.CredentialSubject.DomainID]
-		if !ok || dom.DeploymentID != snap.DeploymentID || dom.Status != api.Active || dom.Certification != parsedCert.ID {
-			return nil, NewError(ErrCodeDomainCertificationInvalid, fmt.Sprintf("domain %q missing, inactive, or mismatches certificationId %q", parsedCert.CredentialSubject.DomainID, parsedCert.ID))
+		if !ok || dom.DeploymentID != snap.DeploymentID {
+			return nil, NewError(ErrCodeDomainCertificationInvalid, fmt.Sprintf("domain %q missing or deployment mismatch", parsedCert.CredentialSubject.DomainID))
+		}
+		if dom.Status != api.Active {
+			msg := fmt.Sprintf("domain %q status %q != ACTIVE", dom.ID, dom.Status)
+			return nil, WrapError(ErrCodeDomainInactive, msg, NewError(ErrCodeDomainCertificationInvalid, msg))
+		}
+		if dom.Certification != parsedCert.ID {
+			return nil, NewError(ErrCodeDomainCertificationInvalid, fmt.Sprintf("domain %q certification %q mismatches %q", dom.ID, dom.Certification, parsedCert.ID))
 		}
 		certAnchor, ok := snap.Certifications[parsedCert.ID]
 		if !ok || certAnchor.DeploymentID != snap.DeploymentID || certAnchor.Status != api.Active || !certAnchor.Interval.Current(now, intervalMargin) {
@@ -716,7 +901,7 @@ func VerifyAccessEvidencePackage(
 	if err != nil {
 		return nil, err
 	}
-	_, actorAuthPub, _, err := dids.ResolveDID(ctx, leafHolderID.ID, DIDResolutionExpectation{
+	actorDoc, actorAuthPub, _, err := dids.ResolveDID(ctx, leafHolderID.ID, DIDResolutionExpectation{
 		ExpectedDigest:       leafHolderID.DocumentDigest,
 		ExpectedKeyID:        parsedKB.Header.Kid,
 		ExpectedKeyVersion:   leafHolderID.KeyVersion,
@@ -726,6 +911,7 @@ func VerifyAccessEvidencePackage(
 	if err != nil {
 		return nil, err
 	}
+	documents[leafHolderID.ID], _ = json.Marshal(actorDoc)
 	if err := parsedKB.Verify(actorAuthPub, parsedKB.Header.Kid); err != nil {
 		return nil, err
 	}
@@ -769,6 +955,7 @@ func VerifyAccessEvidencePackage(
 	}
 
 	return &VerifiedEvidenceResult{
+		DIDDocuments:      documents,
 		Bindings:          *bindings,
 		LeafCredential:    leafVerCred,
 		AncestorCreds:     ancestorVerCreds,

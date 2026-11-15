@@ -1,0 +1,22 @@
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/VerifyRejectHeaderOnlyAuditor
+    order_m3_test.go:479: unverified caller with self-asserted auditor headers: expected 403, got 200
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/VerifyAuditDurableReceipt
+    order_m3_test.go:484: audit committed but no durable receipt exists before delivery
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/VerifyHistoricalRevokedCredential
+    order_m3_test.go:498: revoked credential at historical h incorrectly returned MATCHED
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/VerifyStoppedIntentRejectsNewWorker
+    order_m3_test.go:502: stopped intent accepts a new worker holding current sendRevision
+--- FAIL: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR (0.21s)
+    --- FAIL: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/VerifyRejectHeaderOnlyAuditor (0.01s)
+    --- FAIL: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/VerifyAuditDurableReceipt (0.00s)
+    --- FAIL: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/VerifyHistoricalRevokedCredential (0.01s)
+    --- FAIL: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR/VerifyStoppedIntentRejectsNewWorker (0.00s)
+FAIL
+FAIL	graduation-design/internal/gateway	1.989s
+=== RUN   TestVerifyManagementHTTPActuallySubmits
+    operation_m3_test.go:412: HTTP returned 202 but never invoked configured SubmitAsync backend
+--- FAIL: TestVerifyManagementHTTPActuallySubmits (0.11s)
+FAIL
+FAIL	graduation-design/internal/fabric	1.595s
+FAIL

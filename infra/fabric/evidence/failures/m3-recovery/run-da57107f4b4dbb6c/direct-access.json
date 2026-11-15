@@ -1,0 +1,45 @@
+{
+  "deploymentId": "8dca3458f3874b21b73fb873377cc0b4d0ff4cbd82ff880f91da798b1bc2226d",
+  "runId": "run-da57107f4b4dbb6c",
+  "registrationAndMaterialDelivery": {
+    "g0WalletReceiptDigest": "b31ad4dabca43ad9cf196b9721e921b73fdc0acda211ff22a1bf0b22051c24bb",
+    "invalidProofConsumed": false,
+    "paSubjectId": "did:web:a.local:pa",
+    "registrationChallengeId": "urn:grad:reg-challenge:9e9fcc308d42a5b71bc5c879de8929a2"
+  },
+  "directAccessQuoteAndIdempotency": {
+    "contextVersion": 1,
+    "firstDecisionId": "urn:grad:decision:1b8d511d-1a20-441e-8b56-b0d07ed2bc2a",
+    "idempotencyConflict": "IDEMPOTENCY_CONFLICT",
+    "policyDigest": "f99f41ca04280eb358a0ac340734a28f9ce4ba27efd789657e0553044e5efb8e",
+    "quoteId": "urn:grad:quote:aba64adc-173b-4785-9e96-63b6bb4ac95b",
+    "retryDecisionId": "urn:grad:decision:f64d9159-0e09-4280-9de3-fbc2a8ce3e01",
+    "unitPriceMinor": 80000,
+    "validUntil": 1794728329
+  },
+  "wrongLeafKeyRejected": {
+    "challengeConsumed": false,
+    "challengeId": "urn:grad:challenge:678c2197-b0c0-4283-8848-236d74c3c62a",
+    "errorCode": "SIGNATURE_INVALID",
+    "httpStatus": 401
+  },
+  "probeExpiryStateStale": {
+    "errorCode": "STATE_STALE",
+    "execStatus": 503,
+    "readyStatus": 503
+  },
+  "postLockBlockedNoQuote": {
+    "decisionId": "urn:grad:decision:1e2a4620-f12f-40d4-9580-6bfb35e276af",
+    "errorCode": "POLICY_DENIED",
+    "httpStatus": 403,
+    "quotesCountAfter": 1,
+    "quotesCountBefore": 1
+  },
+  "exactSecondDeadlineRejection": {
+    "challengeId": "urn:grad:challenge:76808cf9-af71-4afc-99ad-badd398c67c3",
+    "decisionAt": 1794728059,
+    "errorCode": "CHALLENGE_EXPIRED",
+    "expiresAt": 1794728059,
+    "httpStatus": 401
+  }
+}

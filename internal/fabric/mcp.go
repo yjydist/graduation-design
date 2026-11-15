@@ -14,8 +14,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"graduation-design/internal/agent"
+	api "graduation-design/internal/fabricapi"
 	"graduation-design/internal/gateway"
 	"graduation-design/internal/protocol"
+	"graduation-design/internal/serviceauth"
 )
 
 func runMCPCmd(ctx context.Context, i *instance, d deployment, db *pgxpool.Pool, gatewayURL string) error {
@@ -57,59 +59,6 @@ func buildM2WalletContext(
 	if nowFn == nil {
 		nowFn = time.Now
 	}
-	w, err := agent.NewWalletContext(agent.WalletConfig{
-		DeploymentID:    d.DeploymentID,
-		GatewayURL:      gatewayURL,
-		Audience:        "https://c.local",
-		SupplierID:      "urn:grad:supplier:C",
-		SupplierDID:     f.Identities["C"].ID,
-		DefaultTaskSpec: f.M2TaskSpec,
-		Currency:        "CNY",
-		DB:              db,
-		HTTPHandler:     httpHandler,
-		Now:             nowFn,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if db != nil {
-		_ = gateway.EnsureSchema(ctx, db, d.DeploymentID, "urn:grad:supplier:C")
-	}
-
-	roleOrder := []string{"U", "A1", "B1", "U-in-B", "PA"}
-	for _, role := range roleOrder {
-		id, ok := f.Identities[role]
-		if !ok {
-			continue
-		}
-		priv, err := loadECPrivateKeyPEM(i.privatePath("app", role+".key.pem"))
-		if err != nil {
-			return nil, fmt.Errorf("load %s private key: %w", role, err)
-		}
-		sdBytes, err := os.ReadFile(i.registrySubPath("credentials", role+".sdjwt"))
-		if err != nil {
-			return nil, fmt.Errorf("load %s SD-JWT: %w", role, err)
-		}
-		credID := "cred:" + role
-		if c, ok := f.Credentials[role]; ok && c.ID != "" {
-			credID = c.ID
-		}
-		if err := w.RegisterActor(agent.ActorConfig{
-			Actor:             role,
-			DID:               id.ID,
-			KeyID:             id.KeyID,
-			CredentialID:      credID,
-			KeyVersion:        id.KeyVersion,
-			DomainID:          id.Domain,
-			EntityType:        id.Kind,
-			Roles:             []string{id.Kind},
-			PrivateKey:        priv,
-			SDJWTPresentation: string(sdBytes),
-		}); err != nil {
-			return nil, fmt.Errorf("register actor %s: %w", role, err)
-		}
-	}
-
 	certA, err := os.ReadFile(i.registrySubPath("certifications", "A.jws"))
 	if err != nil {
 		return nil, err
@@ -163,6 +112,172 @@ func buildM2WalletContext(
 		{Issuer: aIssuerDID, DomainCertification: string(certA)},
 		{Issuer: bIssuerDID, DomainCertification: string(certB)},
 		{Issuer: cIssuerDID, DomainCertification: string(certC)},
+	}
+
+	trustPathsForMode := func(mode string) []protocol.TrustPathEntry {
+		if mode == api.RP {
+			return tpABC
+		}
+		return tpAB
+	}
+	buildChainGrant := func(claims protocol.GrantClaims, digest, parentOverride string) api.Grant {
+		parentID, parentDigest := parentOverride, ""
+		if claims.ParentID != nil && *claims.ParentID != "" {
+			parentID = *claims.ParentID
+		}
+		if claims.ParentDigest != nil {
+			parentDigest = *claims.ParentDigest
+		}
+		return api.Grant{
+			Bound:             api.Bound{DeploymentID: d.DeploymentID},
+			ID:                claims.ID,
+			Schema:            api.Schema,
+			Parent:            parentID,
+			ParentDigest:      parentDigest,
+			Root:              claims.RootID,
+			Task:              claims.TaskID,
+			Mode:              claims.AuthorizationMode,
+			Domain:            claims.PrincipalDomain,
+			Resource:          claims.ResourceID,
+			Issuer:            claims.Issuer,
+			Grantee:           claims.Grantee,
+			IssuerKeyVersion:  claims.IssuerKeyVersion,
+			GranteeKeyVersion: claims.GranteeKeyVersion,
+			IssuerCredential:  claims.IssuerCredentialID,
+			GranteeCredential: claims.GranteeCredentialID,
+			Depth:             uint8(claims.RemainingDepth),
+			Digest:            digest,
+			Interval:          api.Interval{NBF: claims.NBF, EXP: claims.EXP},
+		}
+	}
+
+	var anchorFn func(context.Context, agent.AnchorChildGrantRequest) (*agent.AnchorChildGrantResult, error)
+	var replaceFn func(context.Context, agent.ReplaceGrantRequest) (*agent.ReplaceGrantResult, error)
+	if i != nil && db != nil {
+		if err := initSchema(ctx, db, operationsSchema); err != nil {
+			return nil, err
+		}
+		j := journal{instance: i, deploymentID: d.DeploymentID, db: db}
+		anchorFn = func(callCtx context.Context, req agent.AnchorChildGrantRequest) (*agent.AnchorChildGrantResult, error) {
+			chainGrant := buildChainGrant(req.Claims, req.GrantDigest, req.ParentID)
+			opKey := "mcp-anchor/" + api.Digest([]byte(req.Claims.ID))[:24]
+			op, err := j.write(callCtx, opKey, req.IssuerActor, "RegisterGrant", payload(chainGrant))
+			if err != nil {
+				return nil, err
+			}
+			if err := expectOperation(op, "VALID"); err != nil {
+				return nil, err
+			}
+			return &agent.AnchorChildGrantResult{
+				Anchored:   true,
+				TrustPaths: trustPathsForMode(req.Claims.AuthorizationMode),
+			}, nil
+		}
+		replaceFn = func(callCtx context.Context, req agent.ReplaceGrantRequest) (*agent.ReplaceGrantResult, error) {
+			rev := req.OldGrantRevision
+			if rev == 0 {
+				rev = 1
+			}
+			oldMut := api.Mutation{
+				Bound:            api.Bound{DeploymentID: d.DeploymentID},
+				ID:               req.OldGrantID,
+				ExpectedRevision: rev,
+				ExpectedDigest:   req.OldGrantDigest,
+			}
+			chainGrant := buildChainGrant(req.NewClaims, req.NewGrantDigest, "")
+			opKey := "mcp-replace/" + api.Digest([]byte(req.OldGrantID + "/" + req.NewClaims.ID))[:24]
+			op, err := j.write(callCtx, opKey, req.IssuerActor, "ReplaceGrant", payload(api.Replacement{
+				Old: oldMut,
+				New: chainGrant,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			if err := expectOperation(op, "VALID"); err != nil {
+				return nil, err
+			}
+			return &agent.ReplaceGrantResult{
+				Anchored:   true,
+				TrustPaths: trustPathsForMode(req.NewClaims.AuthorizationMode),
+			}, nil
+		}
+	}
+
+ var recoveryClient,auditClient,receiptClient *http.Client
+ if httpHandler!=nil {
+ recoveryClient=serviceauth.NewLocalClient(httpHandler,serviceauth.Identity{Role:"B_RECOVERY",DID:"did:web:b.local:services:recovery"})
+ auditClient=serviceauth.NewLocalClient(httpHandler,serviceauth.Identity{Role:"C_AUDITOR",DID:"did:web:c.local:auditors:c1"})
+ receiptClient=serviceauth.NewLocalClient(httpHandler,serviceauth.Identity{Role:"C_AUDIT_SERVICE",DID:"did:web:c.local:services:audit"})
+ } else {
+ load:=func(prefix string)(*http.Client,error){cert,key,ca:=os.Getenv(prefix+"_MTLS_CERT"),os.Getenv(prefix+"_MTLS_KEY"),os.Getenv(prefix+"_MTLS_CA");if cert==""&&key==""&&ca==""{return nil,nil};return serviceauth.NewMTLSClient(cert,key,ca)}
+ var err error
+ recoveryClient,err=load("RECOVERY");if err!=nil{return nil,err};auditClient,err=load("AUDIT");if err!=nil{return nil,err};receiptClient,err=load("RECEIPT");if err!=nil{return nil,err}
+ }
+	var receiptDelivery func(context.Context, gateway.OrderOutcomeReceipt) (*gateway.OrderOutcomeReceiptResponse, error)
+	if httpHandler != nil {
+		receiptDelivery = func(ctx context.Context, r gateway.OrderOutcomeReceipt) (*gateway.OrderOutcomeReceiptResponse, error) {
+			return gateway.DeliverStoredReceipt(ctx, db, d.DeploymentID, serviceauth.NewLocalClient(httpHandler, serviceauth.Identity{Role: "C_AUDIT_SERVICE", DID: "did:web:c.local:auditors:c1"}), "https://c.local/v1/internal/order-outcome-receipts", r)
+		}
+	}
+	w, err := agent.NewWalletContext(agent.WalletConfig{
+		ReceiptDelivery:  receiptDelivery,
+		DeploymentID:     d.DeploymentID,
+		GatewayURL:       gatewayURL,
+		Audience:         "https://c.local",
+		SupplierID:       "urn:grad:supplier:C",
+		SupplierDID:      f.Identities["C"].ID,
+		DefaultTaskSpec:  f.M2TaskSpec,
+		Currency:         "CNY",
+		AuditorDID:       "did:web:c.local:auditors:c1",
+		RecoveryDID:      "did:web:b.local:services:recovery",
+		DB:               db,
+		HTTPHandler:      httpHandler,
+		RecoveryClient: recoveryClient,
+		AuditClient: auditClient,
+		ReceiptClient: receiptClient,
+		Now:              nowFn,
+		AnchorChildFunc:  anchorFn,
+		ReplaceGrantFunc: replaceFn,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if db != nil {
+		_ = gateway.EnsureSchema(ctx, db, d.DeploymentID, "urn:grad:supplier:C")
+	}
+
+	roleOrder := []string{"U", "A1", "B1", "B2", "U-in-B", "PA"}
+	for _, role := range roleOrder {
+		id, ok := f.Identities[role]
+		if !ok {
+			continue
+		}
+		priv, err := loadECPrivateKeyPEM(i.privatePath("app", role+".key.pem"))
+		if err != nil {
+			return nil, fmt.Errorf("load %s private key: %w", role, err)
+		}
+		sdBytes, err := os.ReadFile(i.registrySubPath("credentials", role+".sdjwt"))
+		if err != nil {
+			return nil, fmt.Errorf("load %s SD-JWT: %w", role, err)
+		}
+		credID := "cred:" + role
+		if c, ok := f.Credentials[role]; ok && c.ID != "" {
+			credID = c.ID
+		}
+		if err := w.RegisterActor(agent.ActorConfig{
+			Actor:             role,
+			DID:               id.ID,
+			KeyID:             id.KeyID,
+			CredentialID:      credID,
+			KeyVersion:        id.KeyVersion,
+			DomainID:          id.Domain,
+			EntityType:        id.Kind,
+			Roles:             []string{id.Kind},
+			PrivateKey:        priv,
+			SDJWTPresentation: string(sdBytes),
+		}); err != nil {
+			return nil, fmt.Errorf("register actor %s: %w", role, err)
+		}
 	}
 
 	cCredID := f.Credentials["C"].ID

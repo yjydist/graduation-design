@@ -1,0 +1,4 @@
+{
+  "status": "FAIL",
+  "reason": "测试夹具将 DER 证书误作 PEM, 已按 PEM 编码修复."
+}

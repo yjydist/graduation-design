@@ -1,0 +1,157 @@
+2026/11/15 16:20:34 http: TLS handshake error from 127.0.0.1:63372: remote error: tls: bad certificate
+{
+  "runId": "run-706cbbe117a56403",
+  "evidenceDir": ".local/fabric-fix-evidence/run-706cbbe117a56403",
+  "deploymentId": "5e12e94a846ae16013ba9c8b226d775b16a88e3f66cf123bb3f2c67bda6d3f82",
+  "scope": "Fabric D0 verifiable protocol anchors, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-15T08:18:25.860739Z",
+  "finishedAt": "2026-11-15T08:21:58.11433Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "initialization-resume",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "credential-validity-boundaries",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": false,
+      "error": "STATE_STALE: no applied original probe within its deadline\ncontext deadline exceeded"
+    },
+    {
+      "name": "shared-view-concurrent-checkpoint",
+      "pass": false,
+      "error": "could not resume after shared checkpoint advanced: run-706cbbe117a56403/shared-view-probe: expected VALID, got PENDING at COMMIT (failure=, commit=\u003cnil\u003e, broadcast acknowledged; original transaction is not available: peer response 500: Failed to get block for txID 481c6fe664d4b5dd84ea4e1b7ca43b6acd386c75a298f9cc7374e641d1f7a0ae, error no such transaction ID [481c6fe664d4b5dd84ea4e1b7ca43b6acd386c75a298f9cc7374e641d1f7a0ae] in index)"
+    },
+    {
+      "name": "checkpoint-query-outage-and-recovery",
+      "pass": false,
+      "error": "checkpoint query recovery did not adopt a new probe: context deadline exceeded"
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "chaincode-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "protocol-encoding-and-vectors",
+      "pass": true
+    },
+    {
+      "name": "did-web-and-context-pinning",
+      "pass": true
+    },
+    {
+      "name": "verifiable-evidence-and-tamper-rejection",
+      "pass": true
+    },
+    {
+      "name": "registration-and-material-delivery",
+      "pass": true
+    },
+    {
+      "name": "direct-access-quote-and-idempotency",
+      "pass": true
+    },
+    {
+      "name": "wrong-leaf-key-rejected",
+      "pass": true
+    },
+    {
+      "name": "probe-expiry-state-stale",
+      "pass": true
+    },
+    {
+      "name": "post-lock-blocked-no-quote",
+      "pass": true
+    },
+    {
+      "name": "exact-second-deadline-rejection",
+      "pass": true
+    },
+    {
+      "name": "m2-dual-roots-and-identity-link",
+      "pass": true
+    },
+    {
+      "name": "m2-agent-mcp-rp-and-bm-orders",
+      "pass": true
+    },
+    {
+      "name": "m2-revocation-and-postlock-order-guards",
+      "pass": true
+    },
+    {
+      "name": "m2-dual-gateway-concurrent-idempotency",
+      "pass": true
+    },
+    {
+      "name": "m3-authority-identity-and-lifecycle",
+      "pass": true
+    },
+    {
+      "name": "m3-agent-b2-replacement-and-reconcile",
+      "pass": true
+    },
+    {
+      "name": "m3-revocation-window-e6",
+      "pass": true
+    },
+    {
+      "name": "m3-fault-injection-e7",
+      "pass": true
+    }
+  ],
+  "error": "fixed-snapshot-history-and-probe-limits: STATE_STALE: no applied original probe within its deadline\ncontext deadline exceeded\nshared-view-concurrent-checkpoint: could not resume after shared checkpoint advanced: run-706cbbe117a56403/shared-view-probe: expected VALID, got PENDING at COMMIT (failure=, commit=\u003cnil\u003e, broadcast acknowledged; original transaction is not available: peer response 500: Failed to get block for txID 481c6fe664d4b5dd84ea4e1b7ca43b6acd386c75a298f9cc7374e641d1f7a0ae, error no such transaction ID [481c6fe664d4b5dd84ea4e1b7ca43b6acd386c75a298f9cc7374e641d1f7a0ae] in index)\ncheckpoint-query-outage-and-recovery: checkpoint query recovery did not adopt a new probe: context deadline exceeded"
+}
+fixed-snapshot-history-and-probe-limits: STATE_STALE: no applied original probe within its deadline
+context deadline exceeded
+shared-view-concurrent-checkpoint: could not resume after shared checkpoint advanced: run-706cbbe117a56403/shared-view-probe: expected VALID, got PENDING at COMMIT (failure=, commit=<nil>, broadcast acknowledged; original transaction is not available: peer response 500: Failed to get block for txID 481c6fe664d4b5dd84ea4e1b7ca43b6acd386c75a298f9cc7374e641d1f7a0ae, error no such transaction ID [481c6fe664d4b5dd84ea4e1b7ca43b6acd386c75a298f9cc7374e641d1f7a0ae] in index)
+checkpoint-query-outage-and-recovery: checkpoint query recovery did not adopt a new probe: context deadline exceeded
+exit status 1

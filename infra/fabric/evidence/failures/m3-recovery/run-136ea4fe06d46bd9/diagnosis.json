@@ -1,0 +1,30 @@
+{
+  "runId": "run-136ea4fe06d46bd9",
+  "status": "INTERRUPTED_AFTER_HANG",
+  "pid": 93651,
+  "startedAt": "2026-11-15T03:10:06.555813Z",
+  "lastEventAt": "2026-11-15T03:15:06.399887Z",
+  "currentCase": "m3-agent-b2-replacement-and-reconcile",
+  "completedCases": 31,
+  "passedCases": 28,
+  "failedCases": [
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": false,
+      "error": "timeout: context deadline exceeded"
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": false,
+      "error": "one stopped sorter prevented new valid probes: context deadline exceeded"
+    },
+    {
+      "name": "m3-authority-identity-and-lifecycle",
+      "pass": false,
+      "error": "run-136ea4fe06d46bd9/m3-s95-oldcert-deny-run-136e: expected UNAUTHORIZED, got FAILED at ENDORSE (failure=IDENTITY_MANAGEMENT_FORBIDDEN, commit=<nil>, endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:IDENTITY_MANAGEMENT_FORBIDDEN)"
+    }
+  ],
+  "defaultTimeoutSeconds": 300,
+  "terminationSignal": "SIGTERM",
+  "cause": "Base64 parent digest caused child-signing failure; error sanitization re-entered the held wallet mutex."
+}

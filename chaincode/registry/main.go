@@ -28,17 +28,25 @@ var (
 )
 
 const (
-	badInput              = "INVALID_STRUCTURE"
-	denied                = "UNAUTHORIZED"
-	stale                 = "STATE_CHANGED"
-	missing               = "MISSING_DEPENDENCY"
-	invalid               = "INVALID_STATE"
-	used                  = "ID_ALREADY_USED"
-	paInvalid             = "PURCHASING_AUTHORITY_INVALID"
-	linkProofInvalid      = "LINK_PROOF_INVALID"
-	linkApprovalForbidden = "LINK_APPROVAL_FORBIDDEN"
-	linkProposalMismatch  = "LINK_PROPOSAL_MISMATCH"
-	linkStateConflict     = "LINK_STATE_CONFLICT"
+	badInput                  = "INVALID_STRUCTURE"
+	denied                    = "UNAUTHORIZED"
+	stale                     = "STATE_CHANGED"
+	missing                   = "MISSING_DEPENDENCY"
+	invalid                   = "INVALID_STATE"
+	used                      = "ID_ALREADY_USED"
+	paInvalid                 = "PURCHASING_AUTHORITY_INVALID"
+	linkProofInvalid          = "LINK_PROOF_INVALID"
+	linkApprovalForbidden     = "LINK_APPROVAL_FORBIDDEN"
+	linkProposalMismatch      = "LINK_PROPOSAL_MISMATCH"
+	linkStateConflict         = "LINK_STATE_CONFLICT"
+	trustMgmtForbidden        = "TRUST_MANAGEMENT_FORBIDDEN"
+	identityMgmtForbidden     = "IDENTITY_MANAGEMENT_FORBIDDEN"
+	identityRecoveryForbidden = "IDENTITY_RECOVERY_FORBIDDEN"
+	identityStateConflict     = "IDENTITY_STATE_CONFLICT"
+	recoveryProofInvalid      = "RECOVERY_PROOF_INVALID"
+	taskStateConflict         = "TASK_STATE_CONFLICT"
+	grantStateConflict        = "GRANT_STATE_CONFLICT"
+	alreadyRevoked            = "ALREADY_REVOKED"
 )
 
 type registry struct{}
@@ -116,12 +124,22 @@ func invoke(stub shim.ChaincodeStubInterface, method string, arg []byte) ([]byte
 		err = dispatch(arg, tx.bootstrapDomain)
 	case "CertifyDomain":
 		err = dispatch(arg, tx.certify)
+	case "RevokeCertification":
+		err = dispatch(arg, tx.revokeCertification)
 	case "SetDomainStatus":
 		err = dispatch(arg, tx.setDomainStatus)
+	case "UpdateAuthorityIdentity":
+		err = dispatch(arg, tx.updateAuthorityIdentity)
 	case "SetPurchasingAuthority":
 		err = dispatch(arg, tx.setPurchasingAuthority)
 	case "RegisterIdentity":
 		err = dispatch(arg, tx.registerIdentity)
+	case "SetIdentityStatus":
+		err = dispatch(arg, tx.setIdentityStatus)
+	case "RotateIdentity":
+		err = dispatch(arg, tx.rotateIdentity)
+	case "RecoverIdentity":
+		err = dispatch(arg, tx.recoverIdentity)
 	case "ProposeIdentityLink":
 		err = dispatch(arg, tx.proposeIdentityLink)
 	case "ApproveIdentityLink":
@@ -130,10 +148,18 @@ func invoke(stub shim.ChaincodeStubInterface, method string, arg []byte) ([]byte
 		err = dispatch(arg, tx.revokeIdentityLink)
 	case "RegisterCredential":
 		err = dispatch(arg, tx.registerCredential)
+	case "RevokeCredential":
+		err = dispatch(arg, tx.revokeCredential)
 	case "RegisterTask":
 		err = dispatch(arg, tx.registerTask)
+	case "CancelTask":
+		err = dispatch(arg, tx.cancelTask)
 	case "RegisterGrant":
 		err = dispatch(arg, tx.registerGrant)
+	case "SuspendGrant":
+		err = dispatch(arg, tx.suspendGrant)
+	case "ResumeGrant":
+		err = dispatch(arg, tx.resumeGrant)
 	case "RevokeGrant":
 		err = dispatch(arg, tx.revoke)
 	case "ReplaceGrant":

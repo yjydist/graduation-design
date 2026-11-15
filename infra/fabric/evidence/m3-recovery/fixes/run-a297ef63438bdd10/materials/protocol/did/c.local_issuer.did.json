@@ -1,0 +1,1 @@
+{"assertionMethod":["did:web:c.local:issuer#key-1"],"id":"did:web:c.local:issuer","verificationMethod":[{"controller":"did:web:c.local:issuer","id":"did:web:c.local:issuer#key-1","publicKeyJwk":{"crv":"P-256","kty":"EC","x":"6ODoe_XCHYFxI_YpPfew8N_Y2FfslRCfZDpXjAT8te4","y":"E3N-5FbPMFICVAmvix56R5kunvVUBOCCw5xuUdaAQ2k"},"type":"JsonWebKey"}]}

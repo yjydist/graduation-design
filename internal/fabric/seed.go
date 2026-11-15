@@ -545,7 +545,7 @@ func (i *instance) seed(ctx context.Context, j journal, d *deployment) (*seedRep
 			return report, err
 		}
 	}
-	for _, role := range []string{"U", "PA", "U-in-B", "A1", "alt", "B1", "C"} {
+	for _, role := range []string{"U", "PA", "U-in-B", "A1", "alt", "B1", "B2", "C"} {
 		id, ok := f.Identities[role]
 		if !ok {
 			continue
@@ -906,6 +906,93 @@ func (i *instance) ensureM2Fixtures(d *deployment, f *fixtures) (bool, error) {
 			Subject:           uInBID.ID,
 			IssuerKeyVersion:  ibRec.KeyVersion,
 			SubjectKeyVersion: uInBID.KeyVersion,
+			Type:              protocol.CredentialTypeEnterpriseIdentity,
+			ClaimNames:        []string{"domain", "role"},
+			Digest:            signedSD.AnchorDigest,
+			Interval:          valid,
+		}
+		updated = true
+	}
+
+	if _, ok := f.Identities["B2"]; !ok {
+		_, management, _, err := i.role("B2")
+		if err != nil {
+			return false, err
+		}
+		b2DID := "did:web:b.local:b2"
+		b2KeyID := b2DID + "#key-1"
+		_, pubHex, docDigest, _, err := i.ensureAppKey("B2", b2DID, b2KeyID, protocol.KeyPurposeAuthentication, protocol.KeyPurposeAssertionMethod)
+		if err != nil {
+			return false, err
+		}
+		if err := i.updateDIDIndex(map[string]string{b2DID: didRelPath(b2DID)}); err != nil {
+			return false, err
+		}
+		f.DIDDocuments[b2DID] = didRelPath(b2DID)
+		b2ID := api.Identity{
+			Bound:             bound,
+			ID:                b2DID,
+			Domain:            "B",
+			Kind:              "AGENT",
+			Management:        management,
+			DocumentDigest:    docDigest,
+			KeyID:             b2KeyID,
+			KeyVersion:        1,
+			PublicKey:         pubHex,
+			AccountCommitment: api.Digest([]byte("grad-auth-account:" + d.DeploymentID + ":" + b2DID)),
+		}
+		f.Identities["B2"] = b2ID
+
+		ibPriv, err := loadECPrivateKeyPEM(i.privatePath("app", "IB.key.pem"))
+		if err != nil {
+			return false, err
+		}
+		ibRec := f.Domains["B"].Issuers[0]
+		valid := f.Certifications["B"].Certification.Interval
+		vf := time.Unix(valid.NBF, 0).UTC().Format(time.RFC3339)
+		vu := time.Unix(valid.EXP, 0).UTC().Format(time.RFC3339)
+		credID := "urn:grad:credential:B2-v1"
+		holderJWK, err := protocol.AppPublicKeyToJWK(b2ID.PublicKey)
+		if err != nil {
+			return false, err
+		}
+		signedSD, err := protocol.IssueEnterpriseIdentityCredential(
+			ibPriv,
+			ibRec.KeyID,
+			protocol.EnterpriseIdentityCredential{
+				Type:              []string{protocol.CredentialTypeVC, protocol.CredentialTypeEnterpriseIdentity},
+				ID:                credID,
+				DeploymentID:      d.DeploymentID,
+				Issuer:            ibRec.ID,
+				Iss:               ibRec.ID,
+				Sub:               b2ID.ID,
+				IssuerKeyVersion:  ibRec.KeyVersion,
+				AppKeyVersion:     b2ID.KeyVersion,
+				ValidFrom:         vf,
+				ValidUntil:        vu,
+				NBF:               valid.NBF,
+				EXP:               valid.EXP,
+				CredentialStatus:  protocol.CredentialStatus{ID: credID, Type: protocol.StatusTypeCredential},
+				Cnf:               protocol.ConfirmationKey{JWK: holderJWK},
+				CredentialSubject: protocol.SDJWTCredentialSubject{ID: b2ID.ID},
+			},
+			"B",
+			"broker-agent",
+			nil,
+		)
+		if err != nil {
+			return false, err
+		}
+		if err := writePublicFile(i.registrySubPath("credentials", "B2.sdjwt"), []byte(signedSD.PresentationPrefix)); err != nil {
+			return false, err
+		}
+		f.Credentials["B2"] = api.Credential{
+			Bound:             bound,
+			ID:                credID,
+			Issuer:            ibRec.ID,
+			Subject:           b2ID.ID,
+			IssuerKeyVersion:  ibRec.KeyVersion,
+			SubjectKeyVersion: b2ID.KeyVersion,
 			Type:              protocol.CredentialTypeEnterpriseIdentity,
 			ClaimNames:        []string{"domain", "role"},
 			Digest:            signedSD.AnchorDigest,
@@ -1323,6 +1410,7 @@ func (i *instance) syncMaterialOutboxes(ctx context.Context, j journal, d *deplo
 			f.Identities["PA"].ID,
 			f.Identities["A1"].ID,
 			f.Identities["B1"].ID,
+			f.Identities["B2"].ID,
 			f.Identities["C"].ID,
 		}
 		for _, rec := range recipients {

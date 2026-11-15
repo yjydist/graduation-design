@@ -1,0 +1,151 @@
+{
+  "runId": "run-3593ee11d561d1fa",
+  "evidenceDir": ".local/fabric-evidence/run-3593ee11d561d1fa",
+  "deploymentId": "cc0e16faee620931a7caa7560530dee08dd1c7a805af174e51b1410e6154f6db",
+  "scope": "Fabric D0 verifiable protocol anchors, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-15T07:18:47.08266Z",
+  "finishedAt": "2026-11-15T07:20:44.529149Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "initialization-resume",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "credential-validity-boundaries",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "shared-view-concurrent-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "checkpoint-query-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "chaincode-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "protocol-encoding-and-vectors",
+      "pass": true
+    },
+    {
+      "name": "did-web-and-context-pinning",
+      "pass": true
+    },
+    {
+      "name": "verifiable-evidence-and-tamper-rejection",
+      "pass": true
+    },
+    {
+      "name": "registration-and-material-delivery",
+      "pass": true
+    },
+    {
+      "name": "direct-access-quote-and-idempotency",
+      "pass": true
+    },
+    {
+      "name": "wrong-leaf-key-rejected",
+      "pass": true
+    },
+    {
+      "name": "probe-expiry-state-stale",
+      "pass": true
+    },
+    {
+      "name": "post-lock-blocked-no-quote",
+      "pass": true
+    },
+    {
+      "name": "exact-second-deadline-rejection",
+      "pass": true
+    },
+    {
+      "name": "m2-dual-roots-and-identity-link",
+      "pass": true
+    },
+    {
+      "name": "m2-agent-mcp-rp-and-bm-orders",
+      "pass": true
+    },
+    {
+      "name": "m2-revocation-and-postlock-order-guards",
+      "pass": true
+    },
+    {
+      "name": "m2-dual-gateway-concurrent-idempotency",
+      "pass": true
+    },
+    {
+      "name": "m3-authority-identity-and-lifecycle",
+      "pass": false,
+      "error": "run-3593ee11d561d1fa/m3-s97-revoked-recover-run-3593: expected INVALID_STATE, got FAILED at ENDORSE (failure=IDENTITY_STATE_CONFLICT, commit=\u003cnil\u003e, endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:IDENTITY_STATE_CONFLICT)"
+    },
+    {
+      "name": "m3-agent-b2-replacement-and-reconcile",
+      "pass": false,
+      "error": "replace_grant failed: {RevokedGrantID: ReplacementGrant:{GrantID: ParentID: RootID: TaskID: AuthorizationMode: PrincipalDomain: IssuerDID: GranteeDID: MaxAmountMinor:0 Currency: RemainingDepth:0 Resources:[] Actions:[] Suppliers:[] Audience: NBF:0 EXP:0 Anchored:false Replaced:false TrustPathCount:0 AncestorCount:0} Anchored:false Note:} err=MCP replace_grant error: [0x76ade094040]"
+    },
+    {
+      "name": "m3-revocation-window-e6",
+      "pass": true
+    },
+    {
+      "name": "m3-fault-injection-e7",
+      "pass": false,
+      "error": "expected signed unbroadcast transaction: m3-e7-hold-run-3593 (endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:UNAUTHORIZED)"
+    }
+  ],
+  "error": "m3-authority-identity-and-lifecycle: run-3593ee11d561d1fa/m3-s97-revoked-recover-run-3593: expected INVALID_STATE, got FAILED at ENDORSE (failure=IDENTITY_STATE_CONFLICT, commit=\u003cnil\u003e, endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:IDENTITY_STATE_CONFLICT)\nm3-agent-b2-replacement-and-reconcile: replace_grant failed: {RevokedGrantID: ReplacementGrant:{GrantID: ParentID: RootID: TaskID: AuthorizationMode: PrincipalDomain: IssuerDID: GranteeDID: MaxAmountMinor:0 Currency: RemainingDepth:0 Resources:[] Actions:[] Suppliers:[] Audience: NBF:0 EXP:0 Anchored:false Replaced:false TrustPathCount:0 AncestorCount:0} Anchored:false Note:} err=MCP replace_grant error: [0x76ade094040]\nm3-fault-injection-e7: expected signed unbroadcast transaction: m3-e7-hold-run-3593 (endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:UNAUTHORIZED)"
+}

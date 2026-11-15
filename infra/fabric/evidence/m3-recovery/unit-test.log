@@ -1,0 +1,274 @@
+?   	graduation-design/cmd/ledgerctl	[no test files]
+=== RUN   TestSetPurchasingAuthorityAndBuyerMandateRoot
+--- PASS: TestSetPurchasingAuthorityAndBuyerMandateRoot (0.00s)
+=== RUN   TestIdentityLinkDualDomainStateMachine
+--- PASS: TestIdentityLinkDualDomainStateMachine (0.00s)
+=== RUN   TestM3DomainCertRenewalRevocationAndAuthorityUpdate
+--- PASS: TestM3DomainCertRenewalRevocationAndAuthorityUpdate (0.00s)
+=== RUN   TestM3IdentityLifecycleRotateAndRecover
+--- PASS: TestM3IdentityLifecycleRotateAndRecover (0.00s)
+=== RUN   TestM3CredentialTaskAndGrantLifecycle
+--- PASS: TestM3CredentialTaskAndGrantLifecycle (0.00s)
+PASS
+ok  	graduation-design/chaincode/registry	0.425s
+=== RUN   TestPublishedFabricBindings
+--- PASS: TestPublishedFabricBindings (0.00s)
+PASS
+ok  	graduation-design/internal/fabricapi	0.308s
+=== RUN   TestLocalVCv2ContextAndValidation
+=== RUN   TestLocalVCv2ContextAndValidation/wrong_order
+--- PASS: TestLocalVCv2ContextAndValidation/wrong_order (0.00s)
+=== RUN   TestLocalVCv2ContextAndValidation/string_only
+--- PASS: TestLocalVCv2ContextAndValidation/string_only (0.00s)
+=== RUN   TestLocalVCv2ContextAndValidation/v1_url
+--- PASS: TestLocalVCv2ContextAndValidation/v1_url (0.00s)
+=== RUN   TestLocalVCv2ContextAndValidation/extra_array_element
+--- PASS: TestLocalVCv2ContextAndValidation/extra_array_element (0.00s)
+=== RUN   TestLocalVCv2ContextAndValidation/extra_key_in_vocab_object
+--- PASS: TestLocalVCv2ContextAndValidation/extra_key_in_vocab_object (0.00s)
+=== RUN   TestLocalVCv2ContextAndValidation/tampered_vocab_URI
+--- PASS: TestLocalVCv2ContextAndValidation/tampered_vocab_URI (0.00s)
+=== RUN   TestLocalVCv2ContextAndValidation/missing_vocab
+--- PASS: TestLocalVCv2ContextAndValidation/missing_vocab (0.00s)
+--- PASS: TestLocalVCv2ContextAndValidation (0.00s)
+=== RUN   TestDomainAuthorityCredentialSignVerifyAndChainConsistency
+--- PASS: TestDomainAuthorityCredentialSignVerifyAndChainConsistency (0.00s)
+=== RUN   TestEnterpriseIdentityCredentialSDJWTAndNegatives
+--- PASS: TestEnterpriseIdentityCredentialSDJWTAndNegatives (0.00s)
+=== RUN   TestParseDIDWebURLMapping
+--- PASS: TestParseDIDWebURLMapping (0.00s)
+=== RUN   TestDIDWebControlledHTTPSAndNegatives
+2026/11/15 15:41:52 http: TLS handshake error from 127.0.0.1:57585: remote error: tls: bad certificate
+2026/11/15 15:41:52 http: TLS handshake error from 127.0.0.1:57587: remote error: tls: bad certificate
+--- PASS: TestDIDWebControlledHTTPSAndNegatives (0.01s)
+=== RUN   TestM3SignatureCacheB1AndKeyVersionStale
+--- PASS: TestM3SignatureCacheB1AndKeyVersionStale (0.03s)
+=== RUN   TestM3DepartmentScopeShrinkS93
+--- PASS: TestM3DepartmentScopeShrinkS93 (0.01s)
+=== RUN   TestM3RootTOfflineZeroCallsF14S84
+--- PASS: TestM3RootTOfflineZeroCallsF14S84 (0.01s)
+=== RUN   TestAccessEvidencePackageFullVerifyAndSingleFieldTampers
+--- PASS: TestAccessEvidencePackageFullVerifyAndSingleFieldTampers (0.02s)
+=== RUN   TestM2TwoHopEvidenceVerificationRPAndBM
+=== RUN   TestPolicyBundleVerificationAndTamperRejection
+--- PASS: TestPolicyBundleVerificationAndTamperRejection (0.00s)
+=== RUN   TestPolicyRejectsForbiddenBuiltins
+=== RUN   TestPolicyRejectsForbiddenBuiltins/time.now_ns
+--- PASS: TestPolicyRejectsForbiddenBuiltins/time.now_ns (0.00s)
+=== RUN   TestPolicyRejectsForbiddenBuiltins/http.send
+--- PASS: TestPolicyRejectsForbiddenBuiltins/http.send (0.00s)
+--- PASS: TestPolicyRejectsForbiddenBuiltins (0.00s)
+=== RUN   TestPolicyDeterministicEvalAndFailClosed
+--- PASS: TestPolicyDeterministicEvalAndFailClosed (0.00s)
+=== RUN   TestPolicyM2DualModeOrderCreateAndSupplierRejection
+--- PASS: TestPolicyM2DualModeOrderCreateAndSupplierRejection (0.00s)
+PASS
+ok  	graduation-design/internal/policy	0.420s
+--- PASS: TestM2TwoHopEvidenceVerificationRPAndBM (0.02s)
+=== RUN   TestGrantSignVerifyAndDelegationChain
+--- PASS: TestGrantSignVerifyAndDelegationChain (0.00s)
+=== RUN   TestM2TwoHopGrantChainErrorCodes
+--- PASS: TestM2TwoHopGrantChainErrorCodes (0.00s)
+=== RUN   TestJCSCanonicalizeRFC8785AndUTF16Sorting
+--- PASS: TestJCSCanonicalizeRFC8785AndUTF16Sorting (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/empty
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/empty (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/invalid_UTF-8
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/invalid_UTF-8 (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/duplicate_keys
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/duplicate_keys (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/nested_duplicate_keys
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/nested_duplicate_keys (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/unpaired_high_surrogate
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/unpaired_high_surrogate (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/unpaired_low_surrogate
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/unpaired_low_surrogate (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/high_surrogate_followed_by_non-low
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/high_surrogate_followed_by_non-low (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/integer_above_2^53-1
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/integer_above_2^53-1 (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/integer_below_-(2^53-1)
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/integer_below_-(2^53-1) (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/float_literal_exceeding_safe_magnitude
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/float_literal_exceeding_safe_magnitude (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/trailing_garbage
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/trailing_garbage (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/leading_zero_number
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/leading_zero_number (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/unescaped_control_char
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/unescaped_control_char (0.00s)
+=== RUN   TestJCSRejectsMalformedAndUnsafeInputs/oversized_input_>_256_KiB
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs/oversized_input_>_256_KiB (0.00s)
+--- PASS: TestJCSRejectsMalformedAndUnsafeInputs (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets
+=== RUN   TestJCSDecodeStrictStructAndSets/unknown_field
+--- PASS: TestJCSDecodeStrictStructAndSets/unknown_field (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/missing_required_field
+--- PASS: TestJCSDecodeStrictStructAndSets/missing_required_field (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/null_on_non-nullable_string
+--- PASS: TestJCSDecodeStrictStructAndSets/null_on_non-nullable_string (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/float_literal_on_int64_field
+--- PASS: TestJCSDecodeStrictStructAndSets/float_literal_on_int64_field (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/not_an_object
+--- PASS: TestJCSDecodeStrictStructAndSets/not_an_object (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/set_empty
+--- PASS: TestJCSDecodeStrictStructAndSets/set_empty (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/set_wildcard
+--- PASS: TestJCSDecodeStrictStructAndSets/set_wildcard (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/set_partial_wildcard
+--- PASS: TestJCSDecodeStrictStructAndSets/set_partial_wildcard (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/set_duplicate
+--- PASS: TestJCSDecodeStrictStructAndSets/set_duplicate (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/set_unsorted
+--- PASS: TestJCSDecodeStrictStructAndSets/set_unsorted (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/set_empty_element
+--- PASS: TestJCSDecodeStrictStructAndSets/set_empty_element (0.00s)
+=== RUN   TestJCSDecodeStrictStructAndSets/set_exceeds_max
+--- PASS: TestJCSDecodeStrictStructAndSets/set_exceeds_max (0.00s)
+--- PASS: TestJCSDecodeStrictStructAndSets (0.00s)
+=== RUN   TestKeysVectorRecomputation
+--- PASS: TestKeysVectorRecomputation (0.00s)
+=== RUN   TestKeysRejectInvalidPointsAndExtraFields
+=== RUN   TestKeysRejectInvalidPointsAndExtraFields/point_compressed_02
+--- PASS: TestKeysRejectInvalidPointsAndExtraFields/point_compressed_02 (0.00s)
+=== RUN   TestKeysRejectInvalidPointsAndExtraFields/point_infinity
+--- PASS: TestKeysRejectInvalidPointsAndExtraFields/point_infinity (0.00s)
+=== RUN   TestKeysRejectInvalidPointsAndExtraFields/point_off-curve
+--- PASS: TestKeysRejectInvalidPointsAndExtraFields/point_off-curve (0.00s)
+=== RUN   TestKeysRejectInvalidPointsAndExtraFields/point_uppercase_hex
+--- PASS: TestKeysRejectInvalidPointsAndExtraFields/point_uppercase_hex (0.00s)
+=== RUN   TestKeysRejectInvalidPointsAndExtraFields/point_with_0x_prefix
+--- PASS: TestKeysRejectInvalidPointsAndExtraFields/point_with_0x_prefix (0.00s)
+=== RUN   TestKeysRejectInvalidPointsAndExtraFields/point_wrong_length
+--- PASS: TestKeysRejectInvalidPointsAndExtraFields/point_wrong_length (0.00s)
+--- PASS: TestKeysRejectInvalidPointsAndExtraFields (0.00s)
+=== RUN   TestNonceVectorAndValidation
+=== RUN   TestNonceVectorAndValidation/with_equals_padding
+--- PASS: TestNonceVectorAndValidation/with_equals_padding (0.00s)
+=== RUN   TestNonceVectorAndValidation/non-canonical_trailing_bit_8->9
+--- PASS: TestNonceVectorAndValidation/non-canonical_trailing_bit_8->9 (0.00s)
+=== RUN   TestNonceVectorAndValidation/hex_string_instead_of_base64url
+--- PASS: TestNonceVectorAndValidation/hex_string_instead_of_base64url (0.00s)
+=== RUN   TestNonceVectorAndValidation/plus_char
+--- PASS: TestNonceVectorAndValidation/plus_char (0.00s)
+=== RUN   TestNonceVectorAndValidation/slash_char
+--- PASS: TestNonceVectorAndValidation/slash_char (0.00s)
+=== RUN   TestNonceVectorAndValidation/leading_whitespace
+--- PASS: TestNonceVectorAndValidation/leading_whitespace (0.00s)
+=== RUN   TestNonceVectorAndValidation/trailing_newline
+--- PASS: TestNonceVectorAndValidation/trailing_newline (0.00s)
+=== RUN   TestNonceVectorAndValidation/too_short
+--- PASS: TestNonceVectorAndValidation/too_short (0.00s)
+=== RUN   TestNonceVectorAndValidation/too_long
+--- PASS: TestNonceVectorAndValidation/too_long (0.00s)
+--- PASS: TestNonceVectorAndValidation (0.00s)
+=== RUN   TestTaskSpecAndRequestVectors
+--- PASS: TestTaskSpecAndRequestVectors (0.00s)
+=== RUN   TestManagementDualProofVectorAndTampering
+--- PASS: TestManagementDualProofVectorAndTampering (0.00s)
+=== RUN   TestM3RecoveryDualProofAndDIDCanonicalVectors
+--- PASS: TestM3RecoveryDualProofAndDIDCanonicalVectors (0.00s)
+PASS
+ok  	graduation-design/internal/protocol	0.432s
+=== RUN   TestGatewayM3SignatureCacheB1MaterialNotSyncedStateStaleAndPolicyAttributes
+=== RUN   TestDefaultGrantDigestSupportsDelegationAndReplacement
+--- PASS: TestDefaultGrantDigestSupportsDelegationAndReplacement (0.00s)
+=== RUN   TestSigningErrorsReturnWithoutWalletDeadlock
+=== RUN   TestSigningErrorsReturnWithoutWalletDeadlock/delegate
+--- PASS: TestSigningErrorsReturnWithoutWalletDeadlock/delegate (0.00s)
+=== RUN   TestSigningErrorsReturnWithoutWalletDeadlock/replace
+--- PASS: TestSigningErrorsReturnWithoutWalletDeadlock/replace (0.00s)
+--- PASS: TestSigningErrorsReturnWithoutWalletDeadlock (0.00s)
+=== RUN   TestM3AgentReplaceGrantS41S55AndStdioParity
+=== RUN   TestRegistrationDualProofSigningAndFlow
+--- PASS: TestRegistrationDualProofSigningAndFlow (0.04s)
+=== RUN   TestCertificationAndGrantDeliveryFlow
+--- PASS: TestGatewayM3SignatureCacheB1MaterialNotSyncedStateStaleAndPolicyAttributes (0.19s)
+=== RUN   TestGatewayAuxiliaryEndpoints
+--- PASS: TestGatewayAuxiliaryEndpoints (0.08s)
+=== RUN   TestGatewayExecuteSchemaAndCryptoRejection
+--- PASS: TestM3AgentReplaceGrantS41S55AndStdioParity (0.29s)
+=== RUN   TestM3AgentReconcileOrderCreatedAndNotCreatedS63
+--- PASS: TestGatewayExecuteSchemaAndCryptoRejection (0.09s)
+=== RUN   TestGatewayExecuteQuoteCommitAndIdempotency
+--- PASS: TestGatewayExecuteQuoteCommitAndIdempotency (0.11s)
+=== RUN   TestGatewayExecutePostLockBlockedAndCheckpoints
+--- PASS: TestM3AgentReconcileOrderCreatedAndNotCreatedS63 (0.19s)
+=== RUN   TestM3AgentDualSDKOpenAIAndAnthropicMockClosedLoop
+--- PASS: TestCertificationAndGrantDeliveryFlow (0.45s)
+=== RUN   TestM2MultiHopDeliveryAndTrustPathDedup
+--- PASS: TestGatewayExecutePostLockBlockedAndCheckpoints (0.23s)
+=== RUN   TestGatewayM2OrderCreateRPAndBMPositiveAndLimits
+--- PASS: TestGatewayM2OrderCreateRPAndBMPositiveAndLimits (0.27s)
+=== RUN   TestGatewayM2PostLockDynamicChecksAndIsolation
+--- PASS: TestM3AgentDualSDKOpenAIAndAnthropicMockClosedLoop (0.47s)
+=== RUN   TestMCPInMemoryToolsDelegationClientActionsAndRedaction
+--- PASS: TestM2MultiHopDeliveryAndTrustPathDedup (0.49s)
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/pending
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/pending (0.00s)
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/commit_stage
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/commit_stage (0.00s)
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/no_rejection_code
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/no_rejection_code (0.00s)
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/no_rejection_observation
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/no_rejection_observation (0.00s)
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/no_original_proposal
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/no_original_proposal (0.00s)
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/signed_transaction
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/signed_transaction (0.00s)
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/signing_recorded
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/signing_recorded (0.00s)
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/broadcast_recorded
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/broadcast_recorded (0.00s)
+=== RUN   TestInitializationRetryRequiresRejectedUnsignedProposal/commit_recorded
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal/commit_recorded (0.00s)
+--- PASS: TestInitializationRetryRequiresRejectedUnsignedProposal (0.00s)
+=== RUN   TestInterruptedInitialization
+    deployment_test.go:55: set FABRIC_INIT_RETRY_TEST_DIR to a running empty Fabric instance
+--- SKIP: TestInterruptedInitialization (0.00s)
+=== RUN   TestDeploymentResumesAfterCommittedInitialization
+    deployment_test.go:124: set FABRIC_INIT_COMMITTED_TEST_DIR to a running empty Fabric instance
+--- SKIP: TestDeploymentResumesAfterCommittedInitialization (0.00s)
+=== RUN   TestM3ManagementOperationAsyncStateMachine
+--- PASS: TestM3ManagementOperationAsyncStateMachine (0.02s)
+=== RUN   TestM3RecoveryChallengeAndBundle
+--- PASS: TestM3RecoveryChallengeAndBundle (0.01s)
+=== RUN   TestM3HistoricalSnapshotAndFindInactiveBlock
+--- PASS: TestM3HistoricalSnapshotAndFindInactiveBlock (0.04s)
+=== RUN   TestBootstrapAndSeedProtocolMaterialsOffline
+--- PASS: TestGatewayM2PostLockDynamicChecksAndIsolation (0.09s)
+=== RUN   TestGatewayM2DualInstanceConcurrentOrderIdempotency
+--- PASS: TestGatewayM2DualInstanceConcurrentOrderIdempotency (0.17s)
+=== RUN   TestM3ClientActionStopSendAndCaseTransitions
+--- PASS: TestMCPInMemoryToolsDelegationClientActionsAndRedaction (0.29s)
+=== RUN   TestAgentRunnerDualSDKOpenAIAndAnthropicMockClosedLoop
+--- PASS: TestM3ClientActionStopSendAndCaseTransitions (0.10s)
+=== RUN   TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR
+--- PASS: TestBootstrapAndSeedProtocolMaterialsOffline (0.47s)
+=== RUN   TestPostLockProbePreservesOriginalDeadline
+--- PASS: TestPostLockProbePreservesOriginalDeadline (0.00s)
+=== RUN   TestStateProviderRepeatableReadAndFaults
+    agent_test.go:954: anthropic step=1 tool=inspect_wallet err=false out=map[actor:A1 deploymentId:bd11b3c2f5ac145f60e1c74494a1b499a20c4413d299fd30799313f81bd0fa01 did:did:web:a.local:a1 domainId:A grants:[map[actions:[order.create quote.read] ancestorCount:2 anchored:true audience:https://c.local authorizationMode:BUYER_MANDATE currency:CNY exp:1.794735713e+09 grantId:9d31db9b306ccb0ec7cb395f851063d04e31930303ead37a311a74f12fec6ec7 granteeDid:did:web:a.local:a1 issuerDid:did:web:a.local:u maxAmountMinor:500000 nbf:1.794724913e+09 parentId:5ba989dc05db24b3af94e5f5164d3e700ecedd5034859ce8f85bdf0e835c30b9 principalDomain:A remainingDepth:1 resources:[urn:grad:resource:C:orders urn:grad:resource:C:quotes] rootId:5ba989dc05db24b3af94e5f5164d3e700ecedd5034859ce8f85bdf0e835c30b9 suppliers:[urn:grad:supplier:C] taskId:819d60b5c53b78dbf4a194fb849ec0aee604a5da8dcd4244ebd83700944f5979 trustPathCount:1]] roles:[procurement-agent]]
+    agent_test.go:954: anthropic step=2 tool=delegate_grant err=false out=map[anchored:true grant:map[actions:[order.create quote.read] ancestorCount:3 anchored:true audience:https://c.local authorizationMode:BUYER_MANDATE currency:CNY exp:1.794735713e+09 grantId:bmg2-ant granteeDid:did:web:a.local:b1 issuerDid:did:web:a.local:a1 maxAmountMinor:100000 nbf:1.794728508e+09 parentId:9d31db9b306ccb0ec7cb395f851063d04e31930303ead37a311a74f12fec6ec7 principalDomain:A remainingDepth:0 resources:[urn:grad:resource:C:orders urn:grad:resource:C:quotes] rootId:5ba989dc05db24b3af94e5f5164d3e700ecedd5034859ce8f85bdf0e835c30b9 suppliers:[urn:grad:supplier:C] taskId:819d60b5c53b78dbf4a194fb849ec0aee604a5da8dcd4244ebd83700944f5979 trustPathCount:1] note:signed and anchored onto Fabric registry]
+    agent_test.go:954: anthropic step=3 tool=request_quote err=false out=map[currency:CNY decision:ALLOW decisionId:urn:grad:decision:5a166fa8-b3db-4781-afe5-2e936e22d408 productId:urn:grad:product:P1 quantity:1 quoteId:urn:grad:quote:68d3df52-e407-49b1-86bf-1c82f545a765 statusCode:200 taskId:819d60b5c53b78dbf4a194fb849ec0aee604a5da8dcd4244ebd83700944f5979 totalAmountMinor:80000 unitPriceMinor:80000 validUntil:1.794728813e+09]
+    agent_test.go:954: anthropic step=4 tool=create_order err=false out=map[actionId:urn:grad:action:922e303a-b13c-4001-8691-4dccbd84b919 actionStatus:COMPLETED currency:CNY decision:ALLOW decisionId:urn:grad:decision:3f5309dd-e8fe-4696-b45c-70708c01978f orderId:urn:grad:order:60f7d0b5-dcba-4c00-90d6-b0d159379e34 productId:urn:grad:product:P1 quantity:1 quoteId:urn:grad:quote:68d3df52-e407-49b1-86bf-1c82f545a765 sendRevision:1 statusCode:200 totalAmountMinor:80000]
+    agent_test.go:954: anthropic step=5 tool=request_quote err=false out=map[currency:CNY decision:ALLOW decisionId:urn:grad:decision:ff1d1f79-8cb1-4e91-815c-8cf2fa0b4de0 productId:urn:grad:product:P1 quantity:1 quoteId:urn:grad:quote:51b9bddb-0e3b-49eb-82cf-2c107e8ab92f statusCode:200 taskId:819d60b5c53b78dbf4a194fb849ec0aee604a5da8dcd4244ebd83700944f5979 totalAmountMinor:120000 unitPriceMinor:120000 validUntil:1.794728813e+09]
+    agent_test.go:954: anthropic step=6 tool=create_order err=false out=map[actionId:urn:grad:action:c52dd384-d4b1-473a-ad0c-712ab6e38375 actionStatus:FAILED currency:CNY decision:DENY decisionId:urn:grad:decision:dd5db42b-e898-4b4c-9ca3-11c6ebaea8b0 errorCode:AMOUNT_LIMIT_EXCEEDED errorMessage:AMOUNT_LIMIT_EXCEEDED: order amountMinor 120000 exceeds grant path maxAmountMinor 100000 productId:urn:grad:product:P1 quantity:1 quoteId:urn:grad:quote:51b9bddb-0e3b-49eb-82cf-2c107e8ab92f sendRevision:1 statusCode:403]
+--- PASS: TestAgentRunnerDualSDKOpenAIAndAnthropicMockClosedLoop (0.33s)
+PASS
+ok  	graduation-design/internal/agent	2.134s
+--- PASS: TestM3DualGatewayOrderOutcomeAuditAndHistoricalHvsR (0.37s)
+=== RUN   TestM3ConcurrentChallengeExpiryBarrierS66
+--- PASS: TestM3ConcurrentChallengeExpiryBarrierS66 (0.15s)
+PASS
+ok  	graduation-design/internal/gateway	2.394s
+--- PASS: TestStateProviderRepeatableReadAndFaults (0.42s)
+=== RUN   TestStateProviderBMRootAndIdentityLinkView
+--- PASS: TestStateProviderBMRootAndIdentityLinkView (0.42s)
+=== RUN   TestM3LiveAcceptance
+    verify_m3_test.go:15: set FABRIC_M3_TEST_DIR to a deployed experimental instance
+--- SKIP: TestM3LiveAcceptance (0.00s)
+PASS
+ok  	graduation-design/internal/fabric	2.907s

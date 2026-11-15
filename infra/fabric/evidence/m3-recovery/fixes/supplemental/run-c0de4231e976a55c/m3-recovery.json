@@ -1,0 +1,175 @@
+{
+  "deploymentId": "04ba01e1fd488fbfa11cbb0901bf4b3c5b8466d1a4e18591a81d92f7e6ee2406",
+  "runId": "run-c0de4231e976a55c",
+  "revocationWindowE6": {
+    "allowCount": 4,
+    "deltaStateMs": 5000,
+    "denyCount": 14,
+    "probeIntervalMs": 20,
+    "revocationBlockR": 248,
+    "revocationTxId": "fb6a18410f0370ed7cd0d657ac76ca62f72703e7494fc27e819be1944e30a821",
+    "revokedGrantId": "1beeb8d76d30538cc7cf722938897c767f703fab49eb42f27029611b74200acd",
+    "samples": [
+      {
+        "seq": 1,
+        "submittedAtUnixMs": 1794731715577,
+        "respondedAtUnixMs": 1794731715608,
+        "statusCode": 200,
+        "decision": "ALLOW",
+        "decisionBlock": 247,
+        "decisionAtUnixSec": 1794731715,
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 2,
+        "submittedAtUnixMs": 1794731715624,
+        "respondedAtUnixMs": 1794731715655,
+        "statusCode": 200,
+        "decision": "ALLOW",
+        "decisionBlock": 247,
+        "decisionAtUnixSec": 1794731715,
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 3,
+        "submittedAtUnixMs": 1794731715676,
+        "respondedAtUnixMs": 1794731715706,
+        "statusCode": 200,
+        "decision": "ALLOW",
+        "decisionBlock": 247,
+        "decisionAtUnixSec": 1794731715,
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 4,
+        "submittedAtUnixMs": 1794731715723,
+        "respondedAtUnixMs": 1794731715775,
+        "statusCode": 200,
+        "decision": "ALLOW",
+        "decisionBlock": 247,
+        "decisionAtUnixSec": 1794731715,
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 5,
+        "submittedAtUnixMs": 1794731715803,
+        "respondedAtUnixMs": 1794731715824,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 6,
+        "submittedAtUnixMs": 1794731715840,
+        "respondedAtUnixMs": 1794731715855,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 7,
+        "submittedAtUnixMs": 1794731715870,
+        "respondedAtUnixMs": 1794731715887,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 8,
+        "submittedAtUnixMs": 1794731715906,
+        "respondedAtUnixMs": 1794731715926,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 9,
+        "submittedAtUnixMs": 1794731715944,
+        "respondedAtUnixMs": 1794731715963,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 10,
+        "submittedAtUnixMs": 1794731715980,
+        "respondedAtUnixMs": 1794731715997,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 11,
+        "submittedAtUnixMs": 1794731716013,
+        "respondedAtUnixMs": 1794731716029,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 12,
+        "submittedAtUnixMs": 1794731716047,
+        "respondedAtUnixMs": 1794731716064,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 13,
+        "submittedAtUnixMs": 1794731716088,
+        "respondedAtUnixMs": 1794731716125,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 14,
+        "submittedAtUnixMs": 1794731716135,
+        "respondedAtUnixMs": 1794731716146,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 15,
+        "submittedAtUnixMs": 1794731716155,
+        "respondedAtUnixMs": 1794731716165,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 16,
+        "submittedAtUnixMs": 1794731716176,
+        "respondedAtUnixMs": 1794731716185,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 17,
+        "submittedAtUnixMs": 1794731716196,
+        "respondedAtUnixMs": 1794731716208,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      },
+      {
+        "seq": 18,
+        "submittedAtUnixMs": 1794731716220,
+        "respondedAtUnixMs": 1794731716229,
+        "statusCode": 403,
+        "errorCode": "ANCESTOR_INACTIVE",
+        "probeDeadlineUnixSec": 1794731720
+      }
+    ],
+    "tAdoptUnixMs": 1794731715912,
+    "tApplyUnixMs": 1794731715803,
+    "tFirstDenyUnixMs": 1794731715824,
+    "tLastAllowUnixMs": 1794731715775,
+    "tSubmitUnixMs": 1794731715654,
+    "tValidUnixMs": 1794731715793,
+    "totalProbes": 18,
+    "windowAfterValidMs": 0
+  }
+}

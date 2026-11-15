@@ -19,6 +19,7 @@ const (
 	Pending   = "PENDING"
 	Suspended = "SUSPENDED"
 	Revoked   = "REVOKED"
+	Cancelled = "CANCELLED"
 
 	BootstrapKey   = "bootstrap"
 	PeerTimeWindow = 2 * time.Second
@@ -294,6 +295,47 @@ type DomainStatus struct {
 	ID               string `json:"domainId"`
 	ExpectedRevision uint64 `json:"expectedRevision"`
 	Status           string `json:"status"`
+}
+
+type AuthorityIdentityUpdateInput struct {
+	Bound
+	ID                 string     `json:"id"`
+	ExpectedRevision   uint64     `json:"expectedRevision"`
+	ExpectedKeyVersion uint64     `json:"expectedKeyVersion"`
+	Management         Management `json:"managementIdentity"`
+	DocumentDigest     string     `json:"didDocumentDigest"`
+	KeyID              string     `json:"appKeyId"`
+	PublicKey          string     `json:"appPublicKey"`
+}
+
+type IdentityStatusInput struct {
+	Bound
+	ID               string `json:"id"`
+	ExpectedRevision uint64 `json:"expectedRevision"`
+	Status           string `json:"status"`
+}
+
+type RotateIdentityInput struct {
+	Bound
+	ID                 string `json:"id"`
+	ExpectedRevision   uint64 `json:"expectedRevision"`
+	ExpectedKeyVersion uint64 `json:"expectedKeyVersion"`
+	DocumentDigest     string `json:"didDocumentDigest"`
+	KeyID              string `json:"appKeyId"`
+	PublicKey          string `json:"appPublicKey"`
+}
+
+type RecoverIdentityInput struct {
+	Bound
+	ID                 string     `json:"id"`
+	ExpectedRevision   uint64     `json:"expectedRevision"`
+	ExpectedKeyVersion uint64     `json:"expectedKeyVersion"`
+	AccountCommitment  string     `json:"accountCommitment"`
+	OldManagement      Management `json:"oldManagementIdentity"`
+	NewManagement      Management `json:"newManagementIdentity"`
+	DocumentDigest     string     `json:"didDocumentDigest"`
+	KeyID              string     `json:"appKeyId"`
+	PublicKey          string     `json:"appPublicKey"`
 }
 
 type Probe struct {

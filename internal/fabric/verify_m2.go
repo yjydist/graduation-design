@@ -23,12 +23,12 @@ import (
 )
 
 type m2EvidenceReport struct {
-	DeploymentID          string           `json:"deploymentId"`
-	RunID                 string           `json:"runId"`
-	DualRootsIdentityLink map[string]any   `json:"dualRootsAndIdentityLink,omitempty"`
-	DualModeAgentOrders   map[string]any   `json:"dualModeAgentOrders,omitempty"`
-	RevocationAndPostLock map[string]any   `json:"revocationAndPostLockGuards,omitempty"`
-	ConcurrentIdempotency map[string]any   `json:"dualGatewayConcurrentIdempotency,omitempty"`
+	DeploymentID          string            `json:"deploymentId"`
+	RunID                 string            `json:"runId"`
+	DualRootsIdentityLink map[string]any    `json:"dualRootsAndIdentityLink,omitempty"`
+	DualModeAgentOrders   map[string]any    `json:"dualModeAgentOrders,omitempty"`
+	RevocationAndPostLock map[string]any    `json:"revocationAndPostLockGuards,omitempty"`
+	ConcurrentIdempotency map[string]any    `json:"dualGatewayConcurrentIdempotency,omitempty"`
 	AgentTraces           []agent.RunResult `json:"agentTraces,omitempty"`
 }
 
@@ -488,7 +488,9 @@ func (a acceptance) m2AgentMCPRPAndBMOrders() error {
 									lastQuote = q
 								}
 							} else {
-								var arr []struct{ Text string `json:"text"` }
+								var arr []struct {
+									Text string `json:"text"`
+								}
 								if json.Unmarshal(blk.Content, &arr) == nil {
 									for _, it := range arr {
 										if q := extractQuote(it.Text); q != "" {
@@ -809,6 +811,10 @@ func (a acceptance) m2RevocationAndPostLockOrderGuards() error {
 		return err
 	}
 
+	// Material assembly must wait for the VALID registration block, not an older fresh checkpoint.
+	if err := a.waitApplied(op2.Commit.Number); err != nil {
+		return err
+	}
 	waitActiveCtx, cancelActive := context.WithTimeout(a.ctx, 12*time.Second)
 	_, err = waitOnline(waitActiveCtx, rt, revG2.ID)
 	cancelActive()
@@ -1073,12 +1079,12 @@ func (a acceptance) m2DualGatewayConcurrentIdempotency() error {
 
 	return a.recordM2Evidence(func(ev *m2EvidenceReport) {
 		ev.ConcurrentIdempotency = map[string]any{
-			"challenge1":       ch1.ChallengeID,
-			"challenge2":       ch2.ChallengeID,
-			"sharedOrderId":    resp1.Order.OrderID,
-			"orderRowsForKey":  cnt,
-			"conflictStatus":   conflictRec.Code,
-			"conflictErrCode":  protocol.ErrCodeIdempotencyConflict,
+			"challenge1":      ch1.ChallengeID,
+			"challenge2":      ch2.ChallengeID,
+			"sharedOrderId":   resp1.Order.OrderID,
+			"orderRowsForKey": cnt,
+			"conflictStatus":  conflictRec.Code,
+			"conflictErrCode": protocol.ErrCodeIdempotencyConflict,
 		}
 	})
 }

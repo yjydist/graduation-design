@@ -1,0 +1,75 @@
+{
+  "asyncMgmtConfirmedStatus": "CONFIRMED",
+  "domainBRenewedCertId": "urn:grad:cert:B:m3-run-f71a1345",
+  "domainBRenewedCertJWS": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6dC5sb2NhbCNrZXktMSIsInR5cCI6InZjK2p3dCJ9.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLHsiQHZvY2FiIjoiaHR0cHM6Ly9ncmFkLWF1dGguZXhhbXBsZS50ZXN0L3ZvY2FiIyJ9XSwiY3JlZGVudGlhbFN0YXR1cyI6eyJpZCI6InVybjpncmFkOmNlcnQ6QjptMy1ydW4tZjcxYTEzNDUiLCJ0eXBlIjoiUmVnaXN0cnlEb21haW5DZXJ0aWZpY2F0aW9uU3RhdHVzIn0sImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImRvbWFpbklkIjoiQiIsImlkIjoiZGlkOndlYjpiLmxvY2FsIiwiaWRlbnRpdHlJc3N1ZXJzIjpbeyJhcHBLZXlWZXJzaW9uIjoxLCJjbGFpbU5hbWVzIjpbImRvbWFpbiIsInJvbGUiXSwiY3JlZGVudGlhbFR5cGVzIjpbIkVudGVycHJpc2VJZGVudGl0eUNyZWRlbnRpYWwiXSwiaWQiOiJkaWQ6d2ViOmIubG9jYWw6aXNzdWVyIn1dfSwiZGVwbG95bWVudElkIjoiN2I1NWY2NTU4YWYxMDkzYzIzMTcxZDI5NjlmNmQzNmM5NDAxOTcwZWUxMDE1MDBjOWQ4NWY5NzM5YjdiNDYxMiIsImV4cCI6MTc5NDgxNDkxNSwiaWQiOiJ1cm46Z3JhZDpjZXJ0OkI6bTMtcnVuLWY3MWExMzQ1IiwiaXNzIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyS2V5VmVyc2lvbiI6MSwibmJmIjoxNzk0NzI1MDE1LCJzdWIiOiJkaWQ6d2ViOmIubG9jYWwiLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiRG9tYWluQXV0aG9yaXR5Q3JlZGVudGlhbCJdLCJ2YWxpZEZyb20iOiIyMDI2LTExLTE1VDA2OjQzOjM1WiIsInZhbGlkVW50aWwiOiIyMDI2LTExLTE2VDA3OjQxOjU1WiJ9.mFlQxa9hDDEOX37J1baNuujf7eegtpQZf_yRpPvYZ20obaV2EcjnNhnela1-oKqcgTFH4qIZcUzq8C8FS__-TA",
+  "domainBStatusRestored": true,
+  "ephemeralRecoveredIdentity": {
+    "deploymentId": "7b55f6558af1093c23171d2969f6d36c9401970ee101500c9d85f9739b7b4612",
+    "subjectId": "did:web:b.local:m3-eph-run-f71a",
+    "domainId": "B",
+    "kind": "AGENT",
+    "managementIdentity": {
+      "mspId": "BMsp",
+      "certificateSha256": "4e5a650790e2078e36968b37898b9dc5ca5665ab9914636922df24a941453199"
+    },
+    "didDocumentDigest": "f1fc45224a059ff6f70fda1b2916ac4cb8748911ce213a214bfe6ae104ab3e25",
+    "appKeyId": "did:web:b.local:m3-eph-run-f71a#key-3",
+    "appKeyVersion": 3,
+    "appPublicKey": "048e12d7d328d7b9eded938c658768f97da4cd834eed0d28299e4daca0cfb0a06f4cdbecffe9eda3ddfa6dbc2f2409f2a1a3d63474d08db2b314cbb4cfef0c6ab8",
+    "accountCommitment": "ea424dbdf37b33ffe350c668424a5debb925cca6b46ebf64b9944bd8171a2dac",
+    "status": "SUSPENDED",
+    "revision": 6
+  },
+  "grantSuspendResumeExpKept": true,
+  "offlineAndCacheChecks": {
+    "b1SignatureCacheHits": 19,
+    "b1SignatureCacheMisses": 8,
+    "f14OfflineTHits": 0,
+    "s81StaleCode": 403,
+    "s84MaterialMissingCode": 503,
+    "s93DisclosedCode": 403
+  },
+  "recoveryDualProof": {
+    "challenge": {
+      "accountCommitment": "ea424dbdf37b33ffe350c668424a5debb925cca6b46ebf64b9944bd8171a2dac",
+      "challengeId": "rec-run-f71a",
+      "deploymentId": "7b55f6558af1093c23171d2969f6d36c9401970ee101500c9d85f9739b7b4612",
+      "didDocumentDigest": "f1fc45224a059ff6f70fda1b2916ac4cb8748911ce213a214bfe6ae104ab3e25",
+      "domainId": "B",
+      "expectedKeyVersion": 2,
+      "expectedRevision": 5,
+      "expiresAt": 1794728915,
+      "issuedAt": 1794728615,
+      "newAppKeyId": "did:web:b.local:m3-eph-run-f71a#key-3",
+      "newAppKeyVersion": 3,
+      "newAppPublicKey": "048e12d7d328d7b9eded938c658768f97da4cd834eed0d28299e4daca0cfb0a06f4cdbecffe9eda3ddfa6dbc2f2409f2a1a3d63474d08db2b314cbb4cfef0c6ab8",
+      "newManagementIdentity": {
+        "certificateSha256": "4e5a650790e2078e36968b37898b9dc5ca5665ab9914636922df24a941453199",
+        "mspId": "BMsp"
+      },
+      "nonce": "leThkzZ9Wx0cdaMg4kAmuPPqZ0hDl7BYhSRGc_RpJZE",
+      "oldManagementIdentity": {
+        "certificateSha256": "42b947f90d1442bfbc83bb01035839ee4b114a80510c7d053b409e395ae4ee61",
+        "mspId": "BMsp"
+      },
+      "purpose": "grad-identity-recovery-v1",
+      "subjectId": "did:web:b.local:m3-eph-run-f71a"
+    },
+    "challengeSha256": "d9343efb2e4c454dbc99a3c65061b759610ec86c23ea2834f07ba237259d82a1",
+    "deployment": {
+      "channelId": "procurement",
+      "genesisHash": "4ba3693082f1a9edf5346580be112c6922cbc23bbd50ff377fe1638074c584c7",
+      "instanceId": "c223b9d11c1644418ed38ffa7da7ccfb042b0ccb5f1f7e6e1d641c50edf5cfac",
+      "purpose": "grad-fabric-deployment-v1",
+      "registryName": "authregistry",
+      "schemaVersion": "grad-auth-v1"
+    },
+    "deploymentId": "7b55f6558af1093c23171d2969f6d36c9401970ee101500c9d85f9739b7b4612",
+    "newAppJwsProtected": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6Yi5sb2NhbDptMy1lcGgtcnVuLWY3MWEja2V5LTMiLCJ0eXAiOiJncmFkLW1hbmFnZW1lbnQtcHJvb2Yrand0In0",
+    "newAppJwsSignature": "qM5AjFhas9dwaeNQVOEUPdqQOmcdeNZWvLWUK3KEJV0V55mB2d7FwcVOze1MiswiFWKw4zBt3Ygo1iqQseNNvA",
+    "newManagementCertificateDer": "MIICEDCCAbagAwIBAgIRAJsq0WL2MeF_1Po2I7bsNhwwCgYIKoZIzj0EAwIwYTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xEDAOBgNVBAoTB2IubG9jYWwxEzARBgNVBAMTCmNhLmIubG9jYWwwHhcNMjYxMTE1MDczNjAwWhcNMzYxMTEyMDczNjAwWjBjMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNjbzEPMA0GA1UECxMGY2xpZW50MRYwFAYDVQQDDA1Vc2VyOUBiLmxvY2FsMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5VJQr9YrV3wGXdNDZNnk_E_qMCjt8wrtyhxFc9GLb_SS8tIJabXlvFYoUeXla5AtMEVsPIWL0hJO7PQa-v6RTqNNMEswDgYDVR0PAQH_BAQDAgeAMAwGA1UdEwEB_wQCMAAwKwYDVR0jBCQwIoAgFigSgnb7-DATl95f3n05pv3zUjmsmT3ALsrnyVaw-_cwCgYIKoZIzj0EAwIDSAAwRQIhAN4MH2fSFOUTgmRF9vGt3AnweFeV8YhfGsw3LgMw9gzcAiBJThSAGhPhBuhxBKVVeufsPInnBR8k4NOANiluWg6N4g",
+    "newManagementSignatureDer": "MEQCIEhszZ9fnGLqsidFyluvnvD2szzue_GCh7TcZx4odqbuAiB-cGDNDDkupUjMbZyFGSnGrnxOiB31D7wLs4ukKneEbA"
+  },
+  "s85Forbidden": true,
+  "taskCancelled": "cfca40408d44f5861bd62d587297fc3cd6e15c2bdb844ef78e04c5a5cd239deb"
+}

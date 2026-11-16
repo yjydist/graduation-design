@@ -1,0 +1,19 @@
+{
+  "command": "go test -json -count=1 -p 1 ./...",
+  "passed": true,
+  "test_pass_events": 174,
+  "package_pass_events": 9,
+  "skipped_tests": [
+    "TestInterruptedInitialization",
+    "TestDeploymentResumesAfterCommittedInitialization",
+    "TestM3LiveAcceptance"
+  ],
+  "packages_without_tests": [
+    "graduation-design/cmd/ledgerctl",
+    "graduation-design/internal/centralstate"
+  ],
+  "parallel_attempt": "final-unit-test-events.jsonl",
+  "parallel_failure_test": "TestM3AgentReconcileOrderCreatedAndNotCreatedS63",
+  "parallel_failure_cause": "shared PostgreSQL schema DDL and receipt transaction deadlock",
+  "isolated_recheck": "reconcile-recheck.log"
+}

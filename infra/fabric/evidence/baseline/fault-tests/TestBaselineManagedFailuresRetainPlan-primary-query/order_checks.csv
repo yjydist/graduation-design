@@ -1,0 +1,13 @@
+run_id,configuration,case_id,task_id,quote_id,idempotency_key,challenge_id,challenge_consumed,decision_id,decision_outcome,decision_code,quote_amount_minor,order_rows_before,order_rows_after,order_key_rows,order_key_status,order_id,creation_decision_id,order_status,verdict,failure_reason
+test,C0,1109-rp-80000,null,quote,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,primary database query failed
+test,C0,1109-rp-120000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed
+test,C0,1109-bm-80000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed
+test,C0,1109-bm-120000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed
+test,B0,1109-rp-80000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed
+test,B0,1109-rp-120000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed
+test,B0,1109-bm-80000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed
+test,B0,1109-bm-120000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed
+test,B1,1109-rp-80000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed
+test,B1,1109-rp-120000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed
+test,B1,1109-bm-80000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed
+test,B1,1109-bm-120000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,FAIL,not executed

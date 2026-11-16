@@ -17,6 +17,9 @@ import (
 
 // Run is the Fabric ledgerctl entry point.
 func Run(args []string, output io.Writer) error {
+	if len(args) > 0 && args[0] == "experiment" {
+		return runExperimentCLI(args[1:], output)
+	}
 	if len(args) == 0 {
 		return fmt.Errorf("usage: ledgerctl {deploy|seed|check|inspect|invoke|operation|verify|mcp}")
 	}

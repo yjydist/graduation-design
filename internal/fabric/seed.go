@@ -19,14 +19,14 @@ type fixtures struct {
 	Synthetic     bool   `json:"synthetic"`
 	SchemaVersion string `json:"schemaVersion"`
 	api.Bound
-	Domains        map[string]api.DomainBootstrap `json:"domains"`
-	Certifications map[string]api.Certify         `json:"certifications"`
-	Identities     map[string]api.Identity        `json:"identities"`
-	Credentials    map[string]api.Credential      `json:"credentials"`
-	Task           api.Task                       `json:"task"`
-	G0             api.Grant                      `json:"g0"`
-	G1             api.Grant                      `json:"g1"`
-	TaskSpec       protocol.TaskSpec              `json:"taskSpec"`
+	Domains              map[string]api.DomainBootstrap `json:"domains"`
+	Certifications       map[string]api.Certify         `json:"certifications"`
+	Identities           map[string]api.Identity        `json:"identities"`
+	Credentials          map[string]api.Credential      `json:"credentials"`
+	Task                 api.Task                       `json:"task"`
+	G0                   api.Grant                      `json:"g0"`
+	G1                   api.Grant                      `json:"g1"`
+	TaskSpec             protocol.TaskSpec              `json:"taskSpec"`
 	DIDDocuments         map[string]string              `json:"didDocuments"`
 	PurchasingAuthority  api.PurchasingAuthorityUpdate  `json:"purchasingAuthority,omitempty"`
 	IdentityLink         api.IdentityLink               `json:"identityLink,omitempty"`
@@ -1086,6 +1086,15 @@ func (i *instance) ensureM2Fixtures(d *deployment, f *fixtures) (bool, error) {
 			return false, err
 		}
 		f.M2TaskSpec = spec
+		if i.baseline != nil {
+			spec.MaxQuantity = i.baseline.Fixture.Quantity
+			spec.Description = "Paired baseline procurement"
+			specDigest, err = spec.Digest()
+			if err != nil {
+				return false, err
+			}
+			f.M2TaskSpec = spec
+		}
 
 		uPriv, err := loadECPrivateKeyPEM(i.privatePath("app", "U.key.pem"))
 		if err != nil {
@@ -1115,7 +1124,11 @@ func (i *instance) ensureM2Fixtures(d *deployment, f *fixtures) (bool, error) {
 		paID := f.Identities["PA"]
 
 		build2Hop := func(prefix, mode string, rootIssuer api.Identity, rootCredID string, rootPriv *ecdsa.PrivateKey) (api.Task, api.Grant, api.Grant, api.Grant, error) {
-			taskID := api.Digest([]byte(d.DeploymentID + "/m2/" + prefix + "/task"))
+			namespace := "/m2/" + prefix + "/"
+			if i.baseline != nil {
+				namespace = "/baseline/" + i.baseline.LogicalID(mode, "")
+			}
+			taskID := api.Digest([]byte(d.DeploymentID + namespace + "task"))
 			task := api.Task{
 				Bound:             bound,
 				ID:                taskID,
@@ -1192,17 +1205,17 @@ func (i *instance) ensureM2Fixtures(d *deployment, f *fixtures) (bool, error) {
 					Interval:          valid,
 				}, dig, nil
 			}
-			g0ID := api.Digest([]byte(d.DeploymentID + "/m2/" + prefix + "/G0"))
+			g0ID := api.Digest([]byte(d.DeploymentID + namespace + "G0"))
 			g0, g0Dig, err := signOne(g0ID, nil, nil, g0ID, rootIssuer, uID, rootCredID, f.Credentials["U"].ID, 500000, 2, rootPriv, prefix+"_g0.jws")
 			if err != nil {
 				return api.Task{}, api.Grant{}, api.Grant{}, api.Grant{}, err
 			}
-			g1ID := api.Digest([]byte(d.DeploymentID + "/m2/" + prefix + "/G1"))
+			g1ID := api.Digest([]byte(d.DeploymentID + namespace + "G1"))
 			g1, g1Dig, err := signOne(g1ID, &g0ID, &g0Dig, g0ID, uID, a1ID, f.Credentials["U"].ID, f.Credentials["A1"].ID, 500000, 1, uPriv, prefix+"_g1.jws")
 			if err != nil {
 				return api.Task{}, api.Grant{}, api.Grant{}, api.Grant{}, err
 			}
-			g2ID := api.Digest([]byte(d.DeploymentID + "/m2/" + prefix + "/G2"))
+			g2ID := api.Digest([]byte(d.DeploymentID + namespace + "G2"))
 			g2, _, err := signOne(g2ID, &g1ID, &g1Dig, g0ID, a1ID, b1ID, f.Credentials["A1"].ID, f.Credentials["B1"].ID, 100000, 0, a1Priv, prefix+"_g2.jws")
 			if err != nil {
 				return api.Task{}, api.Grant{}, api.Grant{}, api.Grant{}, err
@@ -1311,70 +1324,7 @@ func (i *instance) writeUQuoteSample(
 func (i *instance) syncMaterialOutboxes(ctx context.Context, j journal, d *deployment, f *fixtures, report *seedReport) error {
 	ds := NewDeliveryService(j.db)
 	now := time.Now().UTC().Unix()
-	snap := &protocol.SnapshotView{
-		Height:         1,
-		Now:            time.Unix(now, 0).UTC(),
-		DeploymentID:   d.DeploymentID,
-		Root:           d.Bootstrap.Root,
-		Domains:        make(map[string]api.Domain),
-		Certifications: make(map[string]api.Certification),
-		Identities:     make(map[string]api.Identity),
-		Credentials:    make(map[string]api.Credential),
-		Tasks: map[string]api.Task{
-			f.Task.ID: activateTaskSnapshot(f.Task),
-		},
-		Grants: map[string]api.Grant{
-			f.G0.ID: activateGrantSnapshot(f.G0),
-			f.G1.ID: activateGrantSnapshot(f.G1),
-		},
-		Links: map[string]api.IdentityLink{},
-	}
-	if f.RPTask.ID != "" {
-		snap.Tasks[f.RPTask.ID] = activateTaskSnapshot(f.RPTask)
-		snap.Grants[f.RPG0.ID] = activateGrantSnapshot(f.RPG0)
-		snap.Grants[f.RPG1.ID] = activateGrantSnapshot(f.RPG1)
-		snap.Grants[f.RPG2.ID] = activateGrantSnapshot(f.RPG2)
-	}
-	if f.BMTask.ID != "" {
-		snap.Tasks[f.BMTask.ID] = activateTaskSnapshot(f.BMTask)
-		snap.Grants[f.BMG0.ID] = activateGrantSnapshot(f.BMG0)
-		snap.Grants[f.BMG1.ID] = activateGrantSnapshot(f.BMG1)
-		snap.Grants[f.BMG2.ID] = activateGrantSnapshot(f.BMG2)
-	}
-	for domID, db := range f.Domains {
-		dom := db.Domain
-		dom.Issuers = []string{db.Issuers[0].ID}
-		dom.Certification = f.Certifications[domID].Certification.ID
-		if domID == "A" && f.PurchasingAuthority.DomainID == "A" {
-			dom.PurchasingAuthority = f.PurchasingAuthority.PurchasingAuthority
-		}
-		dom.Version = api.Version{Status: api.Active, Revision: 1}
-		snap.Domains[domID] = dom
-
-		cert := f.Certifications[domID].Certification
-		cert.Version = api.Version{Status: api.Active, Revision: 1}
-		snap.Certifications[cert.ID] = cert
-
-		di := db.Identity
-		di.Version = api.Version{Status: api.Active, Revision: 1}
-		snap.Identities[di.ID] = di
-
-		ii := db.Issuers[0]
-		ii.Version = api.Version{Status: api.Active, Revision: 1}
-		snap.Identities[ii.ID] = ii
-	}
-	for role, id := range f.Identities {
-		id.Version = api.Version{Status: api.Active, Revision: 1}
-		snap.Identities[id.ID] = id
-		if cred, ok := f.Credentials[role]; ok {
-			cred.Version = api.Version{Status: api.Active, Revision: 1}
-			snap.Credentials[cred.ID] = cred
-		}
-	}
-	if cSvc, ok := f.Credentials["C-service"]; ok {
-		cSvc.Version = api.Version{Status: api.Active, Revision: 1}
-		snap.Credentials[cSvc.ID] = cSvc
-	}
+	snap := fixtureSnapshot(d, f, time.Unix(now, 0).UTC())
 
 	rootPub, _, err := protocol.ParseAppPublicKey(d.Bootstrap.Root.PublicKey)
 	if err != nil {
@@ -1562,4 +1512,74 @@ func activateTaskSnapshot(t api.Task) api.Task {
 func activateGrantSnapshot(g api.Grant) api.Grant {
 	g.Version = api.Version{Status: api.Active, Revision: 1}
 	return g
+}
+
+// fixtureSnapshot is the shared registration input for delivery and the centralized preloader.
+func fixtureSnapshot(d *deployment, f *fixtures, at time.Time) *protocol.SnapshotView {
+	snap := &protocol.SnapshotView{
+		Height:         0,
+		Now:            at,
+		DeploymentID:   d.DeploymentID,
+		Root:           d.Bootstrap.Root,
+		Domains:        make(map[string]api.Domain),
+		Certifications: make(map[string]api.Certification),
+		Identities:     make(map[string]api.Identity),
+		Credentials:    make(map[string]api.Credential),
+		Tasks: map[string]api.Task{
+			f.Task.ID: activateTaskSnapshot(f.Task),
+		},
+		Grants: map[string]api.Grant{
+			f.G0.ID: activateGrantSnapshot(f.G0),
+			f.G1.ID: activateGrantSnapshot(f.G1),
+		},
+		Links: map[string]api.IdentityLink{},
+	}
+	if f.RPTask.ID != "" {
+		snap.Tasks[f.RPTask.ID] = activateTaskSnapshot(f.RPTask)
+		snap.Grants[f.RPG0.ID] = activateGrantSnapshot(f.RPG0)
+		snap.Grants[f.RPG1.ID] = activateGrantSnapshot(f.RPG1)
+		snap.Grants[f.RPG2.ID] = activateGrantSnapshot(f.RPG2)
+	}
+	if f.BMTask.ID != "" {
+		snap.Tasks[f.BMTask.ID] = activateTaskSnapshot(f.BMTask)
+		snap.Grants[f.BMG0.ID] = activateGrantSnapshot(f.BMG0)
+		snap.Grants[f.BMG1.ID] = activateGrantSnapshot(f.BMG1)
+		snap.Grants[f.BMG2.ID] = activateGrantSnapshot(f.BMG2)
+	}
+	for domID, db := range f.Domains {
+		dom := db.Domain
+		dom.Issuers = []string{db.Issuers[0].ID}
+		dom.Certification = f.Certifications[domID].Certification.ID
+		if domID == "A" && f.PurchasingAuthority.DomainID == "A" {
+			dom.PurchasingAuthority = f.PurchasingAuthority.PurchasingAuthority
+		}
+		dom.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Domains[domID] = dom
+
+		cert := f.Certifications[domID].Certification
+		cert.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Certifications[cert.ID] = cert
+
+		di := db.Identity
+		di.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Identities[di.ID] = di
+
+		ii := db.Issuers[0]
+		ii.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Identities[ii.ID] = ii
+	}
+	for role, id := range f.Identities {
+		id.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Identities[id.ID] = id
+		if cred, ok := f.Credentials[role]; ok {
+			cred.Version = api.Version{Status: api.Active, Revision: 1}
+			snap.Credentials[cred.ID] = cred
+		}
+	}
+	if cSvc, ok := f.Credentials["C-service"]; ok {
+		cSvc.Version = api.Version{Status: api.Active, Revision: 1}
+		snap.Credentials[cSvc.ID] = cSvc
+	}
+
+	return snap
 }

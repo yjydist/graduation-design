@@ -22,6 +22,8 @@ import (
 )
 
 const (
+	StateFabric      = "fabric"
+	StateCentralized = "centralized"
 	// ChallengeTTLSeconds is C's fixed short lifetime for access challenges.
 	ChallengeTTLSeconds = int64(30)
 	// MaxExecuteBodyBytes enforces the 256 KiB payload limit on POST /v1/access/execute.
@@ -47,6 +49,9 @@ type ProbeInfo struct {
 // ConsistentSnapshot holds a fixed-height ledger snapshot and its verified checkpoint/probe metadata.
 type ConsistentSnapshot struct {
 	DeploymentID    string
+	StateSource     string
+	Revision        int64
+	StateReadAt     time.Time
 	BlockNumber     int64
 	BlockHash       string
 	RevocationEpoch int64
@@ -54,10 +59,11 @@ type ConsistentSnapshot struct {
 	Snapshot        *protocol.SnapshotView
 }
 
-// StateSource provides fixed-height consistent snapshots and monotonic probe freshness checks.
+// StateSource owns consistent reads and the source-specific checkpoint locked in the business transaction.
 type StateSource interface {
-	IsProbeFresh(original ...ProbeInfo) (ProbeInfo, error)
 	AssembleSnapshot(ctx context.Context, leafGrantID string, now time.Time) (*ConsistentSnapshot, error)
+	LockCheckpoint(ctx context.Context, tx pgx.Tx, original *ConsistentSnapshot) (bool, error)
+	CheckFresh(ctx context.Context, original *ConsistentSnapshot) (ProbeInfo, error)
 }
 
 // HistoricalStateSource is optionally implemented by StateSource backends that support historical replay and deactivation lookup.
@@ -91,7 +97,7 @@ type Config struct {
 	// BeforeLockTx is an optional deterministic test hook invoked right before opening the execute transaction.
 	BeforeLockTx func(attempt int)
 	// BeforeLockHead is an optional deterministic test hook invoked inside the execute transaction
-	// right after locking business rows and before acquiring fabric_head FOR SHARE.
+	// right after locking business rows and before acquiring the state source checkpoint lock.
 	BeforeLockHead func(attempt int)
 }
 
@@ -147,44 +153,69 @@ type ContextResponse struct {
 
 // DecisionRecord models GET /v1/decisions/{id}.
 type DecisionRecord struct {
-	DeploymentID          string   `json:"deploymentId"`
-	DecisionID            string   `json:"decisionId"`
-	RequestID             string   `json:"requestId"`
-	ChallengeID           string   `json:"challengeId"`
-	Actor                 string   `json:"actor"`
-	TaskID                string   `json:"taskId"`
-	Action                string   `json:"action"`
-	IdempotencyKey        string   `json:"idempotencyKey"`
-	Outcome               string   `json:"outcome"`
-	Code                  string   `json:"code"`
-	Reason                string   `json:"reason,omitempty"`
-	QuoteID               *string  `json:"quoteId,omitempty"`
-	OrderID               *string  `json:"orderId,omitempty"`
-	BlockNumber           int64    `json:"blockNumber"`
-	BlockHash             string   `json:"blockHash"`
-	RevocationEpoch       int64    `json:"revocationEpoch"`
-	ProbeTxID             string   `json:"probeTxId"`
-	ProbeBlock            int64    `json:"probeBlock"`
-	ProbeSentAt           int64    `json:"probeSentAt"`
-	ProbeDeadline         int64    `json:"probeDeadline"`
-	ProbeSentMonoNs       int64    `json:"probeSentMonoNs"`
-	ProbeDeadlineMonoNs   int64    `json:"probeDeadlineMonoNs"`
-	DecisionAt            int64    `json:"decisionAt"`
-	RootDID               string   `json:"rootDid"`
-	RootKeyVersion        int64    `json:"rootKeyVersion"`
-	DomainID              string   `json:"domainId,omitempty"`
-	CertificationID       string   `json:"certificationId,omitempty"`
-	CertificationDigest   string   `json:"certificationDigest,omitempty"`
-	DomainRevision        int64    `json:"domainRevision"`
-	IdentityIssuer        string   `json:"identityIssuer,omitempty"`
-	PolicyDigest          string   `json:"policyDigest"`
-	ContextVersion        int64    `json:"contextVersion"`
-	ContextRiskLevel      string   `json:"contextRiskLevel"`
-	ContextObservedAt     int64    `json:"contextObservedAt"`
-	ContextAccessDeadline int64    `json:"contextAccessDeadline"`
-	EffectiveDeadline     int64    `json:"effectiveDeadline"`
-	GrantPath             []string `json:"grantPath"`
-	FailedObjectID        *string  `json:"failedObjectId,omitempty"`
+	StateSource           string     `json:"stateSource"`
+	Revision              *int64     `json:"revision"`
+	StateReadAt           *time.Time `json:"stateReadAt"`
+	StateRechecks         int        `json:"stateRechecks"`
+	DeploymentID          string     `json:"deploymentId"`
+	DecisionID            string     `json:"decisionId"`
+	RequestID             string     `json:"requestId"`
+	ChallengeID           string     `json:"challengeId"`
+	Actor                 string     `json:"actor"`
+	TaskID                string     `json:"taskId"`
+	Action                string     `json:"action"`
+	IdempotencyKey        string     `json:"idempotencyKey"`
+	Outcome               string     `json:"outcome"`
+	Code                  string     `json:"code"`
+	Reason                string     `json:"reason,omitempty"`
+	QuoteID               *string    `json:"quoteId,omitempty"`
+	OrderID               *string    `json:"orderId,omitempty"`
+	BlockNumber           int64      `json:"blockNumber"`
+	BlockHash             string     `json:"blockHash"`
+	RevocationEpoch       int64      `json:"revocationEpoch"`
+	ProbeTxID             string     `json:"probeTxId"`
+	ProbeBlock            int64      `json:"probeBlock"`
+	ProbeSentAt           int64      `json:"probeSentAt"`
+	ProbeDeadline         int64      `json:"probeDeadline"`
+	ProbeSentMonoNs       int64      `json:"probeSentMonoNs"`
+	ProbeDeadlineMonoNs   int64      `json:"probeDeadlineMonoNs"`
+	ProbeCheckedMonoNs    *int64     `json:"probeCheckedMonoNs"`
+	DecisionAt            int64      `json:"decisionAt"`
+	RootDID               string     `json:"rootDid"`
+	RootKeyVersion        int64      `json:"rootKeyVersion"`
+	DomainID              string     `json:"domainId,omitempty"`
+	CertificationID       string     `json:"certificationId,omitempty"`
+	CertificationDigest   string     `json:"certificationDigest,omitempty"`
+	DomainRevision        int64      `json:"domainRevision"`
+	IdentityIssuer        string     `json:"identityIssuer,omitempty"`
+	PolicyDigest          string     `json:"policyDigest"`
+	ContextVersion        int64      `json:"contextVersion"`
+	ContextRiskLevel      string     `json:"contextRiskLevel"`
+	ContextObservedAt     int64      `json:"contextObservedAt"`
+	ContextAccessDeadline int64      `json:"contextAccessDeadline"`
+	EffectiveDeadline     int64      `json:"effectiveDeadline"`
+	GrantPath             []string   `json:"grantPath"`
+	FailedObjectID        *string    `json:"failedObjectId,omitempty"`
+}
+
+// MarshalJSON preserves the existing Fabric fields while expressing their absence for C0.
+func (d DecisionRecord) MarshalJSON() ([]byte, error) {
+	type record DecisionRecord
+	raw, err := json.Marshal(record(d))
+	if err != nil {
+		return nil, err
+	}
+	if d.StateSource != StateCentralized {
+		return raw, nil
+	}
+	var fields map[string]json.RawMessage
+	if err = json.Unmarshal(raw, &fields); err != nil {
+		return nil, err
+	}
+	for _, key := range []string{"blockNumber", "blockHash", "revocationEpoch", "probeTxId", "probeBlock", "probeSentAt", "probeDeadline", "probeSentMonoNs", "probeDeadlineMonoNs"} {
+		fields[key] = json.RawMessage("null")
+	}
+	return json.Marshal(fields)
 }
 
 // QuoteDTO is the immutable quote response returned by quote.read.
@@ -729,11 +760,11 @@ func (s *Server) handleGetDecision(w http.ResponseWriter, r *http.Request) {
 	var reason, quoteID, orderID, domID, certID, certDigest, idIssuer, failedObj *string
 	err := s.cfg.DB.QueryRow(r.Context(), `SELECT
 		deployment_id, decision_id, request_id, challenge_id, actor, task_id, action, idempotency_key,
-		outcome, code, reason, quote_id, order_id, block_number, block_hash, revocation_epoch,
-		probe_tx_id, probe_block, probe_sent_at, probe_deadline, probe_sent_mono_ns, probe_deadline_mono_ns, decision_at,
+		outcome, code, reason, quote_id, order_id, COALESCE(block_number,0), COALESCE(block_hash,''), COALESCE(revocation_epoch,0),
+		COALESCE(probe_tx_id,''), COALESCE(probe_block,0), COALESCE(probe_sent_at,0), COALESCE(probe_deadline,0), COALESCE(probe_sent_mono_ns,0), COALESCE(probe_deadline_mono_ns,0), decision_at,
 		root_did, root_key_version, domain_id, certification_id, certification_digest, domain_revision,
 		identity_issuer, policy_digest, context_version, context_risk_level, context_observed_at,
-		context_access_deadline, effective_deadline, grant_path, failed_object_id
+		context_access_deadline, effective_deadline, grant_path, failed_object_id, state_source, revision, state_read_at, state_rechecks, probe_checked_mono_ns
 		FROM decisions WHERE deployment_id=$1 AND decision_id=$2`,
 		s.cfg.DeploymentID, decID,
 	).Scan(
@@ -742,7 +773,7 @@ func (s *Server) handleGetDecision(w http.ResponseWriter, r *http.Request) {
 		&rec.ProbeTxID, &rec.ProbeBlock, &rec.ProbeSentAt, &rec.ProbeDeadline, &rec.ProbeSentMonoNs, &rec.ProbeDeadlineMonoNs, &rec.DecisionAt,
 		&rec.RootDID, &rec.RootKeyVersion, &domID, &certID, &certDigest, &rec.DomainRevision,
 		&idIssuer, &rec.PolicyDigest, &rec.ContextVersion, &rec.ContextRiskLevel, &rec.ContextObservedAt,
-		&rec.ContextAccessDeadline, &rec.EffectiveDeadline, &rec.GrantPath, &failedObj,
+		&rec.ContextAccessDeadline, &rec.EffectiveDeadline, &rec.GrantPath, &failedObj, &rec.StateSource, &rec.Revision, &rec.StateReadAt, &rec.StateRechecks, &rec.ProbeCheckedMonoNs,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeErrorResponse(w, r, http.StatusNotFound, protocol.ErrCodeInvalidSchema, nil, "decision not found")
@@ -778,7 +809,12 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, r, http.StatusServiceUnavailable, protocol.ErrCodeStateUnavailable, nil, "policy bundle not loaded")
 		return
 	}
-	probe, err := s.cfg.State.IsProbeFresh()
+	view, err := s.cfg.State.AssembleSnapshot(r.Context(), "", s.now())
+	if err != nil {
+		writeMappedError(w, r, nil, err)
+		return
+	}
+	probe, err := s.cfg.State.CheckFresh(r.Context(), view)
 	if err != nil {
 		writeMappedError(w, r, nil, err)
 		return
@@ -789,35 +825,15 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.cfg.Delivery != nil {
-		tx, err := s.cfg.DB.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
-		if err != nil {
-			writeErrorResponse(w, r, http.StatusServiceUnavailable, protocol.ErrCodeStateUnavailable, nil, err.Error())
-			return
-		}
-		defer func() { _ = tx.Rollback(r.Context()) }()
 		for _, domID := range []string{"A", "C"} {
-			rawDom, ok, err := readCurrentObjectJSON(r.Context(), tx, s.cfg.DeploymentID, "domain", domID)
-			if err != nil {
-				writeErrorResponse(w, r, http.StatusServiceUnavailable, protocol.ErrCodeStateUnavailable, nil, err.Error())
-				return
-			}
+			dom, ok := view.Snapshot.Domains[domID]
 			if !ok {
-				writeErrorResponse(w, r, http.StatusServiceUnavailable, protocol.ErrCodeStateUnavailable, nil, fmt.Sprintf("domain %s missing in snapshot", domID))
+				writeErrorResponse(w, r, http.StatusServiceUnavailable, protocol.ErrCodeStateUnavailable, nil, "required readiness domain missing")
 				return
 			}
-			var dom api.Domain
-			if err := json.Unmarshal(rawDom, &dom); err != nil {
-				writeErrorResponse(w, r, http.StatusServiceUnavailable, protocol.ErrCodeStateUnavailable, nil, err.Error())
-				return
-			}
-			rawCert, ok, err := readCurrentObjectJSON(r.Context(), tx, s.cfg.DeploymentID, "certification", dom.Certification)
-			if err != nil || !ok {
-				writeErrorResponse(w, r, http.StatusServiceUnavailable, protocol.ErrCodeStateUnavailable, nil, fmt.Sprintf("certification %s missing in snapshot", dom.Certification))
-				return
-			}
-			var cert api.Certification
-			if err := json.Unmarshal(rawCert, &cert); err != nil {
-				writeErrorResponse(w, r, http.StatusServiceUnavailable, protocol.ErrCodeStateUnavailable, nil, err.Error())
+			cert, ok := view.Snapshot.Certifications[dom.Certification]
+			if !ok {
+				writeErrorResponse(w, r, http.StatusServiceUnavailable, protocol.ErrCodeStateUnavailable, nil, "required readiness certification missing")
 				return
 			}
 			if _, err := s.cfg.Delivery.HasSyncedCertification(r.Context(), s.cfg.DeploymentID, domID, cert.ID, cert.Digest); err != nil {
@@ -827,12 +843,19 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var probeBlock any
+	if view.StateSource == StateFabric {
+		probeBlock = probe.ProbeBlock
+	}
 	writeJSONResponse(w, http.StatusOK, map[string]any{
 		"status":       "READY",
 		"deploymentId": s.cfg.DeploymentID,
 		"serviceDid":   s.cfg.ServiceDID,
 		"policyDigest": s.cfg.Policy.PolicyDigest,
-		"probeBlock":   probe.ProbeBlock,
+		"stateSource":  view.StateSource,
+		"revision":     centralRevision(view),
+		"stateReadAt":  centralReadAt(view),
+		"probeBlock":   probeBlock,
 	})
 }
 

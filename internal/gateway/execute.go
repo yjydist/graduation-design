@@ -474,21 +474,13 @@ func (s *Server) executeInTx(
 		s.cfg.BeforeLockHead(attempt)
 	}
 
-	// Step 5: Shared lock fabric_head AFTER all business row locks and compare with precheck checkpoint.
-	var headHeight int64
-	var headHash string
-	err = tx.QueryRow(ctx, `SELECT block_no, hash
-		FROM fabric_head WHERE deployment=$1 FOR SHARE`,
-		s.cfg.DeploymentID,
-	).Scan(&headHeight, &headHash)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, false, protocol.NewError(protocol.ErrCodeStateUnavailable, "fabric_head missing")
-	}
+	// Step 5: Lock and compare the actual source checkpoint AFTER all business row locks.
+	unchanged, err := s.cfg.State.LockCheckpoint(ctx, tx, pre.view)
 	if err != nil {
-		return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "lock fabric_head row", err)
+		return nil, false, err
 	}
-	if headHeight != pre.view.BlockNumber || headHash != pre.view.BlockHash {
-		return nil, true, protocol.NewError(protocol.ErrCodeStateChanged, "fabric checkpoint changed after precheck")
+	if !unchanged {
+		return nil, true, protocol.NewError(protocol.ErrCodeStateChanged, "state checkpoint changed after precheck")
 	}
 
 	// Step 6: Post-lock explicit clock_timestamp() query and monotonic probe freshness verification.
@@ -501,7 +493,7 @@ func (s *Server) executeInTx(
 		decisionSec = s.cfg.NowFn().Unix()
 	}
 
-	probe, err := s.cfg.State.IsProbeFresh(pre.view.Probe)
+	probe, err := s.cfg.State.CheckFresh(ctx, pre.view)
 	if err != nil {
 		return nil, false, err
 	}
@@ -537,6 +529,10 @@ func (s *Server) executeInTx(
 			}
 		}
 		if err := insertDecisionRow(ctx, tx, DecisionRecord{
+			StateSource:           pre.view.StateSource,
+			Revision:              centralRevision(pre.view),
+			StateReadAt:           centralReadAt(pre.view),
+			StateRechecks:         attempt,
 			DeploymentID:          s.cfg.DeploymentID,
 			DecisionID:            decID,
 			RequestID:             reqID,
@@ -557,6 +553,7 @@ func (s *Server) executeInTx(
 			ProbeDeadline:         probe.Deadline.Unix(),
 			ProbeSentMonoNs:       probe.SentMonoNs,
 			ProbeDeadlineMonoNs:   probe.DeadlineMonoNs,
+			ProbeCheckedMonoNs:    checkedProbe(pre.view, probe),
 			DecisionAt:            decisionSec,
 			RootDID:               pre.rootDID,
 			RootKeyVersion:        pre.rootKeyVersion,
@@ -813,6 +810,10 @@ func (s *Server) executeInTx(
 	}
 
 	if err := insertDecisionRow(ctx, tx, DecisionRecord{
+		StateSource:           pre.view.StateSource,
+		Revision:              centralRevision(pre.view),
+		StateReadAt:           centralReadAt(pre.view),
+		StateRechecks:         attempt,
 		DeploymentID:          s.cfg.DeploymentID,
 		DecisionID:            decID,
 		RequestID:             reqID,
@@ -834,6 +835,7 @@ func (s *Server) executeInTx(
 		ProbeDeadline:         probe.Deadline.Unix(),
 		ProbeSentMonoNs:       probe.SentMonoNs,
 		ProbeDeadlineMonoNs:   probe.DeadlineMonoNs,
+		ProbeCheckedMonoNs:    checkedProbe(pre.view, probe),
 		DecisionAt:            decisionSec,
 		RootDID:               pre.rootDID,
 		RootKeyVersion:        pre.rootKeyVersion,
@@ -911,21 +913,22 @@ func insertDecisionRow(ctx context.Context, tx pgx.Tx, d DecisionRecord) error {
 		probe_tx_id, probe_block, probe_sent_at, probe_deadline, probe_sent_mono_ns, probe_deadline_mono_ns, decision_at,
 		root_did, root_key_version, domain_id, certification_id, certification_digest, domain_revision,
 		identity_issuer, policy_digest, context_version, context_risk_level, context_observed_at,
-		context_access_deadline, effective_deadline, grant_path, failed_object_id
+		context_access_deadline, effective_deadline, grant_path, failed_object_id, state_source, revision, state_read_at, state_rechecks, probe_checked_mono_ns
 	) VALUES(
 		$1,$2,$3,$4,$5,$6,$7,$8,
 		$9,$10,$11,$12,$13,$14,$15,$16,
 		$17,$18,$19,$20,$21,$22,$23,
 		$24,$25,$26,$27,$28,$29,
 		$30,$31,$32,$33,$34,
-		$35,$36,$37,$38
+		$35,$36,$37,$38,$39,$40,$41,$42,$43
 	)`,
 		d.DeploymentID, d.DecisionID, d.RequestID, d.ChallengeID, d.Actor, d.TaskID, d.Action, d.IdempotencyKey,
-		d.Outcome, d.Code, reasonPtr, d.QuoteID, d.OrderID, d.BlockNumber, d.BlockHash, d.RevocationEpoch,
-		d.ProbeTxID, d.ProbeBlock, d.ProbeSentAt, d.ProbeDeadline, d.ProbeSentMonoNs, d.ProbeDeadlineMonoNs, d.DecisionAt,
+		d.Outcome, d.Code, reasonPtr, d.QuoteID, d.OrderID, fabricColumn(d, d.BlockNumber), fabricColumn(d, d.BlockHash), fabricColumn(d, d.RevocationEpoch),
+		fabricColumn(d, d.ProbeTxID), fabricColumn(d, d.ProbeBlock), fabricColumn(d, d.ProbeSentAt), fabricColumn(d, d.ProbeDeadline), fabricColumn(d, d.ProbeSentMonoNs), fabricColumn(d, d.ProbeDeadlineMonoNs), d.DecisionAt,
 		d.RootDID, d.RootKeyVersion, domPtr, certPtr, certDigPtr, d.DomainRevision,
 		idIssPtr, d.PolicyDigest, d.ContextVersion, d.ContextRiskLevel, d.ContextObservedAt,
 		d.ContextAccessDeadline, d.EffectiveDeadline, d.GrantPath, d.FailedObjectID,
+		d.StateSource, d.Revision, d.StateReadAt, d.StateRechecks, d.ProbeCheckedMonoNs,
 	)
 	return err
 }
@@ -1009,4 +1012,33 @@ func httpStatusForCode(code string) int {
 		}
 		return http.StatusInternalServerError
 	}
+}
+
+func centralRevision(view *ConsistentSnapshot) *int64 {
+	if view.StateSource != StateCentralized {
+		return nil
+	}
+	v := view.Revision
+	return &v
+}
+func centralReadAt(view *ConsistentSnapshot) *time.Time {
+	if view.StateSource != StateCentralized {
+		return nil
+	}
+	v := view.StateReadAt
+	return &v
+}
+func fabricColumn(d DecisionRecord, value any) any {
+	if d.StateSource == StateCentralized {
+		return nil
+	}
+	return value
+}
+
+func checkedProbe(view *ConsistentSnapshot, p ProbeInfo) *int64 {
+	if view.StateSource != StateFabric {
+		return nil
+	}
+	v := p.CheckedMonoNs
+	return &v
 }

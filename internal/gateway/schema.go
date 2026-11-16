@@ -247,6 +247,20 @@ CREATE TABLE IF NOT EXISTS order_outcome_receipts (
 );
 
 ALTER TABLE decisions ADD COLUMN IF NOT EXISTS order_id TEXT;
+ALTER TABLE decisions ADD COLUMN IF NOT EXISTS state_source TEXT NOT NULL DEFAULT 'fabric';
+ALTER TABLE decisions ADD COLUMN IF NOT EXISTS revision BIGINT;
+ALTER TABLE decisions ADD COLUMN IF NOT EXISTS state_read_at TIMESTAMPTZ;
+ALTER TABLE decisions ADD COLUMN IF NOT EXISTS state_rechecks INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE decisions ADD COLUMN IF NOT EXISTS probe_checked_mono_ns BIGINT;
+ALTER TABLE decisions ALTER COLUMN block_number DROP NOT NULL;
+ALTER TABLE decisions ALTER COLUMN block_hash DROP NOT NULL;
+ALTER TABLE decisions ALTER COLUMN revocation_epoch DROP NOT NULL;
+ALTER TABLE decisions ALTER COLUMN probe_tx_id DROP NOT NULL;
+ALTER TABLE decisions ALTER COLUMN probe_block DROP NOT NULL;
+ALTER TABLE decisions ALTER COLUMN probe_sent_at DROP NOT NULL;
+ALTER TABLE decisions ALTER COLUMN probe_deadline DROP NOT NULL;
+ALTER TABLE decisions ALTER COLUMN probe_sent_mono_ns DROP NOT NULL;
+ALTER TABLE decisions ALTER COLUMN probe_deadline_mono_ns DROP NOT NULL;
 ALTER TABLE decision_evidence ADD COLUMN IF NOT EXISTS checked_mono_ns BIGINT;
 ALTER TABLE order_outcome_receipts ADD COLUMN IF NOT EXISTS audit_at BIGINT NOT NULL DEFAULT 0;
 `

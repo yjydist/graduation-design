@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "compared_to": "round6/manifest.json",
+  "matched_files": 108,
+  "mismatches": []
+}

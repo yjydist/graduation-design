@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"graduation-design/internal/experiment"
 	api "graduation-design/internal/fabricapi"
 
 	"github.com/hyperledger/fabric-gateway/pkg/client"
@@ -29,8 +30,9 @@ import (
 )
 
 type instance struct {
-	dir string
-	env map[string]string
+	dir      string
+	env      map[string]string
+	baseline *experiment.Inputs
 }
 
 func loadInstance(dir string) (*instance, error) {

@@ -1,0 +1,120 @@
+{
+  "artifact_locks": null,
+  "chaincode": null,
+  "channel_id": null,
+  "clock": null,
+  "configurations": null,
+  "deployment_id": null,
+  "driver": "deterministic wallet tools",
+  "fixture_digest": "47e91ed3d170b501914cad44dd5309646bd5c5e458e53a2b9ec0beca1fcc20a5",
+  "genesis_hash": null,
+  "go_version": null,
+  "host": null,
+  "material_digest": null,
+  "planned_cases": [
+    {
+      "configuration": "C0",
+      "case_id": "1109-rp-80000",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "amount_minor": 80000,
+      "expected_http_status": 200,
+      "expected_code": "ALLOW"
+    },
+    {
+      "configuration": "C0",
+      "case_id": "1109-rp-120000",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "amount_minor": 120000,
+      "expected_http_status": 403,
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED"
+    },
+    {
+      "configuration": "C0",
+      "case_id": "1109-bm-80000",
+      "mode": "BUYER_MANDATE",
+      "amount_minor": 80000,
+      "expected_http_status": 200,
+      "expected_code": "ALLOW"
+    },
+    {
+      "configuration": "C0",
+      "case_id": "1109-bm-120000",
+      "mode": "BUYER_MANDATE",
+      "amount_minor": 120000,
+      "expected_http_status": 403,
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED"
+    },
+    {
+      "configuration": "B0",
+      "case_id": "1109-rp-80000",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "amount_minor": 80000,
+      "expected_http_status": 200,
+      "expected_code": "ALLOW"
+    },
+    {
+      "configuration": "B0",
+      "case_id": "1109-rp-120000",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "amount_minor": 120000,
+      "expected_http_status": 403,
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED"
+    },
+    {
+      "configuration": "B0",
+      "case_id": "1109-bm-80000",
+      "mode": "BUYER_MANDATE",
+      "amount_minor": 80000,
+      "expected_http_status": 200,
+      "expected_code": "ALLOW"
+    },
+    {
+      "configuration": "B0",
+      "case_id": "1109-bm-120000",
+      "mode": "BUYER_MANDATE",
+      "amount_minor": 120000,
+      "expected_http_status": 403,
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED"
+    },
+    {
+      "configuration": "B1",
+      "case_id": "1109-rp-80000",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "amount_minor": 80000,
+      "expected_http_status": 200,
+      "expected_code": "ALLOW"
+    },
+    {
+      "configuration": "B1",
+      "case_id": "1109-rp-120000",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "amount_minor": 120000,
+      "expected_http_status": 403,
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED"
+    },
+    {
+      "configuration": "B1",
+      "case_id": "1109-bm-80000",
+      "mode": "BUYER_MANDATE",
+      "amount_minor": 80000,
+      "expected_http_status": 200,
+      "expected_code": "ALLOW"
+    },
+    {
+      "configuration": "B1",
+      "case_id": "1109-bm-120000",
+      "mode": "BUYER_MANDATE",
+      "amount_minor": 120000,
+      "expected_http_status": 403,
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED"
+    }
+  ],
+  "policy_digest": null,
+  "policy_source_digest": "cf510d733d0c865f915c71162c15c1ca77f26a23869928d1777c212e175ab781",
+  "root": null,
+  "run_id": "test",
+  "seed": 1109,
+  "source_commit": null,
+  "started_at": "2026-11-16T03:10:41.932553Z",
+  "topology": null
+}

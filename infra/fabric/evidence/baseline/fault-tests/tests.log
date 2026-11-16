@@ -1,0 +1,10 @@
+=== RUN   TestBaselineManagedFailuresRetainPlan
+=== RUN   TestBaselineManagedFailuresRetainPlan/preparation
+=== RUN   TestBaselineManagedFailuresRetainPlan/timeout
+=== RUN   TestBaselineManagedFailuresRetainPlan/primary-query
+--- PASS: TestBaselineManagedFailuresRetainPlan (0.02s)
+    --- PASS: TestBaselineManagedFailuresRetainPlan/preparation (0.01s)
+    --- PASS: TestBaselineManagedFailuresRetainPlan/timeout (0.00s)
+    --- PASS: TestBaselineManagedFailuresRetainPlan/primary-query (0.00s)
+PASS
+ok  	graduation-design/internal/fabric	0.591s

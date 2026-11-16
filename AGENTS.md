@@ -11,6 +11,8 @@
 | `mise.toml` | 开发环境版本锁定与运行命令统一入口. |
 | `cmd/ledgerctl/` | 账本工具 `ledgerctl` 的命令行入口. |
 | `internal/fabric/`, `internal/fabricapi/` | Fabric 部署, 管理交易恢复, 区块视图, 探针, 协议字段及 D0 验收. |
+| `internal/centralstate/` | C0 独立主库的登记版本, 一致快照与业务事务检查点. |
+| `internal/experiment/` | 配对实验的固定逻辑输入, 三组配置及原始结果导出契约. |
 | `chaincode/registry/` | Fabric Go 登记链码. |
 | `infra/fabric/` | Fabric 通道及 Compose, 启停, 重建和验收. 详见 [网络说明](infra/fabric/README.md). |
 | `docs/` | 设计决策, 技术配置, 实现契约, 测试向量及实验方法和判据, 不承载实施进度. |

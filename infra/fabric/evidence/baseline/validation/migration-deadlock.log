@@ -1,0 +1,12 @@
+2026-11-16 03:13:16.605 UTC [475241] ERROR:  deadlock detected at character 49
+2026-11-16 03:13:16.605 UTC [475241] DETAIL:  Process 475241 waits for RowShareLock on relation 16555 of database 16384; blocked by process 475243.
+	Process 475243 waits for AccessExclusiveLock on relation 16589 of database 16384; blocked by process 475241.
+	Process 475241: SELECT action_id, status, send_revision
+				FROM client_actions
+				WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND action='order.create' AND idempotency_key=$4
+				FOR UPDATE
+	Process 475243: 
+	CREATE TABLE IF NOT EXISTS order_outcome_outbox (
+	 deployment_id TEXT NOT NULL,
+	 case_id TEXT NOT NULL,
+	 send_revision BIGINT NOT NULL,

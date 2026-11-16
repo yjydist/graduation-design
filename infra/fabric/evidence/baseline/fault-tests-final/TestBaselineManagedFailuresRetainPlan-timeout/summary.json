@@ -1,0 +1,249 @@
+{
+  "b1_signature_cache_hits": 0,
+  "by_configuration_and_mode": {
+    "B0/BUYER_MANDATE": {
+      "cases": 2,
+      "failed": 2,
+      "passed": 0
+    },
+    "B0/RESOURCE_PREAUTHORIZED": {
+      "cases": 2,
+      "failed": 2,
+      "passed": 0
+    },
+    "B1/BUYER_MANDATE": {
+      "cases": 2,
+      "failed": 2,
+      "passed": 0
+    },
+    "B1/RESOURCE_PREAUTHORIZED": {
+      "cases": 2,
+      "failed": 2,
+      "passed": 0
+    },
+    "C0/BUYER_MANDATE": {
+      "cases": 2,
+      "failed": 2,
+      "passed": 0
+    },
+    "C0/RESOURCE_PREAUTHORIZED": {
+      "cases": 2,
+      "failed": 2,
+      "passed": 0
+    }
+  },
+  "case_results": [
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 80000,
+      "case_id": "1109-rp-80000",
+      "configuration": "C0",
+      "expected_code": "ALLOW",
+      "expected_status": 200,
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 120000,
+      "case_id": "1109-rp-120000",
+      "configuration": "C0",
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED",
+      "expected_status": 403,
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 80000,
+      "case_id": "1109-bm-80000",
+      "configuration": "C0",
+      "expected_code": "ALLOW",
+      "expected_status": 200,
+      "mode": "BUYER_MANDATE",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 120000,
+      "case_id": "1109-bm-120000",
+      "configuration": "C0",
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED",
+      "expected_status": 403,
+      "mode": "BUYER_MANDATE",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 80000,
+      "case_id": "1109-rp-80000",
+      "configuration": "B0",
+      "expected_code": "ALLOW",
+      "expected_status": 200,
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 120000,
+      "case_id": "1109-rp-120000",
+      "configuration": "B0",
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED",
+      "expected_status": 403,
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 80000,
+      "case_id": "1109-bm-80000",
+      "configuration": "B0",
+      "expected_code": "ALLOW",
+      "expected_status": 200,
+      "mode": "BUYER_MANDATE",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 120000,
+      "case_id": "1109-bm-120000",
+      "configuration": "B0",
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED",
+      "expected_status": 403,
+      "mode": "BUYER_MANDATE",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 80000,
+      "case_id": "1109-rp-80000",
+      "configuration": "B1",
+      "expected_code": "ALLOW",
+      "expected_status": 200,
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 120000,
+      "case_id": "1109-rp-120000",
+      "configuration": "B1",
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED",
+      "expected_status": 403,
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 80000,
+      "case_id": "1109-bm-80000",
+      "configuration": "B1",
+      "expected_code": "ALLOW",
+      "expected_status": 200,
+      "mode": "BUYER_MANDATE",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    },
+    {
+      "actual_code": null,
+      "actual_status": null,
+      "amount_minor": 120000,
+      "case_id": "1109-bm-120000",
+      "configuration": "B1",
+      "expected_code": "AMOUNT_LIMIT_EXCEEDED",
+      "expected_status": 403,
+      "mode": "BUYER_MANDATE",
+      "order_delta": null,
+      "order_key_rows": null,
+      "passed": false
+    }
+  ],
+  "failures": [
+    {
+      "action": "quote.read",
+      "case_id": "1109-rp-80000",
+      "challenge_id": null,
+      "configuration": "C0",
+      "decision_id": null,
+      "failure_stage": "wallet",
+      "reason": "deadline exceeded",
+      "request_id": null,
+      "scope": "C0/1109-rp-80000/quote.read"
+    }
+  ],
+  "pair_results": [
+    {
+      "amount_minor": 80000,
+      "case_id": "1109-rp-80000",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "passed": false,
+      "seed": 1109
+    },
+    {
+      "amount_minor": 120000,
+      "case_id": "1109-rp-120000",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "passed": false,
+      "seed": 1109
+    },
+    {
+      "amount_minor": 80000,
+      "case_id": "1109-bm-80000",
+      "mode": "BUYER_MANDATE",
+      "passed": false,
+      "seed": 1109
+    },
+    {
+      "amount_minor": 120000,
+      "case_id": "1109-bm-120000",
+      "mode": "BUYER_MANDATE",
+      "passed": false,
+      "seed": 1109
+    }
+  ],
+  "passed": false,
+  "request_accounting": {
+    "allowed": 0,
+    "completed": 0,
+    "denied": 0,
+    "dropped": 23,
+    "error": 0,
+    "planned": 24,
+    "started": 1,
+    "timeout": 1
+  },
+  "run_id": "test",
+  "seed": 1109
+}

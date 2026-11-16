@@ -289,6 +289,17 @@ func (sp *StateProvider) assembleAtHeight(ctx context.Context, leafGrantID strin
 		if err := r.assemble(leafGrantID, hook); err != nil {
 			return nil, mapViewErr(err)
 		}
+	} else {
+		// Readiness uses the same consistent source read rather than querying fabric_current in the gateway.
+		for _, id := range []string{"A", "C"} {
+			dom, err := record[api.Domain](r, api.Key("domain", id))
+			if err != nil {
+				return nil, mapViewErr(err)
+			}
+			if _, err := record[api.Certification](r, api.Key("certification", dom.Certification)); err != nil {
+				return nil, mapViewErr(err)
+			}
+		}
 	}
 
 	// Decode assembled records into protocol.SnapshotView
@@ -553,6 +564,23 @@ type gatewayStateAdapter struct {
 	sp *StateProvider
 }
 
+func (a *gatewayStateAdapter) LockCheckpoint(ctx context.Context, tx pgx.Tx, original *gateway.ConsistentSnapshot) (bool, error) {
+	var height int64
+	var hash string
+	err := tx.QueryRow(ctx, `SELECT block_no, hash FROM fabric_head WHERE deployment=$1 FOR SHARE`, a.sp.deploymentID).Scan(&height, &hash)
+	if err != nil {
+		return false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "lock Fabric checkpoint", err)
+	}
+	return original != nil && height == original.BlockNumber && hash == original.BlockHash, nil
+}
+
+func (a *gatewayStateAdapter) CheckFresh(ctx context.Context, original *gateway.ConsistentSnapshot) (gateway.ProbeInfo, error) {
+	if original == nil {
+		return a.IsProbeFresh()
+	}
+	return a.IsProbeFresh(original.Probe)
+}
+
 func (a *gatewayStateAdapter) IsProbeFresh(original ...gateway.ProbeInfo) (gateway.ProbeInfo, error) {
 	var probes []ProbeSnapshot
 	if len(original) > 0 {
@@ -601,6 +629,7 @@ func (a *gatewayStateAdapter) FindInactiveBlock(ctx context.Context, kind, id st
 func toGatewayConsistentSnapshot(view *ConsistentProtocolView) *gateway.ConsistentSnapshot {
 	return &gateway.ConsistentSnapshot{
 		DeploymentID:    view.DeploymentID,
+		StateSource:     gateway.StateFabric,
 		BlockNumber:     view.Checkpoint.Height,
 		BlockHash:       view.Checkpoint.Hash,
 		RevocationEpoch: view.Checkpoint.RevocationEpoch,

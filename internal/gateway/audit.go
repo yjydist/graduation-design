@@ -815,11 +815,11 @@ func (s *Server) auditHistoricalCreation(
 	var dReason, quoteID, orderID, domID, certID, certDigest, idIssuer, failedObj *string
 	err := tx.QueryRow(ctx, `SELECT
 		deployment_id, decision_id, request_id, challenge_id, actor, task_id, action, idempotency_key,
-		outcome, code, reason, quote_id, order_id, block_number, block_hash, revocation_epoch,
-		probe_tx_id, probe_block, probe_sent_at, probe_deadline, probe_sent_mono_ns, probe_deadline_mono_ns, decision_at,
+		outcome, code, reason, quote_id, order_id, COALESCE(block_number,0), COALESCE(block_hash,''), COALESCE(revocation_epoch,0),
+		COALESCE(probe_tx_id,''), COALESCE(probe_block,0), COALESCE(probe_sent_at,0), COALESCE(probe_deadline,0), COALESCE(probe_sent_mono_ns,0), COALESCE(probe_deadline_mono_ns,0), decision_at,
 		root_did, root_key_version, domain_id, certification_id, certification_digest, domain_revision,
 		identity_issuer, policy_digest, context_version, context_risk_level, context_observed_at,
-		context_access_deadline, effective_deadline, grant_path, failed_object_id
+		context_access_deadline, effective_deadline, grant_path, failed_object_id, state_source, revision, state_read_at, state_rechecks, probe_checked_mono_ns
 		FROM decisions WHERE deployment_id=$1 AND decision_id=$2`,
 		s.cfg.DeploymentID, decID,
 	).Scan(
@@ -828,13 +828,16 @@ func (s *Server) auditHistoricalCreation(
 		&d1.ProbeTxID, &d1.ProbeBlock, &d1.ProbeSentAt, &d1.ProbeDeadline, &d1.ProbeSentMonoNs, &d1.ProbeDeadlineMonoNs, &d1.DecisionAt,
 		&d1.RootDID, &d1.RootKeyVersion, &domID, &certID, &certDigest, &d1.DomainRevision,
 		&idIssuer, &d1.PolicyDigest, &d1.ContextVersion, &d1.ContextRiskLevel, &d1.ContextObservedAt,
-		&d1.ContextAccessDeadline, &d1.EffectiveDeadline, &d1.GrantPath, &failedObj,
+		&d1.ContextAccessDeadline, &d1.EffectiveDeadline, &d1.GrantPath, &failedObj, &d1.StateSource, &d1.Revision, &d1.StateReadAt, &d1.StateRechecks, &d1.ProbeCheckedMonoNs,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, "INCOMPLETE", fmt.Sprintf("creation decision %q missing in decisions table", decID), nil, nil, nil
 	}
 	if err != nil {
 		return nil, "", "", nil, nil, err
+	}
+	if d1.StateSource == StateCentralized {
+		return &d1.DecisionID, "INCOMPLETE", "centralized decision is linked by registry revision; Fabric historical replay is not applicable", nil, nil, nil
 	}
 	dID := d1.DecisionID
 	creationDecID = &dID

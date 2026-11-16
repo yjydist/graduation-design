@@ -1,0 +1,62 @@
+{
+  "passed": true,
+  "rounds": [
+    "round5",
+    "round6"
+  ],
+  "seed": 1109,
+  "same_fixture_digest": true,
+  "same_case_matrix": true,
+  "same_policy_source": true,
+  "same_artifact_locks": true,
+  "same_business_results_and_effects": true,
+  "independent_deployments_roots_and_materials": true,
+  "fixture_digest": "47e91ed3d170b501914cad44dd5309646bd5c5e458e53a2b9ec0beca1fcc20a5",
+  "source_commit": "90eb97c8bac3da391be9b6034efc92a979fa1bb2",
+  "by_round": {
+    "round5": {
+      "run_id": "baseline-0fc15472593f8635",
+      "deployment_id": "cf9751ee5b78628f99d5394f7197366737b5f21d129e125568cef4eb2942f760",
+      "material_digest": "a173695f78b5f090a722f458bfcd5b7cd8edbfc582e27c948b1c4f9f122cedad",
+      "request_accounting": {
+        "allowed": 18,
+        "completed": 24,
+        "denied": 6,
+        "dropped": 0,
+        "error": 0,
+        "planned": 24,
+        "started": 24,
+        "timeout": 0
+      },
+      "b1_signature_cache_hits": 62,
+      "files": {
+        "manifest.json": "0eea11cfd6f671a24ed21feb3d7c6084a266a65676dd1873ce75029caf8c7d2a",
+        "requests.csv": "1f7d40798176e30fb7ce1d66682a6c7b0e751d901e7587611733237399c9f38c",
+        "order_checks.csv": "7bba1c704408a7aa737627e006b99fa240c1ce47987ec2e99af4a6357abd14cf",
+        "summary.json": "7ab9fa266ffd3f416655e229099f3af5eb0a98a0e7406cbd68bb2ac3ebb46032"
+      }
+    },
+    "round6": {
+      "run_id": "baseline-5ae659bd15618fc9",
+      "deployment_id": "a35917198219938ebf5f46e3112e6ffeadf10318d01dab7d36fa09ab00bc238e",
+      "material_digest": "f28588411fd6615bc9cbb49818abe88af05a5505969eb01959ef5f68d489a5ab",
+      "request_accounting": {
+        "allowed": 18,
+        "completed": 24,
+        "denied": 6,
+        "dropped": 0,
+        "error": 0,
+        "planned": 24,
+        "started": 24,
+        "timeout": 0
+      },
+      "b1_signature_cache_hits": 62,
+      "files": {
+        "manifest.json": "5058023c43747fbe0cb4e862bb647e5431bcdac2d8cb060ce96b8cd8c1545d93",
+        "requests.csv": "6dc5979248940f163f50a6d2d6ad44583c85e1115c51e9de4382a5f931853686",
+        "order_checks.csv": "6a25d06d2a3d9e3c150bc9a7f97118f8e7d2afd9c19832982020311a9a1166f1",
+        "summary.json": "766013dc5f21cd40a419a09836e627784bcd798611a39f0d4cc7a8e99bae7212"
+      }
+    }
+  }
+}

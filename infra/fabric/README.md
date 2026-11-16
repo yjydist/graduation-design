@@ -82,3 +82,52 @@ FABRIC_M3_TEST_DIR="$PWD/.local/fabric-d0" mise exec -- go test -v -count=1 -tim
 外部 ledgerctl mcp 的核账工具分别从 RECOVERY_MTLS_CERT/RECOVERY_MTLS_KEY/RECOVERY_MTLS_CA, AUDIT_MTLS_CERT/AUDIT_MTLS_KEY/AUDIT_MTLS_CA 和 RECEIPT_MTLS_CERT/RECEIPT_MTLS_KEY/RECEIPT_MTLS_CA 读取三个服务客户端的证书, 私钥与服务端 CA 文件路径. 客户端证书用 DID URI 和角色 OU 绑定恢复, 审计和回执服务, 通过 HTTPS 网关连接; X-Caller-* 头不能认证身份. 未配置认证客户端时, 核账工具保留 UNKNOWN 并返回配置错误. 进程内验收由宿主显式装配三个固定身份的通道.
 
 核账 C 服务在同一事务保存审计记录和 order_outcome_outbox. 嵌入式宿主用 DeliverStoredReceipt 交付该原回执, 服务重启或响应丢失时用 DeliverPendingReceipts 继续投递, 接收端按原 caseId/sendRevision/checkNo 和全部内容去重. decision_evidence 保存原出示和 DID 文档供历史复核, 这些数据库材料不属于公开证据导出.
+
+## 5 三组采购基线实验
+
+`ledgerctl experiment baseline` 使用确定性钱包工具, 实际时钟和真实持有者证明. 入口依次运行 C0, B0, B1, 每组分别执行 RP/BM 的 800 元与 1200 元用例, 每个用例先询价再按原报价下单. 首轮范围与原始字段见[实验变更设计](../../openspec/changes/m4-reproducible-baseline/design.md). 此入口用于接线与业务一致性验收, 正式性能采样沿用[实验计划](../../docs/experiments/实验计划.md).
+
+准备一个新 Fabric 实例, 显式指定新 C0 数据库名和不存在的证据目录. 入口自动部署, 签发, 登记及逐跳交付. 不要先对该实例执行 `ledger:seed`. C0 数据库与该轮 Fabric 视图数据库位于同一 PostgreSQL 服务的不同数据库中, 登记与业务表共同提交; C0 请求不连接 Fabric Peer, 块流或探针. B0/B1 共用已应用视图, 分别等待本进程的专用探针. C0/B0 关闭验签缓存, B1 每轮新建缓存.
+
+```bash
+mise run ledger:build
+mise run fabric:rebuild -- .local/fabric-m4-baseline-5 18680
+build/ledgerctl experiment baseline \
+  --dir .local/fabric-m4-baseline-5 \
+  --c0-database baseline_c0_round5 \
+  --seed 1109 \
+  --out infra/fabric/evidence/baseline/round5
+```
+
+`--dir`, `--c0-database`, `--out` 必须显式提供. 默认实例不能用于该入口. C0 数据库名须匹配 `baseline_[a-z0-9_]{1,48}`, 已有数据库不复用或清空. 每个实例使用独占运行标记, 失败后也不能沿用同一实例或覆盖原证据. 可选种子为 `1109, 1110, 1111, 1112, 1113`. 默认总期限为 10 分钟, 单次钱包动作为 15 秒, 可通过 `--timeout` 与 `--request-timeout` 设置.
+
+复跑时改用新实例, 端口, C0 数据库名及证据目录, 逻辑种子保持一致.
+
+```bash
+mise run fabric:rebuild -- .local/fabric-m4-baseline-6 18700
+build/ledgerctl experiment baseline \
+  --dir .local/fabric-m4-baseline-6 \
+  --c0-database baseline_c0_round6 \
+  --seed 1109 \
+  --out infra/fabric/evidence/baseline/round6
+```
+
+每次尝试均保存 `manifest.json`, `requests.csv`, `order_checks.csv`, `summary.json`. 从清单的计划用例找到配置及 `case_id`, 再按动作定位请求和挑战, 用决定 ID 关联状态版本与主库核对. C0 保存 `revision` 和读取时点, Fabric 列为 `null`; B0/B1 保存实际块和原探针, 中心化列为 `null`. 汇总通过要求 12 次询价, 6 笔唯一订单, 6 次明确超额拒绝, 挑战与决定关联, 拒绝侧无订单或订单键, 跨组三组配对一致且 B1 出现验签命中. 比较两轮的 `fixture_digest`, `planned_cases` 及规范化业务事实, 实际部署, 密钥材料摘要, 状态版本, 随机 ID 和时点各自保留.
+
+准备失败, 超时或主库查询出错时保存已知记录与完整计划并非零退出. 未执行动作为 `dropped`, 未观测字段为 `null`; 主库查询出错不能推断订单不存在. 公开文件仅导出白名单字段, 入口扫描私钥编码, 访问令牌与实际披露盐. 失败处理定点测试可额外保留各样本的四个文件.
+
+```bash
+mkdir -p .local/baseline-fault-samples
+BASELINE_FAULT_EVIDENCE_DIR="$PWD/.local/baseline-fault-samples" \
+  mise exec -- go test -v -count=1 ./internal/fabric \
+  -run '^TestBaselineManagedFailuresRetainPlan$'
+```
+
+停止实验实例会保留卷和材料. 若只检验 C0 对 Fabric 服务的独立性, 保留 PostgreSQL 服务, 仅停止 Peer, Orderer 或链码服务; C0 所用的数据库本身仍须可用.
+
+```bash
+FABRIC_INSTANCE=.local/fabric-m4-baseline-5 mise run fabric:down
+FABRIC_INSTANCE=.local/fabric-m4-baseline-6 mise run fabric:down
+```
+
+本仓库的数据库回归测试默认共用一个本机 PostgreSQL schema. 运行全量回归时使用 `mise exec -- go test -count=1 -p 1 ./...` 串行执行测试包, 避免不同测试包的迁移 DDL 与业务事务竞争; 各测试内部显式构造的并发和锁等待仍会执行.

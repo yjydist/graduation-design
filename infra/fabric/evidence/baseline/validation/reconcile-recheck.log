@@ -1,0 +1,4 @@
+=== RUN   TestM3AgentReconcileOrderCreatedAndNotCreatedS63
+--- PASS: TestM3AgentReconcileOrderCreatedAndNotCreatedS63 (0.19s)
+PASS
+ok  	graduation-design/internal/agent	0.771s

@@ -1,0 +1,41 @@
+{
+  "seeds": [1109, 1110, 1111, 1112, 1113],
+  "root": "T",
+  "domains": {"A": "IA", "B": "IB", "C": "IC"},
+  "identities": {"U": "procurement-owner", "A1": "procurement-agent", "B1": "broker-agent", "PA": "procurement-authority", "C": "supplier-service"},
+  "disclosures": ["domain", "role"],
+  "roots": [{"mode": "RESOURCE_PREAUTHORIZED", "issuer": "C"}, {"mode": "BUYER_MANDATE", "issuer": "PA"}],
+  "path": [
+    {"grant": "G0", "grantee": "U", "amount_minor": 500000, "remaining_depth": 2},
+    {"grant": "G1", "grantee": "A1", "amount_minor": 500000, "remaining_depth": 1},
+    {"grant": "G2", "grantee": "B1", "amount_minor": 100000, "remaining_depth": 0}
+  ],
+  "supplier": "urn:grad:supplier:C",
+  "product": "urn:grad:product:P1",
+  "quantity": 1,
+  "currency": "CNY",
+  "prices_minor": [80000, 120000],
+  "expected_order_status": [200, 403],
+  "expected_order_code": ["ALLOW", "AMOUNT_LIMIT_EXCEEDED"],
+  "configuration_order": ["C0", "B0", "B1"],
+  "actions": ["quote.read", "order.create"],
+  "policy_version": "1.0.0",
+  "roles": {
+    "acceptedAuthorizationModes": ["RESOURCE_PREAUTHORIZED", "BUYER_MANDATE"],
+    "acceptedAuthorityRoles": ["procurement-authority", "PURCHASING_AUTHORITY"],
+    "acceptedBuyerDomains": ["A"],
+    "acceptedServiceRoles": ["supplier-service", "RESOURCE_AUTHORITY", "SERVICE", "ResourceOwner"]
+  },
+  "resources": {"allowedActions": ["quote.read", "order.create"], "allowedProductIds": ["urn:grad:product:P1"], "maxQuantity": 1, "policyDeadline": null},
+  "time_rules": {
+    "credential_nbf_offset_seconds": -3600,
+    "credential_exp_offset_seconds": 86400,
+    "challenge_ttl_seconds": 30,
+    "quote_ttl_seconds": 300,
+    "probe_interval_seconds": 1,
+    "probe_lifetime_seconds": 5,
+    "policy_deadline": "min(RP.task.exp,BM.task.exp)",
+    "clock": "actual UTC and process monotonic clock"
+  },
+  "randomness": "keys, disclosure salts and challenges use crypto/rand independently of the pairing seed"
+}

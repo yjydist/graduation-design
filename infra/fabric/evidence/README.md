@@ -1,5 +1,24 @@
 # Fabric 验收证据
 
+## M4 采购基线
+
+`m4-reproducible-baseline` 的最终同版配对采用 `round5` 和 `round6`, 分别从 `.local/fabric-m4-baseline-5` 和 `.local/fabric-m4-baseline-6` 空环境重建, C0 分别使用 `baseline_c0_round5` 和 `baseline_c0_round6`. 两轮种子均为 `1109`, 每轮 12 次询价允许, 6 笔 800 元唯一订单, 6 次 1200 元 `403 AMOUNT_LIMIT_EXCEEDED`, 拒绝侧无订单或订单业务键. 两轮 B1 各有 62 次静态验签命中. [两轮比对](baseline/validation/comparison.json)确认逻辑夹具, 用例矩阵, 策略源码, 108 个依赖及源码文件指纹和规范化业务事实一致, 实际部署, T 根和材料摘要各自独立. 运行入口见[网络说明](../README.md#5-三组采购基线实验), 实施检验见[变更记录](../../../openspec/changes/m4-reproducible-baseline/validation.md).
+
+| 尝试 | 实际部署与计划 | 原始请求与主库核对 | 汇总 |
+| --- | --- | --- | --- |
+| 最终第一轮 round5 | [manifest.json](baseline/round5/manifest.json) | [requests.csv](baseline/round5/requests.csv), [order_checks.csv](baseline/round5/order_checks.csv) | [summary.json](baseline/round5/summary.json) |
+| 最终第二轮 round6 | [manifest.json](baseline/round6/manifest.json) | [requests.csv](baseline/round6/requests.csv), [order_checks.csv](baseline/round6/order_checks.csv) | [summary.json](baseline/round6/summary.json) |
+| 实际入口准备失败, 非零退出 | [manifest.json](baseline/failure-preparation/manifest.json) | [requests.csv](baseline/failure-preparation/requests.csv), [order_checks.csv](baseline/failure-preparation/order_checks.csv) | [summary.json](baseline/failure-preparation/summary.json) |
+| 准备失败, 超时及主库查询失败定点测试 | [原始测试日志](baseline/fault-tests-final/tests.log) | [准备失败](baseline/fault-tests-final/TestBaselineManagedFailuresRetainPlan-preparation/summary.json), [请求超时](baseline/fault-tests-final/TestBaselineManagedFailuresRetainPlan-timeout/summary.json), [主库查询失败](baseline/fault-tests-final/TestBaselineManagedFailuresRetainPlan-primary-query/summary.json). 每个样本目录均保留四个原始文件. | 测试通过, 各失败样本保持失败结论, 不推断缺失的主库事实 |
+
+[逐例追溯样本](baseline/validation/trace-samples.json)覆盖两轮全部 24 个订单用例. 以 `round + configuration + case_id` 找到请求和主库核对的 CSV 行号, 通过 `request_id`, `request_hash`, `challenge_id`, `decision_id` 追到 C0 的实际 `revision` 或 B0/B1 的实际块和原探针. 成功样本有订单, 创建决定和完成键; 超额样本保留已消费挑战及拒绝决定, 订单和键均无新增. 运行内及补充[产物扫描](baseline/validation/artifact-scan.json)均通过, 扫描包含各实例实际私钥文本, 完整出示及披露盐. [源码核对](baseline/validation/source-fingerprint.json)确认最终指纹匹配工作区实现.
+
+[全量测试汇总](baseline/validation/unit-test-summary.json)记录 `go test -json -count=1 -p 1 ./...` 的 174 个含子测试通过事件及 9 个测试包通过, [原始事件](baseline/validation/final-serial-test-events.jsonl)保留全部结果. 两项初始化专项和 M3 可选实机测试未在此命令启用; 本变更实机采购由上述两轮 CLI 覆盖. [严格校验](baseline/validation/openspec-validation.json)通过. 一次[并行包测试失败](baseline/validation/final-unit-test-events.jsonl)出现回执 `503`, [数据库死锁日志](baseline/validation/migration-deadlock.log)确认共享 schema 的迁移 DDL 与回执事务竞争; [单项复查](baseline/validation/reconcile-recheck.log)通过, 未将该失败替换或删除.
+
+实现过程的 `baseline/round1` 至 `baseline/round4` 接线复跑以及 `baseline/fault-tests` 的早期测试生成器样本保留当时原始输出. 最终同版复现与完整失败记录采用上表和 `fault-tests-final`, 不将早期测试生成器输出替代入口运行结果.
+
+## 既有网络与协议验收
+
 M3 的 C3/W4 入口问题已修复并由[当前核验](../../../openspec/changes/archive/2026-11-16-implement-m3-dynamic-state-and-recovery/verification.md)关闭. [入口修复汇总](m3-recovery/entry-fixes/summary.json), [全量测试](m3-recovery/entry-fixes/unit-test-summary.json)及[竞态检测](m3-recovery/entry-fixes/race-tests.log)记录 154 个含子测试通过事件及相关竞态回归通过. 新独立 Fabric 实例 `.local/fabric-m3-proof-final` 的 [authority 恢复与查询](m3-recovery/entry-fixes/run-b93bda9c05dcd63c/m3-dynamic-recovery.json)和 [management 原交易](m3-recovery/entry-fixes/run-202d30d4d95f2897/management-http.json)均通过: 缺证明/篡改 403, 本人和授权本域审计者 200, 其他身份 403, 有效恢复重启前后保留原 txID 提交 VALID, 重放 409 STATE_CHANGED 且无新增 operation. 本轮实机范围为这两项, 完整 34 项和真实 LLM 轨迹沿用上一轮证据.
 
 修复前的[全量测试](m3-recovery/recheck/unit-test-summary.json)通过, 但[入口边界失败](m3-recovery/recheck/boundary-tests.log)确认 C3/W4. [临时补丁](m3-recovery/recheck/boundary-tests.patch)继续保留, 临时测试已移除, 对应拒绝边界已纳入正式回归.

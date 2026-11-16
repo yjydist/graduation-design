@@ -14,7 +14,6 @@ import (
 
 	api "graduation-design/internal/fabricapi"
 	"graduation-design/internal/protocol"
-	"graduation-design/internal/serviceauth"
 
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	gw "github.com/hyperledger/fabric-protos-go-apiv2/gateway"
@@ -629,6 +628,7 @@ type ManagementOperationService struct {
 	suppressVisibilityIDs map[string]bool
 	deliveredOps          map[string]bool
 	running               map[string]bool
+	operationAuditors     map[api.Management]bool
 }
 
 // NewManagementOperationService creates a ManagementOperationService bound to db and deploymentID.
@@ -641,6 +641,7 @@ func NewManagementOperationService(db *pgxpool.Pool, deploymentID string, rootMg
 		suppressVisibilityIDs: make(map[string]bool),
 		deliveredOps:          make(map[string]bool),
 		running:               make(map[string]bool),
+		operationAuditors:     make(map[api.Management]bool),
 	}
 }
 
@@ -685,6 +686,20 @@ func (s *ManagementOperationService) Accept(
 	if opKey == "" || method == "" {
 		return http.StatusBadRequest, nil, protocol.NewError(protocol.ErrCodeInvalidSchema, "operationKey and method required")
 	}
+	// Recovery accepts the complete proof bundle, never caller-supplied ledger mutations.
+	var recovery *protocol.RecoveryDualProofBundle
+	hashInput := input
+	if method == "RecoverIdentity" {
+		var err error
+		recovery, input, err = s.parseRecoveryRequest(input)
+		if err != nil {
+			return http.StatusForbidden, nil, err
+		}
+		hashInput, err = protocol.MarshalJCS(recovery)
+		if err != nil {
+			return http.StatusBadRequest, nil, err
+		}
+	}
 	// Trust management endpoints are restricted to T (boot.Root.Management) at the HTTP boundary (S85).
 	if (method == "CertifyDomain" || method == "RevokeCertification" || method == "SetDomainStatus" || method == "UpdateAuthorityIdentity") &&
 		s.rootMgmt.Valid() && caller != s.rootMgmt {
@@ -696,7 +711,10 @@ func (s *ManagementOperationService) Accept(
 		return http.StatusBadRequest, nil, protocol.WrapError(protocol.ErrCodeInvalidSchema, "invalid JSON payload", err)
 	}
 	canonInput := compactBuf.Bytes()
-	mat, err := json.Marshal([]string{s.deploymentID, caller.String(), api.Channel, api.Registry, method, string(canonInput)})
+	if recovery == nil {
+		hashInput = canonInput
+	}
+	mat, err := json.Marshal([]string{s.deploymentID, caller.String(), api.Channel, api.Registry, method, string(hashInput)})
 	if err != nil {
 		return http.StatusBadRequest, nil, err
 	}
@@ -761,6 +779,18 @@ func (s *ManagementOperationService) Accept(
 	}
 
 	opID := s.deploymentID + ":" + opKey
+	if recovery != nil {
+		validator, ok := s.backend.(recoveryAuthorizer)
+		if !ok {
+			return http.StatusServiceUnavailable, nil, protocol.NewError(protocol.ErrCodeStateUnavailable, "recovery authority verifier unavailable")
+		}
+		if err := validator.AuthorizeRecovery(ctx, caller, recovery); err != nil {
+			return http.StatusForbidden, nil, err
+		}
+		if err := consumeRecoveryChallenge(ctx, tx, s.deploymentID, opID, recovery); err != nil {
+			return http.StatusForbidden, nil, err
+		}
+	}
 	txID := "pending:" + api.Digest([]byte(opID))[:24]
 	if _, err := tx.Exec(ctx, `INSERT INTO operations(
 		deployment_id, operation_key, operation_id, caller_msp_id, caller_fingerprint,
@@ -891,9 +921,24 @@ func (s *ManagementOperationService) Handler() http.Handler {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		caller, authenticated := s.managementCaller(r)
+		if !authenticated {
+			writeManagementForbidden(w)
+			return
+		}
 		opID := strings.TrimPrefix(r.URL.Path, "/v1/operations/")
 		if opID == "" {
 			http.Error(w, "missing operationId", http.StatusBadRequest)
+			return
+		}
+		if err := s.authorizeOperationQuery(r.Context(), opID, caller); err != nil {
+			if errors.Is(err, errOperationQueryForbidden) {
+				writeManagementForbidden(w)
+			} else {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_ = json.NewEncoder(w).Encode(map[string]string{"errorCode": protocol.ErrCodeStateUnavailable})
+			}
 			return
 		}
 		view, err := s.GetOperation(r.Context(), opID)
@@ -914,18 +959,9 @@ func (s *ManagementOperationService) Handler() http.Handler {
 		}
 		method := strings.TrimPrefix(r.URL.Path, "/v1/management/")
 		opKey := r.Header.Get("Idempotency-Key")
-		id, authenticated := serviceauth.Caller(r)
-		caller := api.Management{MSPID: id.MSPID, Fingerprint: id.Fingerprint}
-		if resolver, ok := s.backend.(interface {
-			ManagementForFingerprint(string) (api.Management, bool)
-		}); ok {
-			caller, authenticated = resolver.ManagementForFingerprint(id.Fingerprint)
-			authenticated = authenticated && id.Fingerprint != "" && (r.TLS != nil || id.Role != "")
-		}
-		if !authenticated || !caller.Valid() {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusForbidden)
-			_ = json.NewEncoder(w).Encode(map[string]string{"errorCode": "IDENTITY_MANAGEMENT_FORBIDDEN"})
+		caller, authenticated := s.managementCaller(r)
+		if !authenticated {
+			writeManagementForbidden(w)
 			return
 		}
 		if s.backend == nil {

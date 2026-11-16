@@ -368,178 +368,6 @@ func (rc *RegistrationCoordinator) IssueRecoveryChallenge(
 	return chal, chalSha256, nil
 }
 
-// AcceptRecoveryBundle validates a submitted RecoveryDualProofBundle against recovery_challenges,
-// optional authorized MSP certificates, and DID document before atomically consuming the challenge
-// and recording the RecoverIdentity operation.
-func (rc *RegistrationCoordinator) AcceptRecoveryBundle(
-	ctx context.Context,
-	operationKey string,
-	operationID string,
-	caller api.Management,
-	bundle *protocol.RecoveryDualProofBundle,
-	authorizedCerts []*x509.Certificate,
-	didDocBytes []byte,
-	now int64,
-	submitFn func(context.Context) (*SubmitResult, error),
-) error {
-	if rc == nil || rc.db == nil {
-		return protocol.NewError(protocol.ErrCodeStateUnavailable, "recovery store not configured")
-	}
-	if bundle == nil {
-		return protocol.NewError(protocol.ErrCodeInvalidSchema, "nil RecoveryDualProofBundle")
-	}
-	if bundle.NewManagementSignatureDER == "" || bundle.NewManagementCertificateDER == "" ||
-		bundle.NewAppJWSProtected == "" || bundle.NewAppJWSSignature == "" {
-		return protocol.NewError(protocol.ErrCodeRecoveryProofInvalid, "missing new management or application proof")
-	}
-
-	tx, err := rc.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(context.Background())
-
-	var (
-		storedDepID      string
-		storedChalSha256 string
-		storedDomainID   string
-		storedSubjectID  string
-		storedAcctCommit string
-		storedOldMSP     string
-		storedOldCert    string
-		storedNewMSP     string
-		storedNewCert    string
-		storedExpRev     uint64
-		storedExpKV      uint64
-		storedNewAppKID  string
-		storedNewAppKV   uint64
-		storedNonce      string
-		storedIssuedAt   int64
-		storedExpiresAt  int64
-		consumed         bool
-		consumedByOpID   string
-	)
-	err = tx.QueryRow(ctx, `SELECT deployment_id, challenge_sha256, domain_id, subject_id, account_commitment,
-		old_msp_id, old_certificate_sha256, new_msp_id, new_certificate_sha256,
-		expected_revision, expected_key_version, new_app_key_id, new_app_key_version,
-		nonce, issued_at, expires_at, consumed, COALESCE(consumed_by_operation_id, '')
-		FROM recovery_challenges WHERE challenge_id=$1 FOR UPDATE`, bundle.Challenge.ChallengeID).
-		Scan(&storedDepID, &storedChalSha256, &storedDomainID, &storedSubjectID, &storedAcctCommit,
-			&storedOldMSP, &storedOldCert, &storedNewMSP, &storedNewCert,
-			&storedExpRev, &storedExpKV, &storedNewAppKID, &storedNewAppKV,
-			&storedNonce, &storedIssuedAt, &storedExpiresAt, &consumed, &consumedByOpID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return protocol.NewError(protocol.ErrCodeChallengeUnknown, "unknown recovery challenge")
-	}
-	if err != nil {
-		return err
-	}
-	if consumed {
-		var existingOpID, existingPayloadHash string
-		opErr := tx.QueryRow(ctx, `SELECT operation_id, payload_hash FROM operations WHERE deployment_id=$1 AND operation_key=$2`,
-			storedDepID, operationKey).Scan(&existingOpID, &existingPayloadHash)
-		if opErr == nil && existingOpID == consumedByOpID {
-			if existingPayloadHash != bundle.ChallengeSha256 {
-				return protocol.NewError(protocol.ErrCodeIdempotencyConflict, "recovery operationKey reused with different challenge payload")
-			}
-			return nil
-		}
-		return protocol.NewError(protocol.ErrCodeChallengeReplay, "recovery challenge already consumed")
-	}
-	if now < storedIssuedAt || now >= storedExpiresAt {
-		return protocol.NewError(protocol.ErrCodeChallengeExpired, "recovery challenge expired")
-	}
-	if bundle.DeploymentID != storedDepID ||
-		bundle.Challenge.DeploymentID != storedDepID ||
-		bundle.ChallengeSha256 != storedChalSha256 ||
-		bundle.Challenge.Nonce != storedNonce ||
-		bundle.Challenge.DomainID != storedDomainID ||
-		bundle.Challenge.SubjectID != storedSubjectID ||
-		bundle.Challenge.AccountCommitment != storedAcctCommit ||
-		bundle.Challenge.OldManagementIdentity.MSPID != storedOldMSP ||
-		bundle.Challenge.OldManagementIdentity.CertificateSha256 != storedOldCert ||
-		bundle.Challenge.NewManagementIdentity.MSPID != storedNewMSP ||
-		bundle.Challenge.NewManagementIdentity.CertificateSha256 != storedNewCert ||
-		bundle.Challenge.ExpectedRevision != storedExpRev ||
-		bundle.Challenge.ExpectedKeyVersion != storedExpKV ||
-		bundle.Challenge.NewAppKeyID != storedNewAppKID ||
-		bundle.Challenge.NewAppKeyVersion != storedNewAppKV {
-		return protocol.NewError(protocol.ErrCodeChallengeMismatch, "recovery bundle does not match issued challenge")
-	}
-	if err := bundle.Verify(); err != nil {
-		return WrapErrorCompat(err)
-	}
-
-	certDER, err := base64.RawURLEncoding.DecodeString(bundle.NewManagementCertificateDER)
-	if err != nil {
-		return protocol.WrapError(protocol.ErrCodeRecoveryProofInvalid, "decode new management certificate", err)
-	}
-	leafCert, err := x509.ParseCertificate(certDER)
-	if err != nil {
-		return protocol.WrapError(protocol.ErrCodeRecoveryProofInvalid, "parse new management certificate", err)
-	}
-	if len(authorizedCerts) > 0 {
-		if err := verifyAuthorizedMgmtCert(leafCert, authorizedCerts); err != nil {
-			return err
-		}
-	}
-	if len(didDocBytes) > 0 {
-		doc, dig, err := protocol.ParseDIDDocument(didDocBytes)
-		if err != nil {
-			return protocol.WrapError(protocol.ErrCodeRecoveryProofInvalid, "parse new DID document", err)
-		}
-		if dig != bundle.Challenge.DIDDocumentDigest {
-			return protocol.NewError(protocol.ErrCodeDIDDocumentMismatch, "new DID document digest mismatches challenge")
-		}
-		if _, _, err := doc.ResolveKey(bundle.Challenge.NewAppKeyID, protocol.KeyPurposeAuthentication, bundle.Challenge.NewAppPublicKey); err != nil {
-			return protocol.WrapError(protocol.ErrCodeDIDDocumentMismatch, "new DID key mismatch", err)
-		}
-	}
-
-	var res SubmitResult
-	if submitFn != nil {
-		out, err := submitFn(ctx)
-		if err != nil {
-			return err
-		}
-		if out != nil {
-			res = *out
-		}
-	}
-	if res.PayloadHash == "" {
-		res.PayloadHash = bundle.ChallengeSha256
-	}
-	if res.Method == "" {
-		res.Method = "RecoverIdentity"
-	}
-
-	if _, err := tx.Exec(ctx, `UPDATE recovery_challenges
-		SET consumed=TRUE, consumed_by_operation_id=$2, consumed_at=$3
-		WHERE challenge_id=$1`, bundle.Challenge.ChallengeID, operationID, now); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `INSERT INTO operations(
-		deployment_id, operation_key, operation_id, caller_msp_id, caller_fingerprint,
-		method, tx_id, block_no, block_hash, stage, status, validation_code, failure_code, payload_hash, updated_at
-	) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'COMMIT','CONFIRMED','VALID',NULL,$10,NOW())
-	ON CONFLICT(deployment_id, operation_key) DO UPDATE SET
-		tx_id=EXCLUDED.tx_id, block_no=EXCLUDED.block_no, block_hash=EXCLUDED.block_hash,
-		stage='COMMIT', status='CONFIRMED', validation_code='VALID', failure_code=NULL, updated_at=NOW()`,
-		bundle.DeploymentID, operationKey, operationID, caller.MSPID, caller.Fingerprint,
-		res.Method, res.TxID, res.BlockNo, res.BlockHash, res.PayloadHash); err != nil {
-		return err
-	}
-	return tx.Commit(ctx)
-}
-
-func WrapErrorCompat(err error) error {
-	var pe *protocol.Error
-	if errors.As(err, &pe) {
-		return err
-	}
-	return protocol.WrapError(protocol.ErrCodeRecoveryProofInvalid, "recovery proof invalid", err)
-}
-
 func verifyAuthorizedMgmtCert(leaf *x509.Certificate, authorized []*x509.Certificate) error {
 	var leafAllowed []*x509.Certificate
 	roots := x509.NewCertPool()
@@ -575,13 +403,13 @@ func verifyAuthorizedMgmtCert(leaf *x509.Certificate, authorized []*x509.Certifi
 // GrantDeliveryPackage bundles C/PA -> U (or grantor -> grantee) root or delegated grant delivery materials
 // verified prior to writing grant_outbox and wallet_receipts.
 type GrantDeliveryPackage struct {
-	DeploymentID           string                             `json:"deploymentId"`
-	Recipient              string                             `json:"recipient"`
-	GrantID                string                             `json:"grantId"`
-	GrantJWS               string                             `json:"grantJws"`
-	TaskSpec               protocol.TaskSpec                  `json:"taskSpec"`
-	ServicePresentation    string                             `json:"servicePresentation"`
-	DomainCertificationJWS string                             `json:"domainCertificationJws"`
+	DeploymentID           string                        `json:"deploymentId"`
+	Recipient              string                        `json:"recipient"`
+	GrantID                string                        `json:"grantId"`
+	GrantJWS               string                        `json:"grantJws"`
+	TaskSpec               protocol.TaskSpec             `json:"taskSpec"`
+	ServicePresentation    string                        `json:"servicePresentation"`
+	DomainCertificationJWS string                        `json:"domainCertificationJws"`
 	AncestorGrants         []string                      `json:"ancestorGrants,omitempty"`
 	AncestorCredentials    []protocol.AncestorCredential `json:"ancestorCredentials,omitempty"`
 	TrustPaths             []protocol.TrustPathEntry     `json:"trustPaths,omitempty"`

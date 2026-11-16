@@ -624,50 +624,28 @@ func (a acceptance) m3AuthorityIdentityAndLifecycle() error {
 	}, "VALID"); err != nil {
 		return err
 	}
-	recNonce, err := protocol.GenerateNonce()
-	if err != nil {
-		return err
-	}
-	if _, err := protocol.ValidateNonce(recNonce); err != nil {
-		return fmt.Errorf("recovery challenge nonce invalid: %w", err)
-	}
-	_, recAppPub3, err := protocol.GenerateP256KeyPair()
-	if err != nil {
-		return err
-	}
 	recAppPriv3, recAppPub3Hex, err := protocol.GenerateP256KeyPair()
 	if err != nil {
 		return err
 	}
-	_ = recAppPub3
 	doc3, _ := protocol.NewDIDDocument(ephDID, ephDID+"#key-3", recAppPub3Hex, protocol.KeyPurposeAuthentication, protocol.KeyPurposeAssertionMethod)
 	doc3Dig, _ := doc3.Digest()
-	recDual, err := protocol.SignRecoveryDualProofBundle(
-		protocol.DeploymentBinding{
-			ChannelID: api.Channel, GenesisHash: a.d.GenesisHash, InstanceID: a.d.InstanceID,
-			RegistryName: api.Registry, SchemaVersion: api.Schema, Purpose: protocol.DeploymentPurpose,
-		},
-		protocol.RecoveryChallenge{
-			ChallengeID: "rec-" + a.id[:8], DeploymentID: a.d.DeploymentID, DomainID: "B", SubjectID: ephDID,
-			AccountCommitment: ephAcct, ExpectedRevision: 5, ExpectedKeyVersion: 2,
-			OldManagementIdentity: protocol.ManagementIdentity{MSPID: oldMgmt.MSPID, CertificateSha256: oldMgmt.Fingerprint},
-			NewManagementIdentity: protocol.ManagementIdentity{MSPID: recMgmt.MSPID, CertificateSha256: recMgmt.Fingerprint},
-			DIDDocumentDigest:     doc3Dig, NewAppKeyID: ephDID + "#key-3", NewAppKeyVersion: 3, NewAppPublicKey: recAppPub3Hex,
-			IssuedAt: baseNow.Unix(), ExpiresAt: baseNow.Add(5 * time.Minute).Unix(), Nonce: recNonce, Purpose: protocol.RecoveryChallengePurpose,
-		},
-		recCertDER, recMgmtPriv, recAppPriv3,
-	)
+	recoveryDeployment := protocol.DeploymentBinding{ChannelID: api.Channel, GenesisHash: a.d.GenesisHash, InstanceID: a.d.InstanceID, RegistryName: api.Registry, SchemaVersion: api.Schema, Purpose: protocol.DeploymentPurpose}
+	challenge, _, err := NewRegistrationCoordinator(a.j.db).IssueRecoveryChallenge(a.ctx, recoveryDeployment, IssueRecoveryChallengeRequest{
+		DomainID: "B", SubjectID: ephDID, AccountCommitment: ephAcct, ExpectedRevision: 5, ExpectedKeyVersion: 2,
+		OldManagementIdentity: protocol.ManagementIdentity{MSPID: oldMgmt.MSPID, CertificateSha256: oldMgmt.Fingerprint},
+		NewManagementIdentity: protocol.ManagementIdentity{MSPID: recMgmt.MSPID, CertificateSha256: recMgmt.Fingerprint},
+		DIDDocumentDigest:     doc3Dig, NewAppKeyID: ephDID + "#key-3", NewAppPublicKey: recAppPub3Hex, IssuedAt: time.Now().Unix(), TTLSeconds: 300,
+	})
 	if err != nil {
 		return err
 	}
-	if err := recDual.Verify(); err != nil {
-		return fmt.Errorf("recovery dual proof self-verify failed: %w", err)
+	recDual, err := protocol.SignRecoveryDualProofBundle(recoveryDeployment, *challenge, recCertDER, recMgmtPriv, recAppPriv3)
+	if err != nil {
+		return err
 	}
-	if _, err := a.op("m3-s95-recover-"+a.id[:8], "registrarB", "RecoverIdentity", api.RecoverIdentityInput{
-		Bound: api.Bound{DeploymentID: a.d.DeploymentID}, ID: ephDID, ExpectedRevision: 5, ExpectedKeyVersion: 2,
-		AccountCommitment: ephAcct, OldManagement: oldMgmt, NewManagement: recMgmt,
-		DocumentDigest: doc3Dig, KeyID: ephDID + "#key-3", PublicKey: recAppPub3Hex,
-	}, "VALID"); err != nil {
+	recoveryHTTPReport, err := a.verifyRecoveryHTTP(recDual)
+	if err != nil {
 		return err
 	}
 	recoveredID, err := ledgerRecord[api.Identity](a.ctx, a.p, "identity", ephDID)
@@ -739,6 +717,7 @@ func (a acceptance) m3AuthorityIdentityAndLifecycle() error {
 		"domainBRenewedCertJWS":      newCertBJWS,
 		"ephemeralRecoveredIdentity": recoveredID,
 		"recoveryDualProof":          recDual,
+		"recoveryHTTP":               recoveryHTTPReport,
 		"grantSuspendResumeExpKept":  true,
 		"taskCancelled":              chain.Task.ID,
 		"asyncMgmtConfirmedStatus":   managementReport["confirmed"].(OperationView).Status,

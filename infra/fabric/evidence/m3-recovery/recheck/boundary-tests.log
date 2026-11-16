@@ -1,0 +1,19 @@
+=== RUN   TestVerificationRecoveryHTTPRequiresDualProof
+    m3_verification_boundary_tmp_test.go:56: missing challenge and both proofs: HTTP 202 dispatched RecoverIdentity to backend
+--- FAIL: TestVerificationRecoveryHTTPRequiresDualProof (0.02s)
+=== RUN   TestVerificationOperationGETRequiresCaller
+=== RUN   TestVerificationOperationGETRequiresCaller/unauthenticated
+    m3_verification_boundary_tmp_test.go:80: unauthenticated operation lookup: HTTP 200, body={"operationId":"684664c3588eae88cb4048681cecc4ab93edcfb4e71e04991c6ab2465ad502d4:private-operation","operationKey":"private-operation","method":"RotateIdentity","txId":"pending:2dc61fdd85043ea48e55ff4b","stage":"ACCEPT","status":"PENDING","errorCode":null,"validationCode":null,"blockNumber":0,"delivered":false}
+=== RUN   TestVerificationOperationGETRequiresCaller/other-domain-management
+    m3_verification_boundary_tmp_test.go:80: other-domain-management operation lookup: HTTP 200, body={"operationId":"684664c3588eae88cb4048681cecc4ab93edcfb4e71e04991c6ab2465ad502d4:private-operation","operationKey":"private-operation","method":"RotateIdentity","txId":"pending:2dc61fdd85043ea48e55ff4b","stage":"ACCEPT","status":"PENDING","errorCode":null,"validationCode":null,"blockNumber":0,"delivered":false}
+--- FAIL: TestVerificationOperationGETRequiresCaller (0.01s)
+    --- FAIL: TestVerificationOperationGETRequiresCaller/unauthenticated (0.00s)
+    --- FAIL: TestVerificationOperationGETRequiresCaller/other-domain-management (0.00s)
+FAIL
+FAIL	graduation-design/internal/fabric	0.587s
+=== RUN   TestVerificationRawRecoveryWithoutProofChangesBinding
+    m3_verification_boundary_tmp_test.go:26: raw registrar submission accepted without either proof: managementChanged=true keyVersion=2
+--- FAIL: TestVerificationRawRecoveryWithoutProofChangesBinding (0.00s)
+FAIL
+FAIL	graduation-design/chaincode/registry	0.382s
+FAIL

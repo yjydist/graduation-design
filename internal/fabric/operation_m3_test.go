@@ -2,11 +2,7 @@ package fabric
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,12 +12,13 @@ import (
 	api "graduation-design/internal/fabricapi"
 	"graduation-design/internal/gateway"
 	"graduation-design/internal/protocol"
+	"graduation-design/internal/serviceauth"
 )
 
 type stubOpBackend struct {
-	revision   uint64
-	exists     bool
-	revErr     error
+	revision    uint64
+	exists      bool
+	revErr      error
 	submitCalls int
 }
 
@@ -108,6 +105,7 @@ func TestM3ManagementOperationAsyncStateMachine(t *testing.T) {
 
 	h := svc.Handler()
 	req := httptest.NewRequest(http.MethodGet, "/v1/operations/"+v1.OperationID, nil)
+	req = req.WithContext(serviceauth.WithIdentity(req.Context(), serviceauth.Identity{Role: "MANAGEMENT", MSPID: caller.MSPID, Fingerprint: caller.Fingerprint}))
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -144,107 +142,34 @@ func TestM3ManagementOperationAsyncStateMachine(t *testing.T) {
 }
 
 func TestM3RecoveryChallengeAndBundle(t *testing.T) {
-	pool := testPgPool(t)
-	ctx := context.Background()
-	now := time.Now().UTC()
-	dep := protocol.DeploymentBinding{
-		Purpose:       protocol.DeploymentPurpose,
-		SchemaVersion: protocol.SchemaVersion,
-		ChannelID:     "procurement",
-		RegistryName:  "authregistry",
-		GenesisHash:   strings.Repeat("2", 64),
-		InstanceID:    strings.Repeat("3", 64),
+	f := newRecoveryServiceFixture(t)
+	ctx := t.Context()
+	raw, _ := json.Marshal(f.bundle)
+	// An unapproved certificate must not consume the server challenge.
+	original := f.backend.certificate
+	_, other, _ := makeSelfSignedUserCert(t, "other", time.Now())
+	f.backend.certificate = other
+	if code, _, err := f.svc.Accept(ctx, "bad-cert", f.caller, "RecoverIdentity", raw, false); code != 403 || !protocol.HasCode(err, protocol.ErrCodeSignatureInvalid) {
+		t.Fatalf("unapproved certificate: %d %v", code, err)
 	}
-	depID, err := dep.ComputeID()
-	if err != nil {
+	f.backend.certificate = original
+	code, view, err := f.svc.Accept(ctx, "recover", f.caller, "RecoverIdentity", raw, false)
+	if err != nil || code != 202 {
+		t.Fatalf("admission: %d %v", code, err)
+	}
+	if err := f.svc.ResumePending(ctx); err != nil {
 		t.Fatal(err)
 	}
-
-	cleanup := func() {
-		_, _ = pool.Exec(ctx, `DELETE FROM operations WHERE deployment_id=$1`, depID)
-		_, _ = pool.Exec(ctx, `DELETE FROM recovery_challenges WHERE deployment_id=$1`, depID)
-		_, _ = pool.Exec(ctx, `DELETE FROM fabric_operation WHERE deployment=$1`, depID)
+	<-f.backend.calls
+	result, err := f.svc.GetOperation(ctx, view.OperationID)
+	if err != nil || result.Status != "CONFIRMED" {
+		t.Fatalf("result: %+v %v", result, err)
 	}
-	cleanup()
-	t.Cleanup(cleanup)
-
-	rc := NewRegistrationCoordinator(pool)
-	_, oldCert, oldDER := makeSelfSignedUserCert(t, "u-old", now)
-	newMgmtPriv, newCert, newDER := makeSelfSignedUserCert(t, "u-new", now)
-	oldSum := sha256.Sum256(oldDER)
-	newSum := sha256.Sum256(newDER)
-
-	newAppPriv, newAppPubHex, err := protocol.GenerateP256KeyPair()
-	if err != nil {
-		t.Fatal(err)
+	if code, retry, err := f.svc.Accept(ctx, "recover", f.caller, "RecoverIdentity", raw, true); err != nil || code != 202 || retry.OperationID != view.OperationID {
+		t.Fatalf("retry: %d %+v %v", code, retry, err)
 	}
-	didDoc, err := protocol.NewDIDDocument("did:web:a.local:u", "did:web:a.local:u#key-2", newAppPubHex, protocol.KeyPurposeAssertionMethod, protocol.KeyPurposeAuthentication)
-	if err != nil {
-		t.Fatal(err)
-	}
-	didDocBytes, err := protocol.MarshalJCS(didDoc)
-	if err != nil {
-		t.Fatal(err)
-	}
-	didDocDigest, err := didDoc.Digest()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	chal, _, err := rc.IssueRecoveryChallenge(ctx, dep, IssueRecoveryChallengeRequest{
-		ChallengeID:           "rec-test-001",
-		DomainID:              "A",
-		SubjectID:             "did:web:a.local:u",
-		AccountCommitment:     strings.Repeat("5", 64),
-		OldManagementIdentity: protocol.ManagementIdentity{MSPID: "AMsp", CertificateSha256: hex.EncodeToString(oldSum[:])},
-		NewManagementIdentity: protocol.ManagementIdentity{MSPID: "AMsp", CertificateSha256: hex.EncodeToString(newSum[:])},
-		ExpectedRevision:      1,
-		ExpectedKeyVersion:    1,
-		NewAppKeyID:           "did:web:a.local:u#key-2",
-		NewAppPublicKey:       newAppPubHex,
-		DIDDocumentDigest:     didDocDigest,
-		IssuedAt:              now.Unix(),
-		TTLSeconds:            120,
-	})
-	if err != nil {
-		t.Fatalf("IssueRecoveryChallenge: %v", err)
-	}
-	if _, err := protocol.ValidateNonce(chal.Nonce); err != nil {
-		t.Fatalf("recovery challenge nonce is not canonical 43-char base64url: %v", err)
-	}
-
-	bundle, err := protocol.SignRecoveryDualProofBundle(dep, *chal, newDER, newMgmtPriv, newAppPriv)
-	if err != nil {
-		t.Fatalf("SignRecoveryDualProofBundle: %v", err)
-	}
-
-	regCaller := api.Management{MSPID: "AMsp", Fingerprint: hex.EncodeToString(oldSum[:])}
-	submitted := 0
-	submitOK := func(ctx context.Context) (*SubmitResult, error) {
-		submitted++
-		return &SubmitResult{TxID: fmt.Sprintf("rec-tx-%d", submitted)}, nil
-	}
-
-	// Unauthorized management cert not in authorizedCerts -> rejected without consuming challenge (S96).
-	if err := rc.AcceptRecoveryBundle(ctx, "rec-op-badcert", "rec-id-badcert", regCaller, bundle, []*x509.Certificate{oldCert}, didDocBytes, now.Unix(), submitOK); !protocol.HasCode(err, protocol.ErrCodeSignatureInvalid) {
-		t.Fatalf("expected SIGNATURE_INVALID for unauthorized new mgmt cert, got %v", err)
-	}
-
-	// Authorized new cert -> succeeds once, idempotent retry allowed, new opKey reusing consumed challenge rejected (S96).
-	if err := rc.AcceptRecoveryBundle(ctx, "rec-op-1", "rec-id-1", regCaller, bundle, []*x509.Certificate{newCert}, didDocBytes, now.Unix(), submitOK); err != nil {
-		t.Fatalf("AcceptRecoveryBundle failed: %v", err)
-	}
-	if submitted != 1 {
-		t.Fatalf("expected 1 submission, got %d", submitted)
-	}
-	if err := rc.AcceptRecoveryBundle(ctx, "rec-op-1", "rec-id-1", regCaller, bundle, []*x509.Certificate{newCert}, didDocBytes, now.Unix(), submitOK); err != nil {
-		t.Fatalf("same-opKey idempotent retry failed: %v", err)
-	}
-	if submitted != 1 {
-		t.Fatalf("idempotent retry must not resubmit; got %d", submitted)
-	}
-	if err := rc.AcceptRecoveryBundle(ctx, "rec-op-2", "rec-id-2", regCaller, bundle, []*x509.Certificate{newCert}, didDocBytes, now.Unix(), submitOK); !protocol.HasCode(err, protocol.ErrCodeChallengeReplay) {
-		t.Fatalf("expected CHALLENGE_REPLAY for new operationKey reusing challenge, got %v", err)
+	if code, _, err := f.svc.Accept(ctx, "other-key", f.caller, "RecoverIdentity", raw, false); code != 403 || !protocol.HasCode(err, protocol.ErrCodeChallengeReplay) {
+		t.Fatalf("challenge replay: %d %v", code, err)
 	}
 }
 

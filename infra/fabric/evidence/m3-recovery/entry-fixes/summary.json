@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "command": "FABRIC_M3_TEST_DIR=\"$PWD/.local/fabric-m3-proof-final\" mise exec -- go test -v -count=1 -timeout=6m ./internal/fabric -run '^TestM3LiveAcceptance/(authority|management)$'",
+  "exitCode": 0,
+  "cases": {
+    "authority": "PASS",
+    "management": "PASS"
+  },
+  "deploymentId": "9e01301edd0f1ca185ffd4b3dcb60dffd6b8d7f15797a3e43c9f144d92dee3c6",
+  "runs": {
+    "authority": "run-b93bda9c05dcd63c",
+    "management": "run-202d30d4d95f2897"
+  },
+  "raceCommand": "CGO_ENABLED=1 mise exec -- go test -race -count=1 ./internal/fabric -run 'Test(Recovery|OperationQuery|M3Recovery|ManagementHTTPDispatchAndDurableRestart|ManagementRecoveryDoesNotBlockOtherOriginalRequests)'",
+  "raceExitCode": 0,
+  "privateKeyScan": "PASS",
+  "scope": "C3/W4 HTTP boundaries, authority lifecycle and original transaction recovery; no full 34-case or LLM rerun."
+}

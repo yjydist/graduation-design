@@ -44,45 +44,12 @@ func (a acceptance) verifyM3ManagementHTTP(grant api.Grant) (map[string]any, err
 		case <-ctx.Done():
 		}
 	}
-	roots := x509.NewCertPool()
-	for _, org := range []string{"a", "b", "c", "t"} {
-		paths, err := filepath.Glob(filepath.Join(a.instance.orgDir(org), "msp", "cacerts", "*.pem"))
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range paths {
-			raw, err := os.ReadFile(p)
-			if err != nil {
-				return nil, err
-			}
-			if !roots.AppendCertsFromPEM(raw) {
-				return nil, fmt.Errorf("invalid management CA")
-			}
-		}
+	server, err := a.managementHTTPServer(svc)
+	if err != nil {
+		return nil, err
 	}
-	server := httptest.NewUnstartedServer(svc.Handler())
-	server.TLS = &tls.Config{ClientAuth: tls.RequireAndVerifyClientCert, ClientCAs: roots, MinVersion: tls.VersionTLS12}
-	server.StartTLS()
 	defer server.Close()
-	makeClient := func(role string) (*http.Client, error) {
-		certPEM, key, _, err := a.loadRoleCertAndKey(role)
-		if err != nil {
-			return nil, err
-		}
-		keyDER, err := x509.MarshalPKCS8PrivateKey(key)
-		if err != nil {
-			return nil, err
-		}
-		cert, err := tls.X509KeyPair(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certPEM}), pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER}))
-		if err != nil {
-			return nil, err
-		}
-		tr := server.Client().Transport.(*http.Transport).Clone()
-		tr.TLSClientConfig = tr.TLSClientConfig.Clone()
-		tr.TLSClientConfig.Certificates = []tls.Certificate{cert}
-		return &http.Client{Transport: tr, Timeout: 20 * time.Second}, nil
-	}
-	client, err := makeClient("U")
+	client, err := a.managementHTTPClient(server, "U")
 	if err != nil {
 		return nil, err
 	}
@@ -244,4 +211,47 @@ func (a acceptance) m3ManagementHTTPRegression() error {
 		return err
 	}
 	return writeJSON(filepath.Join(a.dir, "management-http.json"), result)
+}
+
+// managementHTTPServer mounts the actual handler behind verified domain mTLS.
+func (a acceptance) managementHTTPServer(svc *ManagementOperationService) (*httptest.Server, error) {
+	roots := x509.NewCertPool()
+	for _, org := range []string{"a", "b", "c", "t"} {
+		paths, err := filepath.Glob(filepath.Join(a.instance.orgDir(org), "msp", "cacerts", "*.pem"))
+		if err != nil {
+			return nil, err
+		}
+		for _, path := range paths {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				return nil, err
+			}
+			if !roots.AppendCertsFromPEM(raw) {
+				return nil, fmt.Errorf("invalid management CA")
+			}
+		}
+	}
+	server := httptest.NewUnstartedServer(svc.Handler())
+	server.TLS = &tls.Config{ClientAuth: tls.RequireAndVerifyClientCert, ClientCAs: roots, MinVersion: tls.VersionTLS12}
+	server.StartTLS()
+	return server, nil
+}
+
+func (a acceptance) managementHTTPClient(server *httptest.Server, role string) (*http.Client, error) {
+	certDER, key, _, err := a.loadRoleCertAndKey(role)
+	if err != nil {
+		return nil, err
+	}
+	keyDER, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+	cert, err := tls.X509KeyPair(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER}))
+	if err != nil {
+		return nil, err
+	}
+	tr := server.Client().Transport.(*http.Transport).Clone()
+	tr.TLSClientConfig = tr.TLSClientConfig.Clone()
+	tr.TLSClientConfig.Certificates = []tls.Certificate{cert}
+	return &http.Client{Transport: tr, Timeout: 20 * time.Second}, nil
 }

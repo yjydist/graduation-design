@@ -1,0 +1,49 @@
+{
+  "command": "mise exec -- go test -json -count=1 ./...",
+  "exitCode": 0,
+  "passedTestsIncludingSubtests": 154,
+  "failedTests": [],
+  "skippedTests": [
+    "TestInterruptedInitialization",
+    "TestDeploymentResumesAfterCommittedInitialization",
+    "TestM3LiveAcceptance"
+  ],
+  "packages": [
+    {
+      "package": "graduation-design/cmd/ledgerctl",
+      "action": "skip"
+    },
+    {
+      "package": "graduation-design/chaincode/registry",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/fabricapi",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/serviceauth",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/policy",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/protocol",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/agent",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/gateway",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/fabric",
+      "action": "pass"
+    }
+  ]
+}

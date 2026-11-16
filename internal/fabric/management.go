@@ -2,13 +2,20 @@ package fabric
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	api "graduation-design/internal/fabricapi"
+	"graduation-design/internal/protocol"
 )
 
 // journalOperationBackend uses the same original-transaction journal as ledgerctl invoke.
@@ -72,6 +79,77 @@ func (b *journalOperationBackend) ManagementForFingerprint(fp string) (api.Manag
 		}
 	}
 	return api.Management{}, false
+}
+
+// AuthorizeRecovery checks the current registrar and the approved new certificate
+// against trusted ledger facts and the target domain's MSP, never HTTP fields.
+func (b *journalOperationBackend) AuthorizeRecovery(ctx context.Context, caller api.Management, bundle *protocol.RecoveryDualProofBundle) error {
+	c := bundle.Challenge
+	p, err := b.journal.instance.peer("c", "read")
+	if err != nil {
+		return err
+	}
+	defer p.close()
+	domain, err := ledgerRecord[api.Domain](ctx, p, "domain", c.DomainID)
+	if err != nil {
+		return err
+	}
+	if caller != domain.Registrar || c.NewManagementIdentity.MSPID != domain.ID+"Msp" {
+		return protocol.NewError(protocol.ErrCodeIdentityManagementForbidden, "current domain registrar required")
+	}
+	id, err := ledgerRecord[api.Identity](ctx, p, "identity", c.SubjectID)
+	if err != nil {
+		return err
+	}
+	if id.Domain != domain.ID || (id.Kind != "USER" && id.Kind != "AGENT" && id.Kind != "SERVICE") ||
+		(id.Status != api.Active && id.Status != api.Suspended) || id.Management != recoveryMutation(c).OldManagement ||
+		id.AccountCommitment != c.AccountCommitment || id.KeyVersion != c.ExpectedKeyVersion {
+		return protocol.NewError(protocol.ErrCodeRecoveryProofInvalid, "recovery approval does not match current ordinary identity")
+	}
+	certification, err := ledgerRecord[api.Certification](ctx, p, "certification", domain.Certification)
+	if err != nil {
+		return err
+	}
+	if domain.Status != api.Active || certification.Status != api.Active || !certification.Interval.Current(time.Now(), api.PeerTimeWindow+api.ClockError) {
+		return protocol.NewError(protocol.ErrCodeRecoveryProofInvalid, "domain qualification inactive")
+	}
+	switch domain.ID {
+	case "A", "B", "C":
+	default:
+		return protocol.NewError(protocol.ErrCodeRecoveryProofInvalid, "unknown recovery domain")
+	}
+	paths, err := filepath.Glob(filepath.Join(b.journal.instance.orgDir(strings.ToLower(domain.ID)), "msp", "cacerts", "*.pem"))
+	if err != nil {
+		return err
+	}
+	var authorized []*x509.Certificate
+	for _, path := range paths {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		block, _ := pem.Decode(raw)
+		if block == nil {
+			return fmt.Errorf("invalid MSP CA certificate")
+		}
+		ca, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return err
+		}
+		authorized = append(authorized, ca)
+	}
+	if len(authorized) == 0 {
+		return protocol.NewError(protocol.ErrCodeStateUnavailable, "recovery MSP CA unavailable")
+	}
+	der, err := base64.RawURLEncoding.DecodeString(bundle.NewManagementCertificateDER)
+	if err != nil {
+		return err
+	}
+	leaf, err := x509.ParseCertificate(der)
+	if err != nil {
+		return err
+	}
+	return verifyAuthorizedMgmtCert(leaf, authorized)
 }
 
 func (b *journalOperationBackend) CurrentRevision(ctx context.Context, method string, input json.RawMessage) (uint64, bool, error) {
@@ -183,6 +261,15 @@ func (s *ManagementOperationService) submitPending(ctx context.Context, key, id 
 	s.running[id] = true
 	s.mu.Unlock()
 	defer func() { s.mu.Lock(); delete(s.running, id); s.mu.Unlock() }()
+	if method == "RecoverIdentity" {
+		if err := s.verifyRecoveryAdmission(ctx, key, id, caller, input); err != nil {
+			if protocol.HasCode(err, protocol.ErrCodeRecoveryProofInvalid) {
+				code := protocol.ErrCodeRecoveryProofInvalid
+				_ = s.RecordOutcome(ctx, id, "ACCEPT", "FAILED", "", 0, "", nil, &code, false)
+			}
+			return
+		}
+	}
 	s.backend.SubmitAsync(ctx, key, id, caller, method, input, func(stage, status, txID string, n int64, hash string, val, fail *string, delivered bool) error {
 		return s.RecordOutcome(ctx, id, stage, status, txID, n, hash, val, fail, delivered)
 	})

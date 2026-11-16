@@ -1,0 +1,15 @@
+=== RUN   TestM3LiveAcceptance
+=== RUN   TestM3LiveAcceptance/authority
+    verify_m3_test.go:56: evidence: /Users/yjydist/Desktop/graduation-design/.local/fabric-m3-proof-fix/m3-regression/run-9939f22f6a3e4652
+    verify_m3_test.go:71: ERROR: relation "fabric_head" does not exist (SQLSTATE 42P01)
+    verify_m3_test.go:67: ERROR: relation "fabric_block" does not exist (SQLSTATE 42P01)
+=== RUN   TestM3LiveAcceptance/management
+    verify_m3_test.go:56: evidence: /Users/yjydist/Desktop/graduation-design/.local/fabric-m3-proof-fix/m3-regression/run-55e09ff3d3fb7d8b
+    verify_m3_test.go:71: ERROR: relation "fabric_head" does not exist (SQLSTATE 42P01)
+    verify_m3_test.go:67: ERROR: relation "fabric_block" does not exist (SQLSTATE 42P01)
+--- FAIL: TestM3LiveAcceptance (0.02s)
+    --- FAIL: TestM3LiveAcceptance/authority (0.00s)
+    --- FAIL: TestM3LiveAcceptance/management (0.00s)
+FAIL
+FAIL	graduation-design/internal/fabric	0.382s
+FAIL

@@ -1,0 +1,52 @@
+=== RUN   TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor
+=== RUN   TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/owner
+=== RUN   TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/approved-auditor
+=== RUN   TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/unauthenticated
+=== RUN   TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/other-same-domain-manager
+=== RUN   TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/other-domain-manager
+=== RUN   TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/cross-domain-auditor
+=== RUN   TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/unapproved-auditor
+--- PASS: TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor (0.03s)
+    --- PASS: TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/owner (0.00s)
+    --- PASS: TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/approved-auditor (0.00s)
+    --- PASS: TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/unauthenticated (0.00s)
+    --- PASS: TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/other-same-domain-manager (0.00s)
+    --- PASS: TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/other-domain-manager (0.00s)
+    --- PASS: TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/cross-domain-auditor (0.00s)
+    --- PASS: TestOperationQueryRequiresOwnerOrExplicitSameDomainAuditor/unapproved-auditor (0.00s)
+=== RUN   TestM3RecoveryChallengeAndBundle
+--- PASS: TestM3RecoveryChallengeAndBundle (0.03s)
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/raw-mutation
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/missing-application
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/missing-management
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/bad-application
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/bad-management
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/unissued
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/changed-subject
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/changed-version
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/changed-deployment
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/wrong-registrar
+=== RUN   TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/expired
+--- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay (0.03s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/raw-mutation (0.00s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/missing-application (0.00s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/missing-management (0.00s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/bad-application (0.00s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/bad-management (0.00s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/unissued (0.00s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/changed-subject (0.00s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/changed-version (0.00s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/changed-deployment (0.00s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/wrong-registrar (0.00s)
+    --- PASS: TestRecoveryHTTPRejectsMissingProofTamperingAndReplay/expired (0.00s)
+=== RUN   TestRecoveryAdmissionSurvivesRestartAndRejectsLegacyQueue
+--- PASS: TestRecoveryAdmissionSurvivesRestartAndRejectsLegacyQueue (0.02s)
+=== RUN   TestRecoveryChallengeConsumedOnceAcrossConcurrentOperations
+--- PASS: TestRecoveryChallengeConsumedOnceAcrossConcurrentOperations (0.01s)
+=== RUN   TestRecoveryAdmissionRollsBackChallengeWhenQueueInsertFails
+--- PASS: TestRecoveryAdmissionRollsBackChallengeWhenQueueInsertFails (0.01s)
+=== RUN   TestRecoveryRestartRejectsModifiedDurableRequest
+--- PASS: TestRecoveryRestartRejectsModifiedDurableRequest (0.01s)
+PASS
+ok  	graduation-design/internal/fabric	0.711s

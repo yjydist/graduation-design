@@ -27,6 +27,9 @@ func TestM3LiveAcceptance(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+	if err := initSchema(t.Context(), db, operationsSchema+viewSchema); err != nil {
+		t.Fatal(err)
+	}
 	p, err := i.peer("c", "read")
 	if err != nil {
 		t.Fatal(err)

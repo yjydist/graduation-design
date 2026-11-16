@@ -33,6 +33,8 @@ D0, M1 与 M2 已建立 Fabric `procurement` 通道, `authregistry` 链码, Post
 
 管理 REST 由 `NewFabricManagementOperationService` 装配真实 Fabric 后端, 受理事务保存调用者与规范输入, 后端复用 `journal` 持久化原提案和已签交易. 宿主运行 `RunRecovery` 恢复队列, 查询与重试始终关联原 txID, 不通过注入结果推进实机验收状态.
 
+`RecoverIdentity` 的管理入口仅接受完整双证明包, 核对宿主已签发的一次性挑战, 由服务端派生链码参数. 挑战消费与原请求受理在同一事务提交, 队列恢复再次核对批准绑定, 无批准的旧原始恢复请求不得提交. 操作查询按已认证证书核对原发起身份; 本域审计者必须由宿主按 MSP 与指纹明确配置, 不以自报角色获得权限.
+
 ### 2. 协议与网关层: B1 静态验签缓存与 SD-JWT 披露范围收缩边界
 
 - **静态验签缓存 (`SignatureCache`)**:

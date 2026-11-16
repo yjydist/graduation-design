@@ -1,18 +1,33 @@
 # 核验报告: implement-m3-dynamic-state-and-recovery
 
-原 2 项 CRITICAL 和 3 项 WARNING 均已修复并通过回归. 当前 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION. 全量 Go 测试, 定点竞态检测与独立 Fabric 联合验收通过.
+C3 和 W4 已修复, 当前 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION. 全量 Go 测试, 定点竞态检测和独立 Fabric 实例的 authority/management 实机回归通过. 恢复入口强制双证明与一次性挑战, 查询限定原发起身份或宿主授权的本域审计者. 原失败记录及上一轮 34/34 联合验收证据继续保留.
 
 ## 范围与汇总
 
-使用本地 `spec-driven` 工作流, 已核对 proposal, design, tasks 和 5 份增量规范. 共 8 项需求, 包括 4 项 ADDED 和 4 项 MODIFIED, 22 个场景, 无 REMOVED 或 RENAMED. 本报告覆盖原实现与正式核验后的修复.
+使用本地 `spec-driven` 工作流, 已核对 proposal, design, tasks 和 5 份增量规范. 共 8 项需求, 包括 4 项 ADDED 和 4 项 MODIFIED, 22 个场景, 无 REMOVED 或 RENAMED. 本轮复核基于 `ee9ba67` 及当前工作区修复, 新增源码摘要见[源码指纹](../../../infra/fabric/evidence/m3-recovery/entry-fixes/materials/source-sha256.json).
 
 | 维度 | 结果 |
 | --- | --- |
-| 完整性 | 21/21 任务完成, 8/8 需求有实现和验证证据. |
-| 正确性 | 已核对 8/8 需求映射和 22/22 场景, 130 个含子测试的通过事件, 完整实机联合验收 34/34, 另有管理 HTTP 和 E6 时间线补充实机证据. |
-| 一致性 | 4 组设计决策已核对, 认证通道, 原交易恢复, 历史重放, 停发锁与回执 outbox 均与设计一致. 新代码延续既有 Go 包和事务模式. |
+| 完整性 | 23/23 任务完成, 包括新增 C3/W4 修复任务; 8/8 需求有实现和验证证据, 无不可读追踪文件. |
+| 正确性 | 8/8 需求映射和 22/22 场景已核对. 恢复与查询入口反例已纳入正式回归; 本轮 154 个含子测试通过事件, authority/management 两项实机回归通过. |
+| 一致性 | 4 组设计决策及代码模式已检查. 恢复批准与入队原子提交, 原交易重启恢复及查询证书授权符合设计; 缓存隔离, 历史重放, 停发锁与 outbox 的既有回归继续通过. 无显著模式偏差. |
 
-任务完成, 规范覆盖, 需求实现映射, 场景覆盖, 设计遵循和代码模式一致性六项检查均已执行, 无未核验或不适用项. 全量测试命令中的 3 项显式启用测试会跳过, M3 的实机验证由完整 CLI 验收和显式定点命令完成, 两项初始化专项沿用既有证据. 跳过测试项与跳过核验检查分别记录.
+任务完成, 规范覆盖, 需求实现映射, 场景覆盖, 设计遵循和代码模式一致性六项检查均已执行, 无未核验或不适用项. 全量测试中的 3 项显式启用测试跳过, 随后显式执行 M3 authority/management 实机回归. 本轮未重跑完整 34 项联合验收或 LLM 轨迹, 其未改动场景沿用保留实机证据, 两项初始化专项也沿用原证据. 跳过测试项与跳过核验检查分别记录.
+
+## 本轮修复与验证
+
+- [全量测试汇总](../../../infra/fabric/evidence/m3-recovery/entry-fixes/unit-test-summary.json)及[原始事件](../../../infra/fabric/evidence/m3-recovery/entry-fixes/unit-test-events.jsonl): `mise exec -- go test -json -count=1 ./...` 退出码 0, 8 个测试包通过, 154 个含子测试通过事件, 3 项显式启用测试跳过.
+- [边界回归](../../../infra/fabric/evidence/m3-recovery/entry-fixes/boundary-tests.log)覆盖原始恢复参数, 缺任一证明, 无效签名, 未签发挑战, 主体/部署/版本篡改, 非注册机构及过期拒绝, 精确重试, 换键重放, 并发消费, 入队失败回滚, 重启恢复, 旧队列和批准后请求篡改拒绝. 查询覆盖本人, 授权本域审计者, 无身份, 同域其他管理者, 跨域管理者, 跨域审计者及未授权审计角色, 授权查询的三态均返回 200.
+- [竞态检测](../../../infra/fabric/evidence/m3-recovery/entry-fixes/race-tests.log): `CGO_ENABLED=1` 对恢复, 查询授权及管理重启队列执行 `go test -race -count=1`, 通过.
+- [独立实机汇总](../../../infra/fabric/evidence/m3-recovery/entry-fixes/summary.json)及[命令日志](../../../infra/fabric/evidence/m3-recovery/entry-fixes/live-command.log): `.local/fabric-m3-proof-final` 上 authority 和 management 两项均通过. [恢复与查询结果](../../../infra/fabric/evidence/m3-recovery/entry-fixes/run-b93bda9c05dcd63c/m3-dynamic-recovery.json)记录无证明/篡改 403, 本人及授权本域审计者 200, 跨身份及跨域 403. 有效恢复从 PENDING 到 CONFIRMED/VALID, 重启前后 txID 均为 `7d9ab4eb8e9dc17d0a2e3d6cf6c1c136471180fd1c6139e481b93e798c47bcfd`, 在块 51 提交; 新操作键重放因原版本已推进返回 409 STATE_CHANGED, 无新增 operation. [管理交易结果](../../../infra/fabric/evidence/m3-recovery/entry-fixes/run-202d30d4d95f2897/management-http.json)继续覆盖 VALID/MVCC 配对和原交易重启恢复.
+- [严格校验](../../../infra/fabric/evidence/m3-recovery/entry-fixes/openspec-validation.log)通过. 原始区块, 事件, 实例公开配置和源码摘要一并保存, 新增公开证据扫描未发现私钥. 本轮仅修改管理服务与验收代码, 链码继续信任当前注册机构提交已由服务端批准的原始恢复参数; 外部管理请求不能直接使用该原始参数入口.
+- 实机夹具首次在新 seed 实例缺少视图表时失败, 已为 `TestM3LiveAcceptance` 补齐 schema 初始化; [失败日志](../../../infra/fabric/evidence/failures/m3-entry-fixes/schema-initialization.log)保留. 随后的[重放断言失败](../../../infra/fabric/evidence/failures/m3-entry-fixes/replay-preflight-assertion.log)是测试只接受 403, 实际按受理前版本检查返回 409; 已同时核对合法拒绝码和零新增操作, 再在新独立实例通过.
+
+## 修复前复核证据
+
+- [全量测试汇总](../../../infra/fabric/evidence/m3-recovery/recheck/unit-test-summary.json)及[原始事件](../../../infra/fabric/evidence/m3-recovery/recheck/unit-test-events.jsonl): `mise exec -- go test -json -count=1 ./...` 退出码 0, 8 个测试包通过, 130 个含子测试通过事件. `cmd/ledgerctl` 无测试, 3 项显式启用测试跳过.
+- [新增边界失败](../../../infra/fabric/evidence/m3-recovery/recheck/boundary-tests.log)及[临时测试补丁](../../../infra/fabric/evidence/m3-recovery/recheck/boundary-tests.patch): 对真实 Handler 使用可信进程内身份及捕获后端, 对链码使用既有内存桩. 无挑战/无双证明恢复被受理并派发, 原始链码恢复更改管理绑定并将 keyVersion 升至 2; 未认证及跨域身份均能查询另一身份操作. 此处未声称完成新的 HTTP 到 Fabric 实机攻击复现.
+- [严格校验](../../../infra/fabric/evidence/m3-recovery/recheck/openspec-validation.log)通过. 临时测试已移除, 补丁与失败日志保留供修复回归, 未改动生产实现或任务勾选.
 
 ## 已修复问题
 
@@ -26,7 +41,7 @@
 
 首次核验的[5 项失败日志](../../../infra/fabric/evidence/m3-recovery/verification/boundary-tests.log)和[临时补丁](../../../infra/fabric/evidence/m3-recovery/verification/boundary-tests.patch)继续保留. 这些边界已纳入正式 Go 回归, 当前结果见[修复回归](../../../infra/fabric/evidence/m3-recovery/fixes/boundary-tests.log).
 
-## 验证结果
+## 上一轮验证结果
 
 - [全量测试汇总](../../../infra/fabric/evidence/m3-recovery/fixes/unit-test-summary.json)和[原始事件](../../../infra/fabric/evidence/m3-recovery/fixes/unit-test-events.jsonl): `mise exec -- go test -json -count=1 ./...` 退出码 0, 8 个测试包通过, 130 个含子测试通过事件. `cmd/ledgerctl` 无测试文件. `TestInterruptedInitialization`, `TestDeploymentResumesAfterCommittedInitialization`, `TestM3LiveAcceptance` 在此命令中跳过.
 - [认证与发送锁竞态检测](../../../infra/fabric/evidence/m3-recovery/fixes/race-tests.log)和[管理队列竞态检测](../../../infra/fabric/evidence/m3-recovery/fixes/management-race.log): `CGO_ENABLED=1` 下对新增认证, 发送锁和管理恢复场景执行 `go test -race`, 均通过.
@@ -56,7 +71,14 @@
 | fixed-height-state | 1 / 2 | 独立历史模式, 原 h/r 状态, 历史密码学与策略重放, MATCHED/MISMATCH/INCOMPLETE/NO_DECISION; operation_m3_test.go, order_m3_test.go 和实机核账结果. |
 | verifiable-protocol | 1 / 2 | 并发安全静态缓存, 命中后的动态状态/版本检查, department 隐藏/披露及必需 role; evidence_m3_test.go, gateway_m3_test.go 与 T 离线/缓存实机结果. |
 
-八项需求与二十二个场景均有对应代码, 测试或保留实机证据. 当前修复覆盖原核验发现的边界, 未将既有 34/34 汇总单独作为正确性依据.
+八项需求与二十二个场景均已查找对应代码, 测试或保留实机证据. C3/W4 的恢复与查询入口现由 recovery_test.go, management_auth_test.go 以及 verify_recovery.go 的真实 mTLS 到 Fabric 路径补齐验证, 不再以夹具自验替代入口约束.
+
+## 本轮已关闭问题
+
+| 编号 | 修复与验证 |
+| --- | --- |
+| C3. 恢复入口可绕过双证明 | `internal/fabric/operation.go:692` 仅接受完整双证明包; `recovery.go:30` 验证签名和部署并派生原始输入, `recovery.go:47` 在入队事务内按锁后数据库时钟验证并消费服务端挑战. `management.go:86` 核对当前注册机构, 普通身份, 域资格与目标 MSP 证书; `management.go:264` 在每次派发和重启恢复前校验持久化批准. 已删除孤立的可通过回调直接写 CONFIRMED 的旧协调器路径. 恢复反例和事务故障回归通过, 实机缺证明请求无 operation, 有效双证明恢复保留原 txID 提交 VALID. |
+| W4. 操作查询缺少调用者授权 | `internal/fabric/management_auth.go:31` 只读取可信身份, `management_auth.go:56` 对照原操作调用者或宿主明确授权且同 MSP 的审计证书. `operation.go:924` 在返回详情前授权, 越权 403, 数据库不可用 503, 授权三态 200. 无身份, 同域其他身份, 跨域和伪造角色回归通过, 实机同域审计者 200 与跨域审计者 403 配对通过. |
 
 ## CRITICAL
 
@@ -72,4 +94,4 @@
 
 ## 归档评估
 
-全部核验检查通过. 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION. 可进入主规范同步与归档工作流. M4 的完整重复实验与性能数据产出仍按原阶段边界执行.
+全部核验检查通过. 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION, 23/23 任务完成. C3/W4 已由正式回归和独立实机入口验证关闭, 可进入主规范同步与归档工作流. 本轮实机范围为 authority/management, 完整 34 项与 LLM 轨迹沿用上一轮保留证据. M4 的完整重复实验与性能数据产出仍按原阶段边界执行.

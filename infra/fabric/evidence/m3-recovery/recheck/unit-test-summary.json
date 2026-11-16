@@ -1,0 +1,52 @@
+{
+  "command": "mise exec -- go test -json -count=1 ./...",
+  "exitCode": 0,
+  "passedTestsIncludingSubtests": 130,
+  "failedTests": [],
+  "skippedTests": [
+    "TestInterruptedInitialization",
+    "TestDeploymentResumesAfterCommittedInitialization",
+    "TestM3LiveAcceptance"
+  ],
+  "packages": [
+    {
+      "package": "graduation-design/cmd/ledgerctl",
+      "action": "skip"
+    },
+    {
+      "package": "graduation-design/chaincode/registry",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/fabricapi",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/serviceauth",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/policy",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/protocol",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/agent",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/gateway",
+      "action": "pass"
+    },
+    {
+      "package": "graduation-design/internal/fabric",
+      "action": "pass"
+    }
+  ],
+  "boundaryCommand": "mise exec -- go test -count=1 ./internal/fabric ./chaincode/registry -run '^TestVerification' -v",
+  "boundaryExitCode": 1,
+  "scope": "Full test suite before temporary boundary checks. HTTP capture backend and in-memory chaincode reproduction; no new live Fabric acceptance."
+}

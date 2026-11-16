@@ -1,0 +1,12 @@
+=== RUN   TestM3LiveAcceptance
+=== RUN   TestM3LiveAcceptance/authority
+    verify_m3_test.go:59: evidence: /Users/yjydist/Desktop/graduation-design/.local/fabric-m3-proof-fix/m3-regression/run-260076912ff020cd
+    verify_m3_test.go:74: recovery replay: HTTP 409: <nil>
+=== RUN   TestM3LiveAcceptance/management
+    verify_m3_test.go:59: evidence: /Users/yjydist/Desktop/graduation-design/.local/fabric-m3-proof-fix/m3-regression/run-edb661e800a1cb80
+--- FAIL: TestM3LiveAcceptance (3.60s)
+    --- FAIL: TestM3LiveAcceptance/authority (1.94s)
+    --- PASS: TestM3LiveAcceptance/management (1.63s)
+FAIL
+FAIL	graduation-design/internal/fabric	4.161s
+FAIL

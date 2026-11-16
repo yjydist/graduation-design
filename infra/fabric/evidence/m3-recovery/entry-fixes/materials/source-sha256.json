@@ -1,0 +1,14 @@
+{
+  "internal/fabric/delivery.go": "4f56b7d5232a6e11dcbd24da18ce37bb99da5e64b26ae76965162b8a2753b2f2",
+  "internal/fabric/management.go": "c9eb44bd8b33e82bda4ff8477968956c8ea6ea6c7c3c8c1a69f22b3393ee81cb",
+  "internal/fabric/management_auth.go": "bc8ef4a66c17715d97652d2325293ee9baf94044e4ae6e87be7c73bf6305cbb1",
+  "internal/fabric/management_auth_test.go": "ec7febae31edb19be27cecc19052a4e8ffddaf264ba640e06c326cee5f8b7181",
+  "internal/fabric/operation.go": "249eae9cd1313cbb872adf6e6013ebbb9052a256629b13d528346b2e503d510c",
+  "internal/fabric/operation_m3_test.go": "e6a86627d951f2b2ed9a42e8dd304e58962abdf4f58b5a18ef9e56c9bf42e8d2",
+  "internal/fabric/recovery.go": "e67d5e1c25e7b53700f1699a9e8451fc4f077f85093d7ca2ed7bbd261c486bb8",
+  "internal/fabric/recovery_test.go": "8f1cbd93ccf9748897c7eeec3b7731bdeb1bf4456a7f81b1de613c656f16f6a0",
+  "internal/fabric/verify_m3.go": "c67fc9e1e813fc0309caebd8f965bc04245961d0312be7d89fd91243b8459db9",
+  "internal/fabric/verify_m3_test.go": "ed65b94e62a98bc09a254bb15d0b2b5fcfc02b483252876017d80fb5dfd74091",
+  "internal/fabric/verify_management.go": "70b352a8455ff4979c776ed4c860e3e7520dea756b343f660a3773725f83bd80",
+  "internal/fabric/verify_recovery.go": "5ffe7983e9b783bdf848fc4c7d40d9e4c3c84f4d261bb7b60eecf7ceca8cc5a5"
+}

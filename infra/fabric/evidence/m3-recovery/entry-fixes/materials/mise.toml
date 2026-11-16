@@ -1,0 +1,54 @@
+[tools]
+go = "1.27"
+python = "3.15"
+
+[env]
+CGO_ENABLED = "0"
+
+[tasks."ledger:build"]
+description = "构建 build/ledgerctl 可执行文件"
+run = "go build -o build/ledgerctl ./cmd/ledgerctl"
+
+[tasks."test:unit"]
+description = "运行离线单元测试"
+run = "go test ./..."
+
+[tasks."fabric:config"]
+description = "校验隔离的 Fabric Compose 配置"
+run = "sh infra/fabric/network.sh config"
+
+[tasks."fabric:up"]
+description = "启动并加入 Fabric procurement 通道"
+run = "sh infra/fabric/network.sh up"
+
+[tasks."fabric:down"]
+description = "关闭 Fabric 容器并保留实例目录和卷"
+run = "sh infra/fabric/network.sh down"
+
+[tasks."fabric:ps"]
+description = "查看 Fabric 容器"
+run = "sh infra/fabric/network.sh ps"
+
+[tasks."fabric:rebuild"]
+description = "使用新实例目录和端口创建独立 Fabric 通道"
+run = "sh infra/fabric/network.sh rebuild"
+
+[tasks."ledger:deploy"]
+description = "安装, 三域批准并初始化 Fabric 登记链码"
+run = "go run ./cmd/ledgerctl deploy"
+
+[tasks."ledger:seed"]
+description = "提交 Fabric D0 合成登记夹具"
+run = "go run ./cmd/ledgerctl seed"
+
+[tasks."ledger:check"]
+description = "使用本进程的提交探针装配在线 Fabric 视图"
+run = "go run ./cmd/ledgerctl check"
+
+[tasks."ledger:inspect"]
+description = "按 --block 复查 Fabric 历史"
+run = "go run ./cmd/ledgerctl inspect"
+
+[tasks."ledger:verify"]
+description = "运行 Fabric D0 验收并保存独立证据"
+run = "go run ./cmd/ledgerctl verify"

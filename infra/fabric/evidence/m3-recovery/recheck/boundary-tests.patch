@@ -1,0 +1,124 @@
+diff --git a/internal/fabric/m3_verification_boundary_tmp_test.go b/internal/fabric/m3_verification_boundary_tmp_test.go
+new file mode 100644
+index 0000000..5ce8901
+--- /dev/null
++++ b/internal/fabric/m3_verification_boundary_tmp_test.go
+@@ -0,0 +1,84 @@
++package fabric
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++	"time"
++
++	api "graduation-design/internal/fabricapi"
++	"graduation-design/internal/protocol"
++	"graduation-design/internal/serviceauth"
++)
++
++type verificationCaptureBackend struct { methods chan string }
++
++func (b *verificationCaptureBackend) CurrentRevision(context.Context, string, json.RawMessage) (uint64, bool, error) {
++	return 1, true, nil
++}
++
++func (b *verificationCaptureBackend) SubmitAsync(ctx context.Context, key, id string, caller api.Management, method string, input json.RawMessage, update func(string, string, string, int64, string, *string, *string, bool) error) {
++	b.methods <- method
++}
++
++func TestVerificationRecoveryHTTPRequiresDualProof(t *testing.T) {
++	pool := testPgPool(t)
++	dep := api.Digest([]byte(t.Name()))
++	t.Cleanup(func() { _, _ = pool.Exec(context.Background(), `DELETE FROM operations WHERE deployment_id=$1`, dep) })
++	backend := &verificationCaptureBackend{methods: make(chan string, 1)}
++	svc := NewManagementOperationService(pool, dep, api.Management{}, backend)
++	client := serviceauth.NewLocalClient(svc.Handler(), serviceauth.Identity{Role: "MANAGEMENT", MSPID: "BMsp", Fingerprint: strings.Repeat("a", 64)})
++	// No recovery challenge or proof is issued or included in this request.
++	_, pub, err := protocol.GenerateP256KeyPair()
++	if err != nil { t.Fatal(err) }
++	raw, err := json.Marshal(api.RecoverIdentityInput{
++		Bound: api.Bound{DeploymentID: dep}, ID: "did:web:b.local:b1",
++		ExpectedRevision: 1, ExpectedKeyVersion: 1,
++		AccountCommitment: api.Digest([]byte("original-account")),
++		OldManagement: api.Management{MSPID: "BMsp", Fingerprint: strings.Repeat("b", 64)},
++		NewManagement: api.Management{MSPID: "BMsp", Fingerprint: strings.Repeat("c", 64)},
++		DocumentDigest: api.Digest([]byte("new-document")),
++		KeyID: "did:web:b.local:b1#key-2", PublicKey: pub,
++	})
++	if err != nil { t.Fatal(err) }
++	req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, "https://c.local/v1/management/RecoverIdentity", bytes.NewReader(raw))
++	req.Header.Set("Idempotency-Key", "proof-required")
++	resp, err := client.Do(req)
++	if err != nil { t.Fatal(err) }
++	defer resp.Body.Close()
++	if resp.StatusCode == http.StatusAccepted {
++		select {
++		case method := <-backend.methods:
++			t.Fatalf("missing challenge and both proofs: HTTP %d dispatched %s to backend", resp.StatusCode, method)
++		case <-time.After(time.Second):
++			t.Fatal("missing challenge and both proofs: HTTP 202 accepted")
++		}
++	}
++}
++
++func TestVerificationOperationGETRequiresCaller(t *testing.T) {
++	pool := testPgPool(t)
++	dep := api.Digest([]byte(t.Name()))
++	t.Cleanup(func() { _, _ = pool.Exec(context.Background(), `DELETE FROM operations WHERE deployment_id=$1`, dep) })
++	svc := NewManagementOperationService(pool, dep, api.Management{}, &verificationCaptureBackend{methods: make(chan string, 1)})
++	caller := api.Management{MSPID: "BMsp", Fingerprint: strings.Repeat("a", 64)}
++	_, view, err := svc.Accept(t.Context(), "private-operation", caller, "RotateIdentity", json.RawMessage(`{"id":"did:web:b.local:b1","expectedRevision":1}`), false)
++	if err != nil { t.Fatal(err) }
++	for _, name := range []string{"unauthenticated", "other-domain-management"} {
++		t.Run(name, func(t *testing.T) {
++			req := httptest.NewRequest(http.MethodGet, "/v1/operations/"+view.OperationID, nil)
++			if name != "unauthenticated" {
++				req = req.WithContext(serviceauth.WithIdentity(req.Context(), serviceauth.Identity{Role: "MANAGEMENT", MSPID: "AMsp", Fingerprint: strings.Repeat("f", 64)}))
++			}
++			w := httptest.NewRecorder()
++			svc.Handler().ServeHTTP(w, req)
++			if w.Code != http.StatusForbidden && w.Code != http.StatusUnauthorized {
++				t.Fatalf("%s operation lookup: HTTP %d, body=%s", name, w.Code, w.Body.String())
++			}
++		})
++	}
++}
+diff --git a/chaincode/registry/m3_verification_boundary_tmp_test.go b/chaincode/registry/m3_verification_boundary_tmp_test.go
+new file mode 100644
+index 0000000..589736d
+--- /dev/null
++++ b/chaincode/registry/m3_verification_boundary_tmp_test.go
+@@ -0,0 +1,28 @@
++package main
++
++import (
++	"testing"
++
++	api "graduation-design/internal/fabricapi"
++)
++
++func TestVerificationRawRecoveryWithoutProofChangesBinding(t *testing.T) {
++	h := newRegistryHarness(t)
++	id, err := get[api.Identity](h.stub, api.Key("identity", "did:web:b.local:b1"))
++	if err != nil { t.Fatal(err) }
++	_, newMgmt := makeSerializedCaller(t, "BMsp", "unproven-new-manager")
++	_, pub := makeAppKey(t, id.ID)
++	h.stub.creator = h.bReg
++	// No recovery challenge, application proof, or management proof exists.
++	_, err = invoke(h.stub, "RecoverIdentity", mustJSON(t, api.RecoverIdentityInput{
++		Bound: api.Bound{DeploymentID: h.depID}, ID: id.ID,
++		ExpectedRevision: id.Revision, ExpectedKeyVersion: id.KeyVersion,
++		AccountCommitment: id.AccountCommitment, OldManagement: id.Management, NewManagement: newMgmt,
++		DocumentDigest: api.Digest([]byte("new-document")), KeyID: id.ID + "#key-2", PublicKey: pub,
++	}))
++	if err == nil {
++		after, readErr := get[api.Identity](h.stub, api.Key("identity", id.ID))
++		if readErr != nil { t.Fatal(readErr) }
++		t.Fatalf("raw registrar submission accepted without either proof: managementChanged=%v keyVersion=%d", after.Management != id.Management, after.KeyVersion)
++	}
++}

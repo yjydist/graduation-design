@@ -1,0 +1,5 @@
+ok  	graduation-design/internal/fabric	2.000s
+ok  	graduation-design/internal/gateway	2.594s
+ok  	graduation-design/internal/agent	3.307s
+ok  	graduation-design/internal/protocol	1.518s
+ok  	graduation-design/internal/serviceauth	1.136s

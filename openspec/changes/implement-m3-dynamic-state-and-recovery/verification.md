@@ -1,10 +1,22 @@
 # 核验报告: implement-m3-dynamic-state-and-recovery
 
-C3 和 W4 已修复, 当前 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION. 全量 Go 测试, 定点竞态检测和独立 Fabric 实例的 authority/management 实机回归通过. 恢复入口强制双证明与一次性挑战, 查询限定原发起身份或宿主授权的本域审计者. 原失败记录及上一轮 34/34 联合验收证据继续保留.
+C3 和 W4 已修复, 当前 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION. 当前提交 `4b1be2c` 的全量 Go 测试, 定点竞态检测与 OpenSpec 严格校验再次通过. 独立 Fabric 实例的 authority/management 实机回归及 34/34 联合验收沿用下文保留证据. 恢复入口强制双证明与一次性挑战, 查询限定原发起身份或宿主授权的本域审计者. 原失败记录继续保留.
+
+## 当前提交独立复核
+
+本轮重新读取全部规划制品, 核对 23/23 任务, 8 项需求和 22 个场景, 未发现新增问题. 任务完成, 规范覆盖, 需求实现映射, 场景覆盖, 设计遵循及代码模式一致性六项检查均已执行, 无未核验或不适用项. 测试执行范围与实机证据复用范围分别记录如下.
+
+- [本轮汇总](../../../infra/fabric/evidence/m3-recovery/final-review/summary.json)与[全量测试事件](../../../infra/fabric/evidence/m3-recovery/final-review/unit-test-events.jsonl): `mise exec -- go test -json -count=1 ./...` 退出码 0, 8 个测试包通过, 154 个含子测试通过事件. `cmd/ledgerctl` 无测试文件; `TestInterruptedInitialization`, `TestDeploymentResumesAfterCommittedInitialization` 和 `TestM3LiveAcceptance` 需显式配置, 本次跳过. 数据库相关恢复, 查询授权, 两实例核账, 等锁到期, 停发屏障及回执恢复测试实际执行通过.
+- [定点竞态检测](../../../infra/fabric/evidence/m3-recovery/final-review/race-tests.log)覆盖 fabric, gateway, agent, protocol 与 serviceauth 五个包的 M3, 恢复, 查询授权, 管理队列, 停发和 mTLS 场景, 全部通过. 初次编译因未设置 SDKROOT 缺少 macOS C 标准库头文件而失败, [原失败日志](../../../infra/fabric/evidence/m3-recovery/final-review/race-sdk-missing.log)保留; 使用本机 `xcrun --show-sdk-path` 返回的 SDK 路径后重跑通过, 未修改项目工具链配置.
+- [严格校验](../../../infra/fabric/evidence/m3-recovery/final-review/openspec-validation.json)通过, 无规范格式问题.
+- [源码指纹核对](../../../infra/fabric/evidence/m3-recovery/final-review/source-fingerprint-check.json)确认入口修复实机运行记录中的 12 份源码与当前文件全部一致. 本轮未重跑 Fabric 故障注入, 34 项联合验收或真实 LLM 调用; 这些场景按下文保留的实机结果及本轮代码审查核对, 不将其写为本轮新运行结果.
+- 重点复核 `internal/fabric/operation.go:692`, `internal/fabric/recovery.go:47` 和 `internal/fabric/management.go:264` 的双证明受理, 挑战原子消费与恢复派发; `internal/fabric/management_auth.go:56` 的本人或宿主授权本域审计者查询; `internal/gateway/server.go:400` 的发送与停发串行化; `internal/gateway/audit.go:804` 的历史审计及 `internal/gateway/receipt_delivery.go:23` 的原回执交付. 实现与相应设计决策一致.
+
+本轮结论为全部核验检查通过, 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION, 可进入归档工作流. 本轮仅保存核验结果与证据, 未实施功能修改, 同步主规范或归档变更.
 
 ## 范围与汇总
 
-使用本地 `spec-driven` 工作流, 已核对 proposal, design, tasks 和 5 份增量规范. 共 8 项需求, 包括 4 项 ADDED 和 4 项 MODIFIED, 22 个场景, 无 REMOVED 或 RENAMED. 本轮复核基于 `ee9ba67` 及当前工作区修复, 新增源码摘要见[源码指纹](../../../infra/fabric/evidence/m3-recovery/entry-fixes/materials/source-sha256.json).
+使用本地 `spec-driven` 工作流, 已核对 proposal, design, tasks 和 5 份增量规范. 共 8 项需求, 包括 4 项 ADDED 和 4 项 MODIFIED, 22 个场景, 无 REMOVED 或 RENAMED. 以下汇总和修复记录保留入口修复轮的核验范围, 当时基于 `ee9ba67` 及工作区修复, 后续提交为 `4b1be2c`; 新增源码摘要见[源码指纹](../../../infra/fabric/evidence/m3-recovery/entry-fixes/materials/source-sha256.json). 当前提交独立复核结果见上节.
 
 | 维度 | 结果 |
 | --- | --- |

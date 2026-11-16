@@ -1,0 +1,32 @@
+# runtime/cgo
+_cgo_export.c:3:10: fatal error: 'stdlib.h' file not found
+# runtime/cgo
+In file included from gcc_setenv.c:7:
+./libcgo.h:6:10: fatal error: 'stdlib.h' file not found
+# runtime/cgo
+In file included from gcc_fatalf.c:11:
+./libcgo.h:6:10: fatal error: 'stdlib.h' file not found
+# runtime/cgo
+In file included from gcc_unix.c:7:
+./libcgo.h:6:10: fatal error: 'stdlib.h' file not found
+# runtime/cgo
+gcc_libinit_unix.c:14:10: fatal error: 'pthread.h' file not found
+# runtime/cgo
+In file included from gcc_util.c:5:
+./libcgo.h:6:10: fatal error: 'stdlib.h' file not found
+# runtime/cgo
+cgo-gcc-prolog:32:10: fatal error: 'errno.h' file not found
+# runtime/cgo
+pthread_unix.c:11:10: fatal error: 'pthread.h' file not found
+# runtime/cgo
+In file included from gcc_context.c:7:
+./libcgo.h:6:10: fatal error: 'stdlib.h' file not found
+# runtime/cgo
+In file included from gcc_traceback.c:8:
+./libcgo.h:6:10: fatal error: 'stdlib.h' file not found
+FAIL	graduation-design/internal/fabric [build failed]
+FAIL	graduation-design/internal/gateway [build failed]
+FAIL	graduation-design/internal/agent [build failed]
+ok  	graduation-design/internal/protocol	1.745s
+ok  	graduation-design/internal/serviceauth	1.407s
+FAIL

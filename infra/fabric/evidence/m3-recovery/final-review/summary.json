@@ -1,0 +1,40 @@
+{
+  "status": "PASS",
+  "sourceCommit": "4b1be2c45224f20a027977b23c213d61527e3d50",
+  "unitCommand": "mise exec -- go test -json -count=1 ./...",
+  "unitExitCode": 0,
+  "passedPackages": [
+    "graduation-design/chaincode/registry",
+    "graduation-design/internal/fabricapi",
+    "graduation-design/internal/serviceauth",
+    "graduation-design/internal/policy",
+    "graduation-design/internal/protocol",
+    "graduation-design/internal/agent",
+    "graduation-design/internal/gateway",
+    "graduation-design/internal/fabric"
+  ],
+  "passedTestEvents": 154,
+  "skippedTests": [
+    "TestInterruptedInitialization",
+    "TestDeploymentResumesAfterCommittedInitialization",
+    "TestM3LiveAcceptance"
+  ],
+  "packagesWithoutTests": [
+    "graduation-design/cmd/ledgerctl"
+  ],
+  "raceCommand": "mise exec -- env CGO_ENABLED=1 SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk go test -race -count=1 ./internal/fabric ./internal/gateway ./internal/agent ./internal/protocol ./internal/serviceauth -run 'Test(Recovery|OperationQuery|Management|M3|StoppedIntent|MemoryIntentStop|VerifiedMTLS)'",
+  "raceExitCode": 0,
+  "initialRaceFailure": "macOS SDK headers unavailable without SDKROOT; original failure log retained, retry passed",
+  "requirements": 8,
+  "scenarios": 22,
+  "tasks": {
+    "complete": 23,
+    "total": 23
+  },
+  "issues": {
+    "critical": 0,
+    "warning": 0,
+    "suggestion": 0
+  },
+  "scope": "Current source review, full Go tests, targeted race tests, strict OpenSpec validation; existing Fabric and LLM evidence inspected, no new live run."
+}

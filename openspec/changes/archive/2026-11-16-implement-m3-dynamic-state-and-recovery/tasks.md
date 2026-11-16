@@ -30,7 +30,7 @@
 
 - [x] 5.1 新建 `internal/fabric/verify_m3.go` 并扩展 `internal/fabric/verify.go` 与 `cmd/ledgerctl`, 覆盖 `F14-F15`, `S76-S103` 配对用例, `E3` 动态轨迹 (`B2` 改派与核账恢复), `E6` 20 ms 撤销窗口探测预跑 (核对 `t_submit`/`t_valid`/`t_apply`/`t_adopt`/`t_last_allow`/`t_first_deny` 且采用 `r` 后零允许) 与 `E7` 故障注入预跑 (停排序节点, Peer 断流补块, 等锁超时 `S66`, 锁后风险升级 `S91` 与核账恢复).
 - [x] 5.2 在真实 Fabric 实例 `.local/fabric-d0` 上完成链码序列升级或干净重建, 运行 `go test -count=1 ./...` (`mise run test:unit`) 与 `mise run ledger:verify` (接入可配置 LLM API 运行 `A1`/`B1`/`B2` 轨迹), 核对全部 D0-M3 验收项通过并输出排除私钥与 `LLM_API_KEY` 的结构化证据.
-- [x] 5.3 更新 [阶段任务](../../../TODO.md) 与 [证据索引](../../../infra/fabric/evidence/README.md) 中 M3 阶段完成状态, `S76-S103` / `E6` / `E7` 预跑结论与运行证据索引.
+- [x] 5.3 更新 [阶段任务](../../../../TODO.md) 与 [证据索引](../../../../infra/fabric/evidence/README.md) 中 M3 阶段完成状态, `S76-S103` / `E6` / `E7` 预跑结论与运行证据索引.
 
 ## 6. 正式核验缺陷修复
 

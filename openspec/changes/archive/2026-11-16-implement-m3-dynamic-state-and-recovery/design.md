@@ -2,7 +2,7 @@
 
 ## 背景
 
-D0, M1 与 M2 已建立 Fabric `procurement` 通道, `authregistry` 链码, PostgreSQL 固定高度视图与探针租约, RP/BM 双根两级委托 (`G0 -> G1 -> G2`), `order.create` 双实例唯一订单事务, 以及基于 MCP Go SDK 与 OpenAI/Anthropic 官方 Go SDK 的 `A1`/`B1` 工具闭环 ([提案](proposal.md)). 按照 [阶段任务](../../../TODO.md), [部署与链上登记](../../../docs/implementation/部署与链上登记.md), [证据交付与网关执行](../../../docs/implementation/证据交付与网关执行.md) 与 [订单核账](../../../docs/implementation/订单核账.md), M3 阶段需要补齐动态生命周期, 静态验签缓存 (`B1`), 未知订单核账与历史高度复核, 以及 `B2` 改派和核账恢复的智能体轨迹与 E2/E3/E6/E7 预跑.
+D0, M1 与 M2 已建立 Fabric `procurement` 通道, `authregistry` 链码, PostgreSQL 固定高度视图与探针租约, RP/BM 双根两级委托 (`G0 -> G1 -> G2`), `order.create` 双实例唯一订单事务, 以及基于 MCP Go SDK 与 OpenAI/Anthropic 官方 Go SDK 的 `A1`/`B1` 工具闭环 ([提案](proposal.md)). 按照 [阶段任务](../../../../TODO.md), [部署与链上登记](../../../../docs/implementation/部署与链上登记.md), [证据交付与网关执行](../../../../docs/implementation/证据交付与网关执行.md) 与 [订单核账](../../../../docs/implementation/订单核账.md), M3 阶段需要补齐动态生命周期, 静态验签缓存 (`B1`), 未知订单核账与历史高度复核, 以及 `B2` 改派和核账恢复的智能体轨迹与 E2/E3/E6/E7 预跑.
 
 ## 目标与范围
 
@@ -87,4 +87,4 @@ flowchart TB
 | 静态验签缓存可能被误认为绕过动态吊销或换钥检查 | 强制要求缓存键包含 `appKeyVersion`, 并在命中缓存后无条件执行固定高度快照下的 `Status`, `KeyVersion`, `CurrentCertificationID` 与 `claimNames` 校验; 在 `S22`/`S81`/`S93` 显式写入对抗断言验证缓存命中下的拒绝行为. |
 | `RecoverIdentity` 若未原子切换管理证书绑定, 可能留下旧管理私钥越权或双主体争用 | 在链码同一交易内校验 `newManagementIdentity` 未被占用后删除 `binding/<oldMgmt>` 并写入 `binding/<newMgmt>`, 同时保持 `Status` 不变与 `KeyVersion++`, 依靠 MVCC 读集避免并发换账冲突. |
 | 核账事务同时锁定多条挑战与业务键, 在高并发下可能发生锁序反转死锁 | 严格强制对挑战 ID 并集按字典序排序后逐行 `FOR UPDATE`, 再锁定 `business_keys` 与 `orders`, 与在线 `execute` 事务锁序保持一致, 读库超时返回 `503` 保留 B 端未知状态. |
-| E6/E7 预跑若混入真实 LLM 推理往返会掩盖 `20 ms` 探测精度和精密时序注入 | 遵循 [实验计划](../../../docs/experiments/实验计划.md) 的"同核双驱动": LLM 仅驱动 `E3` 改派与核账恢复语义决策轨迹; `E6` 撤销窗口与 `E7` 故障并发由确定性 Go 工具核直接驱动, 保证时间线精确可复现. |
+| E6/E7 预跑若混入真实 LLM 推理往返会掩盖 `20 ms` 探测精度和精密时序注入 | 遵循 [实验计划](../../../../docs/experiments/实验计划.md) 的"同核双驱动": LLM 仅驱动 `E3` 改派与核账恢复语义决策轨迹; `E6` 撤销窗口与 `E7` 故障并发由确定性 Go 工具核直接驱动, 保证时间线精确可复现. |

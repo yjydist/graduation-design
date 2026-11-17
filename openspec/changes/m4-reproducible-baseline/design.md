@@ -40,6 +40,8 @@ C0 受信预置器使用与 Fabric 相同的夹具登记输入和真实签名材
 
 将可公开的逻辑夹具描述作为固定输入纳入版本控制. 对种子, 逻辑角色与路径, 商品与价格, 期望判据, 披露与期限规则, 策略配置和策略源码摘要计算 JCS/SHA-256 摘要. 同轮将签好的同一套材料与锚点分别装入两种登记来源, 核对实际公共材料摘要一致. 干净重建时按同一规则生成新的密钥, 签名, 随机挑战和真实时间, 清单分别记录实际部署及公开材料摘要. 配对种子只影响逻辑标识和用例, 密钥, 盐及 nonce 使用原有密码学随机源.
 
+采购开始前, 从 C0 主库读取已提交的登记快照和 `revision`, 并将已提交的 Fabric 区块按顺序应用到视图后读取该视图. 两种来源分别在各自的只读 `REPEATABLE READ` 事务中读取检查点和登记值. 比对 T 根及夹具中的域, 域认证, 身份, 凭证, 任务和委托记录. 按记录种类和 ID 索引登记字段, 保留状态, 密钥版本和签名锚点, 提取对象的 `revision` 单独记录, 对剩余字段分别计算 JCS/SHA-256 摘要. 两边均已读出才报告比对结果. 缺失记录, 无效版本或锚点不同均使准备阶段失败, 保存已读出的回读元数据和完整请求计划.
+
 ### 3 运行与首轮验收
 
 增加 `ledgerctl experiment baseline` 入口, 明确输入独立实验实例, 配对种子和新证据目录. 复用 `fabric:up` 与部署, 种子, 交付及真实钱包工具. 每轮使用独立 Fabric 实例和 C0 主库. C0 由实验入口显式启用, 使用自己的挑战, 其登记与业务表位于同一个独立主库, 供定案事务同时持有业务锁和版本锁. B0/B1 顺序运行, 共用同一 Fabric 状态视图, 每组等待自己的有效探针. 三组各用新的钱包意图及不同业务键命名空间, 按运行与用例的订单键核对, 避免将前一组业务结果或缓存计入本组.
@@ -56,12 +58,14 @@ B0/B1 的每个动作都须提供实际块高, SHA-256 块哈希, 原探针交�
 
 | 文件 | 首轮结构 |
 | --- | --- |
-| `manifest.json` | `run_id`, `seed`, `started_at`, `source_commit`, `go_version`, `host`, `clock`, `topology`, `artifact_locks`, `deployment_id`, `channel_id`, `genesis_hash`, `chaincode`, `root`, `fixture_digest`, `material_digest`, `policy_source_digest`, `policy_digest`, `configurations`, `driver`, `planned_cases`. `configurations` 记录每组源类型, 数据库和网关实例标识, 缓存开关与适用的探针参数. `planned_cases` 按执行顺序给出 `configuration`, `case_id`, `mode`, `amount_minor` 和期望响应码 |
+| `manifest.json` | `run_id`, `seed`, `started_at`, `source_commit`, `go_version`, `host`, `clock`, `topology`, `artifact_locks`, `deployment_id`, `channel_id`, `genesis_hash`, `chaincode`, `root`, `fixture_digest`, `material_digest`, `registry_input_digest`, `registry_readback`, `policy_source_digest`, `policy_digest`, `configurations`, `driver`, `planned_cases`. `configurations` 记录每组源类型, 数据库和网关实例标识, 缓存开关与适用的探针参数. `planned_cases` 按执行顺序给出 `configuration`, `case_id`, `mode`, `amount_minor` 和期望响应码 |
 | `requests.csv` | `run_id,configuration,case_id,mode,action,actor,task_id,amount_minor,idempotency_key,planned_at,started_at,finished_at,challenge_ns,execute_ns,request_id,request_hash,challenge_id,decision_id,quote_id,order_id,http_status,code,disposition,failure_stage,state_source,revision,state_read_at,block_number,block_hash,probe_tx_id,probe_block,probe_sent_at,probe_deadline,probe_sent_mono_ns,probe_deadline_mono_ns,probe_checked_mono_ns,context_version,context_observed_at,context_access_deadline,decision_at,effective_deadline,state_rechecks,signature_cache_hits,signature_cache_misses` |
 | `order_checks.csv` | `run_id,configuration,case_id,task_id,quote_id,idempotency_key,challenge_id,challenge_consumed,decision_id,decision_outcome,decision_code,quote_amount_minor,order_rows_before,order_rows_after,order_key_rows,order_key_status,order_id,creation_decision_id,order_status,verdict,failure_reason` |
 | `summary.json` | `run_id`, `seed`, `passed`, `by_configuration_and_mode`, `case_results`, `pair_results`, `request_accounting`, `failures`. `case_results` 和 `pair_results` 按矩阵键列出期望, 实际及核验结果. `failures` 记录作用范围, 失败阶段, 可用的关联 ID 和脱敏原因 |
 
 `requests.csv` 每个计划动作恰有一行, 以 `allowed`, `denied`, `error`, `timeout`, `dropped` 表示实际结果. 未启动的计划动作为 `dropped`, 并标明原因. 汇总按 `planned = started + dropped`, `started = completed + timeout`, `completed = allowed + denied + error` 对账. 预期 `denied` 在用例汇总可判为通过. 未返回或未观察到的响应, 决定或时点用 `null`. B0/B1 的中心化字段以及 C0 的 Fabric 字段用 `null`. `order_checks.csv` 每个计划订单一行, 按数据库, 部署和任务统计前后订单行数, 按该次业务键查对应订单键和业务结果. 主库查询失败时保留查询失败原因和可读取的部分, 不推断不存在. 准备阶段失败也保存已知清单信息, 计划用例和汇总. 对外导出只含白名单字段, 摘要及经脱敏的错误信息.
+
+`registry_input_digest` 是 C0 预置输入的 JCS/SHA-256 摘要. `registry_readback.c0` 和 `registry_readback.fabric` 分别保存实际计算的 `anchor_digest` 和按种类及 ID 索引的 `object_revisions`. C0 另记录 `revision` 和 `state_read_at`, Fabric 另记录 `block_number` 和 `block_hash`. `registry_readback.matched` 记录两份回读摘要的比对结果. 无法完成回读时, 未读取的来源及比对结果为 `null`, 汇总记录 `registry-readback` 失败阶段.
 
 挑战接口返回非 201 时, `requests.csv` 和 `summary.json` 的失败记录均保留 `challenge` 阶段及已观测的 HTTP 状态, 错误码和请求 ID. 该动作以 `error` 对账, 请求超过期限时以 `timeout` 对账. 询价挑战失败后, 对应的订单动作为 `dropped`, 阶段为 `quote-dependency`. 订单自身的挑战失败时, 主库核对只保留已知信息和失败原因.
 

@@ -1,0 +1,75 @@
+{
+  "source_commit": "6c7e33d500a1938fbb691708a21da98d61936e72",
+  "seed": 1109,
+  "fixture_digest": "47e91ed3d170b501914cad44dd5309646bd5c5e458e53a2b9ec0beca1fcc20a5",
+  "artifact_locks_matching_current_working_tree_per_round": 109,
+  "same_planned_cases_and_business_facts": true,
+  "registry_readback_regression": {
+    "test": "TestBaselineRegistryReadbackUsesStoredAnchors",
+    "passed": true
+  },
+  "go_test": {
+    "command": "go test -json -count=1 -p 1 ./...",
+    "packages_passed": 9,
+    "tests_and_subtests_passed": 201,
+    "tests_skipped": [
+      "TestInterruptedInitialization",
+      "TestDeploymentResumesAfterCommittedInitialization",
+      "TestM3LiveAcceptance"
+    ]
+  },
+  "runs": [
+    {
+      "directory": "round2",
+      "deployment_id": "51cb76334d78c23948633837d7eb8877d6e619a69593d09180a53ac47f8bf798",
+      "registry_input_digest": "09b54ec040fbf463fefe56c31a783c4d80e82c531ad5acbd7a1f0d99f2e81a96",
+      "independently_recomputed_readback": {
+        "run_id": "baseline-30ab9ddbbd6c24b1",
+        "anchor_count": 39,
+        "anchor_digest": "c8815532d880c714c14b9ac817f909029d1077fded8aa47310b498a3f9767a2b",
+        "central_revision": 1,
+        "fabric_block_number": 41,
+        "fabric_block_hash": "d9eed61d972fc7ec74802fccfc54f82f47908c254dc8a4715f551fea895a86b6",
+        "central_domain_a_revision": 1,
+        "fabric_domain_a_revision": 3
+      },
+      "request_accounting": {
+        "allowed": 18,
+        "completed": 24,
+        "denied": 6,
+        "dropped": 0,
+        "error": 0,
+        "planned": 24,
+        "started": 24,
+        "timeout": 0
+      },
+      "b1_signature_cache_hits": 62
+    },
+    {
+      "directory": "round3",
+      "deployment_id": "be93fdd88ec8b671288b717cd48bb3992856d7b6f6d32bec57680ee79669088f",
+      "registry_input_digest": "73b210d81713d95d628de768e6af6efec2086e5c439120706c55962564e1013e",
+      "independently_recomputed_readback": {
+        "run_id": "baseline-d2fa96f3a31e6212",
+        "anchor_count": 39,
+        "anchor_digest": "db790a2e9d09c38ff7977dfd5d2143e98c83ee0c137da5d07a8a8177ceb1a03b",
+        "central_revision": 1,
+        "fabric_block_number": 41,
+        "fabric_block_hash": "ffe90a0bda4feb83991432edb6a890b16114819c96cc463739f2e8269dfa08e8",
+        "central_domain_a_revision": 1,
+        "fabric_domain_a_revision": 3
+      },
+      "request_accounting": {
+        "allowed": 18,
+        "completed": 24,
+        "denied": 6,
+        "dropped": 0,
+        "error": 0,
+        "planned": 24,
+        "started": 24,
+        "timeout": 0
+      },
+      "b1_signature_cache_hits": 62
+    }
+  ]
+}

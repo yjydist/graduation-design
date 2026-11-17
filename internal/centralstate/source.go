@@ -84,6 +84,22 @@ func (s *Source) Update(ctx context.Context, expected int64, change func(*protoc
 }
 
 func (s *Source) AssembleSnapshot(ctx context.Context, leaf string, now time.Time) (*gateway.ConsistentSnapshot, error) {
+	view, err := s.ReadRegistry(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view.Snapshot.Now = now.UTC()
+	view.Snapshot.Height = 0
+	view.Snapshot.ExactIntervalBounds = true
+	view.Snapshot.ClockError = api.ClockError
+	if err := dependencies(view.Snapshot, leaf); err != nil {
+		return nil, unavailable(err)
+	}
+	return view, nil
+}
+
+// ReadRegistry reads all persisted anchors and their checkpoint in one snapshot.
+func (s *Source) ReadRegistry(ctx context.Context) (*gateway.ConsistentSnapshot, error) {
 	tx, err := s.DB.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return nil, unavailable(err)
@@ -104,13 +120,6 @@ func (s *Source) AssembleSnapshot(ctx context.Context, leaf string, now time.Tim
 	}
 	if snap.DeploymentID != s.DeploymentID || snap.Root != s.Root {
 		return nil, unavailable(fmt.Errorf("central deployment/root mismatch"))
-	}
-	snap.Now = now.UTC()
-	snap.Height = 0
-	snap.ExactIntervalBounds = true
-	snap.ClockError = api.ClockError
-	if err = dependencies(&snap, leaf); err != nil {
-		return nil, unavailable(err)
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return nil, unavailable(err)

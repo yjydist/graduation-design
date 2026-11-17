@@ -41,7 +41,6 @@ type baselineRun struct {
 	d            *deployment
 	f            *fixtures
 	db, c0db     *pgxpool.Pool
-	registration *baselineRegistration
 	c0           *centralstate.Source
 	resolver     *protocol.DIDWebResolver
 	passed       bool
@@ -208,15 +207,12 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 		return err
 	}
 	r.f = report.fixtures
-	fabricInput, centralInput, err := i.baselineRegistrations(d, r.f)
+	centralInput, err := i.baselineRegistration(d, r.f)
 	if err != nil {
 		return err
 	}
-	if fabricInput.MaterialDigest != centralInput.MaterialDigest || fabricInput.AnchorDigest != centralInput.AnchorDigest {
-		return fmt.Errorf("paired registration material mismatch")
-	}
-	r.registration = centralInput
 	e.Manifest["material_digest"] = centralInput.MaterialDigest
+	e.Manifest["registry_input_digest"] = centralInput.InputDigest
 	// CREATE DATABASE is deliberate and never reuses or clears an existing database.
 	if _, err = db.Exec(ctx, `CREATE DATABASE `+pgx.Identifier{r.options.C0Database}.Sanitize()); err != nil {
 		return err
@@ -231,9 +227,18 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	if err = c0db.Ping(ctx); err != nil {
 		return err
 	}
+	e.Manifest["topology"] = map[string]any{"fabric_instance": dir, "fabric_database": db.Config().ConnConfig.Database, "centralized_database": r.options.C0Database, "peer_domains": []string{"A", "B", "C"}, "orderers": 4}
 	if r.c0, err = centralstate.Initialize(ctx, c0db, centralInput.Snapshot); err != nil {
 		return err
 	}
+	r.stage = "registry-readback"
+	if err = r.applyBaselineRegistry(ctx); err != nil {
+		return fmt.Errorf("apply Fabric registry: %w", err)
+	}
+	if err = r.checkRegistryReadback(ctx, centralInput.Snapshot); err != nil {
+		return err
+	}
+	r.stage = "preparation"
 	if err = initSchema(ctx, c0db, operationsSchema); err != nil {
 		return err
 	}
@@ -246,7 +251,6 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	if err = i.syncMaterialOutboxes(ctx, journal{instance: i, db: c0db, deploymentID: d.DeploymentID}, d, r.f, report); err != nil {
 		return err
 	}
-	e.Manifest["topology"] = map[string]any{"fabric_instance": dir, "fabric_database": db.Config().ConnConfig.Database, "centralized_database": r.options.C0Database, "centralized_registry_digest": centralInput.AnchorDigest, "fabric_registry_digest": fabricInput.AnchorDigest, "peer_domains": []string{"A", "B", "C"}, "orderers": 4}
 	e.Manifest["configurations"] = []any{}
 	ready = true
 	return e.Save()

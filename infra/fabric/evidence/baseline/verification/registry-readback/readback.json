@@ -1,0 +1,23 @@
+{
+  "run_id": "baseline-2db0d9ef2f3b3361",
+  "source_commit": "6c7e33d500a1938fbb691708a21da98d61936e72",
+  "deployment_id": "1b13fdf3a22ed6e30aca1d01e4eb7f15d6d854bd8f30973b42d6768985c8ca60",
+  "fabric": {
+    "database": "fabric",
+    "query": "SELECT key, convert_from(value,'UTF8')::jsonb->>'revision' FROM fabric_current WHERE key LIKE 'domain%' ORDER BY key;",
+    "observed_domain_revisions": {
+      "A": 3,
+      "B": 2,
+      "C": 2
+    },
+    "manifest_digest": "3e9375e1cee47c6803316787753db0d06b8df8aded139d81ccdc503055b41c35"
+  },
+  "c0": {
+    "database": "baseline_m4_independent_verify",
+    "query": "SELECT snapshot->'Domains'->'A'->>'revision' FROM centralized_registry;",
+    "observed_domain_revisions": {
+      "A": 1
+    },
+    "manifest_digest": "3e9375e1cee47c6803316787753db0d06b8df8aded139d81ccdc503055b41c35"
+  }
+}

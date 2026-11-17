@@ -31,7 +31,7 @@ func NewEvidence(dir, runID string, in *Inputs) (*Evidence, error) {
 	}
 	started := time.Now().UTC()
 	e := &Evidence{Directory: dir, Manifest: map[string]any{}, Summary: map[string]any{"run_id": runID, "seed": in.Seed, "passed": false, "failures": []any{}}}
-	for _, key := range strings.Split("run_id,seed,started_at,source_commit,go_version,host,clock,topology,artifact_locks,deployment_id,channel_id,genesis_hash,chaincode,root,fixture_digest,material_digest,policy_source_digest,policy_digest,configurations,driver,planned_cases", ",") {
+	for _, key := range strings.Split("run_id,seed,started_at,source_commit,go_version,host,clock,topology,artifact_locks,deployment_id,channel_id,genesis_hash,chaincode,root,fixture_digest,material_digest,registry_input_digest,registry_readback,policy_source_digest,policy_digest,configurations,driver,planned_cases", ",") {
 		e.Manifest[key] = nil
 	}
 	digest, err := in.Digest()

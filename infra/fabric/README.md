@@ -114,6 +114,8 @@ build/ledgerctl experiment baseline \
 
 每次尝试均保存 `manifest.json`, `requests.csv`, `order_checks.csv`, `summary.json`. 从清单的计划用例找到配置及 `case_id`, 再按动作定位请求和挑战, 用决定 ID 关联状态版本与主库核对. C0 保存 `revision` 和读取时点, Fabric 列为 `null`; B0/B1 保存实际块和原探针, 中心化列为 `null`. 汇总通过要求 12 次询价, 6 笔唯一订单, 6 次明确超额拒绝, 挑战与决定关联, 拒绝侧无订单或订单键, 跨组三组配对一致且 B1 出现验签命中. 比较两轮的 `fixture_digest`, `planned_cases` 及规范化业务事实, 实际部署, 密钥材料摘要, 状态版本, 随机 ID 和时点各自保留.
 
+清单的 `registry_input_digest` 标记 C0 预置输入. 采购开始前, 入口分别从 C0 主库和已应用 Fabric 视图读取共同登记锚点. 在 `registry_readback` 查看各自的锚点摘要, C0 版本和实际读取时点, Fabric 块高和块哈希, 以及各登记对象的版本. 锚点摘要按运行内比对, 对象版本按来源记录. 缺失或不匹配会在 `registry-readback` 阶段失败并保留证据.
+
 准备失败, 超时或主库查询出错时保存已知记录与完整计划并非零退出. 未执行动作为 `dropped`, 未观测字段为 `null`; 主库查询出错不能推断订单不存在. 公开文件仅导出白名单字段, 入口扫描私钥编码, 访问令牌与实际披露盐. 失败处理定点测试可额外保留各样本的四个文件.
 
 ```bash

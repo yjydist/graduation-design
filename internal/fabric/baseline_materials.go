@@ -1,7 +1,6 @@
 package fabric
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,20 +15,18 @@ import (
 type baselineRegistration struct {
 	Snapshot       *protocol.SnapshotView
 	MaterialDigest string
-	AnchorDigest   string
-	PublicDigests  map[string]string
+	InputDigest    string
 }
 
-// baselineRegistrations derives two independent inputs from the same real signed materials.
-// The Fabric input was submitted by seed; the C0 input is for its trusted preloader.
-func (i *instance) baselineRegistrations(d *deployment, f *fixtures) (*baselineRegistration, *baselineRegistration, error) {
+// baselineRegistration prepares the C0 input from the same fixtures submitted by seed.
+func (i *instance) baselineRegistration(d *deployment, f *fixtures) (*baselineRegistration, error) {
 	if i.baseline == nil {
-		return nil, nil, fmt.Errorf("baseline inputs required")
+		return nil, fmt.Errorf("baseline inputs required")
 	}
 	for _, task := range []api.Task{f.RPTask, f.BMTask} {
 		want := api.Digest([]byte(d.DeploymentID + "/baseline/" + i.baseline.LogicalID(task.Mode, "") + "task"))
 		if task.ID != want {
-			return nil, nil, fmt.Errorf("baseline requires fixtures prepared for this seed in a clean instance")
+			return nil, fmt.Errorf("baseline requires fixtures prepared for this seed in a clean instance")
 		}
 	}
 	digests := map[string]string{}
@@ -56,29 +53,19 @@ func (i *instance) baselineRegistrations(d *deployment, f *fixtures) (*baselineR
 			return nil
 		})
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 	public, err := protocol.MarshalJCS(digests)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	snap := fixtureSnapshot(d, f, time.Time{})
 	snap.ExactIntervalBounds = true
 	snap.ClockError = api.ClockError
-	anchors, err := protocol.MarshalJCS(snap)
+	input, err := protocol.MarshalJCS(snap)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	one := &baselineRegistration{snap, api.Digest(public), api.Digest(anchors), digests}
-	// Do not share mutable maps between the two registration writers.
-	raw, err := json.Marshal(one)
-	if err != nil {
-		return nil, nil, err
-	}
-	var two baselineRegistration
-	if err = json.Unmarshal(raw, &two); err != nil {
-		return nil, nil, err
-	}
-	return one, &two, nil
+	return &baselineRegistration{Snapshot: snap, MaterialDigest: api.Digest(public), InputDigest: api.Digest(input)}, nil
 }

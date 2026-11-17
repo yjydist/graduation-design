@@ -146,29 +146,10 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	if !regexp.MustCompile(`^baseline_[a-z0-9_]{1,48}$`).MatchString(r.options.C0Database) {
 		return fmt.Errorf("C0 database must be a new name matching baseline_[a-z0-9_]{1,48}")
 	}
-	dir, err := filepath.Abs(r.options.Dir)
-	if err != nil {
+	if err := r.claimInstance(); err != nil {
 		return err
 	}
-	defaultDir, _ := filepath.Abs(".local/fabric-d0")
-	if dir == defaultDir {
-		return fmt.Errorf("baseline requires an explicitly isolated Fabric instance")
-	}
-	i, err := loadInstance(dir)
-	if err != nil {
-		return err
-	}
-	r.i = i
-	i.baseline = r.inputs
-	claim, err := os.OpenFile(filepath.Join(dir, "baseline-run"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-	if err != nil {
-		return fmt.Errorf("baseline instance is already claimed: %w", err)
-	}
-	_, err = claim.WriteString(r.runID + "\n")
-	closeErr := claim.Close()
-	if err = errors.Join(err, closeErr); err != nil {
-		return err
-	}
+	i := r.i
 	if _, err = os.Stat(i.registryPath("fixtures.json")); err == nil {
 		return fmt.Errorf("baseline requires an instance with no existing seed fixtures")
 	} else if !os.IsNotExist(err) {
@@ -227,7 +208,7 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	if err = c0db.Ping(ctx); err != nil {
 		return err
 	}
-	e.Manifest["topology"] = map[string]any{"fabric_instance": dir, "fabric_database": db.Config().ConnConfig.Database, "centralized_database": r.options.C0Database, "peer_domains": []string{"A", "B", "C"}, "orderers": 4}
+	e.Manifest["topology"] = map[string]any{"fabric_instance": i.dir, "fabric_database": db.Config().ConnConfig.Database, "centralized_database": r.options.C0Database, "peer_domains": []string{"A", "B", "C"}, "orderers": 4}
 	if r.c0, err = centralstate.Initialize(ctx, c0db, centralInput.Snapshot); err != nil {
 		return err
 	}
@@ -254,6 +235,52 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	e.Manifest["configurations"] = []any{}
 	ready = true
 	return e.Save()
+}
+
+func (r *baselineRun) claimInstance() error {
+	dir, err := filepath.Abs(r.options.Dir)
+	if err != nil {
+		return err
+	}
+	defaultDir, err := filepath.Abs(".local/fabric-d0")
+	if err != nil {
+		return err
+	}
+	if dir == defaultDir {
+		return fmt.Errorf("baseline requires an explicitly isolated Fabric instance")
+	}
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		return err
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	target, err := root.Stat(".")
+	if err != nil {
+		return err
+	}
+	defaultInfo, err := os.Stat(defaultDir)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("stat default Fabric instance: %w", err)
+	}
+	if err == nil && os.SameFile(target, defaultInfo) {
+		return fmt.Errorf("baseline requires an explicitly isolated Fabric instance")
+	}
+	i, err := loadInstance(dir)
+	if err != nil {
+		return err
+	}
+	r.i = i
+	i.baseline = r.inputs
+	claim, err := root.OpenFile("baseline-run", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		return fmt.Errorf("baseline instance is already claimed: %w", err)
+	}
+	_, err = claim.WriteString(r.runID + "\n")
+	return errors.Join(err, claim.Close())
 }
 
 func (r *baselineRun) configuration(ctx context.Context, name string) error {

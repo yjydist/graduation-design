@@ -1,6 +1,6 @@
 # m4-reproducible-baseline 核验报告
 
-核验基于 `6c7e33d` 加登记回读修复. 使用本地 `spec-driven` 工作流, 对照提案, 设计, 任务和增量规范. 最新两轮的 109 项 `artifact_locks` 均匹配修复工作区, 早期实机证据按原源码指纹保留.
+使用本地 `spec-driven` 工作流, 对照提案, 设计, 任务和增量规范. 采购双轮复跑基于 `29e93be`, 109 项 `artifact_locks` 均与该提交匹配. 实例隔离修复另有回归和实机复核. 早期实机证据按原源码指纹保留.
 
 ## 汇总
 
@@ -8,16 +8,16 @@
 | --- | --- |
 | 完整性 | 13/13 项任务完成, 4/4 项新增需求均有实现 |
 | 正确性 | 4/4 项需求完成实现映射, 6/6 个场景通过核对. 修复后两次干净重建的登记回读及全部配对用例通过 |
-| 一致性 | 预置输入和实际回读的摘要分别记录, 两种来源的检查点和对象版本独立保留. 已核对设计与代码模式 |
+| 一致性 | 已核对设计与代码模式. 默认实例的目录身份检查已通过回归 |
 
 ## 需求与场景核对
 
 | 需求 | 实现与核验证据 |
 | --- | --- |
-| 三种对照配置共享业务准入语义 | `internal/fabric/baseline.go:259` 装配三个网关配置. `internal/gateway/execute.go:166` 执行共同初验. 两轮 C0/B0 缓存计数为零, B1 各命中 62 次. B1 更新状态后拒绝失效材料的回归通过. 新订单超额检查先于最终 OPA 求值 |
+| 三种对照配置共享业务准入语义 | `internal/fabric/baseline.go:286` 装配三个网关配置. `internal/gateway/execute.go:166` 执行共同初验. 两轮 C0/B0 缓存计数为零, B1 各命中 62 次. B1 更新状态后拒绝失效材料的回归通过. 新订单超额检查先于最终 OPA 求值 |
 | C0 使用可在锁后复核的中心化一致快照 | `internal/centralstate/source.go:102` 在一次只读一致事务读取登记快照, 业务事务内以共享锁复核版本. `internal/gateway/central_test.go:214` 复现锁等待期间版本由 1 推进到 2, 最终决定记录版本 2 和一次重验. 一致快照, 缺依赖停止装配, C0 独立业务决定以及旧 Fabric 决策迁移回归通过 |
 | 使用固定夹具和可查询的实验记录复跑 | `internal/experiment/fixture.go` 固定夹具, `internal/experiment/evidence.go:73` 导出四文件. `internal/fabric/baseline_registry.go:87` 比对已提交的登记锚点. 登记缺失或不匹配, 挑战失败, 执行超时和主库查询失败的回归通过. 早期真实准备失败保留 24 条 `dropped` 记录并以退出码 1 结束 |
-| 首轮三组配对核对两档订单的业务结果 | `internal/fabric/baseline_checks.go:64` 核对 HTTP 结果, 挑战消费, 创建决定和主库副作用. 两轮均有 12 次询价允许, 6 笔 800 元唯一订单和 6 次 1200 元超额拒绝. 拒绝侧新增订单与订单键均为 0 |
+| 首轮三组配对核对两档订单的业务结果 | `internal/fabric/baseline_checks.go:66` 核对 HTTP 结果, 挑战消费, 创建决定和主库副作用. 两轮均有 12 次询价允许, 6 笔 800 元唯一订单和 6 次 1200 元超额拒绝. 拒绝侧新增订单与订单键均为 0 |
 
 ## 早期实测证据
 
@@ -37,10 +37,11 @@
 ## 已关闭的警告
 
 1. **Fabric 证据字段和原探针期限.** `internal/fabric/baseline_checks.go:224` 校验 SHA-256 块哈希, 探针交易 ID, 块高关系及墙钟和单调时点. 14 个子测试覆盖 B0 询价及 B1 下单的缺失字段, 无效哈希, 探针块越界和核验时间越界. 到达原期限的样例判为失败, 两轮实机的有效记录均通过.
-2. **挑战失败响应与未执行项.** `internal/fabric/baseline.go:445` 把非 201 的已观测 HTTP 状态, 错误码和请求 ID 保存到请求和失败汇总. 询价挑战失败时, 下单动作标记为 `dropped` 和 `quote-dependency`. 下单挑战失败时保留已知报价与失败原因, 主库订单行和订单键计数为空. 两个回归均注入 `503 STATE_UNAVAILABLE`. [挑战回归日志](../../../infra/fabric/evidence/baseline/verification/fixes/challenge-tests.log)
+2. **挑战失败响应与未执行项.** `internal/fabric/baseline.go:476` 把非 201 的已观测 HTTP 状态, 错误码和请求 ID 保存到请求和失败汇总. 询价挑战失败时, 下单动作标记为 `dropped` 和 `quote-dependency`. 下单挑战失败时保留已知报价与失败原因, 主库订单行和订单键计数为空. 两个回归均注入 `503 STATE_UNAVAILABLE`. [挑战回归日志](../../../infra/fabric/evidence/baseline/verification/fixes/challenge-tests.log)
 3. **超额检查与 OPA 求值顺序.** 增量规范和设计已明确新订单在锁后校验报价与额度, 超额时先定案, 通过前置检查后执行最终 OPA 求值. 核对 `internal/gateway/execute.go:635` 和同文件第 684 行. 既有额度回归通过, 两轮各 6 次超额拒绝均保存拒绝决定且无订单副作用. [增量规范](specs/reproducible-procurement-experiments/spec.md)
 
 4. **清单的登记摘要取值来源.** 修复前两项摘要取自同一份预置输入, 同轮 A 域对象在 C0 和 Fabric 的版本分别为 1 和 3. 修复后清单以 `registry_input_digest` 标注预置输入, 两种来源分别计算锚点摘要并记录检查点和对象版本. `TestBaselineRegistryReadbackUsesStoredAnchors` 验证不同对象版本可通过, 更新已登记委托摘要以及删除委托记录均使回读失败, 比对结果或部分回读证据仍可追溯. [修复前数据库回读](../../../infra/fabric/evidence/baseline/verification/registry-readback/readback.json)
+5. **默认实例的符号链接绕过.** 修复前经符号链接指定默认实例时, 入口写入 `baseline-run` 后才因已有夹具退出. `internal/fabric/baseline.go:240` 现在先解析目标路径, 用 `os.SameFile` 比较已打开目录和默认目录, 再通过同一个已打开目录独占创建标记. `TestBaselineRejectsDefaultInstanceAliases` 覆盖直接指定默认路径, 目标路径为符号链接, 默认路径为符号链接三种情况. 两种符号链接回归均在修复前复现写入, 修复后确认写入前拒绝. `TestBaselineClaimsIsolatedInstanceThroughAlias` 验证独立实例可通过链接占用, 重复占用保留首次标记.
 
 早期故障和配对样本继续按原源码指纹保留. [故障日志](../../../infra/fabric/evidence/baseline/verification/boundary-tests.log), [测试补丁](../../../infra/fabric/evidence/baseline/verification/boundary-tests.patch), [配对比较](../../../infra/fabric/evidence/baseline/verification/comparison.json), [准备失败样本](../../../infra/fabric/evidence/baseline/verification/fault-preparation/summary.json)
 
@@ -55,6 +56,20 @@
 
 独立 PostgreSQL 上运行 `go test -json -count=1 -p 1 ./...`, 9 个包通过, 共 201 个测试及子测试通过事件. 两项 Fabric 初始化专项和一项 M3 实机测试跳过. OpenSpec 严格校验通过.
 
+## 提交 `29e93be` 的独立复核
+
+使用种子 `1109` 和两个新 Fabric 实例复跑. 每轮从 C0 主库和 Fabric 指定块高的历史记录独立重算 39 条共同登记记录及 T 根的摘要, 均匹配清单. C0 回读版本为 1, Fabric 回读块高为 41. 从主库核对每轮 24 条挑战与决定的关联, 确认 12 次询价允许, 6 笔 800 元订单和 6 次 1200 元 `403 AMOUNT_LIMIT_EXCEEDED`. 超额请求均未生成订单或订单业务键. 每轮 B1 静态验签命中 62 次, C0/B0 均为 0. 两轮的逻辑夹具摘要, 用例矩阵和业务结果一致. 四文件扫描通过.
+
+独立 PostgreSQL 串行回归再次通过 9 个包, 共 201 个测试及子测试通过事件. 两项 Fabric 初始化专项和一项 M3 实机测试跳过. OpenSpec 严格校验通过.
+
+## 实例隔离修复复核
+
+在临时工作目录用实际 CLI 构造两种符号链接场景. 两次均以退出码 1 拒绝, 默认实例均无 `baseline-run` 标记. 四份结果文件保留 24 项准备阶段未执行的计划.
+
+通过符号链接指定新建的独立 Fabric 实例, 用种子 `1109` 跑完一轮. 清单记录解析后的实例目录, 109 项源码与配置指纹匹配修复工作区, 两种来源的登记回读摘要一致. 24 个动作全部完成, 12 次询价允许, 6 笔 800 元订单创建, 6 次 1200 元超额拒绝均无新增订单或订单业务键. B1 静态验签命中 62 次, 四文件扫描通过.
+
+独立 PostgreSQL 串行回归通过 9 个包, 共 206 个测试及子测试通过事件. 两项 Fabric 初始化专项和一项 M3 实机测试跳过. OpenSpec 严格校验通过.
+
 ## 归档评估
 
-任务完成, 规范覆盖, 需求实现映射, 场景覆盖, 设计遵循和代码模式一致性均已核对. 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION, 可进入归档工作流.
+任务完成, 规范覆盖, 需求实现映射, 场景覆盖, 设计遵循和代码模式一致性均已核对. 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION. 可进入归档工作流.

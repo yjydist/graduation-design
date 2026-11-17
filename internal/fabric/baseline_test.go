@@ -40,6 +40,76 @@ func baselineTestEvidenceDir(t *testing.T) string {
 	return filepath.Join(t.TempDir(), "evidence")
 }
 
+func TestBaselineRejectsDefaultInstanceAliases(t *testing.T) {
+	const defaultDir = ".local/fabric-d0"
+	for _, tc := range []struct {
+		name, dir string
+		link      string
+		linkTo    string
+	}{
+		{name: "direct", dir: defaultDir},
+		{name: "requested path is a symlink", dir: "alias", link: "alias", linkTo: defaultDir},
+		{name: "default path is a symlink", dir: ".local/instance", link: defaultDir, linkTo: ".local/instance"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			t.Chdir(root)
+			target := defaultDir
+			if tc.linkTo != "" {
+				target = tc.linkTo
+			}
+			if err := os.MkdirAll(target, 0700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(target, "network.env"), []byte("COMPOSE_PROJECT_NAME=baseline-test\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if tc.link != "" {
+				if err := os.Symlink(filepath.Join(root, target), tc.link); err != nil {
+					t.Fatal(err)
+				}
+			}
+			r := baselineRun{options: baselineOptions{Dir: tc.dir}, runID: "test"}
+			err := r.claimInstance()
+			if _, statErr := os.Lstat(filepath.Join(target, "baseline-run")); !errors.Is(statErr, os.ErrNotExist) {
+				t.Fatalf("default instance marker should be absent, stat error: %v", statErr)
+			}
+			if err == nil || !strings.Contains(err.Error(), "requires an explicitly isolated Fabric instance") {
+				t.Fatalf("expected default instance rejection, got %v", err)
+			}
+		})
+	}
+}
+
+func TestBaselineClaimsIsolatedInstanceThroughAlias(t *testing.T) {
+	root := t.TempDir()
+	t.Chdir(root)
+	if err := os.Mkdir("isolated", 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("isolated/network.env", []byte("COMPOSE_PROJECT_NAME=baseline-test\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("isolated", "alias"); err != nil {
+		t.Fatal(err)
+	}
+	r := baselineRun{options: baselineOptions{Dir: "alias"}, runID: "first"}
+	if err := r.claimInstance(); err != nil {
+		t.Fatal(err)
+	}
+	second := baselineRun{options: baselineOptions{Dir: "isolated"}, runID: "second"}
+	if err := second.claimInstance(); !errors.Is(err, os.ErrExist) {
+		t.Fatalf("expected duplicate claim rejection, got %v", err)
+	}
+	marker, err := os.ReadFile("isolated/baseline-run")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(marker) != "first\n" {
+		t.Fatalf("unexpected claim marker: %q", marker)
+	}
+}
+
 func TestBaselineManagedFailuresRetainPlan(t *testing.T) {
 	t.Run("preparation", func(t *testing.T) {
 		opts := baselineOptions{Dir: filepath.Join(t.TempDir(), "missing"), Out: baselineTestEvidenceDir(t), C0Database: "baseline_missing", Seed: 1109, RequestTimeout: time.Second}

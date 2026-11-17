@@ -46,6 +46,9 @@ func (r *baselineRun) decision(ctx context.Context, db *pgxpool.Pool, row experi
 	if row["disposition"] == "allowed" && d["outcome"] != "ALLOW" || row["disposition"] == "denied" && d["outcome"] != "DENY" {
 		return fmt.Errorf("HTTP disposition differs from stored decision")
 	}
+	if row["disposition"] == "allowed" && (row["quote_id"] != d["quote_id"] || row["order_id"] != d["order_id"]) {
+		return fmt.Errorf("HTTP resource IDs differ from stored decision")
+	}
 	var consumed *int64
 	var challengeDecision *string
 	var requestHash string
@@ -55,13 +58,6 @@ func (r *baselineRun) decision(ctx context.Context, db *pgxpool.Pool, row experi
 	if consumed == nil || challengeDecision == nil || *challengeDecision != row["decision_id"] || requestHash != row["request_hash"] {
 		return fmt.Errorf("challenge and decision association mismatch")
 	}
-	if d["quote_id"] != nil {
-		row["quote_id"] = d["quote_id"]
-	}
-	if d["order_id"] != nil {
-		row["order_id"] = d["order_id"]
-	}
-
 	return nil
 }
 
@@ -105,7 +101,9 @@ func (r *baselineRun) orderCheck(ctx context.Context, db *pgxpool.Pool, c experi
 	if err = tx.QueryRow(ctx, `SELECT count(*) FROM orders WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND idempotency_key=$4`, r.d.DeploymentID, row["actor"], row["task_id"], row["idempotency_key"]).Scan(&ownOrders); err != nil {
 		return err
 	}
-	pass := row["http_status"] == c.ExpectedStatus && row["code"] == c.ExpectedCode && quoteAmount == c.AmountMinor && qActor == row["actor"] && qTask == row["task_id"] && consumed != nil && challengeDecision != nil && *challengeDecision == row["decision_id"] && requestHash == row["request_hash"] && row["failure_stage"] == nil
+	httpOK := row["http_status"] == c.ExpectedStatus && row["code"] == c.ExpectedCode && row["failure_stage"] == nil
+	primaryOK := quoteAmount == c.AmountMinor && qActor == row["actor"] && qTask == row["task_id"] &&
+		consumed != nil && challengeDecision != nil && *challengeDecision == row["decision_id"] && requestHash == row["request_hash"]
 	if c.AmountMinor == 80000 {
 		var id, status, decision, qid string
 		var amount int64
@@ -124,11 +122,16 @@ func (r *baselineRun) orderCheck(ctx context.Context, db *pgxpool.Pool, c experi
 			}
 			check["order_key_status"] = keyStatus
 		}
-		pass = pass && after == before+1 && keys == 1 && ownOrders == 1 && outcome == "ALLOW" && code == "ALLOW" && id == row["order_id"] && status == "CREATED" && decision == row["decision_id"] && qid == quoteID && amount == c.AmountMinor && keyStatus == "COMPLETED" && keyResource == id && keyDecision == decision
+		httpOK = httpOK && id != "" && row["order_id"] == id && row["quote_id"] == quoteID &&
+			row["order_status"] == "CREATED" && row["order_amount_minor"] == c.AmountMinor
+		primaryOK = primaryOK && after == before+1 && keys == 1 && ownOrders == 1 && outcome == "ALLOW" && code == "ALLOW" &&
+			status == "CREATED" && decision == row["decision_id"] && qid == quoteID && amount == c.AmountMinor &&
+			keyStatus == "COMPLETED" && keyResource == id && keyDecision == decision
 	} else {
-		pass = pass && after == before && ownOrders == 0 && keys == 0 && outcome == "DENY" && code == "AMOUNT_LIMIT_EXCEEDED"
+		httpOK = httpOK && row["order_id"] == nil
+		primaryOK = primaryOK && after == before && ownOrders == 0 && keys == 0 && outcome == "DENY" && code == "AMOUNT_LIMIT_EXCEEDED"
 	}
-	if pass {
+	if httpOK && primaryOK {
 		check["verdict"] = "PASS"
 		check["failure_reason"] = nil
 	} else {

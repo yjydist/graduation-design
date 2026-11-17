@@ -360,10 +360,12 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 		})
 		if err = r.decision(ctx, db, qrow); err != nil {
 			r.failureRow(qrow, "quote-check", err)
-			qrow["failure_stage"] = "quote-check"
+			if qrow["failure_stage"] == nil {
+				qrow["failure_stage"] = "quote-check"
+			}
 		}
 		quoteID, _ := qrow["quote_id"].(string)
-		if qrow["disposition"] != "allowed" || quoteID == "" {
+		if qrow["disposition"] != "allowed" || qrow["failure_stage"] != nil || quoteID == "" {
 			orow["failure_stage"] = "quote-dependency"
 			check["failure_reason"] = "quote dependency failed"
 			continue
@@ -377,7 +379,9 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 		})
 		if err = r.decision(ctx, db, orow); err != nil {
 			r.failureRow(orow, "order-decision", err)
-			orow["failure_stage"] = "order-decision"
+			if orow["failure_stage"] == nil {
+				orow["failure_stage"] = "order-decision"
+			}
 		}
 		r.checkOrder(ctx, db, c, orow, check, before, quoteID)
 		active = nil
@@ -399,16 +403,20 @@ func (r *baselineRun) action(ctx context.Context, row experiment.Row, cache *pro
 	row["finished_at"] = time.Now().UTC()
 	row["signature_cache_hits"] = cache.Hits() - hits
 	row["signature_cache_misses"] = cache.Misses() - misses
-	if errors.Is(call.Err(), context.DeadlineExceeded) && row["http_status"] == nil {
+	if row["disposition"] == "timeout" || errors.Is(call.Err(), context.DeadlineExceeded) || errors.Is(err, context.DeadlineExceeded) {
+		if row["disposition"] != "timeout" {
+			row["failure_stage"] = "wallet"
+		}
 		row["disposition"] = "timeout"
-		row["failure_stage"] = "challenge"
 		err = context.DeadlineExceeded
 	}
 	if err != nil {
-		if errors.Is(call.Err(), context.DeadlineExceeded) {
-			row["disposition"] = "timeout"
+		stage, _ := row["failure_stage"].(string)
+		if stage == "" {
+			stage = "wallet"
+			row["failure_stage"] = stage
 		}
-		r.failureRow(row, "wallet", err)
+		r.failureRow(row, stage, err)
 	}
 }
 
@@ -443,7 +451,10 @@ func (r *baselineRun) observe(next http.Handler, current func() experiment.Row) 
 			}
 		}
 		next.ServeHTTP(rec, req)
-		if req.URL.Path == "/v1/auth/challenges" {
+		var stage string
+		switch req.URL.Path {
+		case "/v1/auth/challenges":
+			stage = "challenge"
 			row["challenge_ns"] = time.Since(start).Nanoseconds()
 			if rec.Code == 201 {
 				var c gateway.ChallengeResponse
@@ -451,8 +462,8 @@ func (r *baselineRun) observe(next http.Handler, current func() experiment.Row) 
 					row["challenge_id"] = c.ChallengeID
 				}
 			}
-		}
-		if req.URL.Path == "/v1/access/execute" {
+		case "/v1/access/execute":
+			stage = "execute"
 			row["execute_ns"] = time.Since(start).Nanoseconds()
 			row["http_status"] = rec.Code
 			row["request_id"] = rec.Header().Get("X-Request-Id")
@@ -477,6 +488,8 @@ func (r *baselineRun) observe(next http.Handler, current func() experiment.Row) 
 				if body.Order != nil {
 					row["quote_id"] = body.Order.QuoteID
 					row["order_id"] = body.Order.OrderID
+					row["order_status"] = body.Order.Status
+					row["order_amount_minor"] = body.Order.TotalAmountMinor
 				}
 			}
 			row["disposition"] = "error"
@@ -487,6 +500,10 @@ func (r *baselineRun) observe(next http.Handler, current func() experiment.Row) 
 				row["disposition"] = "denied"
 			}
 			row["failure_stage"] = nil
+		}
+		if stage != "" && errors.Is(req.Context().Err(), context.DeadlineExceeded) {
+			row["disposition"] = "timeout"
+			row["failure_stage"] = stage
 		}
 		for key, values := range rec.Header() {
 			for _, v := range values {

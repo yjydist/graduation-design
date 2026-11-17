@@ -5,6 +5,8 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"graduation-design/internal/experiment"
 	api "graduation-design/internal/fabricapi"
+	"graduation-design/internal/gateway"
 )
 
 func newBaselineTestRun(t *testing.T) *baselineRun {
@@ -83,6 +86,42 @@ func TestBaselineManagedFailuresRetainPlan(t *testing.T) {
 	})
 }
 
+func TestBaselineExecuteDeadlineRetainsResponse(t *testing.T) {
+	r := newBaselineTestRun(t)
+	r.options.RequestTimeout = 10 * time.Millisecond
+	row := r.evidence.Requests[1]
+	handler := r.observe(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		<-req.Context().Done()
+		w.Header().Set("X-Request-Id", "timed-out-order")
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}), func() experiment.Row { return row })
+
+	r.action(t.Context(), row, nil, func(ctx context.Context) error {
+		req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/access/execute", strings.NewReader(`{"challengeId":"challenge"}`))
+		handler.ServeHTTP(httptest.NewRecorder(), req)
+		// The wallet can return a 503 result with no Go error.
+		return nil
+	})
+
+	if row["disposition"] != "timeout" || row["failure_stage"] != "execute" ||
+		row["http_status"] != http.StatusServiceUnavailable || row["request_id"] != "timed-out-order" ||
+		row["challenge_id"] != "challenge" || row["decision_id"] != nil || row["execute_ns"] == nil {
+		t.Fatalf("execution timeout lost observations or stage: %v", row)
+	}
+	account := r.evidence.Account()
+	if account["started"] != 1 || account["completed"] != 0 || account["timeout"] != 1 || account["error"] != 0 {
+		t.Fatalf("incorrect execution timeout accounting: %v", account)
+	}
+	failures := r.evidence.Summary["failures"].([]any)
+	if len(failures) != 1 {
+		t.Fatalf("expected one timeout failure, got %v", failures)
+	}
+	failure := failures[0].(map[string]any)
+	if failure["failure_stage"] != "execute" || failure["reason"] != "deadline exceeded" || failure["request_id"] != row["request_id"] {
+		t.Fatalf("incorrect execution timeout summary: %v", failure)
+	}
+}
+
 func assertBaselineFiles(t *testing.T, dir string) {
 	t.Helper()
 	for _, file := range []string{"manifest.json", "requests.csv", "order_checks.csv", "summary.json"} {
@@ -107,6 +146,88 @@ func assertBaselineFiles(t *testing.T, dir string) {
 		if err != nil || len(rows) != count {
 			t.Fatalf("incomplete %s: %d %v", file, len(rows), err)
 		}
+	}
+}
+
+func TestBaselineChecksHTTPOrderAndPrimaryIndependently(t *testing.T) {
+	cfg := testPgPool(t).Config().Copy()
+	cfg.MaxConns = 1 // Keep the test tables local to one database session.
+	db, err := pgxpool.NewWithConfig(t.Context(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err = db.Exec(t.Context(), `
+		CREATE TEMP TABLE decisions (deployment_id text, decision_id text, request_id text,
+			challenge_id text, task_id text, actor text, idempotency_key text, outcome text, code text,
+			quote_id text, order_id text);
+		CREATE TEMP TABLE challenges (deployment_id text, challenge_id text,
+			consumed_at bigint, decision_id text, request_hash text);
+		CREATE TEMP TABLE orders (deployment_id text, task_id text, actor text, idempotency_key text,
+			order_id text, status text, decision_id text, quote_id text, total_amount_minor bigint);
+		CREATE TEMP TABLE business_keys (deployment_id text, actor text, task_id text, action text,
+			idempotency_key text, status text, resource_id text, decision_id text);
+		CREATE TEMP TABLE quotes (deployment_id text, quote_id text, total_amount_minor bigint, actor text, task_id text);
+		INSERT INTO decisions VALUES ('test','decision','request','challenge','task','actor','key','ALLOW','ALLOW','quote','order');
+		INSERT INTO challenges VALUES ('test','challenge',1,'decision','hash');
+		INSERT INTO orders VALUES ('test','task','actor','key','order','CREATED','decision','quote',80000);
+		INSERT INTO business_keys VALUES ('test','actor','task','order.create','key','COMPLETED','order','decision');
+		INSERT INTO quotes VALUES ('test','quote',80000,'actor','task');`); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name          string
+		order         *gateway.OrderDTO
+		decisionError bool
+		badPrimary    bool
+		verdict       string
+	}{
+		{name: "matching", order: &gateway.OrderDTO{OrderID: "order", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 80000}, verdict: "PASS"},
+		{name: "missing-order", decisionError: true, verdict: "FAIL"},
+		{name: "wrong-order-id", order: &gateway.OrderDTO{OrderID: "wrong", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 80000}, decisionError: true, verdict: "FAIL"},
+		{name: "wrong-quote-id", order: &gateway.OrderDTO{OrderID: "order", QuoteID: "wrong", Status: "CREATED", TotalAmountMinor: 80000}, decisionError: true, verdict: "FAIL"},
+		{name: "wrong-status", order: &gateway.OrderDTO{OrderID: "order", QuoteID: "quote", Status: "WRONG", TotalAmountMinor: 80000}, verdict: "FAIL"},
+		{name: "wrong-amount", order: &gateway.OrderDTO{OrderID: "order", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 120000}, verdict: "FAIL"},
+		{name: "wrong-primary-key-status", order: &gateway.OrderDTO{OrderID: "order", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 80000}, badPrimary: true, verdict: "FAIL"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			keyStatus := "COMPLETED"
+			if tc.badPrimary {
+				keyStatus = "IN_PROGRESS"
+			}
+			if _, err := db.Exec(t.Context(), `UPDATE business_keys SET status=$1`, keyStatus); err != nil {
+				t.Fatal(err)
+			}
+			r := newBaselineTestRun(t)
+			row, check := r.evidence.Requests[1], r.evidence.Orders[0]
+			row["task_id"], row["actor"], row["idempotency_key"], row["quote_id"] = "task", "actor", "key", "quote"
+			r.options.RequestTimeout = time.Second
+			handler := r.observe(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("X-Request-Id", "request")
+				err := json.NewEncoder(w).Encode(gateway.ExecuteResponse{DecisionID: "decision", Code: "ALLOW", Order: tc.order})
+				if err != nil {
+					t.Fatal(err)
+				}
+			}), func() experiment.Row { return row })
+			r.action(t.Context(), row, nil, func(ctx context.Context) error {
+				req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/access/execute", strings.NewReader(`{"challengeId":"challenge"}`))
+				handler.ServeHTTP(httptest.NewRecorder(), req)
+				return nil
+			})
+			row["request_hash"] = "hash"
+			httpID, httpQuoteID := row["order_id"], row["quote_id"]
+			if err := r.decision(t.Context(), db, row); (err != nil) != tc.decisionError {
+				t.Fatalf("unexpected decision check result: %v", err)
+			}
+			if row["order_id"] != httpID || row["quote_id"] != httpQuoteID {
+				t.Fatalf("database lookup overwrote HTTP evidence: %v", row)
+			}
+			r.checkOrder(t.Context(), db, r.inputs.Cases[0], row, check, 0, "quote")
+			if check["verdict"] != tc.verdict || check["order_id"] != "order" || check["order_status"] != "CREATED" {
+				t.Fatalf("unexpected order check: %v", check)
+			}
+		})
 	}
 }
 

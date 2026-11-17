@@ -36,3 +36,9 @@
 一次默认并行包测试中, `TestM3AgentReconcileOrderCreatedAndNotCreatedS63` 收到回执 `503`. [原失败事件](../../../infra/fabric/evidence/baseline/validation/final-unit-test-events.jsonl)和[PostgreSQL 日志](../../../infra/fabric/evidence/baseline/validation/migration-deadlock.log)显示多个测试包共用 schema 时, 迁移 DDL 与回执事务形成死锁. [单项复查](../../../infra/fabric/evidence/baseline/validation/reconcile-recheck.log)及全量顺序包执行通过. 未修改本变更范围外的迁移与在线业务并发调度; 运行说明已给出顺序包回归命令, 各测试内部的显式并发仍保留.
 
 早期接线运行和测试生成器样本均保留, 最终对比采用相同源码指纹的 round5/round6. 本轮验证业务一致性和可重建性, 不据此推导性能优劣或真实 LLM 的正式实验结论.
+
+## 独立核验后的修复
+
+- HTTP 订单响应与主库结果分别校验. 回归覆盖响应缺少订单, 订单 ID, 报价 ID, 状态或金额不符, 以及响应正确但主库订单键未完成的情况.
+- 执行阶段超时记为 `timeout` 和 `execute`, 并保留已观测到的 HTTP 状态及关联 ID. 回归覆盖执行期限耗尽后返回 `503` 的情况.
+- 两项回归在原实现上失败, 在修复后通过. 全量串行 Go 测试和 OpenSpec 严格校验通过. 修复后以 `1109` 在新隔离实例复跑一轮, 核对到 12 次询价允许, 6 笔 800 元唯一订单, 6 次 1200 元超额拒绝及 62 次 B1 缓存命中. round5/round6 保留修复前的实际源码指纹和原始结果.

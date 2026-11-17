@@ -1,0 +1,5 @@
+--- FAIL: TestCentralBusinessDecisionsWithoutFabric (0.13s)
+    central_test.go:220: C0 decision evidence for urn:grad:decision:c47a69be-331d-4ec5-9f1d-74e4ad385375 has checked_mono_ns=0, want NULL
+FAIL
+FAIL	graduation-design/internal/gateway	0.763s
+FAIL

@@ -1,0 +1,22 @@
+{
+  "command": "go test -json -count=1 -p 1 ./...",
+  "database": "isolated PostgreSQL 17.9",
+  "packages_passed": [
+    "graduation-design/chaincode/registry",
+    "graduation-design/internal/agent",
+    "graduation-design/internal/experiment",
+    "graduation-design/internal/fabric",
+    "graduation-design/internal/fabricapi",
+    "graduation-design/internal/gateway",
+    "graduation-design/internal/policy",
+    "graduation-design/internal/protocol",
+    "graduation-design/internal/serviceauth"
+  ],
+  "test_pass_events": 206,
+  "tests_skipped": [
+    "TestInterruptedInitialization",
+    "TestDeploymentResumesAfterCommittedInitialization",
+    "TestM3LiveAcceptance"
+  ],
+  "failures": []
+}

@@ -207,6 +207,19 @@ func TestCentralBusinessDecisionsWithoutFabric(t *testing.T) {
 			if err := h.pool.QueryRow(t.Context(), `SELECT block_number IS NULL AND block_hash IS NULL AND probe_tx_id IS NULL AND probe_deadline IS NULL FROM decisions WHERE deployment_id=$1 AND decision_id=$2`, h.depID, response.DecisionID).Scan(&nulls); err != nil || !nulls {
 				t.Fatalf("C0 persisted invented Fabric metadata: %v", err)
 			}
+			allowedDecisions := []string{qr.DecisionID}
+			if want == 200 {
+				allowedDecisions = append(allowedDecisions, response.DecisionID)
+			}
+			for _, decisionID := range allowedDecisions {
+				var checkedMonoNs *int64
+				if err := h.pool.QueryRow(t.Context(), `SELECT checked_mono_ns FROM decision_evidence WHERE deployment_id=$1 AND decision_id=$2`, h.depID, decisionID).Scan(&checkedMonoNs); err != nil {
+					t.Fatalf("read C0 decision evidence for %s: %v", decisionID, err)
+				}
+				if checkedMonoNs != nil {
+					t.Fatalf("C0 decision evidence for %s has checked_mono_ns=%d, want NULL", decisionID, *checkedMonoNs)
+				}
+			}
 		}
 	}
 }

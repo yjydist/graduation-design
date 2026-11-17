@@ -1,0 +1,4 @@
+=== RUN   TestCentralBusinessDecisionsWithoutFabric
+--- PASS: TestCentralBusinessDecisionsWithoutFabric (0.27s)
+PASS
+ok  	graduation-design/internal/gateway	0.804s

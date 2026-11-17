@@ -864,7 +864,7 @@ func (s *Server) executeInTx(
 	if err != nil {
 		return nil, false, err
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO decision_evidence(deployment_id,decision_id,package_json,did_documents,checked_mono_ns) VALUES($1,$2,$3,$4,$5)`, s.cfg.DeploymentID, decID, evidenceJSON, docsJSON, probe.CheckedMonoNs); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO decision_evidence(deployment_id,decision_id,package_json,did_documents,checked_mono_ns) VALUES($1,$2,$3,$4,$5)`, s.cfg.DeploymentID, decID, evidenceJSON, docsJSON, checkedProbe(pre.view, probe)); err != nil {
 		return nil, false, err
 	}
 

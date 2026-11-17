@@ -2,6 +2,10 @@
 
 ## M4 采购基线
 
+C0 探针证据修复后的两轮干净重建各通过 12 个采购用例. 直接查库确认每轮 C0 六条允许决定的证据附表探针时点均为 `NULL`, B0/B1 共 12 条允许决定的附表时点与主表一致并位于原探针有效区间. [修复后双轮对照](baseline/verification/c0-evidence-null-fix/comparison.json), [原始文件与回归](../../../openspec/changes/m4-reproducible-baseline/verification.md#c0-探针证据修复后复核)
+
+提交 `6e10507` 的两次干净重建均通过 12 个采购用例及登记回读的独立复算. 逐行复核两轮共 48 条挑战与决定关联, 并在修复前样本中记录 C0 证据附表的探针时点为 0. [双轮对照](baseline/verification/commit-6e10507/comparison.json), [原始文件及故障样本](../../../openspec/changes/m4-reproducible-baseline/verification.md#提交-6e10507-的双轮复核)
+
 `m4-reproducible-baseline` 修复三项核验警告后完成两次新环境重建, 两轮均通过 12 个订单用例, 夹具, 矩阵与业务事实一致. [核验报告](../../../openspec/changes/m4-reproducible-baseline/verification.md)定位两轮的四个原始文件, 挑战失败样本和数据库回归. [修复后两轮比对](baseline/verification/fixes/comparison.json)
 
 登记摘要修复后, 用种子 `1109` 从两个独立空实例重建. 两轮的共同锚点均从实际库独立复算并匹配清单, 各来源的检查点及对象版本均可追溯. [两轮对照](baseline/verification/registry-readback-fixed/comparison.json), [原始文件索引](../../../openspec/changes/m4-reproducible-baseline/verification.md#登记回读修复后复跑)

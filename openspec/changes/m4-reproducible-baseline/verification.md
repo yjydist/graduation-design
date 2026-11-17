@@ -1,23 +1,48 @@
 # m4-reproducible-baseline 核验报告
 
-使用本地 `spec-driven` 工作流, 对照提案, 设计, 任务和增量规范. 采购双轮复跑基于 `29e93be`, 109 项 `artifact_locks` 均与该提交匹配. 实例隔离修复另有回归和实机复核. 早期实机证据按原源码指纹保留.
+使用本地 `spec-driven` 工作流, 对照提案, 设计, 任务和增量规范核验基于 `6e10507` 的 C0 探针证据修复. 两轮独立重建的 109 项 `artifact_locks` 均与核验源码和配置匹配, 包含修复及回归断言. 早期实机证据按原源码指纹保留.
 
 ## 汇总
 
 | 维度 | 结论 |
 | --- | --- |
 | 完整性 | 13/13 项任务完成, 4/4 项新增需求均有实现 |
-| 正确性 | 4/4 项需求完成实现映射, 6/6 个场景通过核对. 修复后两次干净重建的登记回读及全部配对用例通过 |
-| 一致性 | 已核对设计与代码模式. 默认实例的目录身份检查已通过回归 |
+| 正确性 | 4/4 项需求完成实现映射, 6/6 个场景通过核验. 两轮登记回读和各 12 个采购用例通过. C0 主表及证据附表的探针字段均为空 |
+| 一致性 | 设计与代码模式通过核对. 决策主表与证据附表复用 `checkedProbe` |
 
 ## 需求与场景核对
 
 | 需求 | 实现与核验证据 |
 | --- | --- |
 | 三种对照配置共享业务准入语义 | `internal/fabric/baseline.go:286` 装配三个网关配置. `internal/gateway/execute.go:166` 执行共同初验. 两轮 C0/B0 缓存计数为零, B1 各命中 62 次. B1 更新状态后拒绝失效材料的回归通过. 新订单超额检查先于最终 OPA 求值 |
-| C0 使用可在锁后复核的中心化一致快照 | `internal/centralstate/source.go:102` 在一次只读一致事务读取登记快照, 业务事务内以共享锁复核版本. `internal/gateway/central_test.go:214` 复现锁等待期间版本由 1 推进到 2, 最终决定记录版本 2 和一次重验. 一致快照, 缺依赖停止装配, C0 独立业务决定以及旧 Fabric 决策迁移回归通过 |
+| C0 使用可在锁后复核的中心化一致快照 | `internal/centralstate/source.go:102` 在一次只读一致事务读取登记快照, 业务事务内以共享锁复核版本. `internal/gateway/central_test.go:227` 复现锁等待期间版本由 1 推进到 2, 最终决定记录版本 2 和一次重验. 一致快照, 缺依赖停止装配, C0 独立业务决定以及旧 Fabric 决策迁移回归通过 |
 | 使用固定夹具和可查询的实验记录复跑 | `internal/experiment/fixture.go` 固定夹具, `internal/experiment/evidence.go:73` 导出四文件. `internal/fabric/baseline_registry.go:87` 比对已提交的登记锚点. 登记缺失或不匹配, 挑战失败, 执行超时和主库查询失败的回归通过. 早期真实准备失败保留 24 条 `dropped` 记录并以退出码 1 结束 |
 | 首轮三组配对核对两档订单的业务结果 | `internal/fabric/baseline_checks.go:66` 核对 HTTP 结果, 挑战消费, 创建决定和主库副作用. 两轮均有 12 次询价允许, 6 笔 800 元唯一订单和 6 次 1200 元超额拒绝. 拒绝侧新增订单与订单键均为 0 |
+
+## C0 探针证据修复后复核
+
+`internal/gateway/execute.go:867` 复用 `checkedProbe` 写入 `decision_evidence.checked_mono_ns`. `internal/gateway/central_test.go:211` 对 RP/BM 的允许询价和允许下单查库, 断言附表存在且该字段为 `NULL`. 新断言在修复前复现值为 0, 修复后通过. [修复前回归](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/regression-before.log), [修复后回归](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/regression-after.log)
+
+使用种子 `1109` 从两个独立空实例重建. 直接查库确认每轮 C0 六条允许决定的附表字段全部为 `NULL`, B0/B1 共 12 条允许决定的附表时点均等于主表记录, 且落在原探针的有效区间. 每轮 24 条挑战与决定正确关联, 39 条登记锚点的回读摘要匹配, 12 次询价允许, 6 笔 800 元订单创建, 6 次 1200 元超额拒绝均无订单或订单业务键. B1 每轮命中 62 次. [修复后双轮对照](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/comparison.json)
+
+| 运行 | 原始证据 |
+| --- | --- |
+| 第一轮 | [清单](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/round-1/manifest.json), [请求](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/round-1/requests.csv), [主库核对](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/round-1/order_checks.csv), [汇总](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/round-1/summary.json) |
+| 第二轮 | [清单](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/round-2/manifest.json), [请求](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/round-2/requests.csv), [主库核对](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/round-2/order_checks.csv), [汇总](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/round-2/summary.json) |
+
+独立 PostgreSQL 串行回归通过 9 个包, 共 206 个测试及子测试通过事件, 两项 Fabric 初始化专项和一项 M3 实机测试未配置. OpenSpec 严格校验通过. [回归汇总](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/test-summary.json), [OpenSpec 严格校验](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/openspec-validation.json)
+
+## 提交 `6e10507` 的双轮复核
+
+用种子 `1109` 从两个独立空实例重建. 两轮分别从 C0 主库和 Fabric 块高 41 的历史视图独立复算 T 根和 39 条共同登记记录的摘要, 均匹配清单. 逐行核对两轮共 48 条请求的挑战及决定关联, 以及 24 条订单用例的主库结果. 每轮有 12 次询价允许, 6 笔 800 元唯一订单和 6 次 `403 AMOUNT_LIMIT_EXCEEDED`. 六次拒绝均无订单或订单业务键. 每轮 B1 命中 62 次, C0/B0 均为 0. 逻辑夹具摘要, 用例矩阵及规范化业务事实跨轮一致. [独立比对](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/comparison.json)
+
+| 运行 | 原始证据 |
+| --- | --- |
+| 第一轮 | [清单](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/round-1/manifest.json), [请求](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/round-1/requests.csv), [主库核对](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/round-1/order_checks.csv), [汇总](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/round-1/summary.json) |
+| 第二轮 | [清单](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/round-2/manifest.json), [请求](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/round-2/requests.csv), [主库核对](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/round-2/order_checks.csv), [汇总](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/round-2/summary.json) |
+| 准备失败 | [清单](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/fault-preparation/manifest.json), [请求](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/fault-preparation/requests.csv), [主库核对](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/fault-preparation/order_checks.csv), [汇总](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/fault-preparation/summary.json), [退出码](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/fault-preparation.exit) |
+
+缺失实例的 CLI 样本以退出码 1 结束, 四文件保留全部 24 个动作, 均标记为 `dropped` 和 `preparation`. 独立 PostgreSQL 串行回归通过 9 个包, 共 206 个测试及子测试通过事件, 两项 Fabric 初始化专项和一项 M3 实机测试未配置. OpenSpec 严格校验通过. [回归汇总](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/test-summary.json)
 
 ## 早期实测证据
 
@@ -42,6 +67,7 @@
 
 4. **清单的登记摘要取值来源.** 修复前两项摘要取自同一份预置输入, 同轮 A 域对象在 C0 和 Fabric 的版本分别为 1 和 3. 修复后清单以 `registry_input_digest` 标注预置输入, 两种来源分别计算锚点摘要并记录检查点和对象版本. `TestBaselineRegistryReadbackUsesStoredAnchors` 验证不同对象版本可通过, 更新已登记委托摘要以及删除委托记录均使回读失败, 比对结果或部分回读证据仍可追溯. [修复前数据库回读](../../../infra/fabric/evidence/baseline/verification/registry-readback/readback.json)
 5. **默认实例的符号链接绕过.** 修复前经符号链接指定默认实例时, 入口写入 `baseline-run` 后才因已有夹具退出. `internal/fabric/baseline.go:240` 现在先解析目标路径, 用 `os.SameFile` 比较已打开目录和默认目录, 再通过同一个已打开目录独占创建标记. `TestBaselineRejectsDefaultInstanceAliases` 覆盖直接指定默认路径, 目标路径为符号链接, 默认路径为符号链接三种情况. 两种符号链接回归均在修复前复现写入, 修复后确认写入前拒绝. `TestBaselineClaimsIsolatedInstanceThroughAlias` 验证独立实例可通过链接占用, 重复占用保留首次标记.
+6. **C0 决策证据附表的探针核验时点.** 修复前两轮各有 6 条 C0 允许决定在附表写入 0. 复用 `checkedProbe` 后, 两轮各 6 条 C0 允许决定的附表字段均为 `NULL`, 已由直接查库和回归断言确认. [修复前主库复核](../../../infra/fabric/evidence/baseline/verification/commit-6e10507/comparison.json), [修复后双轮对照](../../../infra/fabric/evidence/baseline/verification/c0-evidence-null-fix/comparison.json)
 
 早期故障和配对样本继续按原源码指纹保留. [故障日志](../../../infra/fabric/evidence/baseline/verification/boundary-tests.log), [测试补丁](../../../infra/fabric/evidence/baseline/verification/boundary-tests.patch), [配对比较](../../../infra/fabric/evidence/baseline/verification/comparison.json), [准备失败样本](../../../infra/fabric/evidence/baseline/verification/fault-preparation/summary.json)
 
@@ -72,4 +98,4 @@
 
 ## 归档评估
 
-任务完成, 规范覆盖, 需求实现映射, 场景覆盖, 设计遵循和代码模式一致性均已核对. 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION. 可进入归档工作流.
+任务完成, 规范覆盖, 需求实现映射, 场景覆盖, 设计遵循和代码模式一致性均已通过核验. 0 项 CRITICAL, 0 项 WARNING, 0 项 SUGGESTION. 可归档.

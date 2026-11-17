@@ -3,6 +3,8 @@ package fabric
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -165,7 +167,7 @@ func (r *baselineRun) compare() bool {
 					ok = false
 				}
 			} else {
-				if row["revision"] != nil || row["state_read_at"] != nil || row["block_number"] == nil || row["probe_tx_id"] == nil {
+				if row["revision"] != nil || row["state_read_at"] != nil || !validBaselineFabricEvidence(row) {
 					ok = false
 				}
 			}
@@ -217,6 +219,34 @@ func (r *baselineRun) compare() bool {
 	r.evidence.Summary["case_results"] = caseResults
 	r.evidence.Summary["pair_results"] = pairResults
 	return passed
+}
+
+func validBaselineFabricEvidence(row experiment.Row) bool {
+	blockHash, _ := row["block_hash"].(string)
+	hash, err := hex.DecodeString(blockHash)
+	probeTxID, _ := row["probe_tx_id"].(string)
+	probeSent, _ := row["probe_sent_at"].(time.Time)
+	probeDeadline, _ := row["probe_deadline"].(time.Time)
+	if err != nil || len(hash) != sha256.Size || probeTxID == "" || probeSent.IsZero() || !probeSent.Before(probeDeadline) {
+		return false
+	}
+	block, blockOK := baselineDecisionInt(row, "block_number")
+	probeBlock, probeBlockOK := baselineDecisionInt(row, "probe_block")
+	sent, sentOK := baselineDecisionInt(row, "probe_sent_mono_ns")
+	deadline, deadlineOK := baselineDecisionInt(row, "probe_deadline_mono_ns")
+	checked, checkedOK := baselineDecisionInt(row, "probe_checked_mono_ns")
+	return blockOK && probeBlockOK && sentOK && deadlineOK && checkedOK &&
+		probeBlock >= 0 && probeBlock <= block && sent >= 0 && sent <= checked && checked < deadline
+}
+
+// The decision JSON decoder retains integer precision for checkpoints and monotonic timestamps.
+func baselineDecisionInt(row experiment.Row, key string) (int64, bool) {
+	number, ok := row[key].(json.Number)
+	if !ok {
+		return 0, false
+	}
+	value, err := number.Int64()
+	return value, err == nil
 }
 
 func delta(row experiment.Row) any {

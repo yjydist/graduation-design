@@ -1,0 +1,42 @@
+--- a/internal/fabric/baseline_test.go
++++ b/internal/fabric/baseline_test.go
+@@ -269,6 +269,16 @@
+ 	if !r.compare() {
+ 		t.Fatal("expected denial did not pass paired checks")
+ 	}
++	t.Run("missing-fabric-evidence", func(t *testing.T) {
++		fabric := r.evidence.Requests[8]
++		delete(fabric, "block_hash")
++		delete(fabric, "probe_deadline")
++		delete(fabric, "probe_deadline_mono_ns")
++		delete(fabric, "probe_checked_mono_ns")
++		if r.compare() {
++			t.Fatal("acceptance passed with missing Fabric block hash and original probe deadline")
++		}
++	})
+ 	r.evidence.Orders[1]["order_key_rows"] = int64(1)
+ 	if r.compare() {
+ 		t.Fatal("cross-group comparison ignored denial side effect")
+@@ -310,3 +320,22 @@
+ 		t.Fatal("secret scan did not reject private key encoding")
+ 	}
+ }
++
++func TestVerificationChallengeHTTPFailureRecorded(t *testing.T) {
++	r := newBaselineTestRun(t)
++	r.options.RequestTimeout = time.Second
++	row := r.evidence.Requests[0]
++	handler := r.observe(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
++		w.Header().Set("X-Request-Id", "challenge-failure")
++		w.WriteHeader(http.StatusServiceUnavailable)
++		_, _ = w.Write([]byte(`{"code":"STATE_UNAVAILABLE","requestId":"challenge-failure"}`))
++	}), func() experiment.Row { return row })
++	r.action(t.Context(), row, nil, func(ctx context.Context) error {
++		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/auth/challenges", nil))
++		// The wallet returns an HTTP error status as its result with no Go error.
++		return nil
++	})
++	if row["http_status"] != http.StatusServiceUnavailable || row["failure_stage"] != "challenge" || row["request_id"] != "challenge-failure" {
++		t.Fatalf("challenge returned 503 STATE_UNAVAILABLE, evidence recorded status=%v stage=%v request_id=%v", row["http_status"], row["failure_stage"], row["request_id"])
++	}
++}

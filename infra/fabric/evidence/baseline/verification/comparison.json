@@ -1,0 +1,45 @@
+{
+  "source_commit": "8237ef0c9f1ce92b6c1fdf0c57705f5b4d7fef66",
+  "seed": 1109,
+  "fixture_digest": "47e91ed3d170b501914cad44dd5309646bd5c5e458e53a2b9ec0beca1fcc20a5",
+  "policy_source_digest": "cf510d733d0c865f915c71162c15c1ca77f26a23869928d1777c212e175ab781",
+  "artifact_locks_matching_current_checkout": 108,
+  "same_planned_cases": true,
+  "same_business_facts": true,
+  "distinct_deployments_roots_and_signed_materials": true,
+  "distinct_requests_challenges_and_decisions": true,
+  "runs": [
+    {
+      "directory": "round2",
+      "run_id": "baseline-f2aff15184c06f22",
+      "deployment_id": "b956d85f146aa391a0d297a43ed328b236434a908d5aff8bb8fb3bae72f9780f",
+      "centralized_database": "baseline_verify_current_2",
+      "distinct_challenges": 24,
+      "distinct_decisions": 24,
+      "quote_allowed": 12,
+      "orders_created": 6,
+      "orders_denied": 6,
+      "denied_order_rows_added": 0,
+      "denied_order_key_rows": 0,
+      "b1_cache_hits": 62,
+      "fabric_decisions_with_valid_probe_and_hash": 16,
+      "private_pem_files_checked": 137
+    },
+    {
+      "directory": "round3",
+      "run_id": "baseline-cd36f03bef56dc5a",
+      "deployment_id": "b19ff74f8c14cc9d3cbf3a6a722468f3c3559f29d46a94e0ad8d2f0619158673",
+      "centralized_database": "baseline_verify_current_3",
+      "distinct_challenges": 24,
+      "distinct_decisions": 24,
+      "quote_allowed": 12,
+      "orders_created": 6,
+      "orders_denied": 6,
+      "denied_order_rows_added": 0,
+      "denied_order_key_rows": 0,
+      "b1_cache_hits": 62,
+      "fabric_decisions_with_valid_probe_and_hash": 16,
+      "private_pem_files_checked": 137
+    }
+  ]
+}

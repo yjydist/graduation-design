@@ -122,6 +122,96 @@ func TestBaselineExecuteDeadlineRetainsResponse(t *testing.T) {
 	}
 }
 
+func TestBaselineChallengeFailureRetainsResponse(t *testing.T) {
+	for _, action := range []string{"quote.read", "order.create"} {
+		t.Run(action, func(t *testing.T) {
+			r := newBaselineTestRun(t)
+			r.options.RequestTimeout = time.Second
+			quote, order, check := r.evidence.Requests[0], r.evidence.Requests[1], r.evidence.Orders[0]
+			row := quote
+			if action == "order.create" {
+				row = order
+			}
+			handler := r.observe(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.Header().Set("X-Request-Id", "challenge-failure")
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = w.Write([]byte(`{"code":"STATE_UNAVAILABLE","message":"private response detail"}`))
+			}), func() experiment.Row { return row })
+			r.action(t.Context(), row, nil, func(ctx context.Context) error {
+				req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/auth/challenges", nil)
+				handler.ServeHTTP(httptest.NewRecorder(), req)
+				// A non-201 challenge response can reach the wallet as an HTTP result without a Go error.
+				return nil
+			})
+			if action == "quote.read" {
+				if id := r.checkQuote(t.Context(), nil, quote, order, check); id != "" ||
+					order["disposition"] != "dropped" || order["failure_stage"] != "quote-dependency" {
+					t.Fatalf("failed quote challenge dispatched an order: %v", order)
+				}
+			} else {
+				r.checkDecision(t.Context(), nil, order, "order-decision")
+				r.checkOrder(t.Context(), nil, r.inputs.Cases[0], order, check, 0, "quote")
+				if check["failure_reason"] != "order challenge failed" || check["order_rows_after"] != nil || check["order_key_rows"] != nil {
+					t.Fatalf("order challenge failure invented primary database facts: %v", check)
+				}
+			}
+			if r.compare() {
+				t.Fatal("failed challenge passed paired checks")
+			}
+			if err := r.evidence.Save(); err != nil {
+				t.Fatal(err)
+			}
+			f, err := os.Open(filepath.Join(r.evidence.Directory, "requests.csv"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Close()
+			records, err := csv.NewReader(f).ReadAll()
+			if err != nil {
+				t.Fatal(err)
+			}
+			data := records[1]
+			if action == "order.create" {
+				data = records[2]
+			}
+			for i, name := range records[0] {
+				switch name {
+				case "http_status":
+					if data[i] != "503" {
+						t.Fatalf("lost HTTP status in CSV: %s", data[i])
+					}
+				case "code":
+					if data[i] != "STATE_UNAVAILABLE" {
+						t.Fatalf("lost error code in CSV: %s", data[i])
+					}
+				case "request_id":
+					if data[i] != "challenge-failure" {
+						t.Fatalf("lost request ID in CSV: %s", data[i])
+					}
+				case "challenge_id", "decision_id", "execute_ns":
+					if data[i] != "null" {
+						t.Fatalf("invented %s in CSV: %s", name, data[i])
+					}
+				}
+			}
+			failures := r.evidence.Summary["failures"].([]any)
+			if len(failures) != 1 {
+				t.Fatalf("expected one challenge failure, got %v", failures)
+			}
+			failure := failures[0].(map[string]any)
+			if failure["failure_stage"] != "challenge" || failure["http_status"] != 503 ||
+				failure["code"] != "STATE_UNAVAILABLE" || failure["request_id"] != "challenge-failure" ||
+				row["disposition"] != "error" || row["challenge_ns"] == nil || r.evidence.Account()["error"] != 1 {
+				t.Fatalf("incorrect challenge evidence: %v, %v", row, failure)
+			}
+			raw, err := os.ReadFile(filepath.Join(r.evidence.Directory, "summary.json"))
+			if err != nil || strings.Contains(string(raw), "private response detail") {
+				t.Fatalf("invalid summary or raw error message leaked: %v", err)
+			}
+		})
+	}
+}
+
 func assertBaselineFiles(t *testing.T, dir string) {
 	t.Helper()
 	for _, file := range []string{"manifest.json", "requests.csv", "order_checks.csv", "summary.json"} {
@@ -247,8 +337,15 @@ func TestBaselinePairedChecksRejectMissingOrInconsistentResults(t *testing.T) {
 				row["state_read_at"] = time.Now()
 			} else {
 				row["state_source"] = "fabric"
-				row["block_number"] = int64(1)
+				row["block_number"] = json.Number("4")
+				row["block_hash"] = api.Digest([]byte("block"))
 				row["probe_tx_id"] = "probe"
+				row["probe_block"] = json.Number("3")
+				row["probe_sent_at"] = time.Unix(100, 0)
+				row["probe_deadline"] = time.Unix(105, 0)
+				row["probe_sent_mono_ns"] = json.Number("1")
+				row["probe_deadline_mono_ns"] = json.Number("5000000001")
+				row["probe_checked_mono_ns"] = json.Number("5000000000")
 			}
 			if c.Configuration == "B1" {
 				row["signature_cache_hits"] = int64(8)
@@ -268,6 +365,39 @@ func TestBaselinePairedChecksRejectMissingOrInconsistentResults(t *testing.T) {
 	}
 	if !r.compare() {
 		t.Fatal("expected denial did not pass paired checks")
+	}
+	for _, tc := range []struct {
+		name, field string
+		value       any
+	}{
+		{name: "missing-checkpoint-height", field: "block_number"},
+		{name: "missing-block-hash", field: "block_hash"},
+		{name: "invalid-block-hash", field: "block_hash", value: "invalid"},
+		{name: "missing-probe-id", field: "probe_tx_id"},
+		{name: "missing-probe-block", field: "probe_block"},
+		{name: "probe-above-checkpoint", field: "probe_block", value: json.Number("5")},
+		{name: "missing-sent-time", field: "probe_sent_at"},
+		{name: "missing-wall-deadline", field: "probe_deadline"},
+		{name: "missing-monotonic-send", field: "probe_sent_mono_ns"},
+		{name: "missing-monotonic-deadline", field: "probe_deadline_mono_ns"},
+		{name: "missing-monotonic-check", field: "probe_checked_mono_ns"},
+		{name: "checked-before-send", field: "probe_checked_mono_ns", value: json.Number("0")},
+		{name: "checked-at-deadline", field: "probe_checked_mono_ns", value: json.Number("5000000001")},
+		{name: "checked-after-deadline", field: "probe_checked_mono_ns", value: json.Number("5000000002")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Cover the B0 quote and the B1 order paths.
+			for _, i := range []int{8, 17} {
+				row := r.evidence.Requests[i]
+				original := row[tc.field]
+				row[tc.field] = tc.value
+				passed := r.compare()
+				row[tc.field] = original
+				if passed {
+					t.Fatalf("invalid %s passed for %s %s", tc.field, row["configuration"], row["action"])
+				}
+			}
+		})
 	}
 	r.evidence.Orders[1]["order_key_rows"] = int64(1)
 	if r.compare() {

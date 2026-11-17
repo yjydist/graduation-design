@@ -1,0 +1,8 @@
+=== RUN   TestBaselineChallengeFailureRetainsResponse
+=== RUN   TestBaselineChallengeFailureRetainsResponse/quote.read
+=== RUN   TestBaselineChallengeFailureRetainsResponse/order.create
+--- PASS: TestBaselineChallengeFailureRetainsResponse (0.00s)
+    --- PASS: TestBaselineChallengeFailureRetainsResponse/quote.read (0.00s)
+    --- PASS: TestBaselineChallengeFailureRetainsResponse/order.create (0.00s)
+PASS
+ok  	graduation-design/internal/fabric	0.378s

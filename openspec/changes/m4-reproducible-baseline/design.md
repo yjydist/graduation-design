@@ -25,6 +25,8 @@ C0 受信预置器使用与 Fabric 相同的夹具登记输入和真实签名材
 
 决策记录按来源保存实际元数据. C0 写入 `revision` 和读取时点, 区块及探针列允许 `NULL`; Fabric 记录实际区块及探针, 保留原字段语义. Fabric 历史审计继续使用原区块与探针. 首轮 C0 证据通过 `revision`, 请求, 决策和主库核对关联.
 
+新订单在锁后依次核对报价归属, 期限, 请求金额及委托路径额度. 超额先以 `AMOUNT_LIMIT_EXCEEDED` 定案. 通过前置检查的请求使用锁住的风险上下文执行最终 OPA 求值.
+
 ### 2 冻结夹具与策略
 
 | 控制项 | 首轮规则 |
@@ -46,6 +48,8 @@ C0 受信预置器使用与 Fabric 相同的夹具登记输入和真实签名材
 
 验收以 HTTP 响应与主库两者为准. 800 元应新增一笔匹配报价的 `CREATED` 订单, 一条允许决定和一个已完成订单键. 1200 元应提交一条 `AMOUNT_LIMIT_EXCEEDED` 拒绝决定, 实际订单行和目标订单键均不存在. 两种结果均核对挑战与决定的关联. 每轮应有 12 次成功询价, 6 次允许下单和 6 次预期超额拒绝. 按 `(种子, 授权模式, 金额)` 比较三组的响应码, 业务结果和主库副作用. 核对 B1 在首个重复使用的签名材料上出现缓存命中, C0/B0 的计数始终为零. 只比较规范化后的业务事实与预期, 并保留每轮的实际状态, 随机 ID 和时点.
 
+B0/B1 的每个动作都须提供实际块高, SHA-256 块哈希, 原探针交易 ID, 探针所在块和墙钟及单调时点. 原探针所在块不得高于视图块高, 探针墙钟期限须晚于发送时点, 单调核验时点须不早于发送且严格早于原期限.
+
 ### 4 原始数据契约
 
 每次运行独占证据目录. JSON 和 CSV 使用 UTF-8, CSV 固定首行列名和列序, 按标准 CSV 规则转义, 以 `null` 表示缺测或不适用值. JSON 可空字段使用 JSON `null`. 绝对时间使用 UTC RFC 3339 格式, 允许小数秒. 单调时间和持续时间以纳秒记录, 用 `_ns` 后缀. 探针单调时点只在同一进程实例内比较. 金额, 计数, 版本和块高使用整数. `case_id` 由种子, 授权模式小写短名和分单位金额经连字符拼接, 如 `1109-rp-80000`. `run_id + configuration + case_id + action` 唯一标识动作, `action` 取 `quote.read` 或 `order.create`.
@@ -58,6 +62,8 @@ C0 受信预置器使用与 Fabric 相同的夹具登记输入和真实签名材
 | `summary.json` | `run_id`, `seed`, `passed`, `by_configuration_and_mode`, `case_results`, `pair_results`, `request_accounting`, `failures`. `case_results` 和 `pair_results` 按矩阵键列出期望, 实际及核验结果. `failures` 记录作用范围, 失败阶段, 可用的关联 ID 和脱敏原因 |
 
 `requests.csv` 每个计划动作恰有一行, 以 `allowed`, `denied`, `error`, `timeout`, `dropped` 表示实际结果. 未启动的计划动作为 `dropped`, 并标明原因. 汇总按 `planned = started + dropped`, `started = completed + timeout`, `completed = allowed + denied + error` 对账. 预期 `denied` 在用例汇总可判为通过. 未返回或未观察到的响应, 决定或时点用 `null`. B0/B1 的中心化字段以及 C0 的 Fabric 字段用 `null`. `order_checks.csv` 每个计划订单一行, 按数据库, 部署和任务统计前后订单行数, 按该次业务键查对应订单键和业务结果. 主库查询失败时保留查询失败原因和可读取的部分, 不推断不存在. 准备阶段失败也保存已知清单信息, 计划用例和汇总. 对外导出只含白名单字段, 摘要及经脱敏的错误信息.
+
+挑战接口返回非 201 时, `requests.csv` 和 `summary.json` 的失败记录均保留 `challenge` 阶段及已观测的 HTTP 状态, 错误码和请求 ID. 该动作以 `error` 对账, 请求超过期限时以 `timeout` 对账. 询价挑战失败后, 对应的订单动作为 `dropped`, 阶段为 `quote-dependency`. 订单自身的挑战失败时, 主库核对只保留已知信息和失败原因.
 
 ## 风险与取舍
 

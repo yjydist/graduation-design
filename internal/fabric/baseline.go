@@ -358,16 +358,8 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 			quoted, err = wallet.RequestQuote(call, agent.RequestQuoteInput{Actor: "B1", GrantID: leaf.ID, TaskID: task.ID, AuthorizationMode: c.Mode, ProductID: r.inputs.Fixture.Product, Quantity: 1, IdempotencyKey: qkey})
 			return err
 		})
-		if err = r.decision(ctx, db, qrow); err != nil {
-			r.failureRow(qrow, "quote-check", err)
-			if qrow["failure_stage"] == nil {
-				qrow["failure_stage"] = "quote-check"
-			}
-		}
-		quoteID, _ := qrow["quote_id"].(string)
-		if qrow["disposition"] != "allowed" || qrow["failure_stage"] != nil || quoteID == "" {
-			orow["failure_stage"] = "quote-dependency"
-			check["failure_reason"] = "quote dependency failed"
+		quoteID := r.checkQuote(ctx, db, qrow, orow, check)
+		if quoteID == "" {
 			continue
 		}
 		active = orow
@@ -377,12 +369,7 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 			_, err := wallet.CreateOrder(call, agent.CreateOrderInput{Actor: "B1", GrantID: leaf.ID, TaskID: task.ID, AuthorizationMode: c.Mode, QuoteID: quoteID, ProductID: r.inputs.Fixture.Product, Quantity: 1, AmountMinor: quoted.TotalAmountMinor, Currency: r.inputs.Fixture.Currency, IdempotencyKey: okey})
 			return err
 		})
-		if err = r.decision(ctx, db, orow); err != nil {
-			r.failureRow(orow, "order-decision", err)
-			if orow["failure_stage"] == nil {
-				orow["failure_stage"] = "order-decision"
-			}
-		}
+		r.checkDecision(ctx, db, orow, "order-decision")
 		r.checkOrder(ctx, db, c, orow, check, before, quoteID)
 		active = nil
 		if err = r.evidence.Save(); err != nil {
@@ -417,6 +404,8 @@ func (r *baselineRun) action(ctx context.Context, row experiment.Row, cache *pro
 			row["failure_stage"] = stage
 		}
 		r.failureRow(row, stage, err)
+	} else if row["failure_stage"] == "challenge" {
+		r.failureRow(row, "challenge", errors.New("challenge request failed"))
 	}
 }
 
@@ -456,10 +445,27 @@ func (r *baselineRun) observe(next http.Handler, current func() experiment.Row) 
 		case "/v1/auth/challenges":
 			stage = "challenge"
 			row["challenge_ns"] = time.Since(start).Nanoseconds()
-			if rec.Code == 201 {
+			if rec.Code == http.StatusCreated {
 				var c gateway.ChallengeResponse
 				if json.Unmarshal(rec.Body.Bytes(), &c) == nil {
 					row["challenge_id"] = c.ChallengeID
+				}
+			} else {
+				row["http_status"] = rec.Code
+				row["disposition"] = "error"
+				row["failure_stage"] = stage
+				requestID := rec.Header().Get("X-Request-Id")
+				var body gateway.ErrorBody
+				if json.Unmarshal(rec.Body.Bytes(), &body) == nil {
+					if body.RequestID != "" {
+						requestID = body.RequestID
+					}
+					if body.Code != "" {
+						row["code"] = body.Code
+					}
+				}
+				if requestID != "" {
+					row["request_id"] = requestID
 				}
 			}
 		case "/v1/access/execute":
@@ -532,12 +538,40 @@ func (r *baselineRun) failureRow(row experiment.Row, stage string, err error) {
 	r.failure(fmt.Sprint(row["configuration"], "/", row["case_id"], "/", row["action"]), stage, err)
 	list := r.evidence.Summary["failures"].([]any)
 	entry := list[len(list)-1].(map[string]any)
-	for _, key := range []string{"configuration", "case_id", "action", "request_id", "challenge_id", "decision_id"} {
+	for _, key := range []string{"configuration", "case_id", "action", "http_status", "code", "request_id", "challenge_id", "decision_id"} {
 		entry[key] = row[key]
 	}
 }
 
+func (r *baselineRun) checkDecision(ctx context.Context, db *pgxpool.Pool, row experiment.Row, stage string) {
+	if row["failure_stage"] == "challenge" {
+		return
+	}
+	if err := r.decision(ctx, db, row); err != nil {
+		r.failureRow(row, stage, err)
+		if row["failure_stage"] == nil {
+			row["failure_stage"] = stage
+		}
+	}
+}
+
+func (r *baselineRun) checkQuote(ctx context.Context, db *pgxpool.Pool, quote, order, check experiment.Row) string {
+	r.checkDecision(ctx, db, quote, "quote-check")
+	quoteID, _ := quote["quote_id"].(string)
+	if quote["disposition"] == "allowed" && quote["failure_stage"] == nil && quoteID != "" {
+		return quoteID
+	}
+	order["failure_stage"] = "quote-dependency"
+	check["failure_reason"] = "quote dependency failed"
+	return ""
+}
+
 func (r *baselineRun) checkOrder(ctx context.Context, db *pgxpool.Pool, c experiment.Case, row, check experiment.Row, before int64, quoteID string) {
+	if row["failure_stage"] == "challenge" {
+		check["quote_id"] = quoteID
+		check["failure_reason"] = "order challenge failed"
+		return
+	}
 	if err := r.orderCheck(ctx, db, c, row, check, before, quoteID); err != nil {
 		r.failureRow(row, "primary-check", err)
 		check["failure_reason"] = "primary database query failed"

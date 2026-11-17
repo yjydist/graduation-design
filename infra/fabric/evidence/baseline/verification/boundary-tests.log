@@ -1,0 +1,11 @@
+=== RUN   TestBaselinePairedChecksRejectMissingOrInconsistentResults
+=== RUN   TestBaselinePairedChecksRejectMissingOrInconsistentResults/missing-fabric-evidence
+    baseline_test.go:279: acceptance passed with missing Fabric block hash and original probe deadline
+--- FAIL: TestBaselinePairedChecksRejectMissingOrInconsistentResults (0.00s)
+    --- FAIL: TestBaselinePairedChecksRejectMissingOrInconsistentResults/missing-fabric-evidence (0.00s)
+=== RUN   TestVerificationChallengeHTTPFailureRecorded
+    baseline_test.go:339: challenge returned 503 STATE_UNAVAILABLE, evidence recorded status=<nil> stage=wallet request_id=<nil>
+--- FAIL: TestVerificationChallengeHTTPFailureRecorded (0.00s)
+FAIL
+FAIL	graduation-design/internal/fabric	0.712s
+FAIL

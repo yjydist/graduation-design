@@ -2,7 +2,11 @@
 
 ## M4 采购基线
 
-`m4-reproducible-baseline` 的最终同版配对采用 `round5` 和 `round6`, 分别从 `.local/fabric-m4-baseline-5` 和 `.local/fabric-m4-baseline-6` 空环境重建, C0 分别使用 `baseline_c0_round5` 和 `baseline_c0_round6`. 两轮种子均为 `1109`, 每轮 12 次询价允许, 6 笔 800 元唯一订单, 6 次 1200 元 `403 AMOUNT_LIMIT_EXCEEDED`, 拒绝侧无订单或订单业务键. 两轮 B1 各有 62 次静态验签命中. [两轮比对](baseline/validation/comparison.json)确认逻辑夹具, 用例矩阵, 策略源码, 108 个依赖及源码文件指纹和规范化业务事实一致, 实际部署, T 根和材料摘要各自独立. 运行入口见[网络说明](../README.md#5-三组采购基线实验), 实施检验见[变更记录](../../../openspec/changes/m4-reproducible-baseline/validation.md).
+`m4-reproducible-baseline` 修复三项核验警告后完成两次新环境重建, 两轮均通过 12 个订单用例, 夹具, 矩阵与业务事实一致. [核验报告](../../../openspec/changes/m4-reproducible-baseline/verification.md)定位两轮的四个原始文件, 挑战失败样本和数据库回归. [修复后两轮比对](baseline/verification/fixes/comparison.json)
+
+提交 `8237ef0` 的修复前独立核验按原源码指纹保存. [原两轮比对](baseline/verification/comparison.json), [修复前故障日志](baseline/verification/boundary-tests.log)
+
+实施阶段的同版配对采用 `round5` 和 `round6`, 分别从 `.local/fabric-m4-baseline-5` 和 `.local/fabric-m4-baseline-6` 空环境重建, C0 分别使用 `baseline_c0_round5` 和 `baseline_c0_round6`. 两轮种子均为 `1109`, 每轮 12 次询价允许, 6 笔 800 元唯一订单, 6 次 1200 元 `403 AMOUNT_LIMIT_EXCEEDED`, 拒绝侧无订单或订单业务键. 两轮 B1 各有 62 次静态验签命中. [两轮比对](baseline/validation/comparison.json)确认逻辑夹具, 用例矩阵, 策略源码, 108 个依赖及源码文件指纹和规范化业务事实一致, 实际部署, T 根和材料摘要各自独立. 运行入口见[网络说明](../README.md#5-三组采购基线实验), 实施检验见[变更记录](../../../openspec/changes/m4-reproducible-baseline/validation.md).
 
 | 尝试 | 实际部署与计划 | 原始请求与主库核对 | 汇总 |
 | --- | --- | --- | --- |

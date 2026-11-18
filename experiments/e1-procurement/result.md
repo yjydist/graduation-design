@@ -2,7 +2,7 @@
 
 ## 1 实验范围与配置
 
-迁移前的四轮实验中, 两个独立重建的三域 Fabric 网络通过 F01-F16 共 16 项, RP (`RESOURCE_PREAUTHORIZED`) 与 BM (`BUYER_MANDATE`) 均完成采购闭环. 四轮原始记录与各自的源码一并保留. 驱动迁移后的固定构建验证见第 5 节. [实验计划](../../docs/experiments/实验计划.md#3-e1-e3-功能-安全与动态轨迹), [F01-F16 判据](../../docs/experiments/验证用例.md#1-采购闭环), [旧批次源码归档](source-archive/README.md).
+迁移前的四轮实验中, 两个独立重建的三域 Fabric 网络通过 F01-F16 共 16 项, RP (`RESOURCE_PREAUTHORIZED`) 与 BM (`BUYER_MANDATE`) 均完成采购闭环. 四轮原始记录与各自的源码一并保留. 驱动迁移后的固定构建验证见第 5 节. [E1 方法](../../docs/experiments/E1-采购功能闭环.md), [F01-F16 判据](../../docs/experiments/验证用例.md#1-采购闭环), [旧批次源码归档](source-archive/README.md).
 
 - 采用 B0, 由 C 在每次请求装配 Fabric 一致视图并使用本地探针, 关闭跨请求静态验签缓存. 每轮的部署标识, 创世块, 链码包标识及源码指纹见运行清单.
 - 通过 Anthropic SDK 和本地模型代理调用 `deepseek-flash`. A1 读取 G1 后签发并逐跳交付 G2, B1 对独立的 RP/BM 任务发起询价与下单. 两个钱包各从已交付的 G1 装入父路径, 实验用 G2 在运行中由 A1 创建. F15 换钥后再由 A1 签发叶子委托.

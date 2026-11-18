@@ -1,17 +1,17 @@
 # 正式实验
 
-按实验编号查阅 `result.md`. 报告中的表和图通过运行 ID 追溯到原始记录. [实验计划](../docs/experiments/实验计划.md)定义方法和判据, [验收证据索引](../infra/fabric/evidence/README.md)定位实现验收和预跑样本.
+按编号选择方法, 再查看已有运行入口和报告. [实验计划](../docs/experiments/实验计划.md)定义共用对照和复现约定. 表和图通过运行 ID 追溯到原始记录. 实现验收及预跑样本见[验收证据索引](../infra/fabric/evidence/README.md).
 
-| 编号 | 实验 | 结果入口 |
-| --- | --- | --- |
-| E1 | 采购功能闭环 | [结果](e1-procurement/result.md), [独立驱动](e1-procurement/README.md) |
-| E2 | 安全与状态机检查 | 待建 |
-| E3 | 动态调整与恢复 | 待建 |
-| E4 | 微基准 | 待建 |
-| E5 | 开放到达负载 | 待建 |
-| E6 | 撤销窗口 | [结果模板](e6-revocation/result.md) |
-| E7 | 故障与并发 | 待建 |
-| E8 | 账本和通信开销 | 待建 |
+| 编号 | 方法 | 正式运行入口 | 结果 |
+| --- | --- | --- | --- |
+| E1 | [采购功能闭环](../docs/experiments/E1-采购功能闭环.md) | [独立驱动](e1-procurement/README.md) | [结果](e1-procurement/result.md) |
+| E2 | [安全与状态机检查](../docs/experiments/E2-安全与状态机检查.md) | 待建 | 待建 |
+| E3 | [动态调整与恢复](../docs/experiments/E3-动态调整与恢复.md) | 待建 | 待建 |
+| E4 | [微基准](../docs/experiments/E4-微基准.md) | 待建 | 待建 |
+| E5 | [开放到达负载](../docs/experiments/E5-开放到达负载.md) | 待建 | 待建 |
+| E6 | [撤销窗口](../docs/experiments/E6-撤销窗口.md) | 待建 | [结果模板](e6-revocation/result.md) |
+| E7 | [故障与并发](../docs/experiments/E7-故障与并发.md) | 待建 | 待建 |
+| E8 | [账本与通信开销](../docs/experiments/E8-账本与通信开销.md) | 待建 | 待建 |
 
 ## 实验用 LLM 配置
 

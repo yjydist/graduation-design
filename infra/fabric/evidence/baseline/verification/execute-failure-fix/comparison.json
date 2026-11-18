@@ -1,0 +1,62 @@
+{
+  "seed": 1109,
+  "paired_fixture_plan_and_business_results_match": true,
+  "rounds": [
+    {
+      "round": 1,
+      "run_id": "baseline-89ca8dd2d7ad0d57",
+      "source_commit": "ca880c15dd7a5243ef33c2b4dc138ef0d1c0c760",
+      "source_locks": 109,
+      "changed_file_locks": {
+        "internal/fabric/baseline.go": "93bdf5fe2b36807176618b56fc2368490c161eb28dcd9086fb1e2c7474092026",
+        "internal/fabric/baseline_checks.go": "7475127dd45130f0b95a32c58534c19b7f763a3ee6b044270f4a738056284136",
+        "internal/fabric/baseline_test.go": "62ee8b57148a731ac156df3343edd8d9ad9e4878b61caa1037d2508ea65aaf85"
+      },
+      "registry_records": 39,
+      "registry_readback_matched": true,
+      "challenge_decision_links": 24,
+      "allowed_quotes": 12,
+      "orders_created": 6,
+      "over_limit_without_side_effect": 6,
+      "cache_hits": {
+        "C0": 0,
+        "B0": 0,
+        "B1": 62
+      },
+      "allowed_evidence_rows": {
+        "C0": 6,
+        "B0": 6,
+        "B1": 6
+      },
+      "secret_scan_passed": true
+    },
+    {
+      "round": 2,
+      "run_id": "baseline-f9a272b45de77390",
+      "source_commit": "ca880c15dd7a5243ef33c2b4dc138ef0d1c0c760",
+      "source_locks": 109,
+      "changed_file_locks": {
+        "internal/fabric/baseline.go": "93bdf5fe2b36807176618b56fc2368490c161eb28dcd9086fb1e2c7474092026",
+        "internal/fabric/baseline_checks.go": "7475127dd45130f0b95a32c58534c19b7f763a3ee6b044270f4a738056284136",
+        "internal/fabric/baseline_test.go": "62ee8b57148a731ac156df3343edd8d9ad9e4878b61caa1037d2508ea65aaf85"
+      },
+      "registry_records": 39,
+      "registry_readback_matched": true,
+      "challenge_decision_links": 24,
+      "allowed_quotes": 12,
+      "orders_created": 6,
+      "over_limit_without_side_effect": 6,
+      "cache_hits": {
+        "C0": 0,
+        "B0": 0,
+        "B1": 62
+      },
+      "allowed_evidence_rows": {
+        "C0": 6,
+        "B0": 6,
+        "B1": 6
+      },
+      "secret_scan_passed": true
+    }
+  ]
+}

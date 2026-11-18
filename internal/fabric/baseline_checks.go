@@ -93,6 +93,11 @@ func (r *baselineRun) orderCheck(ctx context.Context, db *pgxpool.Pool, c experi
 		return err
 	}
 	check["challenge_consumed"] = consumed != nil
+	if row["decision_id"] == nil && row["failure_stage"] == "execute" {
+		check["verdict"] = "FAIL"
+		check["failure_reason"] = "order execution returned no decision"
+		return tx.Commit(ctx)
+	}
 	var outcome, code string
 	if err = tx.QueryRow(ctx, `SELECT outcome,code FROM decisions WHERE deployment_id=$1 AND decision_id=$2`, r.d.DeploymentID, row["decision_id"]).Scan(&outcome, &code); err != nil {
 		return err

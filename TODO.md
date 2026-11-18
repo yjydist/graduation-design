@@ -1,6 +1,6 @@
 # 毕设实施与验收
 
-**当前状态.** D0-M3 已完成并归档. M4 的可复现采购基线已完成 C0/B0/B1 接线, [变更任务](openspec/changes/m4-reproducible-baseline/tasks.md)为 13/13. [独立核验](openspec/changes/m4-reproducible-baseline/verification.md)的四项警告均已关闭. 登记回读修复后用种子 `1109` 完成两次干净重建, 每轮两种来源的共同锚点一致, 各通过 12 次询价, 6 笔 800 元唯一订单及 6 次 1200 元超额拒绝, B1 各有 62 次静态验签命中. [证据索引](infra/fabric/evidence/README.md#m4-采购基线)保留历次运行及故障样本. 下一步归档基线变更, 随后继续 M4 正式重复实验, 消融, 演示与论文. 任务书结束日期为 2027-05-21.
+**当前状态.** D0-M3 已完成并归档. M4 的可复现采购基线已完成 C0/B0/B1 接线, [变更任务](openspec/changes/m4-reproducible-baseline/tasks.md)为 13/13. 执行接口故障阶段的记录偏差已修复, [独立核验](openspec/changes/m4-reproducible-baseline/verification.md)确认专项回归和两轮干净重建均通过. [证据索引](infra/fabric/evidence/README.md#m4-采购基线)保留历次运行及故障样本. 下一步归档基线变更, 随后继续 M4 正式重复实验, 消融, 演示与论文. 任务书结束日期为 2027-05-21.
 
 [Fabric 任务](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/tasks.md), [Fabric 核验](openspec/changes/archive/2026-11-13-migrate-ledger-to-fabric/verification.md), [D0 协议任务](openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md), [M1 直接访问任务](openspec/changes/archive/2026-11-13-implement-m1-direct-access/tasks.md), [M2 双根与委托任务](openspec/changes/archive/2026-11-15-implement-m2-dual-roots-and-delegation/tasks.md), [M3 动态状态与恢复任务](openspec/changes/archive/2026-11-16-implement-m3-dynamic-state-and-recovery/tasks.md)与[证据索引](infra/fabric/evidence/README.md)记录实施和复跑.
 

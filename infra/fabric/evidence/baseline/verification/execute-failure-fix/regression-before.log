@@ -1,0 +1,7 @@
+=== RUN   TestBaselineQuoteExecuteFailureRetainsResponse
+    baseline_test.go:210: quote CSV failure_stage = "quote-check", want "execute"
+    baseline_test.go:230: incorrect execution failure: map[action:quote.read case_id:1109-rp-80000 challenge_id:issued-challenge code:STATE_UNAVAILABLE configuration:C0 decision_id:<nil> failure_stage:quote-check http_status:503 reason:operation failed request_id:failed-execute scope:C0/1109-rp-80000/quote.read]
+--- FAIL: TestBaselineQuoteExecuteFailureRetainsResponse (0.00s)
+FAIL
+FAIL	graduation-design/internal/fabric	0.784s
+FAIL

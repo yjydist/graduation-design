@@ -156,6 +156,85 @@ func TestBaselineManagedFailuresRetainPlan(t *testing.T) {
 	})
 }
 
+func TestBaselineQuoteExecuteFailureRetainsResponse(t *testing.T) {
+	r := newBaselineTestRun(t)
+	r.options.RequestTimeout = time.Second
+	quote, order, check := r.evidence.Requests[0], r.evidence.Requests[1], r.evidence.Orders[0]
+	handler := r.observe(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		switch req.URL.Path {
+		case "/v1/auth/challenges":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"challengeId":"issued-challenge"}`))
+		case "/v1/access/execute":
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"requestId":"failed-execute","code":"STATE_UNAVAILABLE","message":"private response detail"}`))
+		default:
+			t.Fatalf("unexpected endpoint: %s", req.URL.Path)
+		}
+	}), func() experiment.Row { return quote })
+
+	r.action(t.Context(), quote, nil, func(ctx context.Context) error {
+		challenge := httptest.NewRecorder()
+		handler.ServeHTTP(challenge, httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/auth/challenges", nil))
+		if challenge.Code != http.StatusCreated {
+			t.Fatalf("challenge status = %d", challenge.Code)
+		}
+		execute := httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/access/execute", strings.NewReader(`{"challengeId":"issued-challenge"}`))
+		handler.ServeHTTP(httptest.NewRecorder(), execute)
+		return nil // RequestQuote returns an HTTP result without a Go error for a 503 response.
+	})
+	if id := r.checkQuote(t.Context(), nil, quote, order, check); id != "" ||
+		order["disposition"] != "dropped" || order["failure_stage"] != "quote-dependency" {
+		t.Fatalf("failed quote did not stop the dependent order: %v", order)
+	}
+	if account := r.evidence.Account(); account["error"] != 1 || account["completed"] != 1 || account["dropped"] != 23 || r.compare() {
+		t.Fatalf("incorrect failure accounting: %v", account)
+	}
+	if err := r.evidence.Save(); err != nil {
+		t.Fatal(err)
+	}
+	assertBaselineFiles(t, r.evidence.Directory)
+	f, err := os.Open(filepath.Join(r.evidence.Directory, "requests.csv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	rows, err := csv.NewReader(f).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{"failure_stage": "execute", "disposition": "error", "http_status": "503", "code": "STATE_UNAVAILABLE",
+		"request_id": "failed-execute", "challenge_id": "issued-challenge", "decision_id": "null"}
+	wantOrder := map[string]string{"failure_stage": "quote-dependency", "disposition": "dropped", "http_status": "null"}
+	for i, column := range rows[0] {
+		if value, ok := want[column]; ok && rows[1][i] != value {
+			t.Errorf("quote CSV %s = %q, want %q", column, rows[1][i], value)
+		}
+		if value, ok := wantOrder[column]; ok && rows[2][i] != value {
+			t.Errorf("order CSV %s = %q, want %q", column, rows[2][i], value)
+		}
+	}
+	raw, err := os.ReadFile(filepath.Join(r.evidence.Directory, "summary.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var summary struct {
+		Passed   bool             `json:"passed"`
+		Failures []map[string]any `json:"failures"`
+	}
+	if err := json.Unmarshal(raw, &summary); err != nil {
+		t.Fatal(err)
+	}
+	if summary.Passed || len(summary.Failures) != 1 || strings.Contains(string(raw), "private response detail") {
+		t.Fatalf("incorrect failure summary: %+v", summary)
+	}
+	failure := summary.Failures[0]
+	if failure["failure_stage"] != "execute" || failure["http_status"] != float64(503) || failure["code"] != "STATE_UNAVAILABLE" || failure["reason"] != "STATE_UNAVAILABLE" ||
+		failure["request_id"] != "failed-execute" || failure["challenge_id"] != "issued-challenge" || failure["decision_id"] != nil {
+		t.Fatalf("incorrect execution failure: %v", failure)
+	}
+}
+
 func TestBaselineExecuteDeadlineRetainsResponse(t *testing.T) {
 	r := newBaselineTestRun(t)
 	r.options.RequestTimeout = 10 * time.Millisecond
@@ -389,6 +468,22 @@ func TestBaselineChecksHTTPOrderAndPrimaryIndependently(t *testing.T) {
 			}
 		})
 	}
+	t.Run("execute-failure-without-decision", func(t *testing.T) {
+		if _, err := db.Exec(t.Context(), `INSERT INTO challenges VALUES ('test','failed-challenge',NULL,NULL,'failed-hash')`); err != nil {
+			t.Fatal(err)
+		}
+		r := newBaselineTestRun(t)
+		row, check := r.evidence.Requests[1], r.evidence.Orders[0]
+		row["task_id"], row["actor"], row["idempotency_key"] = "task", "actor", "failed-key"
+		row["failure_stage"], row["challenge_id"] = "execute", "failed-challenge"
+		r.checkDecision(t.Context(), db, row, "order-decision")
+		r.checkOrder(t.Context(), db, r.inputs.Cases[0], row, check, 1, "quote")
+		if check["verdict"] != "FAIL" || check["failure_reason"] != "order execution returned no decision" ||
+			check["order_rows_after"] != int64(1) || check["order_key_rows"] != int64(0) || check["challenge_consumed"] != false ||
+			check["decision_id"] != nil || len(r.evidence.Summary["failures"].([]any)) != 0 {
+			t.Fatalf("incorrect observations for a failed order execution: %v, %v", check, r.evidence.Summary["failures"])
+		}
+	})
 }
 
 func TestBaselinePairedChecksRejectMissingOrInconsistentResults(t *testing.T) {

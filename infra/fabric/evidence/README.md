@@ -2,6 +2,10 @@
 
 ## M4 采购基线
 
+执行接口故障留证修复后的两轮独立重建通过. 挑战成功后执行返回 `503 STATE_UNAVAILABLE` 的回归确认 `execute` 阶段及关联 ID 可查, 依赖订单保留为未执行. [双轮对照](baseline/verification/execute-failure-fix/comparison.json), [故障样本](baseline/verification/execute-failure-fix/fault-quote-execute/summary.json), [原始文件索引](../../../openspec/changes/m4-reproducible-baseline/verification.md#执行接口故障留证修复后复核)
+
+提交 `ca880c1` 的两轮独立重建通过, 逐行核对 48 条挑战与决定的主库关联, 并独立重算两轮各 39 条登记锚点摘要. 执行接口故障注入复现阶段记为 `quote-check`. [双轮对照](baseline/verification/commit-ca880c1/comparison.json), [故障注入日志](baseline/verification/commit-ca880c1/execute-fault.log), [核验报告](../../../openspec/changes/m4-reproducible-baseline/verification.md#提交-ca880c1-的独立复核)
+
 C0 探针证据修复后的两轮干净重建各通过 12 个采购用例. 直接查库确认每轮 C0 六条允许决定的证据附表探针时点均为 `NULL`, B0/B1 共 12 条允许决定的附表时点与主表一致并位于原探针有效区间. [修复后双轮对照](baseline/verification/c0-evidence-null-fix/comparison.json), [原始文件与回归](../../../openspec/changes/m4-reproducible-baseline/verification.md#c0-探针证据修复后复核)
 
 提交 `6e10507` 的两次干净重建均通过 12 个采购用例及登记回读的独立复算. 逐行复核两轮共 48 条挑战与决定关联, 并在修复前样本中记录 C0 证据附表的探针时点为 0. [双轮对照](baseline/verification/commit-6e10507/comparison.json), [原始文件及故障样本](../../../openspec/changes/m4-reproducible-baseline/verification.md#提交-6e10507-的双轮复核)

@@ -1,0 +1,4 @@
+=== RUN   TestBaselineQuoteExecuteFailureRetainsResponse
+--- PASS: TestBaselineQuoteExecuteFailureRetainsResponse (0.00s)
+PASS
+ok  	graduation-design/internal/fabric	0.610s

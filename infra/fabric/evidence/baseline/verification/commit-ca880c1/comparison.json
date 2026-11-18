@@ -1,0 +1,42 @@
+{
+  "commit": "ca880c15dd7a5243ef33c2b4dc138ef0d1c0c760",
+  "fixture_plan_and_business_results_match": true,
+  "rounds": [
+    {
+      "round": 1,
+      "source_locks": 109,
+      "registry_records": 39,
+      "readback_matched": true,
+      "challenge_decision_links": 24,
+      "allowed_quotes": 12,
+      "orders_created": 6,
+      "over_limit_without_side_effect": 6,
+      "cache_hits": {
+        "C0": 0,
+        "B0": 0,
+        "B1": 62
+      },
+      "c0_allowed_evidence_without_probe": 6,
+      "fabric_allowed_evidence_inside_original_probe": 12,
+      "scanned_files": 4
+    },
+    {
+      "round": 2,
+      "source_locks": 109,
+      "registry_records": 39,
+      "readback_matched": true,
+      "challenge_decision_links": 24,
+      "allowed_quotes": 12,
+      "orders_created": 6,
+      "over_limit_without_side_effect": 6,
+      "cache_hits": {
+        "C0": 0,
+        "B0": 0,
+        "B1": 62
+      },
+      "c0_allowed_evidence_without_probe": 6,
+      "fabric_allowed_evidence_inside_original_probe": 12,
+      "scanned_files": 4
+    }
+  ]
+}

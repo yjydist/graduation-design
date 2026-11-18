@@ -428,15 +428,16 @@ func (r *baselineRun) action(ctx context.Context, row experiment.Row, cache *pro
 		row["disposition"] = "timeout"
 		err = context.DeadlineExceeded
 	}
+	stage, _ := row["failure_stage"].(string)
 	if err != nil {
-		stage, _ := row["failure_stage"].(string)
 		if stage == "" {
 			stage = "wallet"
 			row["failure_stage"] = stage
 		}
 		r.failureRow(row, stage, err)
-	} else if row["failure_stage"] == "challenge" {
-		r.failureRow(row, "challenge", errors.New("challenge request failed"))
+	} else if stage == "challenge" || stage == "execute" {
+		code, _ := row["code"].(string)
+		r.failureRow(row, stage, protocol.NewError(code, "gateway request failed"))
 	}
 }
 
@@ -515,7 +516,7 @@ func (r *baselineRun) observe(next http.Handler, current func() experiment.Row) 
 				if body.RequestID != "" {
 					row["request_id"] = body.RequestID
 				}
-				if body.DecisionID != nil {
+				if body.DecisionID != nil && *body.DecisionID != "" {
 					row["decision_id"] = *body.DecisionID
 				}
 				row["code"] = body.Code
@@ -529,14 +530,19 @@ func (r *baselineRun) observe(next http.Handler, current func() experiment.Row) 
 					row["order_amount_minor"] = body.Order.TotalAmountMinor
 				}
 			}
-			row["disposition"] = "error"
-			if rec.Code == 200 {
+			row["failure_stage"] = stage
+			switch rec.Code {
+			case http.StatusOK:
 				row["disposition"] = "allowed"
-			}
-			if rec.Code == 403 {
+				row["failure_stage"] = nil
+			case http.StatusForbidden:
 				row["disposition"] = "denied"
+				if row["decision_id"] != nil {
+					row["failure_stage"] = nil
+				}
+			default:
+				row["disposition"] = "error"
 			}
-			row["failure_stage"] = nil
 		}
 		if stage != "" && errors.Is(req.Context().Err(), context.DeadlineExceeded) {
 			row["disposition"] = "timeout"
@@ -555,7 +561,7 @@ func (r *baselineRun) observe(next http.Handler, current func() experiment.Row) 
 func (r *baselineRun) failure(scope, stage string, err error) {
 	code := "operation failed"
 	var pe *protocol.Error
-	if errors.As(err, &pe) {
+	if errors.As(err, &pe) && pe.Code != "" {
 		code = pe.Code
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
@@ -575,7 +581,7 @@ func (r *baselineRun) failureRow(row experiment.Row, stage string, err error) {
 }
 
 func (r *baselineRun) checkDecision(ctx context.Context, db *pgxpool.Pool, row experiment.Row, stage string) {
-	if row["failure_stage"] == "challenge" {
+	if row["failure_stage"] == "challenge" || (row["failure_stage"] == "execute" && row["decision_id"] == nil) {
 		return
 	}
 	if err := r.decision(ctx, db, row); err != nil {

@@ -1,0 +1,18 @@
+{
+  "counts": {
+    "tests": {
+      "pass": 208,
+      "skip": 3
+    },
+    "packages": {
+      "pass": 9,
+      "skip": 2
+    }
+  },
+  "skipped_tests": [
+    "TestInterruptedInitialization",
+    "TestDeploymentResumesAfterCommittedInitialization",
+    "TestM3LiveAcceptance"
+  ],
+  "failed": []
+}

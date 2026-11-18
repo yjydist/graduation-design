@@ -21,7 +21,7 @@ flowchart TB
 | 查任务书要求与对应证据 | [毕设要求](毕设要求.md), [设计导航与需求追踪](docs/design/AGENTS.md) |
 | 搭建网络, 编写验证器 | [技术栈](docs/implementation/技术栈.md), [实现导航](docs/implementation/AGENTS.md) |
 | 复跑 Fabric D0 | [网络与 ledgerctl](infra/fabric/README.md), [Fabric 证据](infra/fabric/evidence/README.md) |
-| 运行 C0/B0/B1 采购基线 | [隔离实例与实验命令](infra/fabric/README.md#5-三组采购基线实验), [活动变更任务](openspec/changes/m4-reproducible-baseline/tasks.md) |
+| 运行 C0/B0/B1 采购基线 | [隔离实例与实验命令](infra/fabric/README.md#5-三组采购基线实验), [采购基线主规范](openspec/specs/reproducible-procurement-experiments/spec.md) |
 | 测量撤销后还能下单多久 | [E6 撤销窗口](docs/experiments/实验计划.md#2-e6-撤销窗口), [实验导航](docs/experiments/AGENTS.md) |
 | 查阶段状态, 任务和验证证据 | [任务安排与退出条件](TODO.md) |
 | 阅读论文或准备写作 | [文献清单](paper/论文.md), [全文与笔记索引](paper/README.md) |

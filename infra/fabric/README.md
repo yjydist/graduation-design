@@ -85,7 +85,7 @@ FABRIC_M3_TEST_DIR="$PWD/.local/fabric-d0" mise exec -- go test -v -count=1 -tim
 
 ## 5 三组采购基线实验
 
-`ledgerctl experiment baseline` 使用确定性钱包工具, 实际时钟和真实持有者证明. 入口依次运行 C0, B0, B1, 每组分别执行 RP/BM 的 800 元与 1200 元用例, 每个用例先询价再按原报价下单. 首轮范围与原始字段见[实验变更设计](../../openspec/changes/m4-reproducible-baseline/design.md). 此入口用于接线与业务一致性验收, 正式性能采样沿用[实验计划](../../docs/experiments/实验计划.md).
+`ledgerctl experiment baseline` 使用确定性钱包工具, 实际时钟和真实持有者证明. 入口依次运行 C0, B0, B1, 每组分别执行 RP/BM 的 800 元与 1200 元用例, 每个用例先询价再按原报价下单. 首轮范围与原始字段见[实验变更设计](../../openspec/changes/archive/2026-11-18-m4-reproducible-baseline/design.md). 此入口用于接线与业务一致性验收, 正式性能采样沿用[实验计划](../../docs/experiments/实验计划.md).
 
 准备一个新 Fabric 实例, 显式指定新 C0 数据库名和不存在的证据目录. 入口自动部署, 签发, 登记及逐跳交付. 不要先对该实例执行 `ledger:seed`. C0 数据库与该轮 Fabric 视图数据库位于同一 PostgreSQL 服务的不同数据库中, 登记与业务表共同提交; C0 请求不连接 Fabric Peer, 块流或探针. B0/B1 共用已应用视图, 分别等待本进程的专用探针. C0/B0 关闭验签缓存, B1 每轮新建缓存.
 

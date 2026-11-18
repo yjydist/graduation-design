@@ -2,23 +2,23 @@
 
 ## M4 采购基线
 
-执行接口故障留证修复后的两轮独立重建通过. 挑战成功后执行返回 `503 STATE_UNAVAILABLE` 的回归确认 `execute` 阶段及关联 ID 可查, 依赖订单保留为未执行. [双轮对照](baseline/verification/execute-failure-fix/comparison.json), [故障样本](baseline/verification/execute-failure-fix/fault-quote-execute/summary.json), [原始文件索引](../../../openspec/changes/m4-reproducible-baseline/verification.md#执行接口故障留证修复后复核)
+执行接口故障留证修复后的两轮独立重建通过. 挑战成功后执行返回 `503 STATE_UNAVAILABLE` 的回归确认 `execute` 阶段及关联 ID 可查, 依赖订单保留为未执行. [双轮对照](baseline/verification/execute-failure-fix/comparison.json), [故障样本](baseline/verification/execute-failure-fix/fault-quote-execute/summary.json), [原始文件索引](../../../openspec/changes/archive/2026-11-18-m4-reproducible-baseline/verification.md#执行接口故障留证修复后复核)
 
-提交 `ca880c1` 的两轮独立重建通过, 逐行核对 48 条挑战与决定的主库关联, 并独立重算两轮各 39 条登记锚点摘要. 执行接口故障注入复现阶段记为 `quote-check`. [双轮对照](baseline/verification/commit-ca880c1/comparison.json), [故障注入日志](baseline/verification/commit-ca880c1/execute-fault.log), [核验报告](../../../openspec/changes/m4-reproducible-baseline/verification.md#提交-ca880c1-的独立复核)
+提交 `ca880c1` 的两轮独立重建通过, 逐行核对 48 条挑战与决定的主库关联, 并独立重算两轮各 39 条登记锚点摘要. 执行接口故障注入复现阶段记为 `quote-check`. [双轮对照](baseline/verification/commit-ca880c1/comparison.json), [故障注入日志](baseline/verification/commit-ca880c1/execute-fault.log), [核验报告](../../../openspec/changes/archive/2026-11-18-m4-reproducible-baseline/verification.md#提交-ca880c1-的独立复核)
 
-C0 探针证据修复后的两轮干净重建各通过 12 个采购用例. 直接查库确认每轮 C0 六条允许决定的证据附表探针时点均为 `NULL`, B0/B1 共 12 条允许决定的附表时点与主表一致并位于原探针有效区间. [修复后双轮对照](baseline/verification/c0-evidence-null-fix/comparison.json), [原始文件与回归](../../../openspec/changes/m4-reproducible-baseline/verification.md#c0-探针证据修复后复核)
+C0 探针证据修复后的两轮干净重建各通过 12 个采购用例. 直接查库确认每轮 C0 六条允许决定的证据附表探针时点均为 `NULL`, B0/B1 共 12 条允许决定的附表时点与主表一致并位于原探针有效区间. [修复后双轮对照](baseline/verification/c0-evidence-null-fix/comparison.json), [原始文件与回归](../../../openspec/changes/archive/2026-11-18-m4-reproducible-baseline/verification.md#c0-探针证据修复后复核)
 
-提交 `6e10507` 的两次干净重建均通过 12 个采购用例及登记回读的独立复算. 逐行复核两轮共 48 条挑战与决定关联, 并在修复前样本中记录 C0 证据附表的探针时点为 0. [双轮对照](baseline/verification/commit-6e10507/comparison.json), [原始文件及故障样本](../../../openspec/changes/m4-reproducible-baseline/verification.md#提交-6e10507-的双轮复核)
+提交 `6e10507` 的两次干净重建均通过 12 个采购用例及登记回读的独立复算. 逐行复核两轮共 48 条挑战与决定关联, 并在修复前样本中记录 C0 证据附表的探针时点为 0. [双轮对照](baseline/verification/commit-6e10507/comparison.json), [原始文件及故障样本](../../../openspec/changes/archive/2026-11-18-m4-reproducible-baseline/verification.md#提交-6e10507-的双轮复核)
 
-`m4-reproducible-baseline` 修复三项核验警告后完成两次新环境重建, 两轮均通过 12 个订单用例, 夹具, 矩阵与业务事实一致. [核验报告](../../../openspec/changes/m4-reproducible-baseline/verification.md)定位两轮的四个原始文件, 挑战失败样本和数据库回归. [修复后两轮比对](baseline/verification/fixes/comparison.json)
+`m4-reproducible-baseline` 修复三项核验警告后完成两次新环境重建, 两轮均通过 12 个订单用例, 夹具, 矩阵与业务事实一致. [核验报告](../../../openspec/changes/archive/2026-11-18-m4-reproducible-baseline/verification.md)定位两轮的四个原始文件, 挑战失败样本和数据库回归. [修复后两轮比对](baseline/verification/fixes/comparison.json)
 
-登记摘要修复后, 用种子 `1109` 从两个独立空实例重建. 两轮的共同锚点均从实际库独立复算并匹配清单, 各来源的检查点及对象版本均可追溯. [两轮对照](baseline/verification/registry-readback-fixed/comparison.json), [原始文件索引](../../../openspec/changes/m4-reproducible-baseline/verification.md#登记回读修复后复跑)
+登记摘要修复后, 用种子 `1109` 从两个独立空实例重建. 两轮的共同锚点均从实际库独立复算并匹配清单, 各来源的检查点及对象版本均可追溯. [两轮对照](baseline/verification/registry-readback-fixed/comparison.json), [原始文件索引](../../../openspec/changes/archive/2026-11-18-m4-reproducible-baseline/verification.md#登记回读修复后复跑)
 
 登记摘要修复前, 基于 `6c7e33d` 独立重建的采购结果通过. 两库回读显示 A 域对象版本不同, 清单中的两份登记摘要均来自同一预置输入. [复跑汇总](baseline/verification/registry-readback/summary.json), [数据库回读](baseline/verification/registry-readback/readback.json)
 
 提交 `8237ef0` 的修复前独立核验按原源码指纹保存. [原两轮比对](baseline/verification/comparison.json), [修复前故障日志](baseline/verification/boundary-tests.log)
 
-实施阶段的同版配对采用 `round5` 和 `round6`, 分别从 `.local/fabric-m4-baseline-5` 和 `.local/fabric-m4-baseline-6` 空环境重建, C0 分别使用 `baseline_c0_round5` 和 `baseline_c0_round6`. 两轮种子均为 `1109`, 每轮 12 次询价允许, 6 笔 800 元唯一订单, 6 次 1200 元 `403 AMOUNT_LIMIT_EXCEEDED`, 拒绝侧无订单或订单业务键. 两轮 B1 各有 62 次静态验签命中. [两轮比对](baseline/validation/comparison.json)确认逻辑夹具, 用例矩阵, 策略源码, 108 个依赖及源码文件指纹和规范化业务事实一致, 实际部署, T 根和材料摘要各自独立. 运行入口见[网络说明](../README.md#5-三组采购基线实验), 实施检验见[变更记录](../../../openspec/changes/m4-reproducible-baseline/validation.md).
+实施阶段的同版配对采用 `round5` 和 `round6`, 分别从 `.local/fabric-m4-baseline-5` 和 `.local/fabric-m4-baseline-6` 空环境重建, C0 分别使用 `baseline_c0_round5` 和 `baseline_c0_round6`. 两轮种子均为 `1109`, 每轮 12 次询价允许, 6 笔 800 元唯一订单, 6 次 1200 元 `403 AMOUNT_LIMIT_EXCEEDED`, 拒绝侧无订单或订单业务键. 两轮 B1 各有 62 次静态验签命中. [两轮比对](baseline/validation/comparison.json)确认逻辑夹具, 用例矩阵, 策略源码, 108 个依赖及源码文件指纹和规范化业务事实一致, 实际部署, T 根和材料摘要各自独立. 运行入口见[网络说明](../README.md#5-三组采购基线实验), 实施检验见[变更记录](../../../openspec/changes/archive/2026-11-18-m4-reproducible-baseline/validation.md).
 
 | 尝试 | 实际部署与计划 | 原始请求与主库核对 | 汇总 |
 | --- | --- | --- | --- |

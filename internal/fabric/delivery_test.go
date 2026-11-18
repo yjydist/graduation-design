@@ -538,7 +538,7 @@ func TestCertificationAndGrantDeliveryFlow(t *testing.T) {
 	}
 }
 
-func TestM2MultiHopDeliveryAndTrustPathDedup(t *testing.T) {
+func TestMultiHopDeliveryAndTrustPathDedup(t *testing.T) {
 	pool := testPgPool(t)
 	ctx := t.Context()
 
@@ -547,7 +547,7 @@ func TestM2MultiHopDeliveryAndTrustPathDedup(t *testing.T) {
 	writeTestRoleCerts(t, inst)
 
 	genesis := &block{}
-	genesis.Hash = api.Digest([]byte("test-m2-delivery-genesis"))
+	genesis.Hash = api.Digest([]byte("test-dual-root-delivery-genesis"))
 	boot, bootRaw, err := inst.bootstrap(genesis)
 	if err != nil {
 		t.Fatal(err)
@@ -590,7 +590,7 @@ func TestM2MultiHopDeliveryAndTrustPathDedup(t *testing.T) {
 		t.Fatalf("unexpected deduplicated trustPaths: %+v err=%v", tp, err)
 	}
 
-	// Sync all M2 outboxes & receipts via syncMaterialOutboxes.
+	// Sync outboxes and receipts via syncMaterialOutboxes.
 	report := &seedReport{fixtures: f}
 	if err := inst.syncMaterialOutboxes(ctx, journal{db: pool}, dep, f, report); err != nil {
 		t.Fatalf("syncMaterialOutboxes failed: %v", err)
@@ -600,9 +600,8 @@ func TestM2MultiHopDeliveryAndTrustPathDedup(t *testing.T) {
 	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM wallet_receipts WHERE deployment_id=$1", dep.DeploymentID).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	// Expect 1 legacy M1 G0 + 3 RP hops + 3 BM hops = 7 wallet_receipts rows.
+	// Expect 1 direct-access G0 + 3 RP hops + 3 BM hops = 7 wallet_receipts rows.
 	if count != 7 {
-		t.Fatalf("expected 7 wallet_receipts rows for M1+M2 delivery, got %d", count)
+		t.Fatalf("expected 7 wallet_receipts rows for direct-access and dual-root delivery, got %d", count)
 	}
 }
-

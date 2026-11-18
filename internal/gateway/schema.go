@@ -270,7 +270,7 @@ const (
 	DefaultProductID = "urn:grad:product:P1"
 	// DefaultProductPriceMinor is the seeded P1 unit price in CNY minor units (80000 fen).
 	DefaultProductPriceMinor = int64(80000)
-	// SecondaryProductID is the seeded M2 P2 catalog identifier (exceeds G2 100000 fen limit).
+	// SecondaryProductID is the seeded P2 catalog identifier (exceeds G2 100000 fen limit).
 	SecondaryProductID = "urn:grad:product:P2"
 	// SecondaryProductPriceMinor is the seeded P2 unit price in CNY minor units (120000 fen).
 	SecondaryProductPriceMinor = int64(120000)

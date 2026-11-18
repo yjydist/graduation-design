@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-// ControlledTestDomains lists the four local trust/domain hosts used in D0 verification.
+// ControlledTestDomains lists the four local trust/domain hosts used for local verification.
 var ControlledTestDomains = []string{"t.local", "a.local", "b.local", "c.local"}
 
 // TestCA holds a self-signed P-256 root CA certificate and key used for local did:web HTTPS hosts.

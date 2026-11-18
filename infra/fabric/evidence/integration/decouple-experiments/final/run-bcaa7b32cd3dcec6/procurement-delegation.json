@@ -1,0 +1,608 @@
+{
+  "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+  "runId": "run-bcaa7b32cd3dcec6",
+  "dualRootsAndIdentityLink": {
+    "identityLinkId": "urn:grad:link:U-UinB",
+    "identityLinkStatus": "ACTIVE",
+    "purchasingAuthority": "did:web:a.local:pa",
+    "supplierPolicyDenyCode": "SUPPLIER_POLICY_DENIED",
+    "supplierPolicyStatus": 403,
+    "uInBIsolationStatus": 401
+  },
+  "dualModeAgentOrders": {
+    "bmOrderId": "urn:grad:order:870d57fc-54b4-4135-b38d-9cea78e2cad2",
+    "newOrders": 3,
+    "q1200Mismatch": "AMOUNT_MISMATCH",
+    "q1200OverCode": "AMOUNT_LIMIT_EXCEEDED",
+    "rpOrderId": "urn:grad:order:216b3ba2-364f-4028-af4b-9315d094232d"
+  },
+  "revocationAndPostLockGuards": {
+    "ancestorInactiveErrCode": "ANCESTOR_INACTIVE",
+    "ancestorInactiveStatus": 403,
+    "postLockBlockedCode": "POLICY_DENIED",
+    "postLockBlockedStatus": 403,
+    "revocationBlockNumber": 115,
+    "revokedGrantId": "1ec2893be2bca03da6523d30475bfb660c2456add6acb738e85bba35031ccad6"
+  },
+  "dualGatewayConcurrentIdempotency": {
+    "challenge1": "urn:grad:challenge:b04b390e-dd91-436d-8ab5-2d0f097b6965",
+    "challenge2": "urn:grad:challenge:66f94c91-b19f-47e7-8a2a-302ab33c6d7d",
+    "conflictErrCode": "IDEMPOTENCY_CONFLICT",
+    "conflictStatus": 409,
+    "orderRowsForKey": 1,
+    "sharedOrderId": "urn:grad:order:b7b1a1a2-d9ea-4cc3-8e3c-b015998db9a5"
+  },
+  "agentTraces": [
+    {
+      "provider": "openai",
+      "model": "verify-openai",
+      "finalText": "RESOURCE_PREAUTHORIZED closed loop verified.",
+      "llmLatencyMs": 3,
+      "totalDurationMs": 133,
+      "toolCallsCount": 6,
+      "steps": 7,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "inspect_wallet",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb"
+          },
+          "output": {
+            "actor": "B1",
+            "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+            "did": "did:web:b.local:b1",
+            "domainId": "B",
+            "grants": [
+              {
+                "actions": [
+                  "order.create",
+                  "quote.read"
+                ],
+                "ancestorCount": 3,
+                "anchored": true,
+                "audience": "https://c.local",
+                "authorizationMode": "RESOURCE_PREAUTHORIZED",
+                "currency": "CNY",
+                "exp": 1795078859,
+                "grantId": "54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e",
+                "granteeDid": "did:web:b.local:b1",
+                "issuerDid": "did:web:a.local:a1",
+                "maxAmountMinor": 100000,
+                "nbf": 1794988859,
+                "parentId": "c7a8665f5f519019e72e1837d59c854946a6c23957094c69686709b23304a0fb",
+                "principalDomain": "A",
+                "remainingDepth": 0,
+                "resources": [
+                  "urn:grad:resource:C:orders",
+                  "urn:grad:resource:C:quotes"
+                ],
+                "rootId": "eed6c8b5e66581cc5a698f0eb2753fe0887ce12644f8ebf88496df6928bf8a4f",
+                "suppliers": [
+                  "urn:grad:supplier:C"
+                ],
+                "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+                "trustPathCount": 3
+              }
+            ],
+            "roles": [
+              "AGENT"
+            ]
+          },
+          "rawText": "{\"actor\":\"B1\",\"deploymentId\":\"33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f\",\"did\":\"did:web:b.local:b1\",\"domainId\":\"B\",\"grants\":[{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":3,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"RESOURCE_PREAUTHORIZED\",\"currency\":\"CNY\",\"exp\":1795078859,\"grantId\":\"54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e\",\"granteeDid\":\"did:web:b.local:b1\",\"issuerDid\":\"did:web:a.local:a1\",\"maxAmountMinor\":100000,\"nbf\":1794988859,\"parentId\":\"c7a8665f5f519019e72e1837d59c854946a6c23957094c69686709b23304a0fb\",\"principalDomain\":\"A\",\"remainingDepth\":0,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"eed6c8b5e66581cc5a698f0eb2753fe0887ce12644f8ebf88496df6928bf8a4f\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb\",\"trustPathCount\":3}],\"roles\":[\"AGENT\"]}",
+          "isError": false,
+          "durationMs": 1
+        },
+        {
+          "step": 2,
+          "toolName": "request_quote",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb"
+          },
+          "output": {
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:3a92d0a4-8800-4c45-839c-db7a9b88ac1a",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:beeab3bb-e037-4b53-b4bc-c7f0a144fc3c",
+            "statusCode": 200,
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+            "totalAmountMinor": 80000,
+            "unitPriceMinor": 80000,
+            "validUntil": 1794992847
+          },
+          "rawText": "{\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:3a92d0a4-8800-4c45-839c-db7a9b88ac1a\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:beeab3bb-e037-4b53-b4bc-c7f0a144fc3c\",\"statusCode\":200,\"taskId\":\"654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb\",\"totalAmountMinor\":80000,\"unitPriceMinor\":80000,\"validUntil\":1794992847}",
+          "isError": false,
+          "durationMs": 20
+        },
+        {
+          "step": 3,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 80000,
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e",
+            "idempotencyKey": "procurement-run-bcaa7b32cd3dcec6-RESOURCE_PREAUTHORIZED-ok",
+            "quoteId": "urn:grad:quote:beeab3bb-e037-4b53-b4bc-c7f0a144fc3c",
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb"
+          },
+          "output": {
+            "actionId": "urn:grad:action:1a8d85d2-e048-42b0-9577-dcabf8ae4d7a",
+            "actionStatus": "COMPLETED",
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:93e88920-0f15-4481-80d1-78daa8c1bd1a",
+            "orderId": "urn:grad:order:216b3ba2-364f-4028-af4b-9315d094232d",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:beeab3bb-e037-4b53-b4bc-c7f0a144fc3c",
+            "sendRevision": 1,
+            "statusCode": 200,
+            "totalAmountMinor": 80000
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:1a8d85d2-e048-42b0-9577-dcabf8ae4d7a\",\"actionStatus\":\"COMPLETED\",\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:93e88920-0f15-4481-80d1-78daa8c1bd1a\",\"orderId\":\"urn:grad:order:216b3ba2-364f-4028-af4b-9315d094232d\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:beeab3bb-e037-4b53-b4bc-c7f0a144fc3c\",\"sendRevision\":1,\"statusCode\":200,\"totalAmountMinor\":80000}",
+          "isError": false,
+          "durationMs": 46
+        },
+        {
+          "step": 4,
+          "toolName": "request_quote",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb"
+          },
+          "output": {
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:5090c317-88b2-4596-a65b-8c6234c7745e",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed",
+            "statusCode": 200,
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+            "totalAmountMinor": 120000,
+            "unitPriceMinor": 120000,
+            "validUntil": 1794992847
+          },
+          "rawText": "{\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:5090c317-88b2-4596-a65b-8c6234c7745e\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed\",\"statusCode\":200,\"taskId\":\"654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb\",\"totalAmountMinor\":120000,\"unitPriceMinor\":120000,\"validUntil\":1794992847}",
+          "isError": false,
+          "durationMs": 22
+        },
+        {
+          "step": 5,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 100000,
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e",
+            "idempotencyKey": "procurement-run-bcaa7b32cd3dcec6-RESOURCE_PREAUTHORIZED-mismatch",
+            "quoteId": "urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed",
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb"
+          },
+          "output": {
+            "actionId": "urn:grad:action:55a1c5ee-523e-42b2-8574-97bcef226d9c",
+            "actionStatus": "FAILED",
+            "currency": "CNY",
+            "decision": "DENY",
+            "decisionId": "urn:grad:decision:6025f897-b3da-4321-aec9-924f63593567",
+            "errorCode": "AMOUNT_MISMATCH",
+            "errorMessage": "AMOUNT_MISMATCH: request amountMinor 100000 != quote \"urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed\" totalAmountMinor 120000",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed",
+            "sendRevision": 1,
+            "statusCode": 409
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:55a1c5ee-523e-42b2-8574-97bcef226d9c\",\"actionStatus\":\"FAILED\",\"currency\":\"CNY\",\"decision\":\"DENY\",\"decisionId\":\"urn:grad:decision:6025f897-b3da-4321-aec9-924f63593567\",\"errorCode\":\"AMOUNT_MISMATCH\",\"errorMessage\":\"AMOUNT_MISMATCH: request amountMinor 100000 != quote \\\"urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed\\\" totalAmountMinor 120000\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed\",\"sendRevision\":1,\"statusCode\":409}",
+          "isError": false,
+          "durationMs": 18
+        },
+        {
+          "step": 6,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 120000,
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e",
+            "idempotencyKey": "procurement-run-bcaa7b32cd3dcec6-RESOURCE_PREAUTHORIZED-over",
+            "quoteId": "urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed",
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb"
+          },
+          "output": {
+            "actionId": "urn:grad:action:53862e16-44a0-4354-bae7-260cc004eea3",
+            "actionStatus": "FAILED",
+            "currency": "CNY",
+            "decision": "DENY",
+            "decisionId": "urn:grad:decision:8167999f-e938-45ef-b435-45f7735a960e",
+            "errorCode": "AMOUNT_LIMIT_EXCEEDED",
+            "errorMessage": "AMOUNT_LIMIT_EXCEEDED: order amountMinor 120000 exceeds grant path maxAmountMinor 100000",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed",
+            "sendRevision": 1,
+            "statusCode": 403
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:53862e16-44a0-4354-bae7-260cc004eea3\",\"actionStatus\":\"FAILED\",\"currency\":\"CNY\",\"decision\":\"DENY\",\"decisionId\":\"urn:grad:decision:8167999f-e938-45ef-b435-45f7735a960e\",\"errorCode\":\"AMOUNT_LIMIT_EXCEEDED\",\"errorMessage\":\"AMOUNT_LIMIT_EXCEEDED: order amountMinor 120000 exceeds grant path maxAmountMinor 100000\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed\",\"sendRevision\":1,\"statusCode\":403}",
+          "isError": false,
+          "durationMs": 17
+        }
+      ]
+    },
+    {
+      "provider": "anthropic",
+      "model": "verify-anthropic",
+      "finalText": "BUYER_MANDATE closed loop verified.",
+      "llmLatencyMs": 1,
+      "totalDurationMs": 78,
+      "toolCallsCount": 6,
+      "steps": 7,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "inspect_wallet",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "BUYER_MANDATE",
+            "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d"
+          },
+          "output": {
+            "actor": "B1",
+            "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+            "did": "did:web:b.local:b1",
+            "domainId": "B",
+            "grants": [
+              {
+                "actions": [
+                  "order.create",
+                  "quote.read"
+                ],
+                "ancestorCount": 3,
+                "anchored": true,
+                "audience": "https://c.local",
+                "authorizationMode": "BUYER_MANDATE",
+                "currency": "CNY",
+                "exp": 1795078859,
+                "grantId": "978d28fd8adf0cac1034e9f4de75ff64c0bc2dc03265df6b2d763b9b1c64da0b",
+                "granteeDid": "did:web:b.local:b1",
+                "issuerDid": "did:web:a.local:a1",
+                "maxAmountMinor": 100000,
+                "nbf": 1794988859,
+                "parentId": "06bce3049454b74acbea12eb304c85c8d803bec80b952120ead3c9ecf8e55123",
+                "principalDomain": "A",
+                "remainingDepth": 0,
+                "resources": [
+                  "urn:grad:resource:C:orders",
+                  "urn:grad:resource:C:quotes"
+                ],
+                "rootId": "14e859edbc1bc71a50c7ec337eede8db8233a12320e6d49e9f74535a3186bf3b",
+                "suppliers": [
+                  "urn:grad:supplier:C"
+                ],
+                "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d",
+                "trustPathCount": 2
+              }
+            ],
+            "roles": [
+              "AGENT"
+            ]
+          },
+          "rawText": "{\"actor\":\"B1\",\"deploymentId\":\"33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f\",\"did\":\"did:web:b.local:b1\",\"domainId\":\"B\",\"grants\":[{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":3,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"BUYER_MANDATE\",\"currency\":\"CNY\",\"exp\":1795078859,\"grantId\":\"978d28fd8adf0cac1034e9f4de75ff64c0bc2dc03265df6b2d763b9b1c64da0b\",\"granteeDid\":\"did:web:b.local:b1\",\"issuerDid\":\"did:web:a.local:a1\",\"maxAmountMinor\":100000,\"nbf\":1794988859,\"parentId\":\"06bce3049454b74acbea12eb304c85c8d803bec80b952120ead3c9ecf8e55123\",\"principalDomain\":\"A\",\"remainingDepth\":0,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"14e859edbc1bc71a50c7ec337eede8db8233a12320e6d49e9f74535a3186bf3b\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d\",\"trustPathCount\":2}],\"roles\":[\"AGENT\"]}",
+          "isError": false,
+          "durationMs": 0
+        },
+        {
+          "step": 2,
+          "toolName": "request_quote",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "978d28fd8adf0cac1034e9f4de75ff64c0bc2dc03265df6b2d763b9b1c64da0b",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d"
+          },
+          "output": {
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:6e6469d4-2289-4f18-803a-9e4ed718152a",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:a9ac8bc4-c6c0-42c0-8cd8-0e0139ae8ea4",
+            "statusCode": 200,
+            "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d",
+            "totalAmountMinor": 80000,
+            "unitPriceMinor": 80000,
+            "validUntil": 1794992847
+          },
+          "rawText": "{\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:6e6469d4-2289-4f18-803a-9e4ed718152a\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:a9ac8bc4-c6c0-42c0-8cd8-0e0139ae8ea4\",\"statusCode\":200,\"taskId\":\"57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d\",\"totalAmountMinor\":80000,\"unitPriceMinor\":80000,\"validUntil\":1794992847}",
+          "isError": false,
+          "durationMs": 13
+        },
+        {
+          "step": 3,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 80000,
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "978d28fd8adf0cac1034e9f4de75ff64c0bc2dc03265df6b2d763b9b1c64da0b",
+            "idempotencyKey": "procurement-run-bcaa7b32cd3dcec6-BUYER_MANDATE-ok",
+            "quoteId": "urn:grad:quote:a9ac8bc4-c6c0-42c0-8cd8-0e0139ae8ea4",
+            "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d"
+          },
+          "output": {
+            "actionId": "urn:grad:action:932e98e7-cd95-4f68-b58d-3425fe1b527a",
+            "actionStatus": "COMPLETED",
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:409dfdb0-9900-4afb-96ca-c031c7fe937b",
+            "orderId": "urn:grad:order:870d57fc-54b4-4135-b38d-9cea78e2cad2",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:a9ac8bc4-c6c0-42c0-8cd8-0e0139ae8ea4",
+            "sendRevision": 1,
+            "statusCode": 200,
+            "totalAmountMinor": 80000
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:932e98e7-cd95-4f68-b58d-3425fe1b527a\",\"actionStatus\":\"COMPLETED\",\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:409dfdb0-9900-4afb-96ca-c031c7fe937b\",\"orderId\":\"urn:grad:order:870d57fc-54b4-4135-b38d-9cea78e2cad2\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:a9ac8bc4-c6c0-42c0-8cd8-0e0139ae8ea4\",\"sendRevision\":1,\"statusCode\":200,\"totalAmountMinor\":80000}",
+          "isError": false,
+          "durationMs": 15
+        },
+        {
+          "step": 4,
+          "toolName": "request_quote",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "978d28fd8adf0cac1034e9f4de75ff64c0bc2dc03265df6b2d763b9b1c64da0b",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d"
+          },
+          "output": {
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:65265e80-0fac-4837-ab60-c5cfea54ccd3",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:90919426-3a40-49d6-b786-3e37ed292899",
+            "statusCode": 200,
+            "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d",
+            "totalAmountMinor": 120000,
+            "unitPriceMinor": 120000,
+            "validUntil": 1794992847
+          },
+          "rawText": "{\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:65265e80-0fac-4837-ab60-c5cfea54ccd3\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:90919426-3a40-49d6-b786-3e37ed292899\",\"statusCode\":200,\"taskId\":\"57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d\",\"totalAmountMinor\":120000,\"unitPriceMinor\":120000,\"validUntil\":1794992847}",
+          "isError": false,
+          "durationMs": 12
+        },
+        {
+          "step": 5,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 100000,
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "978d28fd8adf0cac1034e9f4de75ff64c0bc2dc03265df6b2d763b9b1c64da0b",
+            "idempotencyKey": "procurement-run-bcaa7b32cd3dcec6-BUYER_MANDATE-mismatch",
+            "quoteId": "urn:grad:quote:90919426-3a40-49d6-b786-3e37ed292899",
+            "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d"
+          },
+          "output": {
+            "actionId": "urn:grad:action:f8b1b8ea-c6ac-4953-bcf4-6e4a2fde11dc",
+            "actionStatus": "FAILED",
+            "currency": "CNY",
+            "decision": "DENY",
+            "decisionId": "urn:grad:decision:ffba2931-3349-4a0c-8115-3ef8cb9727ca",
+            "errorCode": "AMOUNT_MISMATCH",
+            "errorMessage": "AMOUNT_MISMATCH: request amountMinor 100000 != quote \"urn:grad:quote:90919426-3a40-49d6-b786-3e37ed292899\" totalAmountMinor 120000",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:90919426-3a40-49d6-b786-3e37ed292899",
+            "sendRevision": 1,
+            "statusCode": 409
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:f8b1b8ea-c6ac-4953-bcf4-6e4a2fde11dc\",\"actionStatus\":\"FAILED\",\"currency\":\"CNY\",\"decision\":\"DENY\",\"decisionId\":\"urn:grad:decision:ffba2931-3349-4a0c-8115-3ef8cb9727ca\",\"errorCode\":\"AMOUNT_MISMATCH\",\"errorMessage\":\"AMOUNT_MISMATCH: request amountMinor 100000 != quote \\\"urn:grad:quote:90919426-3a40-49d6-b786-3e37ed292899\\\" totalAmountMinor 120000\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:90919426-3a40-49d6-b786-3e37ed292899\",\"sendRevision\":1,\"statusCode\":409}",
+          "isError": false,
+          "durationMs": 15
+        },
+        {
+          "step": 6,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 120000,
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "978d28fd8adf0cac1034e9f4de75ff64c0bc2dc03265df6b2d763b9b1c64da0b",
+            "idempotencyKey": "procurement-run-bcaa7b32cd3dcec6-BUYER_MANDATE-over",
+            "quoteId": "urn:grad:quote:90919426-3a40-49d6-b786-3e37ed292899",
+            "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d"
+          },
+          "output": {
+            "actionId": "urn:grad:action:e5f16ac3-0962-466c-9adb-b2f7c4ac15ce",
+            "actionStatus": "FAILED",
+            "currency": "CNY",
+            "decision": "DENY",
+            "decisionId": "urn:grad:decision:64a041cb-27a5-49e9-9d25-296aa739d352",
+            "errorCode": "AMOUNT_LIMIT_EXCEEDED",
+            "errorMessage": "AMOUNT_LIMIT_EXCEEDED: order amountMinor 120000 exceeds grant path maxAmountMinor 100000",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:90919426-3a40-49d6-b786-3e37ed292899",
+            "sendRevision": 1,
+            "statusCode": 403
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:e5f16ac3-0962-466c-9adb-b2f7c4ac15ce\",\"actionStatus\":\"FAILED\",\"currency\":\"CNY\",\"decision\":\"DENY\",\"decisionId\":\"urn:grad:decision:64a041cb-27a5-49e9-9d25-296aa739d352\",\"errorCode\":\"AMOUNT_LIMIT_EXCEEDED\",\"errorMessage\":\"AMOUNT_LIMIT_EXCEEDED: order amountMinor 120000 exceeds grant path maxAmountMinor 100000\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:90919426-3a40-49d6-b786-3e37ed292899\",\"sendRevision\":1,\"statusCode\":403}",
+          "isError": false,
+          "durationMs": 16
+        }
+      ]
+    },
+    {
+      "provider": "anthropic",
+      "model": "deepseek-flash",
+      "finalText": "Order is committed.\n\n## Results\n\n**Order placed — COMPLETED**\n| Field | Value |\n|---|---|\n| Order ID | `urn:grad:order:2052603c-9e8f-4a75-a669-3b35c414e4e0` |\n| Action ID | `urn:grad:action:4fc4aa89-0a7f-47c7-a24f-c52e8afa2c31` |\n| Quote ID | `urn:grad:quote:76ae0caf-b92e-4f88-ac2d-790a7ddc8f52` (freshly issued to B1, this task) |\n| Amount | 80000 minor CNY (≤ 100000 ceiling) |\n| Quantity | 1 × `urn:grad:product:P1` |\n| Authorization | RESOURCE_PREAUTHORIZED, grant `54a22d5a…f1c7e` |\n| Decision | ALLOW (`urn:grad:decision:695f5121…`), sendRevision 1 |\n| Idempotency key | `procurement-live-run-bcaa7b32cd3dcec6` |\n\nNo UNKNOWN / OUTCOME_UNKNOWN outcome, so no `reconcile_order` was needed.\n\n## On the 120000 minor question\n\n**Yes — 120000 would exceed the limit.** B1's grant for this task has `maxAmountMinor` = **100000** CNY, so 120000 minor is **20000 over ceiling (~20%)**. An `order.create` at that amount would be refused by the gateway regardless of quote availability.\n\n⚠️ Two things worth flagging:\n\n1. **Naming caveat:** the wallet returns only *one* grant for this task, with ID `54a22d5a93ad…f1c7e` issued by A1 (parent `c7a8665f…`, root `eed6c8b5…`). I can't verify from wallet data that the label \"G2\" maps to that ID — please confirm if you're referring to a different grant, because my ceiling comparison assumes G2 = this grant.\n2. **A 120000 cached quote exists** in B1's wallet (`urn:grad:quote:41204371…`). It is not usable: it's above the grant ceiling, and I deliberately did not reuse any cached quote for this order. Don't attempt to pair that quote with an order.\n\nIf a 120000 purchase is genuinely needed, the ceiling must be raised first — which requires A1 to issue a new or replacement delegation above 100000. Note that this grant has `remainingDepth: 0`, so A1 would need to act from its own parent grant `c7a8665f…` rather than through B1.",
+      "llmLatencyMs": 12478,
+      "totalDurationMs": 12545,
+      "toolCallsCount": 3,
+      "steps": 4,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "inspect_wallet",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb"
+          },
+          "output": {
+            "actor": "B1",
+            "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+            "did": "did:web:b.local:b1",
+            "domainId": "B",
+            "grants": [
+              {
+                "actions": [
+                  "order.create",
+                  "quote.read"
+                ],
+                "ancestorCount": 3,
+                "anchored": true,
+                "audience": "https://c.local",
+                "authorizationMode": "RESOURCE_PREAUTHORIZED",
+                "currency": "CNY",
+                "exp": 1795078859,
+                "grantId": "54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e",
+                "granteeDid": "did:web:b.local:b1",
+                "issuerDid": "did:web:a.local:a1",
+                "maxAmountMinor": 100000,
+                "nbf": 1794988859,
+                "parentId": "c7a8665f5f519019e72e1837d59c854946a6c23957094c69686709b23304a0fb",
+                "principalDomain": "A",
+                "remainingDepth": 0,
+                "resources": [
+                  "urn:grad:resource:C:orders",
+                  "urn:grad:resource:C:quotes"
+                ],
+                "rootId": "eed6c8b5e66581cc5a698f0eb2753fe0887ce12644f8ebf88496df6928bf8a4f",
+                "suppliers": [
+                  "urn:grad:supplier:C"
+                ],
+                "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+                "trustPathCount": 3
+              }
+            ],
+            "quotes": [
+              {
+                "actor": "B1",
+                "currency": "CNY",
+                "productId": "urn:grad:product:P1",
+                "quantity": 1,
+                "quoteId": "urn:grad:quote:beeab3bb-e037-4b53-b4bc-c7f0a144fc3c",
+                "supplierId": "urn:grad:supplier:C",
+                "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+                "totalAmountMinor": 80000,
+                "unitPriceMinor": 80000,
+                "validUntil": 1794992847
+              },
+              {
+                "actor": "B1",
+                "currency": "CNY",
+                "productId": "urn:grad:product:P1",
+                "quantity": 1,
+                "quoteId": "urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed",
+                "supplierId": "urn:grad:supplier:C",
+                "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+                "totalAmountMinor": 120000,
+                "unitPriceMinor": 120000,
+                "validUntil": 1794992847
+              }
+            ],
+            "roles": [
+              "AGENT"
+            ]
+          },
+          "rawText": "{\"actor\":\"B1\",\"deploymentId\":\"33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f\",\"did\":\"did:web:b.local:b1\",\"domainId\":\"B\",\"grants\":[{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":3,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"RESOURCE_PREAUTHORIZED\",\"currency\":\"CNY\",\"exp\":1795078859,\"grantId\":\"54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e\",\"granteeDid\":\"did:web:b.local:b1\",\"issuerDid\":\"did:web:a.local:a1\",\"maxAmountMinor\":100000,\"nbf\":1794988859,\"parentId\":\"c7a8665f5f519019e72e1837d59c854946a6c23957094c69686709b23304a0fb\",\"principalDomain\":\"A\",\"remainingDepth\":0,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"eed6c8b5e66581cc5a698f0eb2753fe0887ce12644f8ebf88496df6928bf8a4f\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb\",\"trustPathCount\":3}],\"quotes\":[{\"actor\":\"B1\",\"currency\":\"CNY\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:beeab3bb-e037-4b53-b4bc-c7f0a144fc3c\",\"supplierId\":\"urn:grad:supplier:C\",\"taskId\":\"654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb\",\"totalAmountMinor\":80000,\"unitPriceMinor\":80000,\"validUntil\":1794992847},{\"actor\":\"B1\",\"currency\":\"CNY\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:41204371-ef43-4a95-96ee-14e2a0f55eed\",\"supplierId\":\"urn:grad:supplier:C\",\"taskId\":\"654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb\",\"totalAmountMinor\":120000,\"unitPriceMinor\":120000,\"validUntil\":1794992847}],\"roles\":[\"AGENT\"]}",
+          "isError": false,
+          "durationMs": 1
+        },
+        {
+          "step": 2,
+          "toolName": "request_quote",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb"
+          },
+          "output": {
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:95ac14cc-6aa9-4ea9-9701-3e4e40735227",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:76ae0caf-b92e-4f88-ac2d-790a7ddc8f52",
+            "statusCode": 200,
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+            "totalAmountMinor": 80000,
+            "unitPriceMinor": 80000,
+            "validUntil": 1794992847
+          },
+          "rawText": "{\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:95ac14cc-6aa9-4ea9-9701-3e4e40735227\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:76ae0caf-b92e-4f88-ac2d-790a7ddc8f52\",\"statusCode\":200,\"taskId\":\"654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb\",\"totalAmountMinor\":80000,\"unitPriceMinor\":80000,\"validUntil\":1794992847}",
+          "isError": false,
+          "durationMs": 29
+        },
+        {
+          "step": 3,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 80000,
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "currency": "CNY",
+            "grantId": "54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e",
+            "idempotencyKey": "procurement-live-run-bcaa7b32cd3dcec6",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:76ae0caf-b92e-4f88-ac2d-790a7ddc8f52",
+            "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb"
+          },
+          "output": {
+            "actionId": "urn:grad:action:4fc4aa89-0a7f-47c7-a24f-c52e8afa2c31",
+            "actionStatus": "COMPLETED",
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:695f5121-1711-4905-b099-953d5fcb997c",
+            "orderId": "urn:grad:order:2052603c-9e8f-4a75-a669-3b35c414e4e0",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:76ae0caf-b92e-4f88-ac2d-790a7ddc8f52",
+            "sendRevision": 1,
+            "statusCode": 200,
+            "totalAmountMinor": 80000
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:4fc4aa89-0a7f-47c7-a24f-c52e8afa2c31\",\"actionStatus\":\"COMPLETED\",\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:695f5121-1711-4905-b099-953d5fcb997c\",\"orderId\":\"urn:grad:order:2052603c-9e8f-4a75-a669-3b35c414e4e0\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:76ae0caf-b92e-4f88-ac2d-790a7ddc8f52\",\"sendRevision\":1,\"statusCode\":200,\"totalAmountMinor\":80000}",
+          "isError": false,
+          "durationMs": 32
+        }
+      ]
+    }
+  ]
+}

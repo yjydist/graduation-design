@@ -1,4 +1,4 @@
-// Registry exposes the public Fabric D0 registration operations.
+// Registry exposes the public Fabric registration operations.
 package main
 
 import (
@@ -59,13 +59,13 @@ type transaction struct {
 }
 
 func (registry) Init(shim.ChaincodeStubInterface) *pb.Response {
-	return shim.Error("D0:UNAUTHORIZED")
+	return shim.Error(api.RegistryErrorPrefix + "UNAUTHORIZED")
 }
 
 func (registry) Invoke(stub shim.ChaincodeStubInterface) *pb.Response {
 	method, args := stub.GetFunctionAndParameters()
 	if len(args) != 1 {
-		return shim.Error("D0:" + badInput)
+		return shim.Error(api.RegistryErrorPrefix + badInput)
 	}
 	result, err := invoke(stub, method, []byte(args[0]))
 	if err != nil {
@@ -170,7 +170,7 @@ func invoke(stub shim.ChaincodeStubInterface, method string, arg []byte) ([]byte
 	return nil, err
 }
 
-func reject(code string) error { return errors.New("D0:" + code) }
+func reject(code string) error { return errors.New(api.RegistryErrorPrefix + code) }
 
 func dispatch[T any](arg []byte, f func(T) error) error {
 	var value T

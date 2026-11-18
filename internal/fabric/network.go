@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"graduation-design/internal/experiment"
 	api "graduation-design/internal/fabricapi"
 
 	"github.com/hyperledger/fabric-gateway/pkg/client"
@@ -30,9 +29,8 @@ import (
 )
 
 type instance struct {
-	dir      string
-	env      map[string]string
-	baseline *experiment.Inputs
+	dir string
+	env map[string]string
 }
 
 func loadInstance(dir string) (*instance, error) {
@@ -221,7 +219,7 @@ func (e *peerResponseError) Error() string {
 
 func missingRegistryRecord(err error) bool {
 	var response *peerResponseError
-	return errors.As(err, &response) && response.status == 500 && response.message == "D0:MISSING_DEPENDENCY"
+	return errors.As(err, &response) && response.status == 500 && response.message == api.RegistryErrorPrefix+"MISSING_DEPENDENCY"
 }
 
 // direct uses the pinned Peer Endorser endpoint. Gateway Evaluate may select another Peer.
@@ -331,4 +329,13 @@ func poll(ctx context.Context, d time.Duration, f func() (bool, error)) error {
 		}
 	}
 	return c.Err()
+}
+
+func ledgerRecord[T any](ctx context.Context, p *peerClient, kind, id string) (T, error) {
+	var v T
+	b, err := p.direct(ctx, api.Registry, "Read", api.Key(kind, id))
+	if err == nil {
+		err = json.Unmarshal(b, &v)
+	}
+	return v, err
 }

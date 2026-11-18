@@ -176,7 +176,7 @@ func newAgentTestHarness(t *testing.T) *agentTestHarness {
 		t.Fatal(err)
 	}
 
-	uniqueTag := fmt.Sprintf("agent-m2-%d", time.Now().UnixNano())
+	uniqueTag := fmt.Sprintf("agent-procurement-%d", time.Now().UnixNano())
 	depID := api.Digest([]byte("dep:" + uniqueTag))
 	taskRP := api.Digest([]byte("task-rp:" + uniqueTag))
 	taskBM := api.Digest([]byte("task-bm:" + uniqueTag))
@@ -301,7 +301,7 @@ func newAgentTestHarness(t *testing.T) *agentTestHarness {
 		Currency:    "CNY",
 		Resources:   []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
 		Actions:     []string{"order.create", "quote.read"},
-		Description: "agent M2 procurement delegation",
+		Description: "Agent procurement delegation",
 	}
 	taskDig, err := spec.Digest()
 	if err != nil {

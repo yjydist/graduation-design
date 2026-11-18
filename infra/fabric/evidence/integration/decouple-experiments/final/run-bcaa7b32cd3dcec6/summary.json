@@ -1,0 +1,143 @@
+{
+  "runId": "run-bcaa7b32cd3dcec6",
+  "evidenceDir": "infra/fabric/evidence/integration/decouple-experiments/final/run-bcaa7b32cd3dcec6",
+  "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+  "scope": "Fabric deployment, protocol, transactions and business integration",
+  "startedAt": "2026-11-18T09:00:55.902492Z",
+  "finishedAt": "2026-11-18T09:03:50.078448Z",
+  "status": "PASS",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "initialization-resume",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "credential-validity-boundaries",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": true
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "shared-view-concurrent-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "checkpoint-query-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": true
+    },
+    {
+      "name": "chaincode-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "protocol-encoding-and-vectors",
+      "pass": true
+    },
+    {
+      "name": "did-web-and-context-pinning",
+      "pass": true
+    },
+    {
+      "name": "verifiable-evidence-and-tamper-rejection",
+      "pass": true
+    },
+    {
+      "name": "registration-and-material-delivery",
+      "pass": true
+    },
+    {
+      "name": "direct-access-quote-and-idempotency",
+      "pass": true
+    },
+    {
+      "name": "wrong-leaf-key-rejected",
+      "pass": true
+    },
+    {
+      "name": "probe-expiry-state-stale",
+      "pass": true
+    },
+    {
+      "name": "post-lock-blocked-no-quote",
+      "pass": true
+    },
+    {
+      "name": "exact-second-deadline-rejection",
+      "pass": true
+    },
+    {
+      "name": "dual-roots-and-identity-link",
+      "pass": true
+    },
+    {
+      "name": "mcp-dual-root-orders",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-postlock-order-guards",
+      "pass": true
+    },
+    {
+      "name": "dual-gateway-concurrent-idempotency",
+      "pass": true
+    },
+    {
+      "name": "authority-and-identity-lifecycle",
+      "pass": true
+    },
+    {
+      "name": "agent-replacement-and-reconciliation",
+      "pass": true
+    },
+    {
+      "name": "transaction-and-lock-faults",
+      "pass": true
+    }
+  ]
+}

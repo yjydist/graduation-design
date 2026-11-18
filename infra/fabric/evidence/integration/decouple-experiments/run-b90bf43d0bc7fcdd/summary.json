@@ -1,0 +1,15 @@
+{
+  "runId": "run-b90bf43d0bc7fcdd",
+  "evidenceDir": ".local/decoupled-integration-target/run-b90bf43d0bc7fcdd",
+  "deploymentId": "318855e05b2c6b8852c1c34624b3e46a259d2ee956031bc0c84dca12d7ab3214",
+  "scope": "Fabric D0 verifiable protocol anchors, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-18T08:54:36.488064Z",
+  "finishedAt": "2026-11-18T08:54:38.646496Z",
+  "status": "PASS",
+  "cases": [
+    {
+      "name": "m2-revocation-and-postlock-order-guards",
+      "pass": true
+    }
+  ]
+}

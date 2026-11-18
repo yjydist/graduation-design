@@ -1,0 +1,54 @@
+{
+  "deterministicTrajectory": {
+    "b2Order": {
+      "decision": "ALLOW",
+      "statusCode": 200,
+      "actionId": "urn:grad:action:47642158-64f9-40fc-8954-5cb4ad9f241b",
+      "actionStatus": "COMPLETED",
+      "sendRevision": 1,
+      "decisionId": "urn:grad:decision:e2a5780f-cf15-42f0-bad2-7a87ca3b4594",
+      "orderId": "urn:grad:order:67b8c40a-6385-47c3-adf5-5020c86bbd94",
+      "quoteId": "urn:grad:quote:43f25384-e4a5-4572-bb95-887292bacead",
+      "productId": "urn:grad:product:P1",
+      "quantity": 1,
+      "totalAmountMinor": 80000,
+      "currency": "CNY"
+    },
+    "ordersAdded": 2,
+    "replaceGrantId": "6fdc9fb4dc8d26a268886c3f7009c9008897abda7ad8aa783d2432201d1b7083",
+    "revokedOldGrantId": "21518cabe8841fbb373e26518d3178aa163ef507d825377a9a82ca95b0d606c8",
+    "s41ErrorCode": "GRANT_INACTIVE",
+    "s41StatusCode": 403,
+    "s55ErrorCode": "QUOTE_SCOPE_MISMATCH",
+    "s55StatusCode": 403,
+    "s63Reconcile": {
+      "caseId": "urn:grad:case:7a36bd3d-750d-4648-bc24-d87516b92190",
+      "sendRevision": 2,
+      "outcome": "CREATED",
+      "historicalStatus": "MATCHED",
+      "historicalReason": "historical checks matched at h=148 < r=149",
+      "orderId": "urn:grad:order:1d2515d0-2000-4d49-86f3-a0b491335e33",
+      "creationDecisionId": "urn:grad:decision:2ca4241c-7c73-4d72-93bb-a0763e6cb6bd",
+      "actionStatus": "RECONCILED",
+      "checkNo": 1,
+      "challengeIds": [
+        "urn:grad:challenge:8ca8bb96-8866-4000-8717-d06c227a8467",
+        "urn:grad:challenge:ed58ca74-e1a5-40f9-936e-7ede4b28b2b0"
+      ]
+    },
+    "s63Retry": {
+      "decision": "DENY",
+      "statusCode": 403,
+      "actionId": "urn:grad:action:b63bf7f6-d994-4e8f-9336-96c421cc721e",
+      "actionStatus": "FAILED",
+      "sendRevision": 1,
+      "quoteId": "urn:grad:quote:f15bb7a4-cf37-434f-aa54-a6aa746d7904",
+      "productId": "urn:grad:product:P1",
+      "quantity": 1,
+      "currency": "CNY",
+      "errorCode": "ANCESTOR_INACTIVE",
+      "errorMessage": "ANCESTOR_INACTIVE: ancestor grant \"0dbacfc9166f080106291cb78acd9dd5c09da9ac1af0a1484764dba625584121\" status \"REVOKED\" != ACTIVE at snapshot height 149: GRANT_CHAIN_INVALID: ancestor grant \"0dbacfc9166f080106291cb78acd9dd5c09da9ac1af0a1484764dba625584121\" status \"REVOKED\" != ACTIVE at snapshot height 149"
+    }
+  },
+  "liveTrajectoryChecks": 2
+}

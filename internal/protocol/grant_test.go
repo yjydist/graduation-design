@@ -167,7 +167,7 @@ func TestGrantSignVerifyAndDelegationChain(t *testing.T) {
 	}
 }
 
-func TestM2TwoHopGrantChainErrorCodes(t *testing.T) {
+func TestTwoHopGrantChainErrorCodes(t *testing.T) {
 	privPA, _, err := GenerateP256KeyPair()
 	if err != nil {
 		t.Fatal(err)
@@ -195,7 +195,7 @@ func TestM2TwoHopGrantChainErrorCodes(t *testing.T) {
 		IssuerKeyVersion: 1, GranteeKeyVersion: 1,
 		IssuerCredentialID: "urn:grad:credential:PA-v1", GranteeCredentialID: "urn:grad:credential:U-v1",
 		Resources: []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
-		Actions: []string{"order.create", "quote.read"}, Suppliers: []string{"urn:grad:supplier:C"},
+		Actions:   []string{"order.create", "quote.read"}, Suppliers: []string{"urn:grad:supplier:C"},
 		Aud: "https://c.local", Currency: "CNY", MaxAmountMinor: 500000, NBF: nbf, EXP: exp, RemainingDepth: 2,
 	}
 	g0JWS, g0Dig, err := SignGrant(privPA, "did:web:a.local:pa#key-1", &g0Claims)
@@ -209,7 +209,7 @@ func TestM2TwoHopGrantChainErrorCodes(t *testing.T) {
 		IssuerKeyVersion: 1, GranteeKeyVersion: 1,
 		IssuerCredentialID: "urn:grad:credential:U-v1", GranteeCredentialID: "urn:grad:credential:A1-v1",
 		Resources: []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
-		Actions: []string{"order.create", "quote.read"}, Suppliers: []string{"urn:grad:supplier:C"},
+		Actions:   []string{"order.create", "quote.read"}, Suppliers: []string{"urn:grad:supplier:C"},
 		Aud: "https://c.local", Currency: "CNY", MaxAmountMinor: 500000, NBF: nbf, EXP: exp, RemainingDepth: 1,
 	}
 	g1JWS, g1Dig, err := SignGrant(privU, "did:web:a.local:u#key-1", &g1Claims)
@@ -223,7 +223,7 @@ func TestM2TwoHopGrantChainErrorCodes(t *testing.T) {
 		IssuerKeyVersion: 1, GranteeKeyVersion: 1,
 		IssuerCredentialID: "urn:grad:credential:A1-v1", GranteeCredentialID: "urn:grad:credential:B1-v1",
 		Resources: []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
-		Actions: []string{"order.create", "quote.read"}, Suppliers: []string{"urn:grad:supplier:C"},
+		Actions:   []string{"order.create", "quote.read"}, Suppliers: []string{"urn:grad:supplier:C"},
 		Aud: "https://c.local", Currency: "CNY", MaxAmountMinor: 100000, NBF: nbf, EXP: exp, RemainingDepth: 0,
 	}
 	g2JWS, _, err := SignGrant(privA1, "did:web:a.local:a1#key-1", &g2Claims)

@@ -547,7 +547,7 @@ func toggleLastB64Char(s string) string {
 	return "A"
 }
 
-func TestM2TwoHopEvidenceVerificationRPAndBM(t *testing.T) {
+func TestTwoHopEvidenceVerificationRPAndBM(t *testing.T) {
 	ctx := t.Context()
 	now := time.Now().UTC().Truncate(time.Second)
 	nbf, exp := now.Add(-10*time.Minute).Unix(), now.Add(time.Hour).Unix()
@@ -680,7 +680,7 @@ func TestM2TwoHopEvidenceVerificationRPAndBM(t *testing.T) {
 	spec := TaskSpec{
 		SupplierID: "urn:grad:supplier:C", ProductID: "urn:grad:product:P1", MaxQuantity: 1, Currency: "CNY",
 		Resources: []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
-		Actions: []string{"order.create", "quote.read"}, Description: "M2 verification",
+		Actions:   []string{"order.create", "quote.read"}, Description: "Dual-root verification",
 	}
 	specDig, _ := spec.Digest()
 
@@ -738,15 +738,15 @@ func TestM2TwoHopEvidenceVerificationRPAndBM(t *testing.T) {
 		Domains:        map[string]api.Domain{"A": domA, "B": domB, "C": domC},
 		Certifications: map[string]api.Certification{certA.ID: certA, certB.ID: certB, certC.ID: certC},
 		Identities: map[string]api.Identity{
-			didIA: {Bound: api.Bound{DeploymentID: depID}, ID: didIA, Domain: "A", Kind: "ISSUER", DocumentDigest: digIA, KeyID: didIA + "#key-1", KeyVersion: 1, PublicKey: pubIA, Version: api.Version{Status: api.Active, Revision: 1}},
-			didU:  {Bound: api.Bound{DeploymentID: depID}, ID: didU, Domain: "A", Kind: "USER", DocumentDigest: digU, KeyID: didU + "#key-1", KeyVersion: 1, PublicKey: pubU, Version: api.Version{Status: api.Active, Revision: 1}},
-			didPA: {Bound: api.Bound{DeploymentID: depID}, ID: didPA, Domain: "A", Kind: "SERVICE", DocumentDigest: digPA, KeyID: didPA + "#key-1", KeyVersion: 1, PublicKey: pubPA, Version: api.Version{Status: api.Active, Revision: 1}},
-			didA1: {Bound: api.Bound{DeploymentID: depID}, ID: didA1, Domain: "A", Kind: "AGENT", DocumentDigest: digA1, KeyID: didA1 + "#key-1", KeyVersion: 1, PublicKey: pubA1, Version: api.Version{Status: api.Active, Revision: 1}},
-			didIB: {Bound: api.Bound{DeploymentID: depID}, ID: didIB, Domain: "B", Kind: "ISSUER", DocumentDigest: digIB, KeyID: didIB + "#key-1", KeyVersion: 1, PublicKey: pubIB, Version: api.Version{Status: api.Active, Revision: 1}},
-			didB1: {Bound: api.Bound{DeploymentID: depID}, ID: didB1, Domain: "B", Kind: "AGENT", DocumentDigest: digB1, KeyID: didB1 + "#key-1", KeyVersion: 1, PublicKey: pubB1, Version: api.Version{Status: api.Active, Revision: 1}},
+			didIA:   {Bound: api.Bound{DeploymentID: depID}, ID: didIA, Domain: "A", Kind: "ISSUER", DocumentDigest: digIA, KeyID: didIA + "#key-1", KeyVersion: 1, PublicKey: pubIA, Version: api.Version{Status: api.Active, Revision: 1}},
+			didU:    {Bound: api.Bound{DeploymentID: depID}, ID: didU, Domain: "A", Kind: "USER", DocumentDigest: digU, KeyID: didU + "#key-1", KeyVersion: 1, PublicKey: pubU, Version: api.Version{Status: api.Active, Revision: 1}},
+			didPA:   {Bound: api.Bound{DeploymentID: depID}, ID: didPA, Domain: "A", Kind: "SERVICE", DocumentDigest: digPA, KeyID: didPA + "#key-1", KeyVersion: 1, PublicKey: pubPA, Version: api.Version{Status: api.Active, Revision: 1}},
+			didA1:   {Bound: api.Bound{DeploymentID: depID}, ID: didA1, Domain: "A", Kind: "AGENT", DocumentDigest: digA1, KeyID: didA1 + "#key-1", KeyVersion: 1, PublicKey: pubA1, Version: api.Version{Status: api.Active, Revision: 1}},
+			didIB:   {Bound: api.Bound{DeploymentID: depID}, ID: didIB, Domain: "B", Kind: "ISSUER", DocumentDigest: digIB, KeyID: didIB + "#key-1", KeyVersion: 1, PublicKey: pubIB, Version: api.Version{Status: api.Active, Revision: 1}},
+			didB1:   {Bound: api.Bound{DeploymentID: depID}, ID: didB1, Domain: "B", Kind: "AGENT", DocumentDigest: digB1, KeyID: didB1 + "#key-1", KeyVersion: 1, PublicKey: pubB1, Version: api.Version{Status: api.Active, Revision: 1}},
 			didUinB: {Bound: api.Bound{DeploymentID: depID}, ID: didUinB, Domain: "B", Kind: "USER", DocumentDigest: digUinB, KeyID: didUinB + "#key-1", KeyVersion: 1, PublicKey: pubUinB, Version: api.Version{Status: api.Active, Revision: 1}},
-			didIC: {Bound: api.Bound{DeploymentID: depID}, ID: didIC, Domain: "C", Kind: "ISSUER", DocumentDigest: digIC, KeyID: didIC + "#key-1", KeyVersion: 1, PublicKey: pubIC, Version: api.Version{Status: api.Active, Revision: 1}},
-			didC:  {Bound: api.Bound{DeploymentID: depID}, ID: didC, Domain: "C", Kind: "SERVICE", DocumentDigest: digC, KeyID: didC + "#key-1", KeyVersion: 1, PublicKey: pubC, Version: api.Version{Status: api.Active, Revision: 1}},
+			didIC:   {Bound: api.Bound{DeploymentID: depID}, ID: didIC, Domain: "C", Kind: "ISSUER", DocumentDigest: digIC, KeyID: didIC + "#key-1", KeyVersion: 1, PublicKey: pubIC, Version: api.Version{Status: api.Active, Revision: 1}},
+			didC:    {Bound: api.Bound{DeploymentID: depID}, ID: didC, Domain: "C", Kind: "SERVICE", DocumentDigest: digC, KeyID: didC + "#key-1", KeyVersion: 1, PublicKey: pubC, Version: api.Version{Status: api.Active, Revision: 1}},
 		},
 		Credentials: map[string]api.Credential{
 			credPA.ID: credPA, credU.ID: credU, credA1.ID: credA1, credB1.ID: credB1, credUinB.ID: credUinB, credC.ID: credC,
@@ -756,7 +756,7 @@ func TestM2TwoHopEvidenceVerificationRPAndBM(t *testing.T) {
 	}
 
 	nonce, _ := GenerateNonce()
-	chal := ChallengeContext{ChallengeID: "m2-ch-1", Nonce: nonce, Audience: "https://c.local", IssuedAt: now.Unix(), ExpiresAt: exp}
+	chal := ChallengeContext{ChallengeID: "dual-root-ch-1", Nonce: nonce, Audience: "https://c.local", IssuedAt: now.Unix(), ExpiresAt: exp}
 	qID := "urn:grad:quote:Q800"
 
 	// 1. RP 2-hop C -> U -> A1 -> B1 succeeds.
@@ -765,7 +765,7 @@ func TestM2TwoHopEvidenceVerificationRPAndBM(t *testing.T) {
 			SchemaVersion: SchemaVersion, DeploymentID: depID, Actor: didB1, PrincipalDomain: "A",
 			AuthorizationMode: ModeResourcePreauthorized, TaskID: rpTaskID, Audience: "https://c.local",
 			Resource: resID, Action: "order.create", SupplierID: spec.SupplierID, QuoteID: &qID,
-			ProductID: spec.ProductID, Quantity: 1, Currency: "CNY", AmountMinor: 80000, IdempotencyKey: "m2-rp-001",
+			ProductID: spec.ProductID, Quantity: 1, Currency: "CNY", AmountMinor: 80000, IdempotencyKey: "dual-root-rp-001",
 		},
 		TaskSpec: spec,
 		AncestorCredentials: []AncestorCredential{
@@ -797,7 +797,7 @@ func TestM2TwoHopEvidenceVerificationRPAndBM(t *testing.T) {
 			SchemaVersion: SchemaVersion, DeploymentID: depID, Actor: didB1, PrincipalDomain: "A",
 			AuthorizationMode: ModeBuyerMandate, TaskID: bmTaskID, Audience: "https://c.local",
 			Resource: resID, Action: "order.create", SupplierID: spec.SupplierID, QuoteID: &qID,
-			ProductID: spec.ProductID, Quantity: 1, Currency: "CNY", AmountMinor: 80000, IdempotencyKey: "m2-bm-001",
+			ProductID: spec.ProductID, Quantity: 1, Currency: "CNY", AmountMinor: 80000, IdempotencyKey: "dual-root-bm-001",
 		},
 		TaskSpec: spec,
 		AncestorCredentials: []AncestorCredential{

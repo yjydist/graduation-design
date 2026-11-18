@@ -12,15 +12,14 @@ import (
 	"time"
 
 	"graduation-design/internal/centralstate"
-	"graduation-design/internal/experiment"
 	api "graduation-design/internal/fabricapi"
 	"graduation-design/internal/gateway"
 	"graduation-design/internal/protocol"
 )
 
-func centralHarness(t *testing.T) (*m2GatewayHarness, *centralstate.Source) {
+func centralHarness(t *testing.T) (*procurementGatewayHarness, *centralstate.Source) {
 	t.Helper()
-	h := newM2GatewayHarness(t)
+	h := newProcurementGatewayHarness(t)
 	rp, err := h.state.AssembleProtocolSnapshot(t.Context(), leafID(t, h.rp), h.fixedNow)
 	if err != nil {
 		t.Fatal(err)
@@ -53,7 +52,7 @@ func mergeMap[T any](a, b map[string]T) {
 		a[k] = v
 	}
 }
-func leafID(t *testing.T, c m2ChainFixture) string {
+func leafID(t *testing.T, c procurementChainFixture) string {
 	t.Helper()
 	j, err := protocol.ParseCompactJWS(c.grants[len(c.grants)-1], protocol.TypGrantDelegation)
 	if err != nil {
@@ -65,7 +64,7 @@ func leafID(t *testing.T, c m2ChainFixture) string {
 	}
 	return g.ID
 }
-func centralServer(t *testing.T, h *m2GatewayHarness, s *centralstate.Source, hook func(int), cache *protocol.SignatureCache) *gateway.Server {
+func centralServer(t *testing.T, h *procurementGatewayHarness, s *centralstate.Source, hook func(int), cache *protocol.SignatureCache) *gateway.Server {
 	t.Helper()
 	srv, err := gateway.NewServer(gateway.Config{DB: h.pool, State: s, Delivery: h.delivery, DIDs: h.dids, Policy: h.bundle, SignatureCache: cache, DeploymentID: h.depID, ServiceDID: h.serviceDID, Audience: h.audience, SupplierID: h.supplierID, NowFn: func() time.Time { return h.fixedNow }, BeforeLockTx: hook})
 	if err != nil {
@@ -73,14 +72,14 @@ func centralServer(t *testing.T, h *m2GatewayHarness, s *centralstate.Source, ho
 	}
 	return srv
 }
-func centralRequest(h *m2GatewayHarness, c m2ChainFixture, action, key string, quote *string, amount int64) protocol.AccessRequest {
+func centralRequest(h *procurementGatewayHarness, c procurementChainFixture, action, key string, quote *string, amount int64) protocol.AccessRequest {
 	resource := "urn:grad:resource:C:quotes"
 	if action == "order.create" {
 		resource = "urn:grad:resource:C:orders"
 	}
 	return protocol.AccessRequest{SchemaVersion: protocol.SchemaVersion, DeploymentID: h.depID, Actor: h.didB1, PrincipalDomain: "A", AuthorizationMode: c.mode, TaskID: c.taskID, Audience: h.audience, Resource: resource, Action: action, SupplierID: h.supplierID, QuoteID: quote, ProductID: gateway.DefaultProductID, Quantity: 1, Currency: "CNY", AmountMinor: amount, IdempotencyKey: key}
 }
-func centralExec(t *testing.T, h *m2GatewayHarness, srv *gateway.Server, c m2ChainFixture, req protocol.AccessRequest) *httptest.ResponseRecorder {
+func centralExec(t *testing.T, h *procurementGatewayHarness, srv *gateway.Server, c procurementChainFixture, req protocol.AccessRequest) *httptest.ResponseRecorder {
 	return h.execReq(t, srv.Handler(), c, h.fixedNow.Unix(), h.didB1, h.b1PresPrefix, h.b1KeyID, h.privB1, req)
 }
 
@@ -162,7 +161,7 @@ func TestCentralBusinessDecisionsWithoutFabric(t *testing.T) {
 	if ready.Code != 200 || health["probeBlock"] != nil || health["stateSource"] != "centralized" {
 		t.Fatalf("C0 readiness invented a probe: %s", ready.Body.String())
 	}
-	for _, c := range []m2ChainFixture{h.rp, h.bm} {
+	for _, c := range []procurementChainFixture{h.rp, h.bm} {
 		h.postContext(t, srv.Handler(), c.taskID, 0, "NORMAL", h.policyDeadline)
 		for _, amount := range []int64{80000, 120000} {
 			if _, err := h.pool.Exec(t.Context(), `UPDATE catalog_prices SET unit_price_minor=$2 WHERE deployment_id=$1 AND product_id=$3`, h.depID, amount, gateway.DefaultProductID); err != nil {
@@ -295,7 +294,7 @@ func TestCentralVersionChangeDuringBusinessLockWait(t *testing.T) {
 }
 
 func TestDecisionMigrationPreservesFabricRows(t *testing.T) {
-	h := newM2GatewayHarness(t)
+	h := newProcurementGatewayHarness(t)
 	srv := h.newServer(func() time.Time { return h.fixedNow }, nil)
 	h.postContext(t, srv.Handler(), h.rp.taskID, 0, "NORMAL", h.policyDeadline)
 	r := centralExec(t, h, srv, h.rp, centralRequest(h, h.rp, "quote.read", "legacy", nil, 0))
@@ -325,22 +324,30 @@ func TestDecisionMigrationPreservesFabricRows(t *testing.T) {
 	}
 }
 
-func TestBaselineCacheConfigurationsAndDynamicRecheck(t *testing.T) {
-	for _, name := range []string{"C0", "B0", "B1"} {
-		t.Run(name, func(t *testing.T) {
-			profile, err := experiment.BaselineConfiguration(name)
-			if err != nil {
-				t.Fatal(err)
+func TestSignatureCacheAcrossStateSourcesAndDynamicRecheck(t *testing.T) {
+	profiles := []struct {
+		name    string
+		central bool
+		cached  bool
+	}{
+		{name: "central-uncached", central: true},
+		{name: "fabric-uncached"},
+		{name: "fabric-cached", cached: true},
+	}
+	for _, profile := range profiles {
+		t.Run(profile.name, func(t *testing.T) {
+			var cache *protocol.SignatureCache
+			if profile.cached {
+				cache = protocol.NewSignatureCache()
 			}
-			cache := profile.NewSignatureCache()
-			var h *m2GatewayHarness
+			var h *procurementGatewayHarness
 			var state gateway.StateSource
-			if name == "C0" {
+			if profile.central {
 				var s *centralstate.Source
 				h, s = centralHarness(t)
 				state = s
 			} else {
-				h = newM2GatewayHarness(t)
+				h = newProcurementGatewayHarness(t)
 				state = h.state.GatewayAdapter()
 			}
 			srv, err := gateway.NewServer(gateway.Config{DB: h.pool, State: state, Delivery: h.delivery, DIDs: h.dids, Policy: h.bundle, SignatureCache: cache, DeploymentID: h.depID, ServiceDID: h.serviceDID, Audience: h.audience, SupplierID: h.supplierID, NowFn: func() time.Time { return h.fixedNow }})
@@ -354,14 +361,14 @@ func TestBaselineCacheConfigurationsAndDynamicRecheck(t *testing.T) {
 					t.Fatal(r.Body.String())
 				}
 			}
-			if name != "B1" {
+			if !profile.cached {
 				if cache != nil || cache.Hits() != 0 || cache.Misses() != 0 {
 					t.Fatal("disabled group reused signature computation")
 				}
 				return
 			}
 			if cache.Hits() == 0 {
-				t.Fatal("B1 repeated material did not hit cache")
+				t.Fatal("repeated material did not hit cache")
 			}
 			g := h.rp.g1
 			g.Status = api.Revoked

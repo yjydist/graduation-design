@@ -264,7 +264,7 @@ func TestPolicyDeterministicEvalAndFailClosed(t *testing.T) {
 	}
 }
 
-func TestPolicyM2DualModeOrderCreateAndSupplierRejection(t *testing.T) {
+func TestPolicyDualModeOrderCreateAndSupplierRejection(t *testing.T) {
 	ctx := context.Background()
 	root := testRootRecord()
 	depID := "dep-policy-m2"

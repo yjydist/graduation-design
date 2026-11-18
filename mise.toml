@@ -11,7 +11,11 @@ run = "go build -o build/ledgerctl ./cmd/ledgerctl"
 
 [tasks."test:unit"]
 description = "运行离线单元测试"
-run = "go test ./..."
+run = "go test ./cmd/... ./internal/... ./chaincode/..."
+
+[tasks."experiment:baseline"]
+description = "运行 C0/B0/B1 三组采购基线"
+run = "go run ./experiments/baseline"
 
 [tasks."fabric:config"]
 description = "校验隔离的 Fabric Compose 配置"
@@ -50,5 +54,5 @@ description = "按 --block 复查 Fabric 历史"
 run = "go run ./cmd/ledgerctl inspect"
 
 [tasks."ledger:verify"]
-description = "运行 Fabric D0 验收并保存独立证据"
-run = "go run ./cmd/ledgerctl verify"
+description = "运行 Fabric 集成回归并保存独立证据"
+run = "go test -v -count=1 -timeout=0 ./internal/fabric -run '^TestFabricIntegration$' -args -fabric-live"

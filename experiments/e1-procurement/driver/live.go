@@ -157,7 +157,7 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 	}
 	w, err := agent.NewWalletContext(agent.WalletConfig{
 		DeploymentID: e.d.DeploymentID, Audience: "https://c.local", SupplierID: "urn:grad:supplier:C", SupplierDID: e.f.Identities["C"].ID,
-		DefaultTaskSpec: e.f.M2TaskSpec, Currency: "CNY", DB: e.db, HTTPHandler: e.observe(m, e.server.Handler()), Now: time.Now,
+		DefaultTaskSpec: e.f.ProcurementTaskSpec, Currency: "CNY", DB: e.db, HTTPHandler: e.observe(m, e.server.Handler()), Now: time.Now,
 		AnchorChildFunc: func(ctx context.Context, req agent.AnchorChildGrantRequest) (*agent.AnchorChildGrantResult, error) {
 			c := req.Claims
 			if req.IssuerActor != "A1" || req.GranteeDID != e.f.Identities["B1"].ID || c.ID != m.leafID || req.ParentID != m.g1.ID ||
@@ -185,7 +185,7 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 			rootPub, _, _ := protocol.ParseAppPublicKey(e.d.Bootstrap.Root.PublicKey)
 			iaPub, _, _ := protocol.ParseAppPublicKey(e.f.Domains["A"].Issuers[0].PublicKey)
 			pkg := fabric.GrantDeliveryPackage{DeploymentID: e.d.DeploymentID, Recipient: c.Grantee, GrantID: c.ID, GrantJWS: req.RawGrantJWS,
-				TaskSpec: e.f.M2TaskSpec, ServicePresentation: string(aSD), DomainCertificationJWS: certs["A"], AncestorGrants: []string{g0Raw, g1Raw}}
+				TaskSpec: e.f.ProcurementTaskSpec, ServicePresentation: string(aSD), DomainCertificationJWS: certs["A"], AncestorGrants: []string{g0Raw, g1Raw}}
 			if _, err := ds.PublishGrantOutbox(ctx, snap.Snapshot, pkg, rootPub, iaPub, &aPriv.PublicKey, op.TxID, int64(op.Commit.Number), true, time.Now().Unix()); err != nil {
 				return nil, err
 			}
@@ -240,7 +240,7 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := w.AddGrantBundle(agent.GrantBundle{Claims: parent, RawGrantJWS: g1Raw, TaskSpec: e.f.M2TaskSpec,
+	if err := w.AddGrantBundle(agent.GrantBundle{Claims: parent, RawGrantJWS: g1Raw, TaskSpec: e.f.ProcurementTaskSpec,
 		Revision: 1, ChainRawGrants: []string{g0Raw, g1Raw}, Anchored: true, TrustPaths: paths,
 		AncestorCredentials: []protocol.AncestorCredential{{CredentialID: root.IssuerCredentialID, Presentation: string(rootSD)},
 			{CredentialID: e.f.Credentials["U"].ID, Presentation: parentReceipt.ServicePresentation}},

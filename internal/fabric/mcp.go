@@ -31,7 +31,7 @@ func runMCPCmd(ctx context.Context, i *instance, d deployment, db *pgxpool.Pool,
 	if err != nil {
 		return err
 	}
-	w, err := buildM2WalletContext(ctx, i, d, f, db, gatewayURL, nil, nil)
+	w, err := buildWalletContext(ctx, i, d, f, db, gatewayURL, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,11 @@ func runMCPCmd(ctx context.Context, i *instance, d deployment, db *pgxpool.Pool,
 	return srv.Run(ctx, &mcp.StdioTransport{})
 }
 
-func buildM2WalletContext(
+func (i *instance) BuildWallet(ctx context.Context, d *Deployment, f *Fixtures, db *pgxpool.Pool, handler http.Handler) (*agent.WalletContext, error) {
+	return buildWalletContext(ctx, i, *d, f, db, "", handler, nil)
+}
+
+func buildWalletContext(
 	ctx context.Context,
 	i *instance,
 	d deployment,
@@ -203,16 +207,33 @@ func buildM2WalletContext(
 		}
 	}
 
- var recoveryClient,auditClient,receiptClient *http.Client
- if httpHandler!=nil {
- recoveryClient=serviceauth.NewLocalClient(httpHandler,serviceauth.Identity{Role:"B_RECOVERY",DID:"did:web:b.local:services:recovery"})
- auditClient=serviceauth.NewLocalClient(httpHandler,serviceauth.Identity{Role:"C_AUDITOR",DID:"did:web:c.local:auditors:c1"})
- receiptClient=serviceauth.NewLocalClient(httpHandler,serviceauth.Identity{Role:"C_AUDIT_SERVICE",DID:"did:web:c.local:services:audit"})
- } else {
- load:=func(prefix string)(*http.Client,error){cert,key,ca:=os.Getenv(prefix+"_MTLS_CERT"),os.Getenv(prefix+"_MTLS_KEY"),os.Getenv(prefix+"_MTLS_CA");if cert==""&&key==""&&ca==""{return nil,nil};return serviceauth.NewMTLSClient(cert,key,ca)}
- var err error
- recoveryClient,err=load("RECOVERY");if err!=nil{return nil,err};auditClient,err=load("AUDIT");if err!=nil{return nil,err};receiptClient,err=load("RECEIPT");if err!=nil{return nil,err}
- }
+	var recoveryClient, auditClient, receiptClient *http.Client
+	if httpHandler != nil {
+		recoveryClient = serviceauth.NewLocalClient(httpHandler, serviceauth.Identity{Role: "B_RECOVERY", DID: "did:web:b.local:services:recovery"})
+		auditClient = serviceauth.NewLocalClient(httpHandler, serviceauth.Identity{Role: "C_AUDITOR", DID: "did:web:c.local:auditors:c1"})
+		receiptClient = serviceauth.NewLocalClient(httpHandler, serviceauth.Identity{Role: "C_AUDIT_SERVICE", DID: "did:web:c.local:services:audit"})
+	} else {
+		load := func(prefix string) (*http.Client, error) {
+			cert, key, ca := os.Getenv(prefix+"_MTLS_CERT"), os.Getenv(prefix+"_MTLS_KEY"), os.Getenv(prefix+"_MTLS_CA")
+			if cert == "" && key == "" && ca == "" {
+				return nil, nil
+			}
+			return serviceauth.NewMTLSClient(cert, key, ca)
+		}
+		var err error
+		recoveryClient, err = load("RECOVERY")
+		if err != nil {
+			return nil, err
+		}
+		auditClient, err = load("AUDIT")
+		if err != nil {
+			return nil, err
+		}
+		receiptClient, err = load("RECEIPT")
+		if err != nil {
+			return nil, err
+		}
+	}
 	var receiptDelivery func(context.Context, gateway.OrderOutcomeReceipt) (*gateway.OrderOutcomeReceiptResponse, error)
 	if httpHandler != nil {
 		receiptDelivery = func(ctx context.Context, r gateway.OrderOutcomeReceipt) (*gateway.OrderOutcomeReceiptResponse, error) {
@@ -226,15 +247,15 @@ func buildM2WalletContext(
 		Audience:         "https://c.local",
 		SupplierID:       "urn:grad:supplier:C",
 		SupplierDID:      f.Identities["C"].ID,
-		DefaultTaskSpec:  f.M2TaskSpec,
+		DefaultTaskSpec:  f.ProcurementTaskSpec,
 		Currency:         "CNY",
 		AuditorDID:       "did:web:c.local:auditors:c1",
 		RecoveryDID:      "did:web:b.local:services:recovery",
 		DB:               db,
 		HTTPHandler:      httpHandler,
-		RecoveryClient: recoveryClient,
-		AuditClient: auditClient,
-		ReceiptClient: receiptClient,
+		RecoveryClient:   recoveryClient,
+		AuditClient:      auditClient,
+		ReceiptClient:    receiptClient,
 		Now:              nowFn,
 		AnchorChildFunc:  anchorFn,
 		ReplaceGrantFunc: replaceFn,
@@ -319,7 +340,7 @@ func buildM2WalletContext(
 		}
 		if err := w.AddGrantBundle(agent.GrantBundle{
 			Claims:              g0Claims,
-			TaskSpec:            f.M2TaskSpec,
+			TaskSpec:            f.ProcurementTaskSpec,
 			RawGrantJWS:         string(g0Raw),
 			ChainRawGrants:      []string{string(g0Raw)},
 			AncestorCredentials: []protocol.AncestorCredential{rootAnc},
@@ -330,7 +351,7 @@ func buildM2WalletContext(
 		}
 		if err := w.AddGrantBundle(agent.GrantBundle{
 			Claims:         g1Claims,
-			TaskSpec:       f.M2TaskSpec,
+			TaskSpec:       f.ProcurementTaskSpec,
 			RawGrantJWS:    string(g1Raw),
 			ChainRawGrants: []string{string(g0Raw), string(g1Raw)},
 			AncestorCredentials: []protocol.AncestorCredential{
@@ -353,7 +374,7 @@ func buildM2WalletContext(
 			}
 			if err := w.AddGrantBundle(agent.GrantBundle{
 				Claims:         g2Claims,
-				TaskSpec:       f.M2TaskSpec,
+				TaskSpec:       f.ProcurementTaskSpec,
 				RawGrantJWS:    string(g2Raw),
 				ChainRawGrants: []string{string(g0Raw), string(g1Raw), string(g2Raw)},
 				AncestorCredentials: []protocol.AncestorCredential{

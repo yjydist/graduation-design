@@ -96,7 +96,7 @@ func (e *e1Trial) checkLinkedAccountIsolation() error {
 		return err
 	}
 	handler := e.observe(mode, e.server.Handler())
-	pkg, _, err := e.buildLeafExecutePackage(handler, req, e.f.M2TaskSpec, key, account.KeyID, pres,
+	pkg, _, err := e.buildLeafExecutePackage(handler, req, e.f.ProcurementTaskSpec, key, account.KeyID, pres,
 		[]protocol.AncestorCredential{{CredentialID: mode.g0.IssuerCredential, Presentation: service}}, []string{grant}, paths, time.Now().Unix())
 	if err != nil {
 		return err

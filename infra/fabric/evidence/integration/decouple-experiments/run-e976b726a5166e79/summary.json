@@ -1,0 +1,151 @@
+{
+  "runId": "run-e976b726a5166e79",
+  "evidenceDir": ".local/decoupled-integration-before-sampling-removal/run-e976b726a5166e79",
+  "deploymentId": "7cde2a5b2e4b6f65abe016f258d7607e308ca1357fe62e4be9088d08aafbf1ac",
+  "scope": "Fabric D0 verifiable protocol anchors, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-18T08:49:51.744281Z",
+  "finishedAt": "2026-11-18T08:52:14.284593Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "channel-admission-and-bft-governance",
+      "pass": true
+    },
+    {
+      "name": "deployment-binding",
+      "pass": true
+    },
+    {
+      "name": "initialization-resume",
+      "pass": true
+    },
+    {
+      "name": "role-scope-and-credential-versions",
+      "pass": true
+    },
+    {
+      "name": "credential-validity-boundaries",
+      "pass": true
+    },
+    {
+      "name": "rp-task-and-path-constraints",
+      "pass": true
+    },
+    {
+      "name": "revocation-and-replacement",
+      "pass": true
+    },
+    {
+      "name": "proposal-window-and-delayed-commit",
+      "pass": true
+    },
+    {
+      "name": "durable-operation-mvcc-and-dependency",
+      "pass": false,
+      "error": "invalid character 'P' looking for beginning of value"
+    },
+    {
+      "name": "lost-response-and-original-replay",
+      "pass": true
+    },
+    {
+      "name": "block-validation-and-postgresql-atomicity",
+      "pass": true
+    },
+    {
+      "name": "fixed-snapshot-history-and-probe-limits",
+      "pass": true
+    },
+    {
+      "name": "shared-view-concurrent-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "checkpoint-query-outage-and-recovery",
+      "pass": true
+    },
+    {
+      "name": "sorter-and-peer-failures",
+      "pass": false,
+      "error": "invoke exact retry did not return the original pending operation during C Peer outage: \u003cnil\u003e (decode: invalid character 'P' looking for beginning of value)"
+    },
+    {
+      "name": "chaincode-outage-and-recovery",
+      "pass": false,
+      "error": "chaincode_c_outage_new_check: expected STATE_STALE, got exit 0: \"PASS\\n\" (\u003cnil\u003e)"
+    },
+    {
+      "name": "restart-keeps-checkpoint",
+      "pass": true
+    },
+    {
+      "name": "protocol-encoding-and-vectors",
+      "pass": true
+    },
+    {
+      "name": "did-web-and-context-pinning",
+      "pass": true
+    },
+    {
+      "name": "verifiable-evidence-and-tamper-rejection",
+      "pass": true
+    },
+    {
+      "name": "registration-and-material-delivery",
+      "pass": true
+    },
+    {
+      "name": "direct-access-quote-and-idempotency",
+      "pass": true
+    },
+    {
+      "name": "wrong-leaf-key-rejected",
+      "pass": true
+    },
+    {
+      "name": "probe-expiry-state-stale",
+      "pass": true
+    },
+    {
+      "name": "post-lock-blocked-no-quote",
+      "pass": true
+    },
+    {
+      "name": "exact-second-deadline-rejection",
+      "pass": true
+    },
+    {
+      "name": "m2-dual-roots-and-identity-link",
+      "pass": true
+    },
+    {
+      "name": "m2-agent-mcp-rp-and-bm-orders",
+      "pass": true
+    },
+    {
+      "name": "m2-revocation-and-postlock-order-guards",
+      "pass": true
+    },
+    {
+      "name": "m2-dual-gateway-concurrent-idempotency",
+      "pass": true
+    },
+    {
+      "name": "m3-authority-identity-and-lifecycle",
+      "pass": true
+    },
+    {
+      "name": "m3-agent-b2-replacement-and-reconcile",
+      "pass": true
+    },
+    {
+      "name": "m3-revocation-window-e6",
+      "pass": true
+    },
+    {
+      "name": "m3-fault-injection-e7",
+      "pass": true
+    }
+  ],
+  "error": "durable-operation-mvcc-and-dependency: invalid character 'P' looking for beginning of value\nsorter-and-peer-failures: invoke exact retry did not return the original pending operation during C Peer outage: \u003cnil\u003e (decode: invalid character 'P' looking for beginning of value)\nchaincode-outage-and-recovery: chaincode_c_outage_new_check: expected STATE_STALE, got exit 0: \"PASS\\n\" (\u003cnil\u003e)"
+}

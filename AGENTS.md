@@ -12,14 +12,13 @@
 | `cmd/ledgerctl/` | 账本工具 `ledgerctl` 的命令行入口. |
 | `internal/fabric/`, `internal/fabricapi/` | Fabric 部署, 管理交易恢复, 区块视图, 探针, 协议字段及 D0 验收. |
 | `internal/centralstate/` | C0 独立主库的登记版本, 一致快照与业务事务检查点. |
-| `internal/experiment/` | 配对实验的固定逻辑输入, 三组配置及原始结果导出契约. |
 | `chaincode/registry/` | Fabric Go 登记链码. |
 | `infra/fabric/` | Fabric 通道及 Compose, 启停, 重建和验收. 详见 [网络说明](infra/fabric/README.md). |
 | `docs/` | 设计决策, 技术配置, 实现契约, 测试向量及实验方法和判据, 不承载实施进度. |
 | [设计导航](docs/design/AGENTS.md) | 按机制组织设计依据, 安全目标和需求追踪. |
 | [实现导航](docs/implementation/AGENTS.md) | 按实现顺序组织部署, 协议和业务事务契约. |
 | [实验导航](docs/experiments/AGENTS.md) | 按验证问题索引实验计划和用例. |
-| `experiments/` | 正式实验的结果报告, 原始样本与图表. 详见[正式实验索引](experiments/README.md). |
+| `experiments/` | 三组采购基线和正式实验的驱动, 结果报告, 原始样本与图表. 详见[正式实验索引](experiments/README.md). |
 | `openspec/specs/` | 已接受的能力规范与场景. |
 | `openspec/changes/` | 活动变更的理由, 设计, 任务和核验结论, 以及保留当时记录的归档. |
 | `infra/fabric/evidence/` | Fabric 实例配置, 原始数据, 结果与失败样本, 由证据索引和变更核验记录定位. |

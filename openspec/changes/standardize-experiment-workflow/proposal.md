@@ -22,4 +22,4 @@
 ## 影响
 
 - 方法和导航涉及 `docs/experiments/`, 根 `README.md`, `TODO.md` 和当前实验报告及运行入口的相关引用. D0-M3 归档和历史运行继续作为既有证据使用.
-- 工作流涉及 `experiments/`, `mise.toml` 及所复用的 Fabric, 钱包和网关接口. 现有基线验收仍由 `ledgerctl experiment baseline` 提供.
+- 工作流涉及 `experiments/`, `mise.toml` 及所复用的 Fabric, 钱包和网关接口. 三组采购基线由独立入口 `mise run experiment:baseline` 提供.

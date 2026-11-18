@@ -31,21 +31,47 @@ type fixtures struct {
 	PurchasingAuthority  api.PurchasingAuthorityUpdate  `json:"purchasingAuthority,omitempty"`
 	IdentityLink         api.IdentityLink               `json:"identityLink,omitempty"`
 	IdentityLinkApproval api.IdentityLinkApproval       `json:"identityLinkApproval,omitempty"`
-	M2TaskSpec           protocol.TaskSpec              `json:"m2TaskSpec,omitempty"`
-	RPTask               api.Task                       `json:"rpTask,omitempty"`
-	RPG0                 api.Grant                      `json:"rpG0,omitempty"`
-	RPG1                 api.Grant                      `json:"rpG1,omitempty"`
-	RPG2                 api.Grant                      `json:"rpG2,omitempty"`
-	BMTask               api.Task                       `json:"bmTask,omitempty"`
-	BMG0                 api.Grant                      `json:"bmG0,omitempty"`
-	BMG1                 api.Grant                      `json:"bmG1,omitempty"`
-	BMG2                 api.Grant                      `json:"bmG2,omitempty"`
+	// The persisted key is shared with previously generated fixture files.
+	ProcurementTaskSpec protocol.TaskSpec `json:"m2TaskSpec,omitempty"`
+	RPTask              api.Task          `json:"rpTask,omitempty"`
+	RPG0                api.Grant         `json:"rpG0,omitempty"`
+	RPG1                api.Grant         `json:"rpG1,omitempty"`
+	RPG2                api.Grant         `json:"rpG2,omitempty"`
+	BMTask              api.Task          `json:"bmTask,omitempty"`
+	BMG0                api.Grant         `json:"bmG0,omitempty"`
+	BMG1                api.Grant         `json:"bmG1,omitempty"`
+	BMG2                api.Grant         `json:"bmG2,omitempty"`
 }
 
 type seedReport struct {
 	*fixtures
 	Operations []*operation `json:"operations"`
 	Scope      string       `json:"scope"`
+}
+
+// ProcurementPathIDs identifies a task and its three registered grants.
+type ProcurementPathIDs struct {
+	Task, G0, G1, G2 string
+}
+
+// ProcurementSetup supplies a shared task specification and explicit IDs for both root modes.
+type ProcurementSetup struct {
+	Spec   protocol.TaskSpec
+	RP, BM ProcurementPathIDs
+}
+
+func (s ProcurementSetup) validate() error {
+	if err := s.Spec.Validate(); err != nil {
+		return err
+	}
+	ids := map[string]bool{}
+	for _, id := range []string{s.RP.Task, s.RP.G0, s.RP.G1, s.RP.G2, s.BM.Task, s.BM.G0, s.BM.G1, s.BM.G2} {
+		if !api.IsDigest(id) || ids[id] {
+			return fmt.Errorf("procurement setup requires distinct digest IDs")
+		}
+		ids[id] = true
+	}
+	return nil
 }
 
 func payload(v any) []byte {
@@ -60,13 +86,33 @@ func payload(v any) []byte {
 }
 
 func (i *instance) fixtures(d *deployment) (*fixtures, error) {
+	return i.procurementFixtures(d, nil)
+}
+
+func (i *instance) procurementFixtures(d *deployment, setup *ProcurementSetup) (*fixtures, error) {
+	if setup != nil {
+		if err := setup.validate(); err != nil {
+			return nil, err
+		}
+	}
 	var f fixtures
 	path := i.registryPath("fixtures.json")
 	if err := readJSON(path, &f); err == nil {
 		if f.DeploymentID != d.DeploymentID || f.Synthetic || f.SchemaVersion != protocol.SchemaVersion {
 			return nil, fmt.Errorf("DEPLOYMENT_MISMATCH: fixtures incompatible with verifiable protocol")
 		}
-		if err := i.ensureProtocolFixtures(d, &f); err != nil {
+		if setup != nil && (f.RPTask.ID != "" || f.BMTask.ID != "") {
+			digest, err := setup.Spec.Digest()
+			if err != nil {
+				return nil, err
+			}
+			rp := ProcurementPathIDs{f.RPTask.ID, f.RPG0.ID, f.RPG1.ID, f.RPG2.ID}
+			bm := ProcurementPathIDs{f.BMTask.ID, f.BMG0.ID, f.BMG1.ID, f.BMG2.ID}
+			if rp != setup.RP || bm != setup.BM || f.RPTask.Digest != digest || f.BMTask.Digest != digest {
+				return nil, fmt.Errorf("procurement setup differs from persisted fixtures")
+			}
+		}
+		if err := i.ensureProtocolFixtures(d, &f, setup); err != nil {
 			return nil, err
 		}
 		return &f, nil
@@ -503,7 +549,7 @@ func (i *instance) fixtures(d *deployment) (*fixtures, error) {
 		return nil, err
 	}
 
-	if _, err := i.ensureM2Fixtures(d, &f); err != nil {
+	if _, err := i.ensureProcurementFixtures(d, &f, setup); err != nil {
 		return nil, err
 	}
 
@@ -514,16 +560,20 @@ func (i *instance) fixtures(d *deployment) (*fixtures, error) {
 }
 
 func (i *instance) seed(ctx context.Context, j journal, d *deployment) (*seedReport, error) {
+	return i.seedProcurement(ctx, j, d, nil)
+}
+
+func (i *instance) seedProcurement(ctx context.Context, j journal, d *deployment, setup *ProcurementSetup) (*seedReport, error) {
 	_, unlock, err := j.lock(ctx, "seed/fixture-generation")
 	if err != nil {
 		return nil, err
 	}
 	defer unlock()
-	f, err := i.fixtures(d)
+	f, err := i.procurementFixtures(d, setup)
 	if err != nil {
 		return nil, err
 	}
-	report := &seedReport{fixtures: f, Scope: "D0 verifiable protocol anchors and real Fabric management transactions"}
+	report := &seedReport{fixtures: f, Scope: "Verifiable protocol anchors and Fabric management transactions"}
 	write := func(key, role, method string, arg any) error {
 		op, err := j.write(ctx, "seed/"+key, role, method, payload(arg))
 		if op != nil {
@@ -629,7 +679,7 @@ func (i *instance) seed(ctx context.Context, j journal, d *deployment) (*seedRep
 	return report, writePublicJSON(i.registryPath("seed.json"), report)
 }
 
-func (i *instance) ensureProtocolFixtures(d *deployment, f *fixtures) error {
+func (i *instance) ensureProtocolFixtures(d *deployment, f *fixtures, setup *ProcurementSetup) error {
 	updated := false
 	bound := api.Bound{DeploymentID: d.DeploymentID}
 
@@ -813,17 +863,17 @@ func (i *instance) ensureProtocolFixtures(d *deployment, f *fixtures) error {
 		}
 	}
 
-	m2Updated, err := i.ensureM2Fixtures(d, f)
+	procurementUpdated, err := i.ensureProcurementFixtures(d, f, setup)
 	if err != nil {
 		return err
 	}
-	if updated || m2Updated {
+	if updated || procurementUpdated {
 		return writePublicJSON(i.registryPath("fixtures.json"), f)
 	}
 	return nil
 }
 
-func (i *instance) ensureM2Fixtures(d *deployment, f *fixtures) (bool, error) {
+func (i *instance) ensureProcurementFixtures(d *deployment, f *fixtures, setup *ProcurementSetup) (bool, error) {
 	updated := false
 	bound := api.Bound{DeploymentID: d.DeploymentID}
 
@@ -1079,22 +1129,27 @@ func (i *instance) ensureM2Fixtures(d *deployment, f *fixtures) (bool, error) {
 			Currency:    "CNY",
 			Resources:   []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
 			Actions:     []string{"order.create", "quote.read"},
-			Description: "M2 dual-root procurement",
+			Description: "Dual-root procurement",
+		}
+		pathIDs := func(prefix string) ProcurementPathIDs {
+			// Preserve the identifiers derived for existing deployments.
+			namespace := d.DeploymentID + "/m2/" + prefix + "/"
+			return ProcurementPathIDs{
+				Task: api.Digest([]byte(namespace + "task")),
+				G0:   api.Digest([]byte(namespace + "G0")),
+				G1:   api.Digest([]byte(namespace + "G1")),
+				G2:   api.Digest([]byte(namespace + "G2")),
+			}
+		}
+		rpIDs, bmIDs := pathIDs("rp"), pathIDs("bm")
+		if setup != nil {
+			spec, rpIDs, bmIDs = setup.Spec, setup.RP, setup.BM
 		}
 		specDigest, err := spec.Digest()
 		if err != nil {
 			return false, err
 		}
-		f.M2TaskSpec = spec
-		if i.baseline != nil {
-			spec.MaxQuantity = i.baseline.Fixture.Quantity
-			spec.Description = "Paired baseline procurement"
-			specDigest, err = spec.Digest()
-			if err != nil {
-				return false, err
-			}
-			f.M2TaskSpec = spec
-		}
+		f.ProcurementTaskSpec = spec
 
 		uPriv, err := loadECPrivateKeyPEM(i.privatePath("app", "U.key.pem"))
 		if err != nil {
@@ -1123,12 +1178,8 @@ func (i *instance) ensureM2Fixtures(d *deployment, f *fixtures) (bool, error) {
 		cID := f.Identities["C"]
 		paID := f.Identities["PA"]
 
-		build2Hop := func(prefix, mode string, rootIssuer api.Identity, rootCredID string, rootPriv *ecdsa.PrivateKey) (api.Task, api.Grant, api.Grant, api.Grant, error) {
-			namespace := "/m2/" + prefix + "/"
-			if i.baseline != nil {
-				namespace = "/baseline/" + i.baseline.LogicalID(mode, "")
-			}
-			taskID := api.Digest([]byte(d.DeploymentID + namespace + "task"))
+		build2Hop := func(prefix, mode string, ids ProcurementPathIDs, rootIssuer api.Identity, rootCredID string, rootPriv *ecdsa.PrivateKey) (api.Task, api.Grant, api.Grant, api.Grant, error) {
+			taskID := ids.Task
 			task := api.Task{
 				Bound:             bound,
 				ID:                taskID,
@@ -1205,17 +1256,17 @@ func (i *instance) ensureM2Fixtures(d *deployment, f *fixtures) (bool, error) {
 					Interval:          valid,
 				}, dig, nil
 			}
-			g0ID := api.Digest([]byte(d.DeploymentID + namespace + "G0"))
+			g0ID := ids.G0
 			g0, g0Dig, err := signOne(g0ID, nil, nil, g0ID, rootIssuer, uID, rootCredID, f.Credentials["U"].ID, 500000, 2, rootPriv, prefix+"_g0.jws")
 			if err != nil {
 				return api.Task{}, api.Grant{}, api.Grant{}, api.Grant{}, err
 			}
-			g1ID := api.Digest([]byte(d.DeploymentID + namespace + "G1"))
+			g1ID := ids.G1
 			g1, g1Dig, err := signOne(g1ID, &g0ID, &g0Dig, g0ID, uID, a1ID, f.Credentials["U"].ID, f.Credentials["A1"].ID, 500000, 1, uPriv, prefix+"_g1.jws")
 			if err != nil {
 				return api.Task{}, api.Grant{}, api.Grant{}, api.Grant{}, err
 			}
-			g2ID := api.Digest([]byte(d.DeploymentID + namespace + "G2"))
+			g2ID := ids.G2
 			g2, _, err := signOne(g2ID, &g1ID, &g1Dig, g0ID, a1ID, b1ID, f.Credentials["A1"].ID, f.Credentials["B1"].ID, 100000, 0, a1Priv, prefix+"_g2.jws")
 			if err != nil {
 				return api.Task{}, api.Grant{}, api.Grant{}, api.Grant{}, err
@@ -1223,11 +1274,11 @@ func (i *instance) ensureM2Fixtures(d *deployment, f *fixtures) (bool, error) {
 			return task, g0, g1, g2, nil
 		}
 
-		rpTask, rpG0, rpG1, rpG2, err := build2Hop("rp", api.RP, cID, cCredID, cPriv)
+		rpTask, rpG0, rpG1, rpG2, err := build2Hop("rp", api.RP, rpIDs, cID, cCredID, cPriv)
 		if err != nil {
 			return false, err
 		}
-		bmTask, bmG0, bmG1, bmG2, err := build2Hop("bm", api.BM, paID, f.Credentials["PA"].ID, paPriv)
+		bmTask, bmG0, bmG1, bmG2, err := build2Hop("bm", api.BM, bmIDs, paID, f.Credentials["PA"].ID, paPriv)
 		if err != nil {
 			return false, err
 		}
@@ -1452,7 +1503,7 @@ func (i *instance) syncMaterialOutboxes(ctx context.Context, j journal, d *deplo
 				Recipient:              g.Grantee,
 				GrantID:                g.ID,
 				GrantJWS:               string(gBytes),
-				TaskSpec:               f.M2TaskSpec,
+				TaskSpec:               f.ProcurementTaskSpec,
 				ServicePresentation:    string(grantorSD),
 				DomainCertificationJWS: string(grantorCert),
 				AncestorGrants:         ancGrants,

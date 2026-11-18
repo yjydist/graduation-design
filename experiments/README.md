@@ -13,6 +13,10 @@
 | E7 | [故障与并发](../docs/experiments/E7-故障与并发.md) | 待建 | 待建 |
 | E8 | [账本与通信开销](../docs/experiments/E8-账本与通信开销.md) | 待建 | 待建 |
 
+## 历史预跑
+
+E3 的模型轨迹, E6 的撤销窗口采样和 E7 的故障专题导出来自 [M3 联合验收](../infra/fabric/evidence/README.md#既有网络与协议验收). 如需重放旧采样逻辑, 可在迁移前提交 `d22889501880859d7cda2ce4b7255475a40a1e59` 上用独立实例运行当时的 `ledgerctl verify`; 原始运行的构建标识和数据仍从各自的证据清单查阅. 正式采样由各实验驱动按上表方法执行.
+
 ## 实验用 LLM 配置
 
 编辑 `experiments/llm.env` 指定 `LLM_MODEL` (模型名), `LLM_PROVIDER` (`openai` 或 `anthropic` 接口协议) 和 `LLM_BASE_URL` (服务地址). 运行前在项目根目录加载配置. API 密钥通过当前环境的 `LLM_API_KEY` 提供.

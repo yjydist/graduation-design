@@ -405,7 +405,7 @@ func endorsementFailure(err error) string {
 				"TRUST_MANAGEMENT_FORBIDDEN", "IDENTITY_MANAGEMENT_FORBIDDEN", "IDENTITY_RECOVERY_FORBIDDEN", "IDENTITY_STATE_CONFLICT",
 				"RECOVERY_PROOF_INVALID", "TASK_STATE_CONFLICT", "GRANT_STATE_CONFLICT", "ALREADY_REVOKED",
 			} {
-				if strings.HasSuffix(d.Message, "D0:"+c) && strings.Contains(d.Message, "chaincode response") {
+				if strings.HasSuffix(d.Message, api.RegistryErrorPrefix+c) && strings.Contains(d.Message, "chaincode response") {
 					if reason != "" && reason != c {
 						return "ENDORSEMENT_REJECTED"
 					}
@@ -991,4 +991,31 @@ func (s *ManagementOperationService) Handler() http.Handler {
 		_ = json.NewEncoder(w).Encode(view)
 	})
 	return mux
+}
+
+func expectOperation(op *operation, expected string) error {
+	if op == nil {
+		return fmt.Errorf("expected operation %s", expected)
+	}
+	switch expected {
+	case "VALID":
+		if op.Status == "CONFIRMED" && op.Commit != nil && op.Commit.Code == "VALID" {
+			return nil
+		}
+	case "PENDING":
+		if op.Status == "PENDING" && op.Commit == nil {
+			return nil
+		}
+	default:
+		if op.Status == "FAILED" && ((op.Commit != nil && op.Commit.Code == expected) ||
+			(op.Commit == nil && op.FailureCode != nil && *op.FailureCode == expected)) {
+			return nil
+		}
+	}
+	failure := ""
+	if op.FailureCode != nil {
+		failure = *op.FailureCode
+	}
+	return fmt.Errorf("%s: expected %s, got %s at %s (failure=%s, commit=%+v, %s)",
+		op.Key, expected, op.Status, op.Stage, failure, op.Commit, op.Observation)
 }

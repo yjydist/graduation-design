@@ -210,7 +210,7 @@ func TestManagementDualProofVectorAndTampering(t *testing.T) {
 	}
 }
 
-func TestM3RecoveryDualProofAndDIDCanonicalVectors(t *testing.T) {
+func TestRecoveryDualProofAndDIDCanonicalVectors(t *testing.T) {
 	now := time.Now().UTC()
 	dep := DeploymentBinding{
 		Purpose:       DeploymentPurpose,

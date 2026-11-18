@@ -1,0 +1,46 @@
+{
+  "seed": 1109,
+  "reference_run": "baseline-89ca8dd2d7ad0d57",
+  "fixture_digest": "47e91ed3d170b501914cad44dd5309646bd5c5e458e53a2b9ec0beca1fcc20a5",
+  "binary_sha256": "f75f9aac208da23a6b64cdca855266dffa3a9008e41ee6250f99a8fc56265298",
+  "source_locks": 113,
+  "paired_plan_and_business_results_match_reference": true,
+  "rounds": [
+    {
+      "directory": "round-1",
+      "run_id": "baseline-5678d2531eb15a2b",
+      "deployment_id": "08facf15838debc9e1fcc9059ef9fc43dae17db4fdbc31a73cd5073006caf1d9",
+      "order_cases_passed": 12,
+      "quotes_allowed": 12,
+      "orders_created": 6,
+      "over_limit_without_order_or_key": 6,
+      "anchors_per_source": 39,
+      "registry_readback_matched": true,
+      "decision_and_challenge_links": 24,
+      "signature_cache_hits": {
+        "C0": 0,
+        "B0": 0,
+        "B1": 62
+      },
+      "secret_scan_passed": true
+    },
+    {
+      "directory": "round-2",
+      "run_id": "baseline-9dfb2676b7c8fd18",
+      "deployment_id": "3abd4d6108019e26d9372af42abe5ed06c6770574765357ae900dfcb84912e8e",
+      "order_cases_passed": 12,
+      "quotes_allowed": 12,
+      "orders_created": 6,
+      "over_limit_without_order_or_key": 6,
+      "anchors_per_source": 39,
+      "registry_readback_matched": true,
+      "decision_and_challenge_links": 24,
+      "signature_cache_hits": {
+        "C0": 0,
+        "B0": 0,
+        "B1": 62
+      },
+      "secret_scan_passed": true
+    }
+  ]
+}

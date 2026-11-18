@@ -634,7 +634,7 @@ func TestIdentityLinkDualDomainStateMachine(t *testing.T) {
 	}
 }
 
-func TestM3DomainCertRenewalRevocationAndAuthorityUpdate(t *testing.T) {
+func TestDomainCertRenewalRevocationAndAuthorityUpdate(t *testing.T) {
 	h := newRegistryHarness(t)
 	nbf := h.now.Add(-time.Hour).Unix()
 	exp := h.now.Add(24 * time.Hour).Unix()
@@ -809,7 +809,7 @@ func TestM3DomainCertRenewalRevocationAndAuthorityUpdate(t *testing.T) {
 	}
 }
 
-func TestM3IdentityLifecycleRotateAndRecover(t *testing.T) {
+func TestIdentityLifecycleRotateAndRecover(t *testing.T) {
 	h := newRegistryHarness(t)
 
 	// 1. Self suspends A1; self, domainA admin, registrarB cannot resume; only registrarA can resume (S94).
@@ -981,21 +981,21 @@ func TestM3IdentityLifecycleRotateAndRecover(t *testing.T) {
 	}
 }
 
-func TestM3CredentialTaskAndGrantLifecycle(t *testing.T) {
+func TestCredentialTaskAndGrantLifecycle(t *testing.T) {
 	h := newRegistryHarness(t)
 	nbf := h.now.Add(-time.Hour).Unix()
 	exp := h.now.Add(24 * time.Hour).Unix()
 
 	taskRP := api.Task{
 		Bound:             api.Bound{DeploymentID: h.depID},
-		ID:                api.Digest([]byte("task-m3-rp")),
+		ID:                api.Digest([]byte("lifecycle-task-rp")),
 		Creator:           "did:web:a.local:u",
 		CreatorCredential: "cred-U",
 		CreatorKeyVersion: 1,
 		Domain:            "A",
 		Mode:              api.RP,
 		Resource:          api.Digest([]byte("resource:c")),
-		Digest:            api.Digest([]byte("task-m3-rp-spec")),
+		Digest:            api.Digest([]byte("lifecycle-task-rp-spec")),
 		Interval:          api.Interval{NBF: nbf, EXP: exp},
 	}
 	h.stub.creator = h.aU
@@ -1018,7 +1018,7 @@ func TestM3CredentialTaskAndGrantLifecycle(t *testing.T) {
 		IssuerCredential:  "cred-C",
 		GranteeCredential: "cred-U",
 		Depth:             1,
-		Digest:            api.Digest([]byte("g0-m3-jws")),
+		Digest:            api.Digest([]byte("lifecycle-g0-jws")),
 		Interval:          api.Interval{NBF: nbf, EXP: exp},
 	}
 	h.stub.creator = h.cSvc

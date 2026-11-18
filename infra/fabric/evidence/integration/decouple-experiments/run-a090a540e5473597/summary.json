@@ -1,0 +1,15 @@
+{
+  "runId": "run-a090a540e5473597",
+  "evidenceDir": ".local/decoupled-integration-target/run-a090a540e5473597",
+  "deploymentId": "318855e05b2c6b8852c1c34624b3e46a259d2ee956031bc0c84dca12d7ab3214",
+  "scope": "Fabric D0 verifiable protocol anchors, original transaction evidence and state-provider acceptance",
+  "startedAt": "2026-11-18T08:54:40.665879Z",
+  "finishedAt": "2026-11-18T08:54:41.563046Z",
+  "status": "PASS",
+  "cases": [
+    {
+      "name": "probe-expiry-state-stale",
+      "pass": true
+    }
+  ]
+}

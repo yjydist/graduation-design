@@ -46,7 +46,7 @@ type fixture struct {
 	Identities                         map[string]api.Identity
 	Credentials                        map[string]api.Credential
 	IdentityLink                       api.IdentityLink
-	M2TaskSpec                         protocol.TaskSpec
+	ProcurementTaskSpec                protocol.TaskSpec `json:"m2TaskSpec"`
 	RPTask, BMTask                     api.Task
 	RPG0, RPG1, RPG2, BMG0, BMG1, BMG2 api.Grant
 }

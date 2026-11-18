@@ -1,0 +1,19 @@
+{
+  "deployment_id": "318855e05b2c6b8852c1c34624b3e46a259d2ee956031bc0c84dca12d7ab3214",
+  "original_chaincode_source_digest": "56e5ecb94562b1668753389a1caa801cb17af429d9e54887b42aaa9c729cf50a",
+  "fixture_sha256": "b500a3f68de444012440e83d365959ca0595208ca544edef1f53556f34d8505f",
+  "fixture_task_spec_key": "m2TaskSpec",
+  "fixture_and_deployment_unchanged": true,
+  "wallet_mcp_tools": [
+    "create_order",
+    "delegate_grant",
+    "inspect_wallet",
+    "reconcile_order",
+    "replace_grant",
+    "request_quote"
+  ],
+  "legacy_response": "D0:UNAUTHORIZED",
+  "mapped_failure_code": "UNAUTHORIZED",
+  "operation_key": "decouple/legacy-response/1",
+  "transaction_id": "27ce19c8b287cfd29a786f9fb71622b6262c6e23612c37f96fb1c3773441ecbd"
+}

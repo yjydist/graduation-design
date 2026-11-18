@@ -17,11 +17,8 @@ import (
 
 // Run is the Fabric ledgerctl entry point.
 func Run(args []string, output io.Writer) error {
-	if len(args) > 0 && args[0] == "experiment" {
-		return runExperimentCLI(args[1:], output)
-	}
 	if len(args) == 0 {
-		return fmt.Errorf("usage: ledgerctl {deploy|seed|check|inspect|invoke|operation|verify|mcp}")
+		return fmt.Errorf("usage: ledgerctl {deploy|seed|check|inspect|invoke|operation|mcp}")
 	}
 	command := args[0]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
@@ -31,12 +28,8 @@ func Run(args []string, output io.Writer) error {
 		dir = filepath.Join(".local", "fabric-d0")
 	}
 	flags.StringVar(&dir, "dir", dir, "Fabric instance directory")
-	defaultTimeout := 2 * time.Minute
-	if command == "verify" {
-		defaultTimeout = 5 * time.Minute
-	}
-	timeout := flags.Duration("timeout", defaultTimeout, "overall command timeout")
-	var grant, height, role, key, method, input, evidence, gatewayURL string
+	timeout := flags.Duration("timeout", 2*time.Minute, "overall command timeout")
+	var grant, height, role, key, method, input, gatewayURL string
 	var interval, lifetime time.Duration
 	var retryInitialization bool
 	switch command {
@@ -56,8 +49,6 @@ func Run(args []string, output io.Writer) error {
 			flags.StringVar(&method, "method", "", "registry operation")
 			flags.StringVar(&input, "input", "", "JSON input file")
 		}
-	case "verify":
-		flags.StringVar(&evidence, "out", ".local/fabric-evidence", "parent directory for a unique evidence run")
 	case "deploy":
 		flags.BoolVar(&retryInitialization, "retry-initialization", false, "allow a new operation after a rejected unsigned initialization")
 	case "seed":
@@ -76,13 +67,6 @@ func Run(args []string, output io.Writer) error {
 	defer cancel()
 	enc := json.NewEncoder(output)
 	enc.SetIndent("", "  ")
-	if command == "verify" {
-		report, err := verify(ctx, dir, evidence)
-		if report != nil {
-			err = errors.Join(err, enc.Encode(report))
-		}
-		return err
-	}
 	i, err := loadInstance(dir)
 	if err != nil {
 		return err

@@ -1,0 +1,857 @@
+{
+  "synthetic": false,
+  "schemaVersion": "grad-auth-v1",
+  "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+  "domains": {
+    "A": {
+      "domain": {
+        "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+        "domainId": "A",
+        "domainDid": "did:web:a.local",
+        "administrator": {
+          "mspId": "AMsp",
+          "certificateSha256": "e409d1151670afe7147a5474a96960740c36d9f8530172f51872515adbbf5da3"
+        },
+        "registrar": {
+          "mspId": "AMsp",
+          "certificateSha256": "d95389cf82c807b2943a08a858680fa20f195f5a766fb5b661c0db690e2b13ef"
+        },
+        "identityIssuers": null,
+        "currentCertificationId": "",
+        "status": "",
+        "revision": 0
+      },
+      "identity": {
+        "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+        "subjectId": "did:web:a.local",
+        "domainId": "A",
+        "kind": "DOMAIN",
+        "managementIdentity": {
+          "mspId": "AMsp",
+          "certificateSha256": "e409d1151670afe7147a5474a96960740c36d9f8530172f51872515adbbf5da3"
+        },
+        "didDocumentDigest": "b018290ceaa3f39277432d427866c169861ccd08bf801ba3eba4d0981ca0e653",
+        "appKeyId": "did:web:a.local#key-1",
+        "appKeyVersion": 1,
+        "appPublicKey": "048de003b3048c4062f115396e891ca4527b0fe9a13a0539f837d5162acf42f807a166cd3819c2351ec6bfb2348ae2fae8085470b876f5e595a6e5bbb4fec9baaf",
+        "accountCommitment": "5058a48710e2e40d213e6895e7af5b110efd9ebc1df3964e7d5d22360b401dfd",
+        "status": "",
+        "revision": 0
+      },
+      "issuers": [
+        {
+          "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+          "subjectId": "did:web:a.local:issuer",
+          "domainId": "A",
+          "kind": "ISSUER",
+          "managementIdentity": {
+            "mspId": "AMsp",
+            "certificateSha256": "5dbd5085aec0a646c826a390c6a272a676c6d1c441f0fe298b7a288ba3fa06f5"
+          },
+          "didDocumentDigest": "a68cb5dd265e0949f6719554b632a81cf79492859bb88c13cb38ad55200cd0b3",
+          "appKeyId": "did:web:a.local:issuer#key-1",
+          "appKeyVersion": 1,
+          "appPublicKey": "046f4f802f7d9a929a6ab1d5f48faf05d58b60c2c0ecd0f332c6f505442959fd569e4fa1bb92bceb8d06c841d47f7b8be27b05fa38cd96cdde505f6f95b37bd6d0",
+          "accountCommitment": "173a6198e84696d28f38d9ecd73c6de8d63d626c5000f0fbab17d23c5ea9f024",
+          "status": "",
+          "revision": 0
+        }
+      ]
+    },
+    "B": {
+      "domain": {
+        "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+        "domainId": "B",
+        "domainDid": "did:web:b.local",
+        "administrator": {
+          "mspId": "BMsp",
+          "certificateSha256": "5ce388362b253a7f3455947d8127f088cd4d3f37767d7ec743c5eca0ae35c367"
+        },
+        "registrar": {
+          "mspId": "BMsp",
+          "certificateSha256": "7198b31425321e0b5bcb2736c53be17101a6892602c77158e126e55af0037b4c"
+        },
+        "identityIssuers": null,
+        "currentCertificationId": "",
+        "status": "",
+        "revision": 0
+      },
+      "identity": {
+        "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+        "subjectId": "did:web:b.local",
+        "domainId": "B",
+        "kind": "DOMAIN",
+        "managementIdentity": {
+          "mspId": "BMsp",
+          "certificateSha256": "5ce388362b253a7f3455947d8127f088cd4d3f37767d7ec743c5eca0ae35c367"
+        },
+        "didDocumentDigest": "d4bd834fe0f5618791ad34b5e3d0ebd48ee0a51ca6d83fca4ec1b68cbd310707",
+        "appKeyId": "did:web:b.local#key-1",
+        "appKeyVersion": 1,
+        "appPublicKey": "04de06914b21f521f5da44167fd1be0a5c4c0cc0b85ed788f18ab859df204f733d289a95fabfbf7258de20968832576d85998a18c8213aada07417b7d5ddf501e9",
+        "accountCommitment": "c0579c5853e5fa1aadf4921ab9939cfe07e821ed78d6b54010b52477ef70b1f3",
+        "status": "",
+        "revision": 0
+      },
+      "issuers": [
+        {
+          "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+          "subjectId": "did:web:b.local:issuer",
+          "domainId": "B",
+          "kind": "ISSUER",
+          "managementIdentity": {
+            "mspId": "BMsp",
+            "certificateSha256": "e0cf03f925d03c6799e591a97174f9ebc15a552962de5469aca4e8d4e8db3820"
+          },
+          "didDocumentDigest": "cf0dd5d61740b53e59241374a1ad2c55cfe800e1a7cd8d7388db57675bbc2b8a",
+          "appKeyId": "did:web:b.local:issuer#key-1",
+          "appKeyVersion": 1,
+          "appPublicKey": "040ff6b1efd31c49e7f9403ee3801edbee091f6d3269064b10a284b473d462caf427723c6c156021d298b260aef6407b6f4f62632f531fee93283c089a92f40bfd",
+          "accountCommitment": "358653e2160233fb135cd18603631d5e6609ca7f9de8b9da0f298e2ff1715103",
+          "status": "",
+          "revision": 0
+        }
+      ]
+    },
+    "C": {
+      "domain": {
+        "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+        "domainId": "C",
+        "domainDid": "did:web:c.local",
+        "administrator": {
+          "mspId": "CMsp",
+          "certificateSha256": "35e74b5dbfd8a2991bceab903ec4336f8fed5cc642617ed71c82a4be7a26dced"
+        },
+        "registrar": {
+          "mspId": "CMsp",
+          "certificateSha256": "bf16f1d1e74493b00b7869598648212e25ff450236c660b38936d367f02891a5"
+        },
+        "identityIssuers": null,
+        "currentCertificationId": "",
+        "status": "",
+        "revision": 0
+      },
+      "identity": {
+        "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+        "subjectId": "did:web:c.local",
+        "domainId": "C",
+        "kind": "DOMAIN",
+        "managementIdentity": {
+          "mspId": "CMsp",
+          "certificateSha256": "35e74b5dbfd8a2991bceab903ec4336f8fed5cc642617ed71c82a4be7a26dced"
+        },
+        "didDocumentDigest": "f8e91055f112afe95fcc4769ea7057c7c8f09dd420e1f3062eef9540d696a666",
+        "appKeyId": "did:web:c.local#key-1",
+        "appKeyVersion": 1,
+        "appPublicKey": "041ddcadded9964f3d58b464a4fb046456e308b2fe311589efd301cdd3eb3e89d933f5f1bcb98fb17b1046e4217f8c0b92cae256796d77033ad5f1010a05231faa",
+        "accountCommitment": "60cf99e5b842a7ca85dfacf18964712bc40e840b51fbcd4ce08d03c867683587",
+        "status": "",
+        "revision": 0
+      },
+      "issuers": [
+        {
+          "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+          "subjectId": "did:web:c.local:issuer",
+          "domainId": "C",
+          "kind": "ISSUER",
+          "managementIdentity": {
+            "mspId": "CMsp",
+            "certificateSha256": "eff444a537edbaa722a6cd601ec70c1430ad5aeb1b89b8614c3b09bff42e8f48"
+          },
+          "didDocumentDigest": "f242d131a4c4a3104829efe509c4eb267457e943253665494d8869bf200b9294",
+          "appKeyId": "did:web:c.local:issuer#key-1",
+          "appKeyVersion": 1,
+          "appPublicKey": "04d6080634a01c53540a24f5b76d3f3a313d54f66d2b55ad84d010632a8d2a76c56661d5523795a849b41f290b94312d42c443cf00826bfc417faccab913862b48",
+          "accountCommitment": "befef4629a462c76dda900f35aeefafcb5e91eeb2a6d413282efa07428cda711",
+          "status": "",
+          "revision": 0
+        }
+      ]
+    }
+  },
+  "certifications": {
+    "A": {
+      "certification": {
+        "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+        "certificationId": "urn:grad:domain-certification:A-v1",
+        "domainId": "A",
+        "issuerKeyVersion": 1,
+        "digest": "66748a3c3b21d286ad0e5c29bd8ad38497241b7fca9a3b31fb034091e4d6a955",
+        "identityIssuers": [
+          {
+            "id": "did:web:a.local:issuer",
+            "appKeyVersion": 1,
+            "credentialTypes": [
+              "EnterpriseIdentityCredential"
+            ],
+            "claimNames": [
+              "domain",
+              "role"
+            ]
+          }
+        ],
+        "nbf": 1794988859,
+        "exp": 1795078859,
+        "status": "",
+        "revision": 0
+      },
+      "expectedRevision": 1,
+      "expectedCertificationId": ""
+    },
+    "B": {
+      "certification": {
+        "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+        "certificationId": "urn:grad:domain-certification:B-v1",
+        "domainId": "B",
+        "issuerKeyVersion": 1,
+        "digest": "c9db3773cea861c9e71e8aa1f5e5d4711a4843861d1e955e64a1d974c7c679d3",
+        "identityIssuers": [
+          {
+            "id": "did:web:b.local:issuer",
+            "appKeyVersion": 1,
+            "credentialTypes": [
+              "EnterpriseIdentityCredential"
+            ],
+            "claimNames": [
+              "domain",
+              "role"
+            ]
+          }
+        ],
+        "nbf": 1794988859,
+        "exp": 1795078859,
+        "status": "",
+        "revision": 0
+      },
+      "expectedRevision": 1,
+      "expectedCertificationId": ""
+    },
+    "C": {
+      "certification": {
+        "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+        "certificationId": "urn:grad:domain-certification:C-v1",
+        "domainId": "C",
+        "issuerKeyVersion": 1,
+        "digest": "fe7e8d295fc8bdffefd6a167512b754f90e08f9f030b971047927430b584c6f4",
+        "identityIssuers": [
+          {
+            "id": "did:web:c.local:issuer",
+            "appKeyVersion": 1,
+            "credentialTypes": [
+              "EnterpriseIdentityCredential"
+            ],
+            "claimNames": [
+              "domain",
+              "role"
+            ]
+          }
+        ],
+        "nbf": 1794988859,
+        "exp": 1795078859,
+        "status": "",
+        "revision": 0
+      },
+      "expectedRevision": 1,
+      "expectedCertificationId": ""
+    }
+  },
+  "identities": {
+    "A1": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "subjectId": "did:web:a.local:a1",
+      "domainId": "A",
+      "kind": "AGENT",
+      "managementIdentity": {
+        "mspId": "AMsp",
+        "certificateSha256": "ccbbc22ae087f9221678b4476f8b9e88b5aa567dd92bad13804de132a2a1c9cf"
+      },
+      "didDocumentDigest": "2020d9ecadcbf6c7f65542d5e8d09adbb6eeeab3479da502bede149b9f65f406",
+      "appKeyId": "did:web:a.local:a1#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0427a5d15f816b8b275344ebdf0d99efa0419c2ef6198397a6d95da7e1baea63b66274c890e4559d4d5c18ee766192663244d25676f059c8ae822896f17496b252",
+      "accountCommitment": "38d02b683d15cb6e319faf45d676508e6fe989a00e9686579787a33f6fb14543",
+      "status": "",
+      "revision": 0
+    },
+    "B1": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "subjectId": "did:web:b.local:b1",
+      "domainId": "B",
+      "kind": "AGENT",
+      "managementIdentity": {
+        "mspId": "BMsp",
+        "certificateSha256": "35db1ead6424effd49951cdf44fe0c876f87e7fbb5d9554c2221b0187e66153b"
+      },
+      "didDocumentDigest": "8e0f61401a17966f8302e753ab9ea8df59c7b5c1fc1d067223397bc10e1e4a3b",
+      "appKeyId": "did:web:b.local:b1#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0489ece68332dd231f04635930e249cdcd9a975a04f0fdda124e5388b349021ee39d6c736ae634a2a71617df998bc096fa3d2a727b3c6f0ab92d9520eaea42b5df",
+      "accountCommitment": "d5858b2344473f28de5cb9e45e66c25212bc4a4a55c731c0b677af2954d3e2fb",
+      "status": "",
+      "revision": 0
+    },
+    "B2": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "subjectId": "did:web:b.local:b2",
+      "domainId": "B",
+      "kind": "AGENT",
+      "managementIdentity": {
+        "mspId": "BMsp",
+        "certificateSha256": "e2980ff4da112d8d2f4c30e76417ca98bef90b304d1f1e8b57c0aa7234327c79"
+      },
+      "didDocumentDigest": "ea9e7f9437de10b9a92f1a3cfaa58755a249ddce1bbd6b134cc48d3beba4c777",
+      "appKeyId": "did:web:b.local:b2#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "045442593293f493504e5cb388fe091488ca99efca9bd19d361dccc00ade57f9c7dbe5fc3e643ebee2fa043ed925d1ced2676a4692fd52dfe57b21c8e3ba7c236d",
+      "accountCommitment": "f4a609d85328f857616b0324408b3c58bf18fceacdd02952b11360ed09faae69",
+      "status": "",
+      "revision": 0
+    },
+    "C": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "subjectId": "did:web:c.local:supplier",
+      "domainId": "C",
+      "kind": "SERVICE",
+      "managementIdentity": {
+        "mspId": "CMsp",
+        "certificateSha256": "9bec99a764c674756b09885a7470edc75e78ab083469528a1764269996d64e70"
+      },
+      "didDocumentDigest": "4c51c6ed7e73892a83cd3f131a507183c07e71c3a8ceb771bd58c610a84033d6",
+      "appKeyId": "did:web:c.local:supplier#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0401f43314efd97d083c2b7494adc9f01ea0d9d4326d36f9a27dbf46a4a95ba9ec378abef9347f5a5eeedbe5069438065e7bc4e3207386485b9018c9077350efa8",
+      "accountCommitment": "50ebee10bd503573e26e853111a017039372288f271ef230d7dcea48b8e7ef1f",
+      "status": "",
+      "revision": 0
+    },
+    "PA": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "subjectId": "did:web:a.local:pa",
+      "domainId": "A",
+      "kind": "SERVICE",
+      "managementIdentity": {
+        "mspId": "AMsp",
+        "certificateSha256": "3b7872b10038ce862124e2c0b19579062b7d1a06e95214175901565cf37bcadf"
+      },
+      "didDocumentDigest": "1919680f02213e0da74c777b320a05aab94fa77a114a64cfe1b547614812a3b4",
+      "appKeyId": "did:web:a.local:pa#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "041eae7f08bab408ddb05eab179ef3eeed1db48fcf8e25cbc069d5e738bf98f232b0d13af0b17c7ef154ae55ff18c6ea30f3e4a4464d1715a7926429270ca4de0d",
+      "accountCommitment": "1780d98fcdbc0171c249f0c5dde41f0c85503ad92a7cbf6e36c72df7da63c5c3",
+      "status": "",
+      "revision": 0
+    },
+    "U": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "subjectId": "did:web:a.local:u",
+      "domainId": "A",
+      "kind": "USER",
+      "managementIdentity": {
+        "mspId": "AMsp",
+        "certificateSha256": "d3211b1f4d6afb0016d6a1fa228b5834f852d790ff1d470e34e6e963b2d2be5a"
+      },
+      "didDocumentDigest": "5c87b322d848e7d0dc2ee038686227f2b4f65c9426f7db03c1b8334d4f9922af",
+      "appKeyId": "did:web:a.local:u#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "0449229570f0097b345d0bdef6b1b1f5d610a3e6244fc510228eaf729108ea6cc295e440265bace80e18c54a31165d391a82e827aa1a06e2e32f1dddfcd73f3702",
+      "accountCommitment": "300e915dd8f0228f708ebb82d409b5a0cbba15ef8a65b5ce665b2bbfa4f286ae",
+      "status": "",
+      "revision": 0
+    },
+    "U-in-B": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "subjectId": "did:web:b.local:u-in-b",
+      "domainId": "B",
+      "kind": "USER",
+      "managementIdentity": {
+        "mspId": "BMsp",
+        "certificateSha256": "95c5fcee17dec2a2278ef180c8630e1f05646d3da2a7083eb994305cf433b895"
+      },
+      "didDocumentDigest": "25a2cd6115f82842d9ca4f0df6ad640831aae6c240ebc0cd27d00b193153b25a",
+      "appKeyId": "did:web:b.local:u-in-b#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "04cbf824fba86163194baf894d605d8a26e34e313ae758185c841ba9ce550e87fc6d390e4874d224a5e26f83fb255cec3c79ea01fe261ef23e0244809da4e46cc1",
+      "accountCommitment": "1609eeaa21604c019284dfb84760729a865ae1fd1f683fb463456657b2334647",
+      "status": "",
+      "revision": 0
+    },
+    "alt": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "subjectId": "did:web:a.local:other",
+      "domainId": "A",
+      "kind": "USER",
+      "managementIdentity": {
+        "mspId": "AMsp",
+        "certificateSha256": "f972fbf93abb5724f996919a2a8c5c83e30fcb3feec1b149ad0f837ff1812289"
+      },
+      "didDocumentDigest": "45c365cd17d04ad357422d7b07f9203269ecf2f824081618838c5b9a2fa5407e",
+      "appKeyId": "did:web:a.local:other#key-1",
+      "appKeyVersion": 1,
+      "appPublicKey": "04d300d5081ba0aef9e574c0a43ee7b0348dd7856dcb819cc93899bf40f8d44b4a13bbc3d3efbf727cff759266ae0710a9926f78e33f4db954f6d7f30813662c6a",
+      "accountCommitment": "e379423c417fb7e6fb722c64c9a1d7a0098b4b8a483f6de7ccd80a2004cc5eec",
+      "status": "",
+      "revision": 0
+    }
+  },
+  "credentials": {
+    "A1": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "credentialId": "urn:grad:credential:A1-v1",
+      "issuer": "did:web:a.local:issuer",
+      "subject": "did:web:a.local:a1",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "b6cea52d4ba00cbee46d5b07da847667f7dc3738f3005dfd29e31b60905604b1",
+      "nbf": 1794988859,
+      "exp": 1795078859,
+      "status": "",
+      "revision": 0
+    },
+    "B1": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "credentialId": "urn:grad:credential:B1-v1",
+      "issuer": "did:web:b.local:issuer",
+      "subject": "did:web:b.local:b1",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "7dee75828e5f5a470b4fc0e0f04f66c599e35623a9c938b158f62785411d4a6a",
+      "nbf": 1794988859,
+      "exp": 1795078859,
+      "status": "",
+      "revision": 0
+    },
+    "B2": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "credentialId": "urn:grad:credential:B2-v1",
+      "issuer": "did:web:b.local:issuer",
+      "subject": "did:web:b.local:b2",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "e9c8bec7cd0ad804eb8d9379694deabbff2784770d56751f7e1b01436b7b5c46",
+      "nbf": 1794988859,
+      "exp": 1795078859,
+      "status": "",
+      "revision": 0
+    },
+    "C": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "credentialId": "urn:grad:credential:C-v1",
+      "issuer": "did:web:c.local:issuer",
+      "subject": "did:web:c.local:supplier",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "0ef5dbe502a643e2df58f765f8a55c664a0c95e0830303d6d3a59c6a0eef7d04",
+      "nbf": 1794988859,
+      "exp": 1795078859,
+      "status": "",
+      "revision": 0
+    },
+    "PA": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "credentialId": "urn:grad:credential:PA-v1",
+      "issuer": "did:web:a.local:issuer",
+      "subject": "did:web:a.local:pa",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "a43209bbc5922cf6663fd7667975869687e1d4746a2fb9b54ff243ae61449b97",
+      "nbf": 1794988859,
+      "exp": 1795078859,
+      "status": "",
+      "revision": 0
+    },
+    "U": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "credentialId": "urn:grad:credential:U-v1",
+      "issuer": "did:web:a.local:issuer",
+      "subject": "did:web:a.local:u",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "f05e9581bfb55b2bec70473fd6cb93735da45193980c3f3a2848939066663789",
+      "nbf": 1794988859,
+      "exp": 1795078859,
+      "status": "",
+      "revision": 0
+    },
+    "U-in-B": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "credentialId": "urn:grad:credential:U-in-B-v1",
+      "issuer": "did:web:b.local:issuer",
+      "subject": "did:web:b.local:u-in-b",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "0e37faedbc4d2ef63d5f960d17a0b5967e3aa4f40548c717d8c0a74113bd2cf5",
+      "nbf": 1794988859,
+      "exp": 1795078859,
+      "status": "",
+      "revision": 0
+    },
+    "alt": {
+      "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+      "credentialId": "urn:grad:credential:alt-v1",
+      "issuer": "did:web:a.local:issuer",
+      "subject": "did:web:a.local:other",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "dc0350b319a26f02c7e2c1fc097efd6e2e395f4adf58998a535de175889a963d",
+      "nbf": 1794988859,
+      "exp": 1795078859,
+      "status": "",
+      "revision": 0
+    }
+  },
+  "task": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "taskId": "8969258b7b9582badf5112b75ed3b611c38b69e97139aecc29c411ffe4b11ae0",
+    "creator": "did:web:a.local:u",
+    "creatorCredentialId": "urn:grad:credential:U-v1",
+    "creatorKeyVersion": 1,
+    "principalDomain": "A",
+    "authorizationMode": "RESOURCE_PREAUTHORIZED",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "taskSpecDigest": "430541fe288ebcb3eaadbc6ba54765d45e4e56a1131148ff57a5e42c26e7c6ba",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  },
+  "g0": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "grantId": "c5006596d3510eb745c315e66034942ad4ebaff00eb2aaeb6440bd2345e90c51",
+    "schemaVersion": "grad-auth-v1",
+    "parentId": "",
+    "parentDigest": "",
+    "rootId": "c5006596d3510eb745c315e66034942ad4ebaff00eb2aaeb6440bd2345e90c51",
+    "taskId": "8969258b7b9582badf5112b75ed3b611c38b69e97139aecc29c411ffe4b11ae0",
+    "authorizationMode": "RESOURCE_PREAUTHORIZED",
+    "principalDomain": "A",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "issuer": "did:web:c.local:supplier",
+    "grantee": "did:web:a.local:u",
+    "issuerKeyVersion": 1,
+    "granteeKeyVersion": 1,
+    "issuerCredentialId": "urn:grad:credential:C-v1",
+    "granteeCredentialId": "urn:grad:credential:U-v1",
+    "remainingDepth": 2,
+    "digest": "81578335acfde729c139437b30da1a4f40b2f3be0fb067a47da090e41c66ceef",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  },
+  "g1": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "grantId": "727c07c3b849bb09ce6db977305a5ffc35813a45e7977c5a8a84030897b817e0",
+    "schemaVersion": "grad-auth-v1",
+    "parentId": "c5006596d3510eb745c315e66034942ad4ebaff00eb2aaeb6440bd2345e90c51",
+    "parentDigest": "81578335acfde729c139437b30da1a4f40b2f3be0fb067a47da090e41c66ceef",
+    "rootId": "c5006596d3510eb745c315e66034942ad4ebaff00eb2aaeb6440bd2345e90c51",
+    "taskId": "8969258b7b9582badf5112b75ed3b611c38b69e97139aecc29c411ffe4b11ae0",
+    "authorizationMode": "RESOURCE_PREAUTHORIZED",
+    "principalDomain": "A",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "issuer": "did:web:a.local:u",
+    "grantee": "did:web:a.local:a1",
+    "issuerKeyVersion": 1,
+    "granteeKeyVersion": 1,
+    "issuerCredentialId": "urn:grad:credential:U-v1",
+    "granteeCredentialId": "urn:grad:credential:A1-v1",
+    "remainingDepth": 1,
+    "digest": "77d2e7d3f234415004cb28f67cd56ebf7f326d227c074001e0a4e4937c7c5fa4",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  },
+  "taskSpec": {
+    "supplierId": "urn:grad:supplier:C",
+    "productId": "urn:grad:product:P1",
+    "maxQuantity": 1,
+    "currency": "CNY",
+    "resources": [
+      "urn:grad:resource:C:orders",
+      "urn:grad:resource:C:quotes"
+    ],
+    "actions": [
+      "order.create",
+      "quote.read"
+    ],
+    "description": "P1 x 1"
+  },
+  "didDocuments": {
+    "did:web:a.local": "did/a.local.did.json",
+    "did:web:a.local:a1": "did/a.local_a1.did.json",
+    "did:web:a.local:issuer": "did/a.local_issuer.did.json",
+    "did:web:a.local:other": "did/a.local_other.did.json",
+    "did:web:a.local:pa": "did/a.local_pa.did.json",
+    "did:web:a.local:u": "did/a.local_u.did.json",
+    "did:web:b.local": "did/b.local.did.json",
+    "did:web:b.local:b1": "did/b.local_b1.did.json",
+    "did:web:b.local:b2": "did/b.local_b2.did.json",
+    "did:web:b.local:issuer": "did/b.local_issuer.did.json",
+    "did:web:b.local:u-in-b": "did/b.local_u-in-b.did.json",
+    "did:web:c.local": "did/c.local.did.json",
+    "did:web:c.local:issuer": "did/c.local_issuer.did.json",
+    "did:web:c.local:supplier": "did/c.local_supplier.did.json",
+    "did:web:t.local": "did/t.local.did.json"
+  },
+  "purchasingAuthority": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "domainId": "A",
+    "purchasingAuthority": "did:web:a.local:pa",
+    "expectedRevision": 2
+  },
+  "identityLink": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "id": "urn:grad:link:U-UinB",
+    "sourceDomain": "A",
+    "sourceSubject": "did:web:a.local:u",
+    "sourceKeyVersion": 1,
+    "sourceAccountCommitment": "300e915dd8f0228f708ebb82d409b5a0cbba15ef8a65b5ce665b2bbfa4f286ae",
+    "targetDomain": "B",
+    "targetSubject": "did:web:b.local:u-in-b",
+    "targetKeyVersion": 1,
+    "targetAccountCommitment": "1609eeaa21604c019284dfb84760729a865ae1fd1f683fb463456657b2334647",
+    "proposalDigest": "3ca70b5033f2caccf19750f34dda405be476146dbe86fbe210884a2ccf6a571c",
+    "proposedAt": 1794988859,
+    "expiresAt": 1795078859,
+    "effectiveActive": false,
+    "status": "",
+    "revision": 0
+  },
+  "identityLinkApproval": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "id": "urn:grad:link:U-UinB",
+    "proposalDigest": "3ca70b5033f2caccf19750f34dda405be476146dbe86fbe210884a2ccf6a571c",
+    "expectedRevision": 1,
+    "approvedAt": 1794988859
+  },
+  "m2TaskSpec": {
+    "supplierId": "urn:grad:supplier:C",
+    "productId": "urn:grad:product:P1",
+    "maxQuantity": 2,
+    "currency": "CNY",
+    "resources": [
+      "urn:grad:resource:C:orders",
+      "urn:grad:resource:C:quotes"
+    ],
+    "actions": [
+      "order.create",
+      "quote.read"
+    ],
+    "description": "Dual-root procurement"
+  },
+  "rpTask": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+    "creator": "did:web:a.local:u",
+    "creatorCredentialId": "urn:grad:credential:U-v1",
+    "creatorKeyVersion": 1,
+    "principalDomain": "A",
+    "authorizationMode": "RESOURCE_PREAUTHORIZED",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "taskSpecDigest": "dd81a832882d309bc1dc0a8db803ded0d36067154710dcd8903cd43310b48f7d",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  },
+  "rpG0": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "grantId": "eed6c8b5e66581cc5a698f0eb2753fe0887ce12644f8ebf88496df6928bf8a4f",
+    "schemaVersion": "grad-auth-v1",
+    "parentId": "",
+    "parentDigest": "",
+    "rootId": "eed6c8b5e66581cc5a698f0eb2753fe0887ce12644f8ebf88496df6928bf8a4f",
+    "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+    "authorizationMode": "RESOURCE_PREAUTHORIZED",
+    "principalDomain": "A",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "issuer": "did:web:c.local:supplier",
+    "grantee": "did:web:a.local:u",
+    "issuerKeyVersion": 1,
+    "granteeKeyVersion": 1,
+    "issuerCredentialId": "urn:grad:credential:C-v1",
+    "granteeCredentialId": "urn:grad:credential:U-v1",
+    "remainingDepth": 2,
+    "digest": "cbc67cff20b4ba8b6838903937e0821ad2a151316913a6a68e27e9085cc7e979",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  },
+  "rpG1": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "grantId": "c7a8665f5f519019e72e1837d59c854946a6c23957094c69686709b23304a0fb",
+    "schemaVersion": "grad-auth-v1",
+    "parentId": "eed6c8b5e66581cc5a698f0eb2753fe0887ce12644f8ebf88496df6928bf8a4f",
+    "parentDigest": "cbc67cff20b4ba8b6838903937e0821ad2a151316913a6a68e27e9085cc7e979",
+    "rootId": "eed6c8b5e66581cc5a698f0eb2753fe0887ce12644f8ebf88496df6928bf8a4f",
+    "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+    "authorizationMode": "RESOURCE_PREAUTHORIZED",
+    "principalDomain": "A",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "issuer": "did:web:a.local:u",
+    "grantee": "did:web:a.local:a1",
+    "issuerKeyVersion": 1,
+    "granteeKeyVersion": 1,
+    "issuerCredentialId": "urn:grad:credential:U-v1",
+    "granteeCredentialId": "urn:grad:credential:A1-v1",
+    "remainingDepth": 1,
+    "digest": "1db7aa1d07d917905062c5bb6bdd7834755e42595ac421aadceef1231303bdea",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  },
+  "rpG2": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "grantId": "54a22d5a93ad0dfe721a79ae767147cb634b2e4e6ab66f9db5a4fab1931f6c7e",
+    "schemaVersion": "grad-auth-v1",
+    "parentId": "c7a8665f5f519019e72e1837d59c854946a6c23957094c69686709b23304a0fb",
+    "parentDigest": "1db7aa1d07d917905062c5bb6bdd7834755e42595ac421aadceef1231303bdea",
+    "rootId": "eed6c8b5e66581cc5a698f0eb2753fe0887ce12644f8ebf88496df6928bf8a4f",
+    "taskId": "654c4cf746b6fbf501d2d29f1d9c41a3f035f37dfbf4fdab6fab142026b3c0eb",
+    "authorizationMode": "RESOURCE_PREAUTHORIZED",
+    "principalDomain": "A",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "issuer": "did:web:a.local:a1",
+    "grantee": "did:web:b.local:b1",
+    "issuerKeyVersion": 1,
+    "granteeKeyVersion": 1,
+    "issuerCredentialId": "urn:grad:credential:A1-v1",
+    "granteeCredentialId": "urn:grad:credential:B1-v1",
+    "remainingDepth": 0,
+    "digest": "f05790c080867507a16eb86225b22235fb8a9cb7543c9d97ea7d88b545744801",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  },
+  "bmTask": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d",
+    "creator": "did:web:a.local:u",
+    "creatorCredentialId": "urn:grad:credential:U-v1",
+    "creatorKeyVersion": 1,
+    "principalDomain": "A",
+    "authorizationMode": "BUYER_MANDATE",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "taskSpecDigest": "dd81a832882d309bc1dc0a8db803ded0d36067154710dcd8903cd43310b48f7d",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  },
+  "bmG0": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "grantId": "14e859edbc1bc71a50c7ec337eede8db8233a12320e6d49e9f74535a3186bf3b",
+    "schemaVersion": "grad-auth-v1",
+    "parentId": "",
+    "parentDigest": "",
+    "rootId": "14e859edbc1bc71a50c7ec337eede8db8233a12320e6d49e9f74535a3186bf3b",
+    "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d",
+    "authorizationMode": "BUYER_MANDATE",
+    "principalDomain": "A",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "issuer": "did:web:a.local:pa",
+    "grantee": "did:web:a.local:u",
+    "issuerKeyVersion": 1,
+    "granteeKeyVersion": 1,
+    "issuerCredentialId": "urn:grad:credential:PA-v1",
+    "granteeCredentialId": "urn:grad:credential:U-v1",
+    "remainingDepth": 2,
+    "digest": "8990832b3d73f788817097adf95456da426088e0773703d260d1473912303850",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  },
+  "bmG1": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "grantId": "06bce3049454b74acbea12eb304c85c8d803bec80b952120ead3c9ecf8e55123",
+    "schemaVersion": "grad-auth-v1",
+    "parentId": "14e859edbc1bc71a50c7ec337eede8db8233a12320e6d49e9f74535a3186bf3b",
+    "parentDigest": "8990832b3d73f788817097adf95456da426088e0773703d260d1473912303850",
+    "rootId": "14e859edbc1bc71a50c7ec337eede8db8233a12320e6d49e9f74535a3186bf3b",
+    "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d",
+    "authorizationMode": "BUYER_MANDATE",
+    "principalDomain": "A",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "issuer": "did:web:a.local:u",
+    "grantee": "did:web:a.local:a1",
+    "issuerKeyVersion": 1,
+    "granteeKeyVersion": 1,
+    "issuerCredentialId": "urn:grad:credential:U-v1",
+    "granteeCredentialId": "urn:grad:credential:A1-v1",
+    "remainingDepth": 1,
+    "digest": "6a6bf23844a0e2c87935ce88ba27a8e276451ede0d104639a3965b4331d99302",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  },
+  "bmG2": {
+    "deploymentId": "33e6accd31f413af1639b1ba8d8574f524897b518d43c50b59abf25083896b9f",
+    "grantId": "978d28fd8adf0cac1034e9f4de75ff64c0bc2dc03265df6b2d763b9b1c64da0b",
+    "schemaVersion": "grad-auth-v1",
+    "parentId": "06bce3049454b74acbea12eb304c85c8d803bec80b952120ead3c9ecf8e55123",
+    "parentDigest": "6a6bf23844a0e2c87935ce88ba27a8e276451ede0d104639a3965b4331d99302",
+    "rootId": "14e859edbc1bc71a50c7ec337eede8db8233a12320e6d49e9f74535a3186bf3b",
+    "taskId": "57e0c7c6b18b02ac1eb8da418f6badf4561756b84dba062b9ef1c0711a54497d",
+    "authorizationMode": "BUYER_MANDATE",
+    "principalDomain": "A",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "issuer": "did:web:a.local:a1",
+    "grantee": "did:web:b.local:b1",
+    "issuerKeyVersion": 1,
+    "granteeKeyVersion": 1,
+    "issuerCredentialId": "urn:grad:credential:A1-v1",
+    "granteeCredentialId": "urn:grad:credential:B1-v1",
+    "remainingDepth": 0,
+    "digest": "9dfa9db03da8d9b7a631f87dbfcc8db4dbed3a4cf99eac27f37de08d946d6849",
+    "nbf": 1794988859,
+    "exp": 1795078859,
+    "status": "",
+    "revision": 0
+  }
+}

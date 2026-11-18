@@ -26,6 +26,9 @@ const (
 	ClockError     = time.Second
 	ProbeInterval  = time.Second
 	ProbeLifetime  = 5 * time.Second
+
+	// RegistryErrorPrefix preserves the error text emitted by deployed registries.
+	RegistryErrorPrefix = "D0:"
 )
 
 func Digest(data []byte) string {

@@ -2,6 +2,10 @@
 
 ## M4 采购基线
 
+独立基线入口迁移后, 用同一个固定构建和种子 `1109` 重建两轮, 每轮通过 12/12, 逻辑输入和数据库副作用与迁移前参考轮一致. [双轮对照](baseline/verification/decouple-experiments/comparison.json), [运行与留证核验](../../../openspec/changes/decouple-experiments-from-prototype/verification.md#迁移后的固定构建双轮对照).
+
+能力命名和回归入口迁移后的最终构建, 独立采购基线通过 12/12, 项目集成回归通过 33/33. [基线汇总](baseline/verification/decouple-experiments/final/summary.json), [集成回归汇总](integration/decouple-experiments/final/run-bcaa7b32cd3dcec6/summary.json), [旧部署兼容核对](integration/decouple-experiments/legacy-compatibility.json).
+
 执行接口故障留证修复后的两轮独立重建通过. 挑战成功后执行返回 `503 STATE_UNAVAILABLE` 的回归确认 `execute` 阶段及关联 ID 可查, 依赖订单保留为未执行. [双轮对照](baseline/verification/execute-failure-fix/comparison.json), [故障样本](baseline/verification/execute-failure-fix/fault-quote-execute/summary.json), [原始文件索引](../../../openspec/changes/archive/2026-11-18-m4-reproducible-baseline/verification.md#执行接口故障留证修复后复核)
 
 提交 `ca880c1` 的两轮独立重建通过, 逐行核对 48 条挑战与决定的主库关联, 并独立重算两轮各 39 条登记锚点摘要. 执行接口故障注入复现阶段记为 `quote-check`. [双轮对照](baseline/verification/commit-ca880c1/comparison.json), [故障注入日志](baseline/verification/commit-ca880c1/execute-fault.log), [核验报告](../../../openspec/changes/archive/2026-11-18-m4-reproducible-baseline/verification.md#提交-ca880c1-的独立复核)

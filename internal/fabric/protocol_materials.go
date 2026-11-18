@@ -372,6 +372,27 @@ func (i *instance) startControlledDIDResolver() (*protocol.DIDWebServer, *protoc
 	return srv, resolver, nil
 }
 
+// StartRegistryDIDResolver serves local DID documents and pins the deployment's root.
+func (i *instance) StartRegistryDIDResolver(d *Deployment) (*protocol.DIDWebServer, *protocol.DIDWebResolver, error) {
+	server, resolver, err := i.startControlledDIDResolver()
+	if err != nil {
+		return nil, nil, err
+	}
+	root := d.Bootstrap.Root
+	document, err := os.ReadFile(i.registrySubPath(didRelPath(root.DID)))
+	if err == nil {
+		_, err = resolver.RegisterPreseed(protocol.RootPreseed{
+			DID: root.DID, KeyID: root.KeyID, KeyVersion: root.KeyVersion,
+			PublicKeyHex: root.PublicKey, DIDDocumentDigest: root.DocumentDigest, RawDocument: document,
+		})
+	}
+	if err != nil {
+		_ = server.Close()
+		return nil, nil, err
+	}
+	return server, resolver, nil
+}
+
 func collectRegistryPublicFiles(registryDir string) (map[string]string, error) {
 	out := make(map[string]string)
 	prefixes := []string{"ca", "tls", "did", "certifications", "credentials", "grants"}

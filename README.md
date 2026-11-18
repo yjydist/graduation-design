@@ -27,7 +27,7 @@ flowchart TB
 | 查阶段状态, 任务和验证证据 | [任务安排与退出条件](TODO.md) |
 | 阅读论文或准备写作 | [文献清单](paper/论文.md), [全文与笔记索引](paper/README.md) |
 
-## 复跑 Fabric D0
+## 复跑 Fabric 集成回归
 
 在 arm64 主机启动 Docker, 然后在项目根目录执行.
 

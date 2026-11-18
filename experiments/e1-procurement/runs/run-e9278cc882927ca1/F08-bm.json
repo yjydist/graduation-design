@@ -1,0 +1,37 @@
+{
+  "firstChallenge": "urn:grad:challenge:68040a9f-de3d-4ef8-b767-d85bc76569cf",
+  "firstOrder": {
+    "orderId": "urn:grad:order:8929fc6a-0436-463f-8e22-f62730d6e9c2",
+    "quoteId": "urn:grad:quote:1101b7d2-54df-467f-8cfc-693b25f6785b",
+    "taskId": "2a0c4ce4d53559e4399750763267d4e84fccf8b48e7af6132282900fc2e1c905",
+    "actor": "did:web:b.local:b1",
+    "supplierId": "urn:grad:supplier:C",
+    "productId": "urn:grad:product:P1",
+    "quantity": 1,
+    "currency": "CNY",
+    "totalAmountMinor": 80000,
+    "idempotencyKey": "e1-bm-lost-response",
+    "status": "CREATED",
+    "createdAt": 1794969090
+  },
+  "firstStatus": 200,
+  "orderRowsAfter": 2,
+  "orderRowsBefore": 1,
+  "retryChallenge": "urn:grad:challenge:4db7afe0-396b-437e-909f-d24b435b266e",
+  "retryOrder": {
+    "orderId": "urn:grad:order:8929fc6a-0436-463f-8e22-f62730d6e9c2",
+    "quoteId": "urn:grad:quote:1101b7d2-54df-467f-8cfc-693b25f6785b",
+    "taskId": "2a0c4ce4d53559e4399750763267d4e84fccf8b48e7af6132282900fc2e1c905",
+    "actor": "did:web:b.local:b1",
+    "supplierId": "urn:grad:supplier:C",
+    "productId": "urn:grad:product:P1",
+    "quantity": 1,
+    "currency": "CNY",
+    "totalAmountMinor": 80000,
+    "idempotencyKey": "e1-bm-lost-response",
+    "status": "CREATED",
+    "createdAt": 1794969090
+  },
+  "retryStatus": 200,
+  "sameKey": "e1-bm-lost-response"
+}

@@ -1,0 +1,102 @@
+{
+  "authorizationModes": [
+    "RESOURCE_PREAUTHORIZED",
+    "BUYER_MANDATE"
+  ],
+  "binarySHA256": {
+    "driver": "6608c7b4092c049f62083104f009229da7681bff9fe9a1746a9971d4dc347302",
+    "ledgerctl": "e72512dbbb6d0cd40b6e911dbf74999806ee036cdbe50087e3cda5e89cbc87aa"
+  },
+  "configuration": "Fabric fixed-height, static signature cache disabled; real lease acquired using ledgerctl check and handed to the existing StateProvider",
+  "deployment": {
+    "channelId": "procurement",
+    "genesisHash": "6c5c756f3566e40fb52686f679bdc7a69950b1015014177c709d14585f3fba6b",
+    "instanceId": "28efc6f7a8cd81fe95417b1275ca1378ddfb857bb768045093e8f7a7bafe131d",
+    "registryName": "authregistry",
+    "schemaVersion": "grad-auth-v1",
+    "deploymentId": "7cd165f3bbdef0393a7931dc215d8eea2a7f4e87dd8bf38e9a058c505b489231",
+    "channelConfigSha256": "ec3744ec67a7ce6c70a99bcf192174006b398d05456026f480800d23688fdb79",
+    "bootstrapSha256": "3f316809a8895320bcd4959c9e0e8d350631f24ddeb868d549a0f5c673600c22",
+    "chaincodeBuildSha256": "08996528b7624d5113cbeb4b69a096b0882078be0103d41c5a5a31eab3307a15",
+    "chaincodeSourceSha256": "56e5ecb94562b1668753389a1caa801cb17af429d9e54887b42aaa9c729cf50a",
+    "packageIds": {
+      "a": "authregistry_a_d4e7ec6a7cf7:02ef49dece1bca1283340bdd537b7bd7ea25ad63db80f64790f33c051fa65bfc",
+      "b": "authregistry_b_d4e7ec6a7cf7:f58f9dd2b8449b8a41f014a44d99d260df737a3bc813bbc49b802cae79f7a189",
+      "c": "authregistry_c_d4e7ec6a7cf7:3583e3dd29fbb5c3aea207bf61401d8e37d30200674bca22364cbe521b7b5b85"
+    },
+    "definitionSha256": "8fbbe52338447e7f71a187133183c71b470219368e1cf1eb2bf28e1f63a6b917",
+    "definitionBlock": {
+      "blockNumber": 4,
+      "blockHash": "c9ba114855defdfe52858490fc738c33932b101b76f21e31eb60e90ac20369e8"
+    },
+    "definitionTxId": "1f04d7f278dd6a8610f8a1224a5e22d0e861d65cf237510ca66925e48cbea3df",
+    "initializationBlock": {
+      "blockNumber": 5,
+      "blockHash": "81a9ffbe9191d5f6270e94fa66dc67f53c4baf0a792e659669af734b2492faa5"
+    },
+    "bootstrap": {
+      "channelId": "procurement",
+      "genesisHash": "6c5c756f3566e40fb52686f679bdc7a69950b1015014177c709d14585f3fba6b",
+      "instanceId": "28efc6f7a8cd81fe95417b1275ca1378ddfb857bb768045093e8f7a7bafe131d",
+      "registryName": "authregistry",
+      "schemaVersion": "grad-auth-v1",
+      "root": {
+        "rootDid": "did:web:t.local",
+        "managementIdentity": {
+          "mspId": "TMsp",
+          "certificateSha256": "a212a43d04ef972779d742d5692160d1578fba40954cd777234ef211fd0771a1"
+        },
+        "didDocumentDigest": "12ec1a4b55d1fb6028034703f3690a2ba1710c4b09a90479b3d62b85998753e2",
+        "appKeyId": "did:web:t.local#key-1",
+        "appKeyVersion": 1,
+        "appPublicKey": "04876e935c735afacd7a2a7bb14786f3c6f5a65a4712ca58ea275abdb3146ba98ecd9582e897c38cc9004ab859291e3edc050503d9c55e3b05efc8092b7853422a"
+      },
+      "initializer": {
+        "mspId": "AMsp",
+        "certificateSha256": "1b7f0475ba77395fc28621d49c3e29da596fe2ae159938c55bb3929f100651b1"
+      },
+      "taskCreator": {
+        "domainId": "A",
+        "subjectId": "did:web:a.local:u",
+        "managementIdentity": {
+          "mspId": "AMsp",
+          "certificateSha256": "fce464040e35b5a87baa9441d617a3a994a1a08499f68ba00b7add96abed70cc"
+        }
+      },
+      "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+      "resourceOwner": "did:web:c.local:supplier",
+      "resourceManagement": {
+        "mspId": "CMsp",
+        "certificateSha256": "7c6cbee150cbdcbf0a8d3137f3bda568aba837ec41ce6cd49daba0122ddde1bf"
+      }
+    }
+  },
+  "experiment": "E1",
+  "fileSHA256": {
+    "docs/experiments/实验计划.md": "81f4f816ef26e80214c5501ea2c6db71dd16e87f6766199831d60c61df418cfc",
+    "docs/experiments/验证用例.md": "98397d20f5a8ed0a95478dc15fbea4d8a995b5d802a6d2e3bb60cfa6c56e349c",
+    "experiments/e1-procurement/driver/cases.go": "5ef2f34ea8ed177c76b4fe807d94ce829286dd7d3476b6a169074597178173d3",
+    "experiments/e1-procurement/driver/evidence.go": "a4585ba4eae0e1c44445a75aadbbf4ed4e79a42172498504350ab06e291edbb2",
+    "experiments/e1-procurement/driver/http.go": "d3821c3accafc1af8efca1813e202d21247f2ea295a396d46ec55f73a2da3f42",
+    "experiments/e1-procurement/driver/identity.go": "c55aee1ff4343e8db4e21f7d397bb9c74665a773ed4e54ba53a8d14ddcdc0389",
+    "experiments/e1-procurement/driver/live.go": "d1dcc5fa24e012e7a17b29e0139b74a07f32b3e850690c7d4a4a34b9c0c18492",
+    "experiments/e1-procurement/driver/main.go": "92c2e7191cb59fea8dd634c6593eeb4e09ceba02e378d9edb8c68721d2543908",
+    "experiments/e1-procurement/driver/platform.go": "806e46bc37d44f6e93209f8c59024acd58e7889f799faa3b2d8b2e360f3c23f6",
+    "go.mod": "9f8063e4dd85920bb27169317382ee19df1f211da59825d8cacec73524480021",
+    "go.sum": "898c954ba13d003f0f9276f092503b82e384df288049e108e2de65ef3874fc3f",
+    "infra/fabric/compose.yaml": "4d06390e5ef16a01268b3168a946fd89e189b3b42e5d4e98244e40662d21fba4"
+  },
+  "go": "go1.27.3",
+  "host": "darwin/arm64",
+  "instance": "/Users/yjydist/Desktop/graduation-design/.local/fabric-e1-fixed-02",
+  "llm": {
+    "baseURL": "http://127.0.0.1:8317/v1",
+    "configuredBaseURL": "http://127.0.0.1:8317/v1",
+    "maxSteps": 10,
+    "model": "deepseek-v4.1-flash",
+    "provider": "openai"
+  },
+  "policyDigest": "aa92d4dc2d99db5255e28f5d15ce69af44fc3549bb8780c0dd19c29dc4fa2ca9",
+  "runId": "run-8e823c1f2d3bc13a",
+  "sourceCommit": "79125cc40855014c16fcfb0a962bc276202023d8"
+}

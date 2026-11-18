@@ -1,0 +1,48 @@
+{
+  "runId": "run-e9278cc882927ca1",
+  "summaryVerdicts": 16,
+  "capturedGatewayRequests": 76,
+  "llmSessions": 8,
+  "llmToolCalls": 18,
+  "gatewaysModes": {
+    "rp": {
+      "F06OrderId": "urn:grad:order:7adf709b-ae88-46db-9f88-0b71588b81ca",
+      "F06CreationDecisionId": "urn:grad:decision:b9461755-e808-4bba-807e-75d56e9bbd4a",
+      "F06QuoteId": "urn:grad:quote:d38050f7-d988-4e60-b23f-abd4ef3cb433",
+      "F06ChallengeIds": [
+        "urn:grad:challenge:f0b9dea2-6d5c-418b-b4b1-ffe8875da651",
+        "urn:grad:challenge:f0ac5930-1f0e-4a4b-8297-41c6127ffee1"
+      ],
+      "F07Denials": {
+        "AMOUNT_MISMATCH": "urn:grad:decision:b025c2f0-ea7a-40c9-83ca-b970549255ed",
+        "AMOUNT_LIMIT_EXCEEDED": "urn:grad:decision:45ee0653-09db-472a-8a70-6f44e1e67b06"
+      },
+      "F08OrderId": "urn:grad:order:98bdb0b3-43a5-4e88-9e02-08ac867c87e5",
+      "F16EvidenceHash": "82749890c69dc6719833324d69d4fa39ea8fe0b7f13e22650f3dcbd4c719b45f"
+    },
+    "bm": {
+      "F06OrderId": "urn:grad:order:96643fec-1f08-4f4b-ad7d-38077128a3b1",
+      "F06CreationDecisionId": "urn:grad:decision:10246826-ff5a-4320-b473-ea92254e458f",
+      "F06QuoteId": "urn:grad:quote:1101b7d2-54df-467f-8cfc-693b25f6785b",
+      "F06ChallengeIds": [
+        "urn:grad:challenge:d075ddde-6be8-4253-b827-339904e2da93",
+        "urn:grad:challenge:a06563da-c826-4041-b80a-ab72a9d1c894"
+      ],
+      "F07Denials": {
+        "AMOUNT_MISMATCH": "urn:grad:decision:b6887fdc-a85e-4bd5-b270-85075459e67b",
+        "AMOUNT_LIMIT_EXCEEDED": "urn:grad:decision:ce4f2bad-6981-4eb5-ac94-2ee902420464"
+      },
+      "F08OrderId": "urn:grad:order:8929fc6a-0436-463f-8e22-f62730d6e9c2",
+      "F16EvidenceHash": "bd4e7ab8015f259f57d0ba470deea8be6a990c65b6d97215fdf6b1e5df1a29cb"
+    }
+  },
+  "blocks": 127,
+  "storedQuotes": 11,
+  "storedOrders": 8,
+  "storedDecisions": 28,
+  "f06BlockIntervalAfterFirstDecision": {
+    "firstExclusive": 61,
+    "lastInclusive": 68,
+    "nonProbeWriteKeys": 0
+  }
+}

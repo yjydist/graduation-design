@@ -4,7 +4,7 @@
 
 | 编号 | 实验 | 结果入口 |
 | --- | --- | --- |
-| E1 | 采购功能闭环 | 待建 |
+| E1 | 采购功能闭环 | [结果](e1-procurement/result.md), [独立驱动](e1-procurement/README.md) |
 | E2 | 安全与状态机检查 | 待建 |
 | E3 | 动态调整与恢复 | 待建 |
 | E4 | 微基准 | 待建 |
@@ -12,6 +12,16 @@
 | E6 | 撤销窗口 | [结果模板](e6-revocation/result.md) |
 | E7 | 故障与并发 | 待建 |
 | E8 | 账本和通信开销 | 待建 |
+
+## 实验用 LLM 配置
+
+编辑 `experiments/llm.env` 指定 `LLM_MODEL` (模型名), `LLM_PROVIDER` (`openai` 或 `anthropic` 接口协议) 和 `LLM_BASE_URL` (服务地址). 运行前在项目根目录加载配置. API 密钥通过当前环境的 `LLM_API_KEY` 提供.
+
+```bash
+source experiments/llm.env
+```
+
+真实 LLM 实验在每轮清单记录实际模型名, 接口协议和服务地址.
 
 ## 目录约定
 

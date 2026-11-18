@@ -1,0 +1,44 @@
+{
+  "anchor": {
+    "certification": {
+      "deploymentId": "10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b",
+      "certificationId": "urn:grad:cert:B:f14-short:run-3f8a7a6db26d582c",
+      "domainId": "B",
+      "issuerKeyVersion": 1,
+      "digest": "4b998f131e2171f6f63e14b995568dd36946bff786fee3c312eb9c3cc3814915",
+      "identityIssuers": [
+        {
+          "id": "did:web:b.local:issuer",
+          "appKeyVersion": 1,
+          "credentialTypes": [
+            "EnterpriseIdentityCredential"
+          ],
+          "claimNames": [
+            "domain",
+            "role"
+          ]
+        }
+      ],
+      "nbf": 1794971242,
+      "exp": 1794971318,
+      "status": "",
+      "revision": 0
+    },
+    "expectedRevision": 2,
+    "expectedCertificationId": "urn:grad:domain-certification:B-v1"
+  },
+  "certificationJWS": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6dC5sb2NhbCNrZXktMSIsInR5cCI6InZjK2p3dCJ9.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLHsiQHZvY2FiIjoiaHR0cHM6Ly9ncmFkLWF1dGguZXhhbXBsZS50ZXN0L3ZvY2FiIyJ9XSwiY3JlZGVudGlhbFN0YXR1cyI6eyJpZCI6InVybjpncmFkOmNlcnQ6QjpmMTQtc2hvcnQ6cnVuLTNmOGE3YTZkYjI2ZDU4MmMiLCJ0eXBlIjoiUmVnaXN0cnlEb21haW5DZXJ0aWZpY2F0aW9uU3RhdHVzIn0sImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImRvbWFpbklkIjoiQiIsImlkIjoiZGlkOndlYjpiLmxvY2FsIiwiaWRlbnRpdHlJc3N1ZXJzIjpbeyJhcHBLZXlWZXJzaW9uIjoxLCJjbGFpbU5hbWVzIjpbImRvbWFpbiIsInJvbGUiXSwiY3JlZGVudGlhbFR5cGVzIjpbIkVudGVycHJpc2VJZGVudGl0eUNyZWRlbnRpYWwiXSwiaWQiOiJkaWQ6d2ViOmIubG9jYWw6aXNzdWVyIn1dfSwiZGVwbG95bWVudElkIjoiMTBjODNiOGZlYjAwZDIwMDdkYzNkNzQ5OWJhOWU1MzY0ODczNzE0MWVmZjkwNDU5ODlkYWY3OThkMDFiNTUxYiIsImV4cCI6MTc5NDk3MTMxOCwiaWQiOiJ1cm46Z3JhZDpjZXJ0OkI6ZjE0LXNob3J0OnJ1bi0zZjhhN2E2ZGIyNmQ1ODJjIiwiaXNzIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyS2V5VmVyc2lvbiI6MSwibmJmIjoxNzk0OTcxMjQyLCJzdWIiOiJkaWQ6d2ViOmIubG9jYWwiLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiRG9tYWluQXV0aG9yaXR5Q3JlZGVudGlhbCJdLCJ2YWxpZEZyb20iOiIyMDI2LTExLTE4VDAzOjA3OjIyWiIsInZhbGlkVW50aWwiOiIyMDI2LTExLTE4VDAzOjA4OjM4WiJ9.s3KBN0Il_VMJTJxGeS8Gy6cQP8jtD2BHQ0yatsPNrNWaxahqjZi-QmnMha41sovYVt1wPHz6P8zIxoq-xVs9lg",
+  "operation": {
+    "operationKey": "run-3f8a7a6db26d582c/F14-short",
+    "txId": "0b40939002bda442bca293fa61a2387e60c5764763629a1c1f7624c8d2a340bf",
+    "status": "CONFIRMED",
+    "stage": "COMMIT",
+    "failureCode": null,
+    "observation": "broadcast acknowledged",
+    "commit": {
+      "blockNumber": 77,
+      "blockHash": "bd3929e3155a1c146fae183f76a3132bb6b570824aeb4ab30a228b5815b9b8a6",
+      "validationCode": "VALID"
+    }
+  }
+}

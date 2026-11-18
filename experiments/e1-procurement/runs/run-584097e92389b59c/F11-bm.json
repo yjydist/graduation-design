@@ -1,0 +1,24 @@
+{
+  "allowedHTTP": 200,
+  "allowedPolicy": "0706e1ebc26b6d58bf16a32232d4e12553d1dff29c0d9dbd8e2c69772b728c3e",
+  "deniedCode": "SUPPLIER_POLICY_DENIED",
+  "deniedHTTP": 403,
+  "deniedPolicy": "a623defa432fd8b14c0d6d8c06788cb20245d417160b2a0351ffd3b481396bd9",
+  "ordersAfterAllow": 3,
+  "ordersAfterDenial": 2,
+  "ordersBefore": 2,
+  "restored": {
+    "orderId": "urn:grad:order:5747a60e-3d6e-4113-92fd-40f98f8fb3ab",
+    "quoteId": "urn:grad:quote:49f2bbb4-2137-426b-b8f9-90cd1250bd4d",
+    "taskId": "85f56211a761330633d006f6683cef312d3747b4d2906c05344b53142556b329",
+    "actor": "did:web:b.local:b1",
+    "supplierId": "urn:grad:supplier:C",
+    "productId": "urn:grad:product:P1",
+    "quantity": 1,
+    "currency": "CNY",
+    "totalAmountMinor": 80000,
+    "idempotencyKey": "e1-bm-supplier-policy",
+    "status": "CREATED",
+    "createdAt": 1794968831
+  }
+}

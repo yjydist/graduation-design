@@ -1,0 +1,18 @@
+{
+  "newCredential": "urn:grad:credential:B1-v1:ib2",
+  "newG2": "f47e490a5f1c4281af4bf15ebd55bec9021490bc83f60a263eb548f0887485cf",
+  "oldG2": "0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1",
+  "quote": {
+    "decision": "ALLOW",
+    "statusCode": 200,
+    "decisionId": "urn:grad:decision:26a7735e-6e90-4676-a3dd-18e5690f7bb9",
+    "quoteId": "urn:grad:quote:eaeedbef-a731-454c-8a43-8664c65fe855",
+    "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad",
+    "productId": "urn:grad:product:P1",
+    "quantity": 1,
+    "unitPriceMinor": 80000,
+    "totalAmountMinor": 80000,
+    "currency": "CNY",
+    "validUntil": 1794971628
+  }
+}

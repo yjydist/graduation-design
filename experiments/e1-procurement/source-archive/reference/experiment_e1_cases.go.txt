@@ -1,0 +1,831 @@
+package fabric
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"maps"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"slices"
+	"strings"
+	"time"
+
+	"graduation-design/internal/agent"
+	api "graduation-design/internal/fabricapi"
+	"graduation-design/internal/gateway"
+	"graduation-design/internal/policy"
+	"graduation-design/internal/protocol"
+)
+
+func (e *e1Trial) link() error {
+	if e.setupErr != nil {
+		return e.setupErr
+	}
+	propose := e.seedOperation("link-propose")
+	approve := e.seedOperation("link-approve")
+	if propose == nil || approve == nil || propose.Commit == nil || approve.Commit == nil {
+		return fmt.Errorf("missing dual-domain link transactions")
+	}
+	states := make([]api.IdentityLink, 2)
+	for n, op := range []*operation{propose, approve} {
+		raw, err := e.rawAt("link", e.f.IdentityLink.ID, op.Commit.Number)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(raw, &states[n]); err != nil {
+			return err
+		}
+	}
+	if states[0].Status != api.Pending || states[0].EffectiveActive ||
+		states[1].Status != api.Active || !states[1].EffectiveActive {
+		return fmt.Errorf("link did not transition from PENDING to effective ACTIVE")
+	}
+	source, target := e.f.Identities["U"], e.f.Identities["U-in-B"]
+	srcKey, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "U.key.pem"))
+	if err != nil {
+		return err
+	}
+	dstKey, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "U-in-B.key.pem"))
+	if err != nil {
+		return err
+	}
+	l := states[1]
+	proof, err := protocol.SignIdentityLinkProofBundle(protocol.IdentityLinkProposal{
+		DeploymentID: e.d.DeploymentID, ExpiresAt: l.ExpiresAt, ID: l.ID, ProposedAt: l.ProposedAt,
+		SourceAccountCommitment: source.AccountCommitment, SourceDomain: source.Domain, SourceKeyID: source.KeyID, SourceKeyVersion: source.KeyVersion, SourceSubject: source.ID,
+		TargetAccountCommitment: target.AccountCommitment, TargetDomain: target.Domain, TargetKeyID: target.KeyID, TargetKeyVersion: target.KeyVersion, TargetSubject: target.ID,
+	}, srcKey, dstKey)
+	if err != nil {
+		return err
+	}
+	if err := proof.Verify(&srcKey.PublicKey, &dstKey.PublicKey); err != nil {
+		return err
+	}
+	if proof.ProposalDigest != l.ProposalDigest {
+		return fmt.Errorf("link PoP proposal does not match on-chain digest")
+	}
+	if err := e.m2DualRootsAndIdentityLink(); err != nil {
+		return err
+	}
+	return e.save("F02", map[string]any{"proposed": states[0], "approved": l, "proposeTx": propose.TxID, "approveTx": approve.TxID, "proof": proof})
+}
+
+func (e *e1Trial) credentials() error {
+	if e.setupErr != nil {
+		return e.setupErr
+	}
+	if err := e.registrationAndMaterialDelivery(); err != nil {
+		return err
+	}
+	records := make(map[string]any)
+	roles := []string{"PA", "U", "A1", "B1", "C"}
+	if _, ok := e.f.Credentials["C-service"]; ok {
+		roles = append(roles, "C-service")
+	}
+	for _, role := range roles {
+		cred := e.f.Credentials[role]
+		op := e.seedOperation("credential-" + role)
+		if op == nil || op.Commit == nil || op.Commit.Number < 1 {
+			return fmt.Errorf("missing confirmation for %s", role)
+		}
+		prior, err := e.rawAt("credential", cred.ID, op.Commit.Number-1)
+		if err != nil {
+			return err
+		}
+		live, err := ledgerRecord[api.Credential](e.ctx, e.p, "credential", cred.ID)
+		if err != nil {
+			return err
+		}
+		if len(prior) != 0 || live.Status != api.Active || cred.Digest != live.Digest {
+			return fmt.Errorf("credential %s active before confirmation or missing/mismatched after it", role)
+		}
+		records[role] = map[string]any{"before": "not committed", "confirmed": live, "txID": op.TxID, "commit": op.Commit}
+	}
+	return e.save("F03", records)
+}
+
+func (e *e1Trial) trust() error {
+	if e.setupErr != nil {
+		return e.setupErr
+	}
+	return errors.Join(e.protocolDIDAndContext(), e.protocolEvidence())
+}
+
+func (e *e1Trial) freshRequest(m *e1Mode, action, key string) (protocol.AccessRequest, error) {
+	if m.pkg == nil {
+		return protocol.AccessRequest{}, fmt.Errorf("F06 verified access package is unavailable")
+	}
+	req := m.pkg.Request
+	req.IdempotencyKey = key
+	if action == "quote.read" {
+		req.Action, req.AmountMinor, req.QuoteID = action, 0, nil
+		req.Resource = "urn:grad:resource:C:quotes"
+	}
+	return req, nil
+}
+
+func (e *e1Trial) signed(m *e1Mode, handler http.Handler, req protocol.AccessRequest, paths []protocol.TrustPathEntry, now func() time.Time) (protocol.AccessEvidencePackage, gateway.ChallengeResponse, error) {
+	key, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "B1.key.pem"))
+	if err != nil {
+		return protocol.AccessEvidencePackage{}, gateway.ChallengeResponse{}, err
+	}
+	prefix := m.pkg.LeafPresentation[:strings.LastIndexByte(m.pkg.LeafPresentation, '~')+1]
+	return e.buildLeafExecutePackage(handler, req, m.pkg.TaskSpec, key, e.f.Identities["B1"].KeyID,
+		prefix, m.pkg.AncestorCredentials, m.pkg.Grants, slices.Clone(paths), now().Unix())
+}
+
+func (e *e1Trial) exercise(m *e1Mode, handler http.Handler, action, key string, paths []protocol.TrustPathEntry, now func() time.Time) (int, string, *gateway.ExecuteResponse, error) {
+	req, err := e.freshRequest(m, action, key)
+	if err != nil {
+		return 0, "", nil, err
+	}
+	observed := e.observe(m, handler)
+	pkg, _, err := e.signed(m, observed, req, paths, now)
+	if err != nil {
+		return 0, "", nil, err
+	}
+	rec := gatewayPostExecute(observed, pkg)
+	var out gateway.ExecuteResponse
+	var denied gateway.ErrorBody
+	_ = json.Unmarshal(rec.Body.Bytes(), &out)
+	_ = json.Unmarshal(rec.Body.Bytes(), &denied)
+	return rec.Code, denied.Code, &out, nil
+}
+
+func (e *e1Trial) retryOrder(m *e1Mode) error {
+	if m.pkg == nil {
+		return fmt.Errorf("F06 package unavailable for F08")
+	}
+	if _, err := e.ensureTaskContextNormal(e.server.Handler(), m.task.ID, time.Now().Unix()); err != nil {
+		return err
+	}
+	before, err := e.orderCount(m)
+	if err != nil {
+		return err
+	}
+	req, err := e.freshRequest(m, "order.create", "e1-"+m.tag+"-lost-response")
+	if err != nil {
+		return err
+	}
+	observed := e.observe(m, e.server.Handler())
+	first, c1, err := e.signed(m, observed, req, m.pkg.TrustPaths, time.Now)
+	if err != nil {
+		return err
+	}
+	res := gatewayPostExecute(observed, first)
+	var original gateway.ExecuteResponse
+	if res.Code != http.StatusOK || json.Unmarshal(res.Body.Bytes(), &original) != nil || original.Order == nil {
+		return fmt.Errorf("response-loss injection had no successful commit to lose: HTTP %d", res.Code)
+	}
+	e.log.event("response_discarded", map[string]any{"case": "F08", "mode": m.task.Mode, "challengeId": c1.ChallengeID})
+	second, c2, err := e.signed(m, observed, req, m.pkg.TrustPaths, time.Now)
+	if err != nil {
+		return err
+	}
+	retried := gatewayPostExecute(observed, second)
+	var same gateway.ExecuteResponse
+	_ = json.Unmarshal(retried.Body.Bytes(), &same)
+	after, err := e.orderCount(m)
+	if err != nil {
+		return err
+	}
+	if err := e.save("F08-"+m.tag, map[string]any{"firstStatus": res.Code, "firstOrder": original.Order, "firstChallenge": c1.ChallengeID, "sameKey": req.IdempotencyKey,
+		"retryStatus": retried.Code, "retryOrder": same.Order, "retryChallenge": c2.ChallengeID, "orderRowsBefore": before, "orderRowsAfter": after}); err != nil {
+		return err
+	}
+	if c1.ChallengeID == c2.ChallengeID || retried.Code != http.StatusOK || same.Order == nil ||
+		same.Order.OrderID != original.Order.OrderID || after-before != 1 {
+		return fmt.Errorf("F08 new challenge or idempotent retry failed: HTTP %d, new order rows=%d", retried.Code, after-before)
+	}
+	return nil
+}
+
+func (e *e1Trial) decisions() error {
+	if e.setupErr != nil {
+		return e.setupErr
+	}
+	e.stage = "F09"
+	decisions := make(map[string]gateway.DecisionRecord)
+	for _, m := range e.modes {
+		var id string
+		for _, r := range e.requests {
+			if r.Case == "F06" && r.Mode == m.task.Mode && r.Action == "order.create" {
+				id = r.DecisionID
+			}
+		}
+		if id == "" {
+			return fmt.Errorf("missing F06 order decision for %s", m.tag)
+		}
+		rec := httptest.NewRecorder()
+		e.observe(m, e.server.Handler()).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/decisions/"+id, nil))
+		var result gateway.DecisionRecord
+		if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &result) != nil {
+			return fmt.Errorf("decision readback HTTP %d", rec.Code)
+		}
+		if result.RootDID != e.d.Bootstrap.Root.DID || result.RootKeyVersion != int64(e.d.Bootstrap.Root.KeyVersion) || result.Outcome != "ALLOW" ||
+			result.Actor != e.f.Identities["B1"].ID || result.TaskID != m.task.ID || result.BlockHash == "" || result.ProbeTxID == "" ||
+			!slices.Equal(result.GrantPath, []string{m.g0.ID, m.g1.ID, m.leafID}) {
+			return fmt.Errorf("recorded grant path or checkpoint does not match signed %s request", m.tag)
+		}
+		decisions[m.tag] = result
+	}
+	return e.save("F09", decisions)
+}
+
+func (e *e1Trial) buyerRoot() error {
+	if e.setupErr != nil {
+		return e.setupErr
+	}
+	m := e.modes[1]
+	if m.pkg == nil {
+		return fmt.Errorf("missing BM order package")
+	}
+	issuers := make([]string, 0, len(m.pkg.Grants))
+	for _, raw := range m.pkg.Grants {
+		claims, err := decodeGrantPayload(raw)
+		if err != nil {
+			return err
+		}
+		issuers = append(issuers, claims.Issuer)
+	}
+	if !slices.Equal(issuers, []string{e.f.Identities["PA"].ID, e.f.Identities["U"].ID, e.f.Identities["A1"].ID}) ||
+		m.pkg.Request.AuthorizationMode != api.BM || m.pkg.Request.TaskID != m.task.ID {
+		return fmt.Errorf("BM did not use an independent PA-issued root")
+	}
+	var rootCount int
+	if err := e.j.db.QueryRow(e.ctx, `SELECT count(*) FROM fabric_current WHERE deployment=$1 AND key LIKE $2
+		AND convert_from(value,'UTF8')::jsonb->>'taskId'=$3 AND convert_from(value,'UTF8')::jsonb->>'issuer'=$4`,
+		e.d.DeploymentID, "grant/%", m.task.ID, e.f.Identities["C"].ID).Scan(&rootCount); err != nil {
+		return err
+	}
+	if rootCount != 0 {
+		return fmt.Errorf("BM task unexpectedly includes %d registry grants issued by C", rootCount)
+	}
+	return e.save("F10", map[string]any{"taskId": m.task.ID, "mode": m.task.Mode, "signingIssuers": issuers, "cIssuedGrants": rootCount, "allowedQuote": m.q800})
+}
+
+func (e *e1Trial) supplierPolicy(m *e1Mode) error {
+	if m.pkg == nil {
+		return fmt.Errorf("F06 package unavailable for F11")
+	}
+	other := api.RP
+	if m.task.Mode == api.RP {
+		other = api.BM
+	}
+	service, root := e.f.Identities["C"].ID, e.d.Bootstrap.Root
+	deadline := time.Now().Add(time.Hour).Unix()
+	version := policy.DefaultPolicyVersion + "-e1-deny-" + m.tag
+	files, digest, err := policy.BuildCustomBundle(e.d.DeploymentID, service, version, root, policy.RolesConfig{
+		AcceptedAuthorizationModes: []string{other}, AcceptedAuthorityRoles: []string{"procurement-authority", "PURCHASING_AUTHORITY"},
+		AcceptedBuyerDomains: []string{"A"}, AcceptedServiceRoles: []string{"supplier-service", "RESOURCE_AUTHORITY", "SERVICE", "ResourceOwner"},
+	}, policy.ResourcesConfig{
+		AllowedActions: []string{"quote.read", "order.create"}, AllowedProductIDs: []string{gateway.DefaultProductID}, MaxQuantity: 10, PolicyDeadline: &deadline,
+	})
+	if err != nil {
+		return err
+	}
+	bundle, err := policy.VerifyAndLoadBundle(files, e.d.DeploymentID, service, root, digest)
+	if err != nil {
+		return err
+	}
+	handler, err := e.gatewayFor(e.resolver, bundle, time.Now)
+	if err != nil {
+		return err
+	}
+	before, err := e.orderCount(m)
+	if err != nil {
+		return err
+	}
+	key := "e1-" + m.tag + "-supplier-policy"
+	status, code, _, err := e.exercise(m, handler, "order.create", key, m.pkg.TrustPaths, time.Now)
+	if err != nil {
+		return err
+	}
+	deniedCount, err := e.orderCount(m)
+	if err != nil {
+		return err
+	}
+	allowedStatus, _, allowed, err := e.exercise(m, e.server.Handler(), "order.create", key, m.pkg.TrustPaths, time.Now)
+	if err != nil {
+		return err
+	}
+	after, err := e.orderCount(m)
+	if err != nil {
+		return err
+	}
+	if err := e.save("F11-"+m.tag, map[string]any{"deniedPolicy": digest, "allowedPolicy": e.bundle.PolicyDigest,
+		"deniedHTTP": status, "deniedCode": code, "allowedHTTP": allowedStatus, "restored": allowed.Order,
+		"ordersBefore": before, "ordersAfterDenial": deniedCount, "ordersAfterAllow": after}); err != nil {
+		return err
+	}
+	if status != http.StatusForbidden || code != protocol.ErrCodeSupplierPolicyDenied || before != deniedCount ||
+		allowedStatus != http.StatusOK || allowed.Order == nil || after-before != 1 {
+		return fmt.Errorf("supplier policy pair returned %d %s and %d, order counts %d/%d/%d", status, code, allowedStatus, before, deniedCount, after)
+	}
+	return nil
+}
+
+func (e *e1Trial) didBinding() error {
+	return e.forModes("F12", func(m *e1Mode) error {
+		if m.pkg == nil {
+			return fmt.Errorf("F06 package unavailable for F12")
+		}
+		b := e.f.Identities["B1"]
+		good, err := os.ReadFile(e.instance.registrySubPath(didRelPath(b.ID)))
+		if err != nil {
+			return err
+		}
+		bad, err := protocol.NewDIDDocument(b.ID, b.KeyID, b.PublicKey, protocol.KeyPurposeAssertionMethod)
+		if err != nil {
+			return err
+		}
+		badRaw, err := protocol.MarshalJCS(bad)
+		if err != nil {
+			return err
+		}
+		if err := e.did.SetDocument(b.ID, badRaw); err != nil {
+			return err
+		}
+		status, code, _, negErr := e.exercise(m, e.server.Handler(), "quote.read", "e1-"+m.tag+"-did-bad", m.pkg.TrustPaths, time.Now)
+		if err := errors.Join(negErr, e.did.SetDocument(b.ID, good)); err != nil {
+			return err
+		}
+		ok, _, out, err := e.exercise(m, e.server.Handler(), "quote.read", "e1-"+m.tag+"-did-good", m.pkg.TrustPaths, time.Now)
+		if err != nil {
+			return err
+		}
+		if err := e.save("F12-"+m.tag, map[string]any{"invalidHTTP": status, "invalidCode": code, "validHTTP": ok, "validQuote": out.Quote}); err != nil {
+			return err
+		}
+		if (code != protocol.ErrCodeDIDDocumentMismatch && code != protocol.ErrCodeDIDKeyPurposeInvalid) || ok != http.StatusOK || out.Quote == nil {
+			return fmt.Errorf("DID document pair returned %d %s and %d", status, code, ok)
+		}
+		return nil
+	})
+}
+
+func (e *e1Trial) modeBinding(m *e1Mode) error {
+	other := api.RP
+	if m.task.Mode == api.RP {
+		other = api.BM
+	}
+	req, err := e.freshRequest(m, "quote.read", "e1-"+m.tag+"-mode-bad")
+	if err != nil {
+		return err
+	}
+	req.AuthorizationMode = other
+	handler := e.observe(m, e.server.Handler())
+	pkg, _, err := e.signed(m, handler, req, m.pkg.TrustPaths, time.Now)
+	if err != nil {
+		return err
+	}
+	rec := gatewayPostExecute(handler, pkg)
+	var denied gateway.ErrorBody
+	_ = json.Unmarshal(rec.Body.Bytes(), &denied)
+	if err := e.save("F13-"+m.tag, map[string]any{"requestedMode": other, "boundMode": m.task.Mode, "status": rec.Code, "code": denied.Code}); err != nil {
+		return err
+	}
+	if denied.Code != protocol.ErrCodeAuthorizationModeMismatch {
+		return fmt.Errorf("request/chain mode mismatch returned %d %s", rec.Code, denied.Code)
+	}
+	if m.task.Mode == api.RP {
+		// The PA holds a genuine BM signing key but cannot issue a root for this RP task.
+		claims, err := decodeGrantPayload(m.pkg.Grants[0])
+		if err != nil {
+			return err
+		}
+		pa := e.f.Identities["PA"]
+		key, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "PA.key.pem"))
+		if err != nil {
+			return err
+		}
+		rootID := api.Digest([]byte(e.id + "/F13/PA-as-RP"))
+		claims.ID, claims.RootID, claims.Issuer = rootID, rootID, pa.ID
+		claims.IssuerKeyVersion, claims.IssuerCredentialID = pa.KeyVersion, e.f.Credentials["PA"].ID
+		jws, digest, err := protocol.SignGrant(key, pa.KeyID, &claims)
+		if err != nil {
+			return err
+		}
+		candidate := m.g0
+		candidate.ID, candidate.Root, candidate.Issuer, candidate.Digest = rootID, rootID, pa.ID, digest
+		candidate.IssuerKeyVersion, candidate.IssuerCredential = pa.KeyVersion, claims.IssuerCredentialID
+		op, err := e.op("F13-PA-as-RP", "PA", "RegisterGrant", candidate, "INVALID_STRUCTURE")
+		if err != nil {
+			return err
+		}
+		if err := e.absent("grant", rootID); err != nil {
+			return err
+		}
+		return e.save("F13-rp-root", map[string]any{"attemptedGrant": candidate, "grantJWS": jws, "operation": op})
+	}
+	return nil
+}
+
+func (e *e1Trial) offlineRoot() error {
+	if e.setupErr != nil {
+		return e.setupErr
+	}
+	e.stage = "F14"
+	ca, _, err := e.instance.loadTestCAAndHostCerts()
+	if err != nil {
+		return err
+	}
+	routes := e.did.Routes()
+	delete(routes, "t.local:443")
+	delete(routes, "t.local")
+	resolver, err := protocol.NewDIDWebResolver(ca, routes)
+	if err != nil {
+		return err
+	}
+	root := e.d.Bootstrap.Root
+	raw, err := os.ReadFile(e.instance.registrySubPath(didRelPath(root.DID)))
+	if err != nil {
+		return err
+	}
+	if _, err := resolver.RegisterPreseed(protocol.RootPreseed{DID: root.DID, KeyID: root.KeyID, KeyVersion: root.KeyVersion, PublicKeyHex: root.PublicKey, DIDDocumentDigest: root.DocumentDigest, RawDocument: raw}); err != nil {
+		return err
+	}
+	if _, err := resolver.ResolveRawURL(e.ctx, "https://t.local/.well-known/did.json"); err == nil {
+		return fmt.Errorf("T local DID endpoint remained routable")
+	}
+	handler, err := e.gatewayFor(resolver, e.bundle, time.Now)
+	if err != nil {
+		return err
+	}
+	if err := e.forModes("F14", func(m *e1Mode) error {
+		if m.pkg == nil {
+			return fmt.Errorf("F06 package unavailable for F14")
+		}
+		status, code, result, err := e.exercise(m, handler, "order.create", "e1-"+m.tag+"-t-offline", m.pkg.TrustPaths, time.Now)
+		if err != nil {
+			return err
+		}
+		if err := e.save("F14-"+m.tag, map[string]any{"tDIDEndpointRoutable": false, "status": status, "code": code, "order": result.Order}); err != nil {
+			return err
+		}
+		if status != http.StatusOK || result.Order == nil {
+			return fmt.Errorf("valid authorization with T offline returned %d %s", status, code)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	expiry := time.Now().Add(16 * time.Second).Unix()
+	cert, err := e.renewB("F14-short", 1, expiry)
+	if err != nil {
+		return err
+	}
+	m := e.modes[0]
+	paths := e.withBCert(m, cert)
+	status, code, _, err := e.exercise(m, handler, "quote.read", "e1-rp-t-short-valid", paths, time.Now)
+	if err != nil {
+		return err
+	}
+	if status != http.StatusOK {
+		return fmt.Errorf("short certification positive control returned %d %s", status, code)
+	}
+	if err := poll(e.ctx, 22*time.Second, func() (bool, error) { return time.Now().Unix() >= expiry+1, nil }); err != nil {
+		return err
+	}
+	return e.forModes("F14", func(m *e1Mode) error {
+		before, err := e.orderCount(m)
+		if err != nil {
+			return err
+		}
+		status, code, _, err := e.exercise(m, handler, "order.create", "e1-"+m.tag+"-t-expired", e.withBCert(m, cert), time.Now)
+		if err != nil {
+			return err
+		}
+		after, err := e.orderCount(m)
+		if err != nil {
+			return err
+		}
+		if err := e.save("F14-expired-"+m.tag, map[string]any{"qualificationExpiry": expiry, "status": status, "code": code, "ordersBefore": before, "ordersAfter": after}); err != nil {
+			return err
+		}
+		if status == http.StatusOK || !isDomainExpiry(code) || before != after {
+			return fmt.Errorf("expired B certification returned %d %s, order change=%d", status, code, after-before)
+		}
+		return nil
+	})
+}
+
+func isDomainExpiry(code string) bool {
+	return code == protocol.ErrCodeDomainCertificationInvalid || code == protocol.ErrCodeDomainInactive
+}
+
+func (e *e1Trial) renewB(label string, keyVersion uint64, expiry int64) (string, error) {
+	ib, root := e.f.Domains["B"].Issuers[0], e.d.Bootstrap.Root
+	dom, err := ledgerRecord[api.Domain](e.ctx, e.p, "domain", "B")
+	if err != nil {
+		return "", err
+	}
+	tKey, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "T.key.pem"))
+	if err != nil {
+		return "", err
+	}
+	nbf := time.Now().Add(-time.Minute).Unix()
+	id := "urn:grad:cert:B:" + strings.ToLower(label) + ":" + e.id
+	auth := []api.Scope{{ID: ib.ID, KeyVersion: keyVersion, Types: []string{protocol.CredentialTypeEnterpriseIdentity}, Claims: []string{"domain", "role"}}}
+	claims := protocol.DomainAuthorityCredential{
+		Type: []string{protocol.CredentialTypeVC, protocol.CredentialTypeDomainAuthority},
+		ID:   id, DeploymentID: e.d.DeploymentID, Issuer: root.DID, Iss: root.DID, Sub: dom.DID, IssuerKeyVersion: root.KeyVersion,
+		ValidFrom: time.Unix(nbf, 0).UTC().Format(time.RFC3339), ValidUntil: time.Unix(expiry, 0).UTC().Format(time.RFC3339), NBF: nbf, EXP: expiry,
+		CredentialStatus: protocol.CredentialStatus{ID: id, Type: protocol.StatusTypeDomainCertification},
+		CredentialSubject: protocol.DomainAuthoritySubject{ID: dom.DID, DomainID: "B", IdentityIssuers: []protocol.IssuerScope{{
+			ID: ib.ID, AppKeyVersion: keyVersion, CredentialTypes: auth[0].Types, ClaimNames: auth[0].Claims,
+		}}},
+	}
+	jws, digest, err := protocol.SignDomainAuthorityCredential(tKey, root.KeyID, &claims)
+	if err != nil {
+		return "", err
+	}
+	input := api.Certify{ExpectedCertification: dom.Certification, ExpectedRevision: dom.Revision,
+		Certification: api.Certification{Bound: api.Bound{DeploymentID: e.d.DeploymentID}, ID: id, Domain: "B", RootKeyVersion: root.KeyVersion,
+			Digest: digest, Scopes: auth, Interval: api.Interval{NBF: nbf, EXP: expiry}}}
+	op, err := e.op(label, "T", "CertifyDomain", input, "VALID")
+	if err != nil {
+		return "", err
+	}
+	if err := e.waitApplied(op.Commit.Number); err != nil {
+		return "", err
+	}
+	// The fresh check uses the shared committed view. Certification material delivery
+	// is separate from both the signed anchor and the actor's next presentation.
+	snap, err := e.sp.AssembleProtocolSnapshot(e.ctx, e.f.RPG2.ID, time.Now())
+	if err != nil {
+		return "", err
+	}
+	rootPub, _, err := protocol.ParseAppPublicKey(root.PublicKey)
+	if err != nil {
+		return "", err
+	}
+	ds := NewDeliveryService(e.j.db)
+	for _, actor := range []string{"C", "A1", "B1"} {
+		recipient := e.f.Identities[actor].ID
+		if err := ds.PublishDomainCertification(e.ctx, snap.Snapshot, recipient, "B", jws, rootPub, op.TxID, int64(op.Commit.Number), true, time.Now().Unix()); err != nil {
+			return "", err
+		}
+		if _, err := ds.SyncCertificationReceipt(e.ctx, snap.Snapshot, recipient, "B", rootPub, time.Now().Unix()); err != nil {
+			return "", err
+		}
+	}
+	return jws, e.save(label, map[string]any{"certificationJWS": jws, "anchor": input, "operation": op})
+}
+
+func (e *e1Trial) withBCert(m *e1Mode, cert string) []protocol.TrustPathEntry {
+	paths := slices.Clone(m.pkg.TrustPaths)
+	for k := range paths {
+		if paths[k].Issuer == e.f.Domains["B"].Issuers[0].ID {
+			paths[k].DomainCertification = cert
+		}
+	}
+	return paths
+}
+
+func (e *e1Trial) renewAuthority() error {
+	if e.setupErr != nil {
+		return e.setupErr
+	}
+	for _, m := range e.modes {
+		if m.pkg == nil {
+			return fmt.Errorf("F06 package unavailable for F15 %s", m.tag)
+		}
+	}
+	originalExpiry := e.f.Certifications["B"].Certification.EXP
+	cert, err := e.renewB("F15-same-key", 1, originalExpiry)
+	if err != nil {
+		return err
+	}
+	if err := e.forModes("F15", func(m *e1Mode) error {
+		handler := e.server.Handler()
+		consumed, oldCode, _, err := e.exercise(m, handler, "quote.read", "e1-"+m.tag+"-old-cert", m.pkg.TrustPaths, time.Now)
+		if err != nil {
+			return err
+		}
+		allowed, newCode, out, err := e.exercise(m, handler, "quote.read", "e1-"+m.tag+"-new-cert", e.withBCert(m, cert), time.Now)
+		if err != nil {
+			return err
+		}
+		if err := e.save("F15-same-key-"+m.tag, map[string]any{"oldHTTP": consumed, "oldCode": oldCode,
+			"newHTTP": allowed, "newCode": newCode, "newQuote": out.Quote, "reusedGrants": []string{m.g0.ID, m.g1.ID, m.leafID}}); err != nil {
+			return err
+		}
+		if consumed == http.StatusOK || allowed != http.StatusOK || out.Quote == nil {
+			return fmt.Errorf("same-key renewal pair returned %d %s and %d %s", consumed, oldCode, allowed, newCode)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	ib, err := ledgerRecord[api.Identity](e.ctx, e.p, "identity", e.f.Domains["B"].Issuers[0].ID)
+	if err != nil {
+		return err
+	}
+	key, pub, err := protocol.GenerateP256KeyPair()
+	if err != nil {
+		return err
+	}
+	keyID := ib.ID + "#key-2"
+	doc, err := protocol.NewDIDDocument(ib.ID, keyID, pub, protocol.KeyPurposeAssertionMethod)
+	if err != nil {
+		return err
+	}
+	docRaw, err := protocol.MarshalJCS(doc)
+	if err != nil {
+		return err
+	}
+	rotation := api.AuthorityIdentityUpdateInput{Bound: api.Bound{DeploymentID: e.d.DeploymentID}, ID: ib.ID, ExpectedRevision: ib.Revision,
+		ExpectedKeyVersion: ib.KeyVersion, Management: ib.Management, DocumentDigest: api.Digest(docRaw), KeyID: keyID, PublicKey: pub}
+	rotate, err := e.op("F15-rotate-IB", "T", "UpdateAuthorityIdentity", rotation, "VALID")
+	if err != nil {
+		return err
+	}
+	if err := e.did.SetDocument(ib.ID, docRaw); err != nil {
+		return err
+	}
+	if err := e.save("F15-rotated-IB", map[string]any{"update": rotation, "did": doc, "operation": rotate}); err != nil {
+		return err
+	}
+	rotatedCert, err := e.renewB("F15-new-key", ib.KeyVersion+1, originalExpiry)
+	if err != nil {
+		return err
+	}
+	if err := e.forModes("F15", func(m *e1Mode) error {
+		status, code, _, err := e.exercise(m, e.server.Handler(), "quote.read", "e1-"+m.tag+"-old-ib", e.withBCert(m, rotatedCert), time.Now)
+		if err != nil {
+			return err
+		}
+		if err := e.save("F15-old-IB-"+m.tag, map[string]any{"status": status, "code": code, "grant": m.leafID}); err != nil {
+			return err
+		}
+		if status == http.StatusOK || code != protocol.ErrCodeKeyVersionStale {
+			return fmt.Errorf("old B1 credential after IB rotation returned %d %s", status, code)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	b1, old := e.f.Identities["B1"], e.f.Credentials["B1"]
+	credential := old
+	credential.ID += ":ib2"
+	credential.IssuerKeyVersion = ib.KeyVersion + 1
+	activeB, err := ledgerRecord[api.Domain](e.ctx, e.p, "domain", "B")
+	if err != nil {
+		return err
+	}
+	anchor, err := ledgerRecord[api.Certification](e.ctx, e.p, "certification", activeB.Certification)
+	if err != nil {
+		return err
+	}
+	credential.NBF = max(credential.NBF, anchor.NBF)
+	credential.EXP = min(credential.EXP, anchor.EXP)
+	jwk, err := protocol.AppPublicKeyToJWK(b1.PublicKey)
+	if err != nil {
+		return err
+	}
+	signed, err := protocol.IssueEnterpriseIdentityCredential(key, keyID, protocol.EnterpriseIdentityCredential{
+		Type: []string{protocol.CredentialTypeVC, protocol.CredentialTypeEnterpriseIdentity},
+		ID:   credential.ID, DeploymentID: e.d.DeploymentID, Issuer: ib.ID, Iss: ib.ID, Sub: b1.ID,
+		IssuerKeyVersion: credential.IssuerKeyVersion, AppKeyVersion: b1.KeyVersion,
+		NBF: credential.NBF, EXP: credential.EXP, ValidFrom: time.Unix(credential.NBF, 0).UTC().Format(time.RFC3339),
+		ValidUntil:       time.Unix(credential.EXP, 0).UTC().Format(time.RFC3339),
+		CredentialStatus: protocol.CredentialStatus{ID: credential.ID, Type: protocol.StatusTypeCredential},
+		Cnf:              protocol.ConfirmationKey{JWK: jwk}, CredentialSubject: protocol.SDJWTCredentialSubject{ID: b1.ID},
+	}, "B", "broker-agent", nil)
+	if err != nil {
+		return err
+	}
+	credential.Digest = signed.AnchorDigest
+	registered, err := e.op("F15-VC-B1-IB2", "IB", "RegisterCredential", credential, "VALID")
+	if err != nil {
+		return err
+	}
+	if err := e.waitApplied(registered.Commit.Number); err != nil {
+		return err
+	}
+	e.f.Credentials["B1"] = credential
+	if err := writePublicFile(e.instance.registrySubPath("credentials", "B1.sdjwt"), []byte(signed.PresentationPrefix)); err != nil {
+		return err
+	}
+	if err := writePublicFile(e.instance.registrySubPath("certifications", "B.jws"), []byte(rotatedCert)); err != nil {
+		return err
+	}
+	if err := e.save("F15-new-credential", map[string]any{"credential": credential, "signedPresentation": signed.PresentationPrefix, "operation": registered}); err != nil {
+		return err
+	}
+	return e.forModes("F15", func(m *e1Mode) error {
+		next := *m
+		next.leafID = api.Digest([]byte(e.id + "/E1/" + m.tag + "/G2/IB2"))
+		if err := e.delegate(&next); err != nil {
+			return err
+		}
+		if err := e.updatePriceAndContext(&next, 80000); err != nil {
+			return err
+		}
+		out, err := next.wallet.RequestQuote(e.ctx, agent.RequestQuoteInput{Actor: "B1", TaskID: next.task.ID, GrantID: next.leafID, AuthorizationMode: next.task.Mode, ProductID: gateway.DefaultProductID, Quantity: 1, IdempotencyKey: "e1-" + m.tag + "-ib2-quote"})
+		if err != nil {
+			return err
+		}
+		if err := e.save("F15-reissued-"+m.tag, map[string]any{"oldG2": m.leafID, "newG2": next.leafID, "newCredential": credential.ID, "quote": out}); err != nil {
+			return err
+		}
+		if out.Decision != "ALLOW" || out.QuoteID == "" || out.TotalAmountMinor != 80000 {
+			return fmt.Errorf("re-issued leaf materials returned %d %s", out.StatusCode, out.ErrorCode)
+		}
+		return nil
+	})
+}
+
+func (e *e1Trial) evidenceBindings() error {
+	return e.forModes("F16", func(m *e1Mode) error {
+		if m.pkg == nil {
+			return fmt.Errorf("F06 package unavailable for F16")
+		}
+		var height uint64
+		if err := e.j.db.QueryRow(e.ctx, `SELECT block_number FROM decisions WHERE deployment_id=$1 AND challenge_id=$2`, e.d.DeploymentID, m.chal.ChallengeID).Scan(&height); err != nil {
+			return err
+		}
+		now := time.Unix(m.chal.IssuedAt, 0)
+		history, err := e.sp.AssembleHistoricalProtocolSnapshot(e.ctx, m.leafID, height, now)
+		if err != nil {
+			return err
+		}
+		// Use the original public documents, including IB v1, for the historical verifier.
+		didServer, resolver, err := e.newControlledDIDResolver()
+		if err != nil {
+			return err
+		}
+		defer didServer.Close()
+		result, err := protocol.VerifyAccessEvidencePackage(e.ctx, m.pkg, history.Snapshot, resolver, m.chal)
+		if err != nil {
+			return err
+		}
+		leaf := m.pkg.LeafPresentation[:strings.LastIndexByte(m.pkg.LeafPresentation, '~')+1]
+		kbJWT := m.pkg.LeafPresentation[len(leaf):]
+		parsedKB, err := protocol.ParseCompactJWS(kbJWT, protocol.TypKeyBindingJWT)
+		if err != nil {
+			return err
+		}
+		var kb protocol.KBJWTClaims
+		if err := protocol.DecodeStrictJSON(parsedKB.PayloadBytes, &kb); err != nil {
+			return err
+		}
+		ancestors := make([]map[string]string, 0, len(m.pkg.AncestorCredentials))
+		for _, a := range m.pkg.AncestorCredentials {
+			ancestors = append(ancestors, map[string]string{"credentialId": a.CredentialID, "digest": api.Digest([]byte(a.Presentation))})
+		}
+		trust := make([]map[string]string, 0, len(m.pkg.TrustPaths))
+		for _, tp := range m.pkg.TrustPaths {
+			trust = append(trust, map[string]string{"issuer": tp.Issuer, "domainCertification": api.Digest([]byte(tp.DomainCertification))})
+		}
+		task, err := m.pkg.TaskSpec.Digest()
+		if err != nil {
+			return err
+		}
+		canonical, err := protocol.MarshalJCS(map[string]any{"ancestors": ancestors, "leaf": api.Digest([]byte(leaf)), "taskSpec": task, "trustPaths": trust})
+		if err != nil {
+			return err
+		}
+		evidenceHash := api.Digest(canonical)
+		badBytes := *m.pkg
+		badBytes.TrustPaths = slices.Clone(m.pkg.TrustPaths)
+		jws := []byte(badBytes.TrustPaths[0].DomainCertification)
+		index := strings.LastIndexByte(string(jws), '.') + 1
+		if jws[index] == 'A' {
+			jws[index] = 'B'
+		} else {
+			jws[index] = 'A'
+		}
+		badBytes.TrustPaths[0].DomainCertification = string(jws)
+		changed, err := badBytes.ComputeBindings(false)
+		if err != nil {
+			return err
+		}
+		_, byteErr := protocol.VerifyAccessEvidencePackage(e.ctx, &badBytes, history.Snapshot, resolver, m.chal)
+		badOrder := *m.pkg
+		badOrder.TrustPaths = slices.Clone(m.pkg.TrustPaths)
+		slices.Reverse(badOrder.TrustPaths)
+		_, orderErr := protocol.VerifyAccessEvidencePackage(e.ctx, &badOrder, history.Snapshot, resolver, m.chal)
+		pending := *history.Snapshot
+		pending.Credentials = maps.Clone(history.Snapshot.Credentials)
+		delete(pending.Credentials, result.LeafCredential.Claims.ID)
+		_, pendingErr := protocol.VerifyAccessEvidencePackage(e.ctx, m.pkg, &pending, resolver, m.chal)
+		if err := e.save("F16-"+m.tag, map[string]any{"height": height, "challenge": m.chal, "originalRecords": m.pkg.TrustPaths,
+			"grantJWS": m.pkg.Grants, "canonicalEvidence": string(canonical), "walletEvidenceHash": evidenceHash,
+			"verifiedEvidenceHash": result.Bindings.EvidenceHash, "originalKBJWT": kbJWT,
+			"kbEvidenceHash": kb.GradBinding.EvidenceHash, "changedEvidenceHash": changed.EvidenceHash,
+			"absentCredentialControl": fmt.Sprint(pendingErr), "byteChangeError": fmt.Sprint(byteErr), "orderChangeError": fmt.Sprint(orderErr)}); err != nil {
+			return err
+		}
+		if result.Bindings.EvidenceHash != evidenceHash || kb.GradBinding.EvidenceHash != evidenceHash || changed.EvidenceHash == kb.GradBinding.EvidenceHash ||
+			byteErr == nil || orderErr == nil || !protocol.HasCode(pendingErr, protocol.ErrCodeCredentialStatusInvalid) {
+			return fmt.Errorf("independent evidence digests or certification tamper checks failed")
+		}
+		return nil
+	})
+}

@@ -1,0 +1,6 @@
+{
+  "boundMode": "RESOURCE_PREAUTHORIZED",
+  "code": "AUTHORIZATION_MODE_MISMATCH",
+  "requestedMode": "BUYER_MANDATE",
+  "status": 403
+}

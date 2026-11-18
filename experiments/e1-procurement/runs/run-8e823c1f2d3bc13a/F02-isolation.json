@@ -1,0 +1,5 @@
+{
+  "actor": "did:web:b.local:u-in-b",
+  "code": "HOLDER_MISMATCH",
+  "status": 401
+}

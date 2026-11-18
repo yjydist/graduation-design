@@ -1,0 +1,11 @@
+{
+  "allowedQuote": "urn:grad:quote:00c9c7eb-4566-434c-9d01-d3d19c4736c0",
+  "cIssuedGrants": 0,
+  "mode": "BUYER_MANDATE",
+  "signingIssuers": [
+    "did:web:a.local:pa",
+    "did:web:a.local:u",
+    "did:web:a.local:a1"
+  ],
+  "taskId": "1037571178b509aabaa51a69f049edab834919795ffcc20d5757dd4cded51c39"
+}

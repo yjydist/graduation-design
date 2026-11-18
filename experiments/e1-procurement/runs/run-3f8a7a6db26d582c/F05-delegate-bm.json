@@ -1,0 +1,52 @@
+{
+  "g2": {
+    "id": "c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7",
+    "schemaVersion": "grad-auth-v1",
+    "deploymentId": "10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b",
+    "parentId": "e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9",
+    "parentDigest": "61a68cd2178e075d59de9ab8ec7b17a0d7ff5403a561510be8da3717003249df",
+    "rootId": "b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b",
+    "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f",
+    "authorizationMode": "BUYER_MANDATE",
+    "principalDomain": "A",
+    "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+    "issuer": "did:web:a.local:a1",
+    "grantee": "did:web:b.local:b1",
+    "issuerKeyVersion": 1,
+    "granteeKeyVersion": 1,
+    "issuerCredentialId": "urn:grad:credential:A1-v1",
+    "granteeCredentialId": "urn:grad:credential:B1-v1",
+    "resources": [
+      "urn:grad:resource:C:orders",
+      "urn:grad:resource:C:quotes"
+    ],
+    "actions": [
+      "order.create",
+      "quote.read"
+    ],
+    "suppliers": [
+      "urn:grad:supplier:C"
+    ],
+    "aud": "https://c.local",
+    "currency": "CNY",
+    "maxAmountMinor": 100000,
+    "nbf": 1794971259,
+    "exp": 1795057646,
+    "remainingDepth": 0
+  },
+  "g2JWS": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6YS5sb2NhbDphMSNrZXktMSIsInR5cCI6ImdyYWQtZGVsZWdhdGlvbitqd3QifQ.eyJhY3Rpb25zIjpbIm9yZGVyLmNyZWF0ZSIsInF1b3RlLnJlYWQiXSwiYXVkIjoiaHR0cHM6Ly9jLmxvY2FsIiwiYXV0aG9yaXphdGlvbk1vZGUiOiJCVVlFUl9NQU5EQVRFIiwiY3VycmVuY3kiOiJDTlkiLCJkZXBsb3ltZW50SWQiOiIxMGM4M2I4ZmViMDBkMjAwN2RjM2Q3NDk5YmE5ZTUzNjQ4NzM3MTQxZWZmOTA0NTk4OWRhZjc5OGQwMWI1NTFiIiwiZXhwIjoxNzk1MDU3NjQ2LCJncmFudGVlIjoiZGlkOndlYjpiLmxvY2FsOmIxIiwiZ3JhbnRlZUNyZWRlbnRpYWxJZCI6InVybjpncmFkOmNyZWRlbnRpYWw6QjEtdjEiLCJncmFudGVlS2V5VmVyc2lvbiI6MSwiaWQiOiJjMWVkZTJlZGE2MjA4NjVmNjk5YmYxNjkwNWYxZjEyOWI2NDFiYmQ2YjkzODk3M2U2ZDRkNGMwNjk0ODFjZGI3IiwiaXNzdWVyIjoiZGlkOndlYjphLmxvY2FsOmExIiwiaXNzdWVyQ3JlZGVudGlhbElkIjoidXJuOmdyYWQ6Y3JlZGVudGlhbDpBMS12MSIsImlzc3VlcktleVZlcnNpb24iOjEsIm1heEFtb3VudE1pbm9yIjoxMDAwMDAsIm5iZiI6MTc5NDk3MTI1OSwicGFyZW50RGlnZXN0IjoiNjFhNjhjZDIxNzhlMDc1ZDU5ZGU5YWI4ZWM3YjE3YTBkN2ZmNTQwM2E1NjE1MTBiZThkYTM3MTcwMDMyNDlkZiIsInBhcmVudElkIjoiZTdkNDU4Mjc0YzFjMWYzYTk1ZDI4YzVmOTFlYzA3NDIxZjg2Nzc0ZjBhYzU2NTM1YjA3MjQyNTJiNjYwYWNiOSIsInByaW5jaXBhbERvbWFpbiI6IkEiLCJyZW1haW5pbmdEZXB0aCI6MCwicmVzb3VyY2VJZCI6IjY3ODMyYjZlOWNhM2E3MTc5YTQ3ZTU1NjA5NWQzOTM4OTI5ZWE5ODgzNDViZDY5ZDM3YTQ4OTViMzI2MGI4YzIiLCJyZXNvdXJjZXMiOlsidXJuOmdyYWQ6cmVzb3VyY2U6QzpvcmRlcnMiLCJ1cm46Z3JhZDpyZXNvdXJjZTpDOnF1b3RlcyJdLCJyb290SWQiOiJiOWNlZWUyYTk3ZTZjZmRhMmVhZWE4NWVhOTk0NTVmMjE5OGFjN2I1M2Q2NzQ5MDc3MGRhYjkzZmMxNjgzYTRiIiwic2NoZW1hVmVyc2lvbiI6ImdyYWQtYXV0aC12MSIsInN1cHBsaWVycyI6WyJ1cm46Z3JhZDpzdXBwbGllcjpDIl0sInRhc2tJZCI6ImU0ZWFkY2IwMTE5YzllYTc1ODY5NTE0ZTI2ZWIyZjAzY2U0M2JiMmQ4OGFhMjMxNjA0NTI2OTgwOGExOThiNWYifQ.gAk1qoNkREtP_0BSByHEhhjKWHzAC5rPPnDMYHS5dBkJOhcLWUsfBUmJTWqte5MWpITYVBrQyWuvvlPjFDuDTw",
+  "operation": {
+    "operationKey": "run-3f8a7a6db26d582c/e1-bm-live-g2-c1ede2eda620",
+    "txId": "261e197b9946315affe55c4c6b3e3fb14761a07ae3e52f5e2902bc754a052193",
+    "status": "CONFIRMED",
+    "stage": "COMMIT",
+    "failureCode": null,
+    "observation": "broadcast acknowledged",
+    "commit": {
+      "blockNumber": 48,
+      "blockHash": "8917112cf74bf495c3c4f4c9c28401299c17c497fe6c9d09cd84dc41c9e7d9ac",
+      "validationCode": "VALID"
+    }
+  },
+  "receipt": "2ee05ecf8da5b4763f8a8aad6b0bdf8540f58ebb8cd0e8c44cc42f7b7e6ea9be"
+}

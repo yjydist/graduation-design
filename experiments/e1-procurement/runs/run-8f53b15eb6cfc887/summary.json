@@ -1,0 +1,88 @@
+{
+  "runId": "run-8f53b15eb6cfc887",
+  "evidenceDir": "experiments/e1-procurement/runs/run-8f53b15eb6cfc887",
+  "deploymentId": "8f1e32d8c38d7bc7f206d50e7f5b1f7ff91a3e35c0f0f4bc1721310f3b72901e",
+  "scope": "E1 formal procurement lifecycle, F01-F16, live LLM on RP and BM",
+  "startedAt": "2026-11-18T02:24:24.376989Z",
+  "finishedAt": "2026-11-18T02:24:58.97897Z",
+  "status": "FAIL",
+  "cases": [
+    {
+      "name": "F01",
+      "pass": true
+    },
+    {
+      "name": "F02",
+      "pass": true
+    },
+    {
+      "name": "F03",
+      "pass": false,
+      "error": "missing confirmation for C-service"
+    },
+    {
+      "name": "F04",
+      "pass": true
+    },
+    {
+      "name": "F05",
+      "pass": false,
+      "error": "rp: open /Users/yjydist/Desktop/graduation-design/.local/fabric-e1-formal-01/registry/credentials/C-service.sdjwt: no such file or directory"
+    },
+    {
+      "name": "F06",
+      "pass": false,
+      "error": "rp: F05 wallet was not prepared"
+    },
+    {
+      "name": "F07",
+      "pass": false,
+      "error": "rp: F05 wallet was not prepared"
+    },
+    {
+      "name": "F08",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F08"
+    },
+    {
+      "name": "F09",
+      "pass": false,
+      "error": "missing F06 order decision for rp"
+    },
+    {
+      "name": "F10",
+      "pass": true
+    },
+    {
+      "name": "F11",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F11"
+    },
+    {
+      "name": "F12",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F12"
+    },
+    {
+      "name": "F13",
+      "pass": false,
+      "error": "rp: F06 verified access package is unavailable"
+    },
+    {
+      "name": "F14",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F14"
+    },
+    {
+      "name": "F15",
+      "pass": false,
+      "error": "F06 package unavailable for F15 rp"
+    },
+    {
+      "name": "F16",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F16"
+    }
+  ],
+  "error": "F03: missing confirmation for C-service\nF05: rp: open /Users/yjydist/Desktop/graduation-design/.local/fabric-e1-formal-01/registry/credentials/C-service.sdjwt: no such file or directory\nF06: rp: F05 wallet was not prepared\nF07: rp: F05 wallet was not prepared\nF08: rp: F06 package unavailable for F08\nF09: missing F06 order decision for rp\nF11: rp: F06 package unavailable for F11\nF12: rp: F06 package unavailable for F12\nF13: rp: F06 verified access package is unavailable\nF14: rp: F06 package unavailable for F14\nF15: F06 package unavailable for F15 rp\nF16: rp: F06 package unavailable for F16"
+}

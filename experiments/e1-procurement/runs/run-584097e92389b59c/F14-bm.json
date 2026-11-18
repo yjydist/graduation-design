@@ -1,0 +1,19 @@
+{
+  "code": "ALLOW",
+  "order": {
+    "orderId": "urn:grad:order:d3ca3395-aa8c-4d68-9689-10506786b53b",
+    "quoteId": "urn:grad:quote:49f2bbb4-2137-426b-b8f9-90cd1250bd4d",
+    "taskId": "85f56211a761330633d006f6683cef312d3747b4d2906c05344b53142556b329",
+    "actor": "did:web:b.local:b1",
+    "supplierId": "urn:grad:supplier:C",
+    "productId": "urn:grad:product:P1",
+    "quantity": 1,
+    "currency": "CNY",
+    "totalAmountMinor": 80000,
+    "idempotencyKey": "e1-bm-t-offline",
+    "status": "CREATED",
+    "createdAt": 1794968831
+  },
+  "status": 200,
+  "tDIDEndpointRoutable": false
+}

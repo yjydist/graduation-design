@@ -1,0 +1,24 @@
+{
+  "newCode": "ALLOW",
+  "newHTTP": 200,
+  "newQuote": {
+    "quoteId": "urn:grad:quote:56c15d50-1474-4674-95b5-45582c8693d8",
+    "taskId": "3c69c7876160b342d5147b26fbe5a3a93ce798fc09a273ddb338d5e3a52e13ff",
+    "actor": "did:web:b.local:b1",
+    "supplierId": "urn:grad:supplier:C",
+    "productId": "urn:grad:product:P1",
+    "quantity": 1,
+    "currency": "CNY",
+    "unitPriceMinor": 120000,
+    "totalAmountMinor": 120000,
+    "issuedAt": 1794969204,
+    "validUntil": 1794969504
+  },
+  "oldCode": "DOMAIN_CERTIFICATION_INVALID",
+  "oldHTTP": 403,
+  "reusedGrants": [
+    "b7a20e6354e6fa53db7818fb6c9feaedb5fad905a9551458463db0ea1e46ed7a",
+    "cf3149fb6a322580d32e82e4e4eed850ebdf90ea94f240404987f2281fa4ec65",
+    "31eb2bdcddcaec83dc4ee5b54303976a2acae90ba155876b0eda2fa1a69213ad"
+  ]
+}

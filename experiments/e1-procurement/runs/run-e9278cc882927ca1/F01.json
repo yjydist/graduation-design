@@ -1,0 +1,199 @@
+{
+  "domains": {
+    "A": {
+      "active": {
+        "deploymentId": "083336da6c5be4cbbd1e8e6ecdebe5166932bf983780b1c4e17110769277ea53",
+        "domainId": "A",
+        "domainDid": "did:web:a.local",
+        "administrator": {
+          "mspId": "AMsp",
+          "certificateSha256": "93302043f415512b96ff0ecebc663cf17dbe0a69807f4b776da016df4446e3c8"
+        },
+        "registrar": {
+          "mspId": "AMsp",
+          "certificateSha256": "3ed4974e014c26bd0e40d40d2de6c24a8a222353d8970e089e4c6ef9a5dc8976"
+        },
+        "identityIssuers": [
+          "did:web:a.local:issuer"
+        ],
+        "purchasingAuthority": "did:web:a.local:pa",
+        "currentCertificationId": "urn:grad:domain-certification:A-v1",
+        "status": "ACTIVE",
+        "revision": 3
+      },
+      "pending": {
+        "deploymentId": "083336da6c5be4cbbd1e8e6ecdebe5166932bf983780b1c4e17110769277ea53",
+        "domainId": "A",
+        "domainDid": "did:web:a.local",
+        "administrator": {
+          "mspId": "AMsp",
+          "certificateSha256": "93302043f415512b96ff0ecebc663cf17dbe0a69807f4b776da016df4446e3c8"
+        },
+        "registrar": {
+          "mspId": "AMsp",
+          "certificateSha256": "3ed4974e014c26bd0e40d40d2de6c24a8a222353d8970e089e4c6ef9a5dc8976"
+        },
+        "identityIssuers": [
+          "did:web:a.local:issuer"
+        ],
+        "currentCertificationId": "",
+        "status": "PENDING",
+        "revision": 1
+      },
+      "pendingBlock": 6,
+      "pendingRegistration": {
+        "deploymentId": "083336da6c5be4cbbd1e8e6ecdebe5166932bf983780b1c4e17110769277ea53",
+        "operationKey": "seed/e1-pending-identity-A",
+        "inputSha256": "6d578e34e9f7c66d62bd72e2c5b43d70f2fda9a7c3e9faee7edabfdcf447a047",
+        "role": "registrarA",
+        "caller": {
+          "mspId": "AMsp",
+          "certificateSha256": "3ed4974e014c26bd0e40d40d2de6c24a8a222353d8970e089e4c6ef9a5dc8976"
+        },
+        "channelId": "procurement",
+        "chaincode": "authregistry",
+        "method": "RegisterIdentity",
+        "txId": "0ab80bbd813b88b894b0a8a789b2890254e82f99697a05e13a969b38606b6ad2",
+        "signedProposal": "CkAwYWI4MGJiZDgxM2I4OGI4OTRiMGE4YTc4OWIyODkwMjU0ZTgyZjk5Njk3YTA1ZTEzYTk2OWIzODYwNmI2YWQyEsENCvUMCqIHCnEIAxoMCM2b9NcGEKDrhd8CIgtwcm9jdXJlbWVudCpAMGFiODBiYmQ4MTNiODhiODk0YjBhOGE3ODliMjg5MDI1NGU4MmY5OTY5N2EwNWUxM2E5NjliMzg2MDZiNmFkMjoQEg4SDGF1dGhyZWdpc3RyeRKsBgqPBgoEQU1zcBKGBi0tLS0tQkVHSU4gQ0VSVElGSUNBVEUtLS0tLQpNSUlDRHpDQ0FiYWdBd0lCQWdJUkFOL0FjWEVMR0N1b3VTVG45R0w4ZjZjd0NnWUlLb1pJemowRUF3SXdZVEVMCk1Ba0dBMVVFQmhNQ1ZWTXhFekFSQmdOVkJBZ1RDa05oYkdsbWIzSnVhV0V4RmpBVUJnTlZCQWNURFZOaGJpQkcKY21GdVkybHpZMjh4RURBT0JnTlZCQW9UQjJFdWJHOWpZV3d4RXpBUkJnTlZCQU1UQ21OaExtRXViRzlqWVd3dwpIaGNOTWpZeE1URTRNREl5TkRBd1doY05Nell4TVRFMU1ESXlOREF3V2pCak1Rc3dDUVlEVlFRR0V3SlZVekVUCk1CRUdBMVVFQ0JNS1EyRnNhV1p2Y201cFlURVdNQlFHQTFVRUJ4TU5VMkZ1SUVaeVlXNWphWE5qYnpFUE1BMEcKQTFVRUN4TUdZMnhwWlc1ME1SWXdGQVlEVlFRRERBMVZjMlZ5TTBCaExteHZZMkZzTUZrd0V3WUhLb1pJemowQwpBUVlJS29aSXpqMERBUWNEUWdBRU43RHVEbmZNZTI4SnBPL1luUCtrWE9CdDJNT3FkTnhhZ0dQcUtQQjVud3RECmJYUUZvK01ra0YwUGVobTRLN1RaU3ArVmlyNUVKYk50ZXA3L0FUbURDS05OTUVzd0RnWURWUjBQQVFIL0JBUUQKQWdlQU1Bd0dBMVVkRXdFQi93UUNNQUF3S3dZRFZSMGpCQ1F3SW9BZ0p3aWJmUmMwdnV1SzVpQ09rMXl0S1BzbApFRTAzUk9wazFaM1NnSUdBdTN3d0NnWUlLb1pJemowRUF3SURSd0F3UkFJZ015OXJESUxSLzNnMWdtYWd5aDFNClpNb09iMXhicDdSTWZBNml0WGZHY3pBQ0lIZ3VaWit3cVNUVDhtZE9NWXpNQlFReXFhb3pOYWdUMWtBa3pPVTkKMFNZbAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tChIYuzMytSzd4mbul6l1XZ6Z/Pz7fG2OAvOgEs0FCsoFCscFEg4SDGF1dGhyZWdpc3RyeRq0BQoQUmVnaXN0ZXJJZGVudGl0eQqfBXsiZGVwbG95bWVudElkIjoiMDgzMzM2ZGE2YzViZTRjYmJkMWU4ZTZlY2RlYmU1MTY2OTMyYmY5ODM3ODBiMWM0ZTE3MTEwNzY5Mjc3ZWE1MyIsInN1YmplY3RJZCI6ImRpZDp3ZWI6YS5sb2NhbDp1IiwiZG9tYWluSWQiOiJBIiwia2luZCI6IlVTRVIiLCJtYW5hZ2VtZW50SWRlbnRpdHkiOnsibXNwSWQiOiJBTXNwIiwiY2VydGlmaWNhdGVTaGEyNTYiOiI1ODY5ZmFmMjA1MTIyNmNiMTY2YmYzOWZlODNkNGZlZjRjOGIxMjVhNTZiMDRlYjQ5MTBkODQxNjQxMzU0NjJhIn0sImRpZERvY3VtZW50RGlnZXN0IjoiY2JkZTg5N2ZjN2E5ZDZkZGY5YWRiMGU2YzY4OTA2YjA0YjQyMzI4YTViMGY4ODQ0ZTdhMzEyNmM4NzNlZjkyZSIsImFwcEtleUlkIjoiZGlkOndlYjphLmxvY2FsOnUja2V5LTEiLCJhcHBLZXlWZXJzaW9uIjoxLCJhcHBQdWJsaWNLZXkiOiIwNGU1MzdjOTAyNTk3MTJjY2MwOWU2MzdkNGNiZmEyYjJmMjE5OGRmNzc0OWIxM2RhMjNkMTExM2I3NzYzYmM1MzM1MGE0ODMyZGQxNzE2MTc1MTE2ZTc3YzQyYTM0ODMyZDI0OGFkNjUwODM5MWE3Nzg2NmRjNjExNGY4NGUzY2VhIiwiYWNjb3VudENvbW1pdG1lbnQiOiJiODJlYjJkMWI3Zjk5NDI3MmUxNDM5ZTFhMGVlZmE1MDhjNmI1MDMyMmQwOGRkMTNlN2MxNTM4MjNjNGRjMjQ5Iiwic3RhdHVzIjoiIiwicmV2aXNpb24iOjB9EkcwRQIhAJSGuMsBqp9hpMsJg98ZUzQsy4SdhAGE5KDVX8sqGf9hAiBFkmOhlUBioIesRqTb7Arg1GP5fCVfRsbj26PKUypKKQ==",
+        "status": "FAILED",
+        "stage": "ENDORSE",
+        "failureCode": "INVALID_STATE",
+        "observation": "endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:INVALID_STATE",
+        "acceptedAt": "2026-11-18T02:30:37.736276Z"
+      }
+    },
+    "B": {
+      "active": {
+        "deploymentId": "083336da6c5be4cbbd1e8e6ecdebe5166932bf983780b1c4e17110769277ea53",
+        "domainId": "B",
+        "domainDid": "did:web:b.local",
+        "administrator": {
+          "mspId": "BMsp",
+          "certificateSha256": "e2d2736a37ef576de6b5f90af9b410e1ab10c8735f27d6e8d68b9ea9466f6a63"
+        },
+        "registrar": {
+          "mspId": "BMsp",
+          "certificateSha256": "3693369f61be90d2595772073a0453b1b9eddd5447fd9c309a24fb80d9d368b8"
+        },
+        "identityIssuers": [
+          "did:web:b.local:issuer"
+        ],
+        "currentCertificationId": "urn:grad:domain-certification:B-v1",
+        "status": "ACTIVE",
+        "revision": 2
+      },
+      "pending": {
+        "deploymentId": "083336da6c5be4cbbd1e8e6ecdebe5166932bf983780b1c4e17110769277ea53",
+        "domainId": "B",
+        "domainDid": "did:web:b.local",
+        "administrator": {
+          "mspId": "BMsp",
+          "certificateSha256": "e2d2736a37ef576de6b5f90af9b410e1ab10c8735f27d6e8d68b9ea9466f6a63"
+        },
+        "registrar": {
+          "mspId": "BMsp",
+          "certificateSha256": "3693369f61be90d2595772073a0453b1b9eddd5447fd9c309a24fb80d9d368b8"
+        },
+        "identityIssuers": [
+          "did:web:b.local:issuer"
+        ],
+        "currentCertificationId": "",
+        "status": "PENDING",
+        "revision": 1
+      },
+      "pendingBlock": 8,
+      "pendingRegistration": {
+        "deploymentId": "083336da6c5be4cbbd1e8e6ecdebe5166932bf983780b1c4e17110769277ea53",
+        "operationKey": "seed/e1-pending-identity-B",
+        "inputSha256": "12fb05184fb1f459735e097616f3bc058497b3dc50f6d15c771d698e6035e683",
+        "role": "registrarB",
+        "caller": {
+          "mspId": "BMsp",
+          "certificateSha256": "3693369f61be90d2595772073a0453b1b9eddd5447fd9c309a24fb80d9d368b8"
+        },
+        "channelId": "procurement",
+        "chaincode": "authregistry",
+        "method": "RegisterIdentity",
+        "txId": "78a805783f6bb58d3d7a19220983023d54e79229c5dac57d33395049bcddfa68",
+        "signedProposal": "CkA3OGE4MDU3ODNmNmJiNThkM2Q3YTE5MjIwOTgzMDIzZDU0ZTc5MjI5YzVkYWM1N2QzMzM5NTA0OWJjZGRmYTY4EsMNCvcMCqEHCnAIAxoLCM6b9NcGEOiO5E0iC3Byb2N1cmVtZW50KkA3OGE4MDU3ODNmNmJiNThkM2Q3YTE5MjIwOTgzMDIzZDU0ZTc5MjI5YzVkYWM1N2QzMzM5NTA0OWJjZGRmYTY4OhASDhIMYXV0aHJlZ2lzdHJ5EqwGCo8GCgRCTXNwEoYGLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNEakNDQWJXZ0F3SUJBZ0lRSHF4ZDNCbDF4ektpNVo4aFVDeXkwVEFLQmdncWhrak9QUVFEQWpCaE1Rc3cKQ1FZRFZRUUdFd0pWVXpFVE1CRUdBMVVFQ0JNS1EyRnNhV1p2Y201cFlURVdNQlFHQTFVRUJ4TU5VMkZ1SUVaeQpZVzVqYVhOamJ6RVFNQTRHQTFVRUNoTUhZaTVzYjJOaGJERVRNQkVHQTFVRUF4TUtZMkV1WWk1c2IyTmhiREFlCkZ3MHlOakV4TVRnd01qSTBNREJhRncwek5qRXhNVFV3TWpJME1EQmFNR014Q3pBSkJnTlZCQVlUQWxWVE1STXcKRVFZRFZRUUlFd3BEWVd4cFptOXlibWxoTVJZd0ZBWURWUVFIRXcxVFlXNGdSbkpoYm1OcGMyTnZNUTh3RFFZRApWUVFMRXdaamJHbGxiblF4RmpBVUJnTlZCQU1NRFZWelpYSXpRR0l1Ykc5allXd3dXVEFUQmdjcWhrak9QUUlCCkJnZ3Foa2pPUFFNQkJ3TkNBQVNJdTFHMTJXWVc1eVg3R1d1VHpqKzJDRmthb1dvTlZOK0lHS2dreEhidW8rZG0KSEFORjUyK3NMaStHNFgxNDFWZjhJMS9HRlFrTkEweFJ1ZGc5Z3k4UG8wMHdTekFPQmdOVkhROEJBZjhFQkFNQwpCNEF3REFZRFZSMFRBUUgvQkFJd0FEQXJCZ05WSFNNRUpEQWlnQ0FsMVp4NG1LTnB2QmhYSkg4Y2ROZDhpaC9rCkVRdllpV0JGelBkRm5DN2ZNVEFLQmdncWhrak9QUVFEQWdOSEFEQkVBaUJzMW4yajhPQjBValZzdjRwNnJUUUEKcnRHYWx1OVh0SDhVVVN6S0xUOEU1d0lnVUdXczN4TGxQS0s0b1FkTktScHdXRWVJZWw4QUs1K1pLWDhOb2puNwpBNE09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0KEhgfa+PROB0si27jOLnxINmQalCJYRVmcCsS0AUKzQUKygUSDhIMYXV0aHJlZ2lzdHJ5GrcFChBSZWdpc3RlcklkZW50aXR5CqIFeyJkZXBsb3ltZW50SWQiOiIwODMzMzZkYTZjNWJlNGNiYmQxZThlNmVjZGViZTUxNjY5MzJiZjk4Mzc4MGIxYzRlMTcxMTA3NjkyNzdlYTUzIiwic3ViamVjdElkIjoiZGlkOndlYjpiLmxvY2FsOmIxIiwiZG9tYWluSWQiOiJCIiwia2luZCI6IkFHRU5UIiwibWFuYWdlbWVudElkZW50aXR5Ijp7Im1zcElkIjoiQk1zcCIsImNlcnRpZmljYXRlU2hhMjU2IjoiMTA2OTJkMTczMWMzYzdjOWRlZGE0YjY5MGE0MzViYTZmZTEyNDJlNWQxMDgxOTUyZTMzODk3MTYxMWEyZGFmMiJ9LCJkaWREb2N1bWVudERpZ2VzdCI6ImFhOTBjNjg1Yzg5ODM2Njg2NjI2NTBjYTU3MWZjZjkxMDgyY2Q3MDhjY2JiMmU2ODA2ZTBiNzY3OTkwNmYxY2EiLCJhcHBLZXlJZCI6ImRpZDp3ZWI6Yi5sb2NhbDpiMSNrZXktMSIsImFwcEtleVZlcnNpb24iOjEsImFwcFB1YmxpY0tleSI6IjA0MmNjZjU5NWJkYWEyMWY4N2JhMTFhM2NkNDJhYTYyZWFjNjkxZjViYzFlYjk4MmRlZTM1NDFkZTAwMmI4MDEwOGRhYjllZDFkZjI1MDNhYmE0MDY5NjZkNTJiZWNmNDNjNjRhZDllY2QwODM5ZmMzOGU5Yzc5MDk1YzZmNDFlZGMiLCJhY2NvdW50Q29tbWl0bWVudCI6IjAzZmY3ODkyM2MyOTA2ZjYyZDQ1MGNjYjc5MGE5NmQ1ZGM0NWI5NThjNjkzOGJjNWYxMzIzODBhMDgzNTUzYmUiLCJzdGF0dXMiOiIiLCJyZXZpc2lvbiI6MH0SRzBFAiEA6ap4AeJNHpUbU7MwhZqVPci2Geie6CMokOsgP81c49MCIDSEuHDHvhUo5Xk0WySPVp4qmGEyUKTPsX1P/EQE/1hv",
+        "status": "FAILED",
+        "stage": "ENDORSE",
+        "failureCode": "INVALID_STATE",
+        "observation": "endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:INVALID_STATE",
+        "acceptedAt": "2026-11-18T02:30:38.163234Z"
+      }
+    },
+    "C": {
+      "active": {
+        "deploymentId": "083336da6c5be4cbbd1e8e6ecdebe5166932bf983780b1c4e17110769277ea53",
+        "domainId": "C",
+        "domainDid": "did:web:c.local",
+        "administrator": {
+          "mspId": "CMsp",
+          "certificateSha256": "cb5ffcecd5a0a6cbd0ef8a8f74e8ca0fb1d1c43533f2f4659d3a19dd82dd74e2"
+        },
+        "registrar": {
+          "mspId": "CMsp",
+          "certificateSha256": "ac8ba8007f68dfa00dd94b445447a42ad7611418b15ca97ad0d66725f03f716e"
+        },
+        "identityIssuers": [
+          "did:web:c.local:issuer"
+        ],
+        "currentCertificationId": "urn:grad:domain-certification:C-v1",
+        "status": "ACTIVE",
+        "revision": 2
+      },
+      "pending": {
+        "deploymentId": "083336da6c5be4cbbd1e8e6ecdebe5166932bf983780b1c4e17110769277ea53",
+        "domainId": "C",
+        "domainDid": "did:web:c.local",
+        "administrator": {
+          "mspId": "CMsp",
+          "certificateSha256": "cb5ffcecd5a0a6cbd0ef8a8f74e8ca0fb1d1c43533f2f4659d3a19dd82dd74e2"
+        },
+        "registrar": {
+          "mspId": "CMsp",
+          "certificateSha256": "ac8ba8007f68dfa00dd94b445447a42ad7611418b15ca97ad0d66725f03f716e"
+        },
+        "identityIssuers": [
+          "did:web:c.local:issuer"
+        ],
+        "currentCertificationId": "",
+        "status": "PENDING",
+        "revision": 1
+      },
+      "pendingBlock": 10,
+      "pendingRegistration": {
+        "deploymentId": "083336da6c5be4cbbd1e8e6ecdebe5166932bf983780b1c4e17110769277ea53",
+        "operationKey": "seed/e1-pending-identity-C",
+        "inputSha256": "b2a68d57d7238461f74ca2dc812635bc7f5913db7b2acd7ce3e4f925807b1d22",
+        "role": "registrarC",
+        "caller": {
+          "mspId": "CMsp",
+          "certificateSha256": "ac8ba8007f68dfa00dd94b445447a42ad7611418b15ca97ad0d66725f03f716e"
+        },
+        "channelId": "procurement",
+        "chaincode": "authregistry",
+        "method": "RegisterIdentity",
+        "txId": "d8317c0590b3a02e1feba3263d02088dc40bcc1f69d692bf664779588a058cc1",
+        "signedProposal": "CkBkODMxN2MwNTkwYjNhMDJlMWZlYmEzMjYzZDAyMDg4ZGM0MGJjYzFmNjlkNjkyYmY2NjQ3Nzk1ODhhMDU4Y2MxEtINCoYNCqIHCnEIAxoMCM6b9NcGEMCJrI0CIgtwcm9jdXJlbWVudCpAZDgzMTdjMDU5MGIzYTAyZTFmZWJhMzI2M2QwMjA4OGRjNDBiY2MxZjY5ZDY5MmJmNjY0Nzc5NTg4YTA1OGNjMToQEg4SDGF1dGhyZWdpc3RyeRKsBgqPBgoEQ01zcBKGBi0tLS0tQkVHSU4gQ0VSVElGSUNBVEUtLS0tLQpNSUlDRHpDQ0FiV2dBd0lCQWdJUU12S2t3L1pMMEpLcHk1NmgyWmgwY0RBS0JnZ3Foa2pPUFFRREFqQmhNUXN3CkNRWURWUVFHRXdKVlV6RVRNQkVHQTFVRUNCTUtRMkZzYVdadmNtNXBZVEVXTUJRR0ExVUVCeE1OVTJGdUlFWnkKWVc1amFYTmpiekVRTUE0R0ExVUVDaE1IWXk1c2IyTmhiREVUTUJFR0ExVUVBeE1LWTJFdVl5NXNiMk5oYkRBZQpGdzB5TmpFeE1UZ3dNakkwTURCYUZ3MHpOakV4TVRVd01qSTBNREJhTUdNeEN6QUpCZ05WQkFZVEFsVlRNUk13CkVRWURWUVFJRXdwRFlXeHBabTl5Ym1saE1SWXdGQVlEVlFRSEV3MVRZVzRnUm5KaGJtTnBjMk52TVE4d0RRWUQKVlFRTEV3WmpiR2xsYm5ReEZqQVVCZ05WQkFNTURWVnpaWEl6UUdNdWJHOWpZV3d3V1RBVEJnY3Foa2pPUFFJQgpCZ2dxaGtqT1BRTUJCd05DQUFRRnZGaFl2RmxsS2FSRzlsWkhVa2psSklqcVVTRWpXcEFMcHRFRUxDYXVyMjI4CnhvSkJxQnA5Qks2V2FFcktWbWEzaFBBamRjckhqTzFlWG5LaWZyOW1vMDB3U3pBT0JnTlZIUThCQWY4RUJBTUMKQjRBd0RBWURWUjBUQVFIL0JBSXdBREFyQmdOVkhTTUVKREFpZ0NCb1hDNllBc21ySTYzY1IyVm9qU3U1ZkZhcgpMcHJ5NWwxZ3ZqNytvb0J1YkRBS0JnZ3Foa2pPUFFRREFnTklBREJGQWlFQTVaeXJTRHBEbEc2R3NvNDNwd2xDCm5GTGkvdGlsY0k5dXZ1K201Uy8rT0VjQ0lFUXBTd2tGLzQ1djIrZElEWUQ5VTJIajY0ZG9ibUZBaGx4MWc2V2cKK09UdgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tChIY8cIYMh7Y4078S9ODL0wla9PdQHgiCej5Et4FCtsFCtgFEg4SDGF1dGhyZWdpc3RyeRrFBQoQUmVnaXN0ZXJJZGVudGl0eQqwBXsiZGVwbG95bWVudElkIjoiMDgzMzM2ZGE2YzViZTRjYmJkMWU4ZTZlY2RlYmU1MTY2OTMyYmY5ODM3ODBiMWM0ZTE3MTEwNzY5Mjc3ZWE1MyIsInN1YmplY3RJZCI6ImRpZDp3ZWI6Yy5sb2NhbDpzdXBwbGllciIsImRvbWFpbklkIjoiQyIsImtpbmQiOiJTRVJWSUNFIiwibWFuYWdlbWVudElkZW50aXR5Ijp7Im1zcElkIjoiQ01zcCIsImNlcnRpZmljYXRlU2hhMjU2IjoiOTk2M2U0NWYxMzIxODZhMWE0NGEwOWUxMjJmNGRkYWNlM2I4Y2MzNDcxMWM5ZmJlMTQzMjc2NTM2YmVmM2EwMCJ9LCJkaWREb2N1bWVudERpZ2VzdCI6IjdmYmNiNmU5ZjQ2Mzk4MDk2YTFhYmM4MjE2ZjM4Y2U0MWIxY2MyMGU4NWUwY2JhMDVmNTI3OWNjNTUwOTJmMmMiLCJhcHBLZXlJZCI6ImRpZDp3ZWI6Yy5sb2NhbDpzdXBwbGllciNrZXktMSIsImFwcEtleVZlcnNpb24iOjEsImFwcFB1YmxpY0tleSI6IjA0OTcwMzNiZjczZDFkMGU4MDRkNTIxNWU1N2MzZjk2MzIzY2I5ZWY3ZTY4MmNkODkwODZiMmFhNzc2ZjM5ZWVlZWQ4ZmE0YmY3OGFmNWVhZDMxMTEyMGI5MWIxZTk3ZTZiYzRlMjhlMGUxYzM2OWE3ZDJjYjYxNzlkMTVjNGQ4MWUiLCJhY2NvdW50Q29tbWl0bWVudCI6ImNiOTc2M2M4ZjM1NmM3Y2U3Mzk1ODYxMjYzY2MzMGM5ZmQ0Mzc1ZmI1MjI2MDUzMTdmMGVhYzFjODZkNzlmNzIiLCJzdGF0dXMiOiIiLCJyZXZpc2lvbiI6MH0SRzBFAiEApjWyaxaJQGXDqNdN2Bc4tPt7hmpWgHwANByZoPewBX4CIE3PJtHYbm6FjUYd24600q1qrN4q+0cGfOKFR/DywgQ+",
+        "status": "FAILED",
+        "stage": "ENDORSE",
+        "failureCode": "INVALID_STATE",
+        "observation": "endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:INVALID_STATE",
+        "acceptedAt": "2026-11-18T02:30:38.564897Z"
+      }
+    }
+  },
+  "root": {
+    "rootDid": "did:web:t.local",
+    "managementIdentity": {
+      "mspId": "TMsp",
+      "certificateSha256": "af16b7736dcb0c1be046b238c75ddc4f1cb65832d859d24f3d2cb75a0cecab6a"
+    },
+    "didDocumentDigest": "616e4f013fb8b9e961c5fec18a0908ca0e203e1af763fb5e83ecd3a156414dc4",
+    "appKeyId": "did:web:t.local#key-1",
+    "appKeyVersion": 1,
+    "appPublicKey": "0452ec396828a719c6b88c67d46f09bd0d1e93a54871671ec3c88898d49bb4ddfb980f09a9f9161511cf4b22fcc6f34b01d790ff5e79cdda5eb1b93021230c2549"
+  }
+}

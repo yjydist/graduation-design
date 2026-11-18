@@ -1,0 +1,10 @@
+{
+  "deploymentId": "42a781755652be4ca896f6e0d4da5f7ef608362d2a88af4b79f4431373f0e180",
+  "runId": "run-584097e92389b59c",
+  "registrationAndMaterialDelivery": {
+    "g0WalletReceiptDigest": "65521dfa52253d5322ae93789d330328ffb237c41c31ba478a87256af9450fab",
+    "invalidProofConsumed": false,
+    "paSubjectId": "did:web:a.local:pa",
+    "registrationChallengeId": "urn:grad:reg-challenge:9d2bbe9a310c1b59f7b20878a0039799"
+  }
+}

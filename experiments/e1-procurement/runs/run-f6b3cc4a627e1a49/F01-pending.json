@@ -1,0 +1,29 @@
+{
+  "A": {
+    "operationKey": "run-f6b3cc4a627e1a49/F01-pending-A",
+    "txId": "33d417c6ba81db47221d6f9b0eef571292480d67e08cb58ce97b7db2fe08313b",
+    "status": "FAILED",
+    "stage": "ENDORSE",
+    "failureCode": "INVALID_STATE",
+    "observation": "endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:INVALID_STATE",
+    "commit": null
+  },
+  "B": {
+    "operationKey": "run-f6b3cc4a627e1a49/F01-pending-B",
+    "txId": "07fa701dfbe7051559a1f6d6f034e4ad52e9e5220ef1aad4397e2cff74a564cd",
+    "status": "FAILED",
+    "stage": "ENDORSE",
+    "failureCode": "INVALID_STATE",
+    "observation": "endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:INVALID_STATE",
+    "commit": null
+  },
+  "C": {
+    "operationKey": "run-f6b3cc4a627e1a49/F01-pending-C",
+    "txId": "8844031d15e8bef0e145654dc61ed6f89a6693f680e3afd8c1a00f3ae50ed609",
+    "status": "FAILED",
+    "stage": "ENDORSE",
+    "failureCode": "INVALID_STATE",
+    "observation": "endorse error: rpc error: code = Aborted desc = failed to endorse transaction, see attached details for more info\nDetails:\n  - Address: peer-c:7051\n    MspId: CMsp\n    Message: chaincode response 500, D0:INVALID_STATE",
+    "commit": null
+  }
+}

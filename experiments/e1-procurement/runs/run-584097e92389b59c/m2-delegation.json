@@ -1,0 +1,12 @@
+{
+  "deploymentId": "42a781755652be4ca896f6e0d4da5f7ef608362d2a88af4b79f4431373f0e180",
+  "runId": "run-584097e92389b59c",
+  "dualRootsAndIdentityLink": {
+    "identityLinkId": "urn:grad:link:U-UinB",
+    "identityLinkStatus": "ACTIVE",
+    "purchasingAuthority": "did:web:a.local:pa",
+    "supplierPolicyDenyCode": "SUPPLIER_POLICY_DENIED",
+    "supplierPolicyStatus": 403,
+    "uInBIsolationStatus": 401
+  }
+}

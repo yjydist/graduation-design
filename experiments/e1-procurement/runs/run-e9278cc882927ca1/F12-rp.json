@@ -1,0 +1,18 @@
+{
+  "invalidCode": "DID_DOCUMENT_MISMATCH",
+  "invalidHTTP": 401,
+  "validHTTP": 200,
+  "validQuote": {
+    "quoteId": "urn:grad:quote:81b54727-c3c6-455b-84f0-c229a3de0536",
+    "taskId": "09e1e0adf1ccdb8133d1b25f449874283020b4a592fd48bf236555948f2e58aa",
+    "actor": "did:web:b.local:b1",
+    "supplierId": "urn:grad:supplier:C",
+    "productId": "urn:grad:product:P1",
+    "quantity": 1,
+    "currency": "CNY",
+    "unitPriceMinor": 120000,
+    "totalAmountMinor": 120000,
+    "issuedAt": 1794969090,
+    "validUntil": 1794969390
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "domains": {
+    "A": {
+      "active": {
+        "deploymentId": "42a781755652be4ca896f6e0d4da5f7ef608362d2a88af4b79f4431373f0e180",
+        "domainId": "A",
+        "domainDid": "did:web:a.local",
+        "administrator": {
+          "mspId": "AMsp",
+          "certificateSha256": "794b80c7d14580326cb1b0d36c0ec7641de548d918b697f5164671e11c228213"
+        },
+        "registrar": {
+          "mspId": "AMsp",
+          "certificateSha256": "ac7a6bbd0200ca470f632ae46c6c34f97a46f3f65f3be44fbe13e853d72931dc"
+        },
+        "identityIssuers": [
+          "did:web:a.local:issuer"
+        ],
+        "purchasingAuthority": "did:web:a.local:pa",
+        "currentCertificationId": "urn:grad:domain-certification:A-v1",
+        "status": "ACTIVE",
+        "revision": 3
+      },
+      "pending": {
+        "deploymentId": "42a781755652be4ca896f6e0d4da5f7ef608362d2a88af4b79f4431373f0e180",
+        "domainId": "A",
+        "domainDid": "did:web:a.local",
+        "administrator": {
+          "mspId": "AMsp",
+          "certificateSha256": "794b80c7d14580326cb1b0d36c0ec7641de548d918b697f5164671e11c228213"
+        },
+        "registrar": {
+          "mspId": "AMsp",
+          "certificateSha256": "ac7a6bbd0200ca470f632ae46c6c34f97a46f3f65f3be44fbe13e853d72931dc"
+        },
+        "identityIssuers": [
+          "did:web:a.local:issuer"
+        ],
+        "currentCertificationId": "",
+        "status": "PENDING",
+        "revision": 1
+      },
+      "pendingBlock": 6
+    },
+    "B": {
+      "active": {
+        "deploymentId": "42a781755652be4ca896f6e0d4da5f7ef608362d2a88af4b79f4431373f0e180",
+        "domainId": "B",
+        "domainDid": "did:web:b.local",
+        "administrator": {
+          "mspId": "BMsp",
+          "certificateSha256": "25c5e589edebf44160a46cdfc2305ce4e93ce5644d163dcad4ab447690b718a0"
+        },
+        "registrar": {
+          "mspId": "BMsp",
+          "certificateSha256": "6fedd4093553945a0ec4defbc7f67615bddbcf7a0aa08e82e4c736e7782c6524"
+        },
+        "identityIssuers": [
+          "did:web:b.local:issuer"
+        ],
+        "currentCertificationId": "urn:grad:domain-certification:B-v1",
+        "status": "ACTIVE",
+        "revision": 2
+      },
+      "pending": {
+        "deploymentId": "42a781755652be4ca896f6e0d4da5f7ef608362d2a88af4b79f4431373f0e180",
+        "domainId": "B",
+        "domainDid": "did:web:b.local",
+        "administrator": {
+          "mspId": "BMsp",
+          "certificateSha256": "25c5e589edebf44160a46cdfc2305ce4e93ce5644d163dcad4ab447690b718a0"
+        },
+        "registrar": {
+          "mspId": "BMsp",
+          "certificateSha256": "6fedd4093553945a0ec4defbc7f67615bddbcf7a0aa08e82e4c736e7782c6524"
+        },
+        "identityIssuers": [
+          "did:web:b.local:issuer"
+        ],
+        "currentCertificationId": "",
+        "status": "PENDING",
+        "revision": 1
+      },
+      "pendingBlock": 8
+    },
+    "C": {
+      "active": {
+        "deploymentId": "42a781755652be4ca896f6e0d4da5f7ef608362d2a88af4b79f4431373f0e180",
+        "domainId": "C",
+        "domainDid": "did:web:c.local",
+        "administrator": {
+          "mspId": "CMsp",
+          "certificateSha256": "7072ff37af7e94da64f4114cbec88311341320d4784f0ad0cdbb3b69f42f8493"
+        },
+        "registrar": {
+          "mspId": "CMsp",
+          "certificateSha256": "53ce7ea028c085669ba09d6a1d137539845b400f54c855f0af40f9d3db71bc89"
+        },
+        "identityIssuers": [
+          "did:web:c.local:issuer"
+        ],
+        "currentCertificationId": "urn:grad:domain-certification:C-v1",
+        "status": "ACTIVE",
+        "revision": 2
+      },
+      "pending": {
+        "deploymentId": "42a781755652be4ca896f6e0d4da5f7ef608362d2a88af4b79f4431373f0e180",
+        "domainId": "C",
+        "domainDid": "did:web:c.local",
+        "administrator": {
+          "mspId": "CMsp",
+          "certificateSha256": "7072ff37af7e94da64f4114cbec88311341320d4784f0ad0cdbb3b69f42f8493"
+        },
+        "registrar": {
+          "mspId": "CMsp",
+          "certificateSha256": "53ce7ea028c085669ba09d6a1d137539845b400f54c855f0af40f9d3db71bc89"
+        },
+        "identityIssuers": [
+          "did:web:c.local:issuer"
+        ],
+        "currentCertificationId": "",
+        "status": "PENDING",
+        "revision": 1
+      },
+      "pendingBlock": 10
+    }
+  },
+  "root": {
+    "rootDid": "did:web:t.local",
+    "managementIdentity": {
+      "mspId": "TMsp",
+      "certificateSha256": "bf4bf49c395d1875a082a3a325dfde0ae78910b34f18e879ce37ebaa85238e30"
+    },
+    "didDocumentDigest": "693626d251c23f29e0f022d1d6f3a292075e982647590688dedf4ce223555b7c",
+    "appKeyId": "did:web:t.local#key-1",
+    "appKeyVersion": 1,
+    "appPublicKey": "04f92243b41fe1296d5d2791c7a74a69873319f76d52aa0cdbe23372c694dd182c771cc7909b52fd45552bef1b60fc72fbebade89ef17de957f0573505c56ab231"
+  }
+}

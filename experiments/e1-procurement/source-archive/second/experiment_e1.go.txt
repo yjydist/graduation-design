@@ -1,0 +1,285 @@
+package fabric
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"time"
+
+	"graduation-design/internal/agent"
+	api "graduation-design/internal/fabricapi"
+	"graduation-design/internal/gateway"
+	"graduation-design/internal/policy"
+	"graduation-design/internal/protocol"
+)
+
+const e1Scope = "E1 formal procurement lifecycle, F01-F16, live LLM on RP and BM"
+
+func runE1CLI(args []string, output io.Writer) error {
+	flags := flag.NewFlagSet("experiment e1", flag.ContinueOnError)
+	flags.SetOutput(output)
+	dir := flags.String("dir", "", "new, explicitly isolated Fabric instance")
+	out := flags.String("out", "", "parent directory for formal run evidence")
+	timeout := flags.Duration("timeout", 12*time.Minute, "overall time limit")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 || *dir == "" || *out == "" || *timeout <= 0 {
+		return fmt.Errorf("explicit dir, out and positive timeout required")
+	}
+	cfg := agent.LoadRunnerConfigFromEnv()
+	endpoint, err := url.Parse(cfg.BaseURL)
+	if err != nil || endpoint.Host == "" || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" ||
+		(endpoint.Scheme != "http" && endpoint.Scheme != "https") ||
+		cfg.APIKey == "" || cfg.Model == "" || (cfg.Provider != agent.ProviderAnthropic && cfg.Provider != agent.ProviderOpenAI) {
+		return fmt.Errorf("E1 requires LLM_PROVIDER, LLM_MODEL, LLM_API_KEY and an explicit HTTP(S) LLM_BASE_URL without embedded credentials")
+	}
+	if cfg.MaxSteps < 10 {
+		cfg.MaxSteps = 10
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+	report, err := verifyCases(ctx, *dir, *out, e1Scope, func(a acceptance, seed *seedReport) ([]acceptanceCase, func() error) {
+		trial := &e1Trial{acceptance: a, cfg: cfg, seed: seed, requests: make([]e1HTTPRecord, 0)}
+		return trial.cases(), trial.finish
+	})
+	if report != nil {
+		err = errors.Join(err, json.NewEncoder(output).Encode(report))
+	}
+	return err
+}
+
+type e1Trial struct {
+	acceptance
+	cfg      agent.RunnerConfig
+	seed     *seedReport
+	rt       *online
+	sp       *StateProvider
+	stop     func()
+	did      *protocol.DIDWebServer
+	resolver *protocol.DIDWebResolver
+	server   *gateway.Server
+	bundle   *policy.VerifiedBundle
+	modes    []*e1Mode
+	requests []e1HTTPRecord
+	traces   []e1Trace
+	stage    string
+	setupErr error
+}
+
+type e1Mode struct {
+	tag    string
+	task   api.Task
+	g0, g1 api.Grant
+	leafID string
+	wallet *agent.WalletContext
+	q800   string
+	pkg    *protocol.AccessEvidencePackage
+	chal   protocol.ChallengeContext
+}
+
+func (e *e1Trial) cases() []acceptanceCase {
+	return []acceptanceCase{
+		{"F01", e.bootstrap},
+		{"F02", e.link},
+		{"F03", e.credentials},
+		{"F04", e.trust},
+		{"F05", func() error { return e.forModes("F05", e.delegate) }},
+		{"F06", func() error { return e.forModes("F06", e.acceptOrder) }},
+		{"F07", func() error { return e.forModes("F07", e.overLimit) }},
+		{"F08", func() error { return e.forModes("F08", e.retryOrder) }},
+		{"F09", e.decisions},
+		{"F10", e.buyerRoot},
+		{"F11", func() error { return e.forModes("F11", e.supplierPolicy) }},
+		{"F12", e.didBinding},
+		{"F13", func() error { return e.forModes("F13", e.modeBinding) }},
+		{"F14", e.offlineRoot},
+		{"F15", e.renewAuthority},
+		{"F16", e.evidenceBindings},
+	}
+}
+
+func (e *e1Trial) bootstrap() error {
+	e.setupErr = e.setup()
+	if e.setupErr != nil {
+		return e.setupErr
+	}
+	raw, err := e.p.direct(e.ctx, api.Registry, "Read", api.BootstrapKey)
+	if err != nil {
+		return err
+	}
+	var live api.Bootstrap
+	if err := json.Unmarshal(raw, &live); err != nil {
+		return err
+	}
+	if live.Root != e.d.Bootstrap.Root {
+		return fmt.Errorf("T RootRecord differs from deployment manifest")
+	}
+	if err := e.deploymentBinding(); err != nil {
+		return err
+	}
+	domains := map[string]any{}
+	for _, id := range []string{"A", "B", "C"} {
+		op := e.seedOperation("domain-" + id)
+		if op == nil || op.Commit == nil {
+			return fmt.Errorf("missing bootstrap transaction for %s", id)
+		}
+		before, err := e.domainAt(id, op.Commit.Number)
+		if err != nil {
+			return err
+		}
+		after, err := ledgerRecord[api.Domain](e.ctx, e.p, "domain", id)
+		if err != nil {
+			return err
+		}
+		if before.Status != api.Pending || after.Status != api.Active || after.Certification == "" ||
+			(id == "A" && after.PurchasingAuthority != e.f.Identities["PA"].ID) {
+			return fmt.Errorf("unexpected domain or PA state for %s", id)
+		}
+		domains[id] = map[string]any{"pending": before, "active": after, "pendingBlock": op.Commit.Number}
+	}
+	return e.save("F01", map[string]any{"root": live.Root, "domains": domains})
+}
+
+func (e *e1Trial) setup() error {
+	e.rt = newRuntime(e.acceptance)
+	stop, err := e.rt.start(e.ctx)
+	if err != nil {
+		return err
+	}
+	e.stop = stop
+	wait, cancel := context.WithTimeout(e.ctx, 20*time.Second)
+	defer cancel()
+	if _, err := waitOnline(wait, e.rt, e.f.BMG2.ID); err != nil {
+		return err
+	}
+	e.sp = NewStateProvider(e.j.db, e.d, e.rt)
+	e.did, e.resolver, err = e.newControlledDIDResolver()
+	if err != nil {
+		return err
+	}
+	e.server, e.bundle, err = e.newDirectAccessServer(e.sp, e.resolver, nil, time.Now)
+	if err != nil {
+		return err
+	}
+	e.modes = []*e1Mode{
+		{tag: "rp", task: e.f.RPTask, g0: e.f.RPG0, g1: e.f.RPG1},
+		{tag: "bm", task: e.f.BMTask, g0: e.f.BMG0, g1: e.f.BMG1},
+	}
+	for _, m := range e.modes {
+		m.leafID = api.Digest([]byte(e.id + "/E1/" + m.tag + "/G2"))
+	}
+	commit, err := exec.CommandContext(e.ctx, "git", "rev-parse", "HEAD").Output()
+	if err != nil {
+		return err
+	}
+	locks := make(map[string]string)
+	for _, name := range []string{"internal/fabric/experiment_e1.go", "internal/fabric/experiment_e1_cases.go", "internal/fabric/experiment_e1_live.go", "internal/fabric/verify.go", "docs/experiments/实验计划.md", "docs/experiments/验证用例.md", "go.mod", "go.sum", "mise.toml", "infra/fabric/compose.yaml"} {
+		raw, err := os.ReadFile(name)
+		if err != nil {
+			return err
+		}
+		locks[name] = api.Digest(raw)
+	}
+	return writePublicJSON(filepath.Join(e.dir, "manifest.json"), map[string]any{
+		"experiment": "E1", "runId": e.id, "sourceCommit": string(commit[:len(commit)-1]), "fileSHA256": locks,
+		"instance": e.instance.dir, "deployment": e.d, "host": runtime.GOOS + "/" + runtime.GOARCH,
+		"go": runtime.Version(), "timeBase": "one host, UTC wall clock and in-process monotonic clock",
+		"configuration": "B0", "authorizationModes": []string{api.RP, api.BM},
+		"policyDigest": e.bundle.PolicyDigest, "policyVersion": e.bundle.Manifest.PolicyVersion,
+		"llm": map[string]any{"provider": e.cfg.Provider, "model": e.cfg.Model, "baseURL": e.cfg.BaseURL, "maxSteps": e.cfg.MaxSteps},
+	})
+}
+
+func (e *e1Trial) finish() error {
+	if e.stop != nil {
+		e.stop()
+	}
+	if e.did != nil {
+		_ = e.did.Close()
+	}
+	err := errors.Join(e.writeHTTP(), writePublicJSON(filepath.Join(e.dir, "llm-traces.json"), e.traces))
+	if e.server != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		for _, table := range []string{"quotes", "orders", "decisions"} {
+			var raw json.RawMessage
+			query := "SELECT COALESCE(jsonb_agg(to_jsonb(x) ORDER BY to_jsonb(x)), '[]'::jsonb) FROM " + table + " x WHERE deployment_id=$1"
+			if readErr := e.j.db.QueryRow(ctx, query, e.d.DeploymentID).Scan(&raw); readErr != nil {
+				err = errors.Join(err, readErr)
+				continue
+			}
+			err = errors.Join(err, writePublicJSON(filepath.Join(e.dir, "db-"+table+".json"), raw))
+		}
+	}
+	_, scanErr := scanDirForPrivateKeys(e.dir)
+	return errors.Join(err, scanErr)
+}
+
+func (e *e1Trial) save(name string, observations any) error {
+	return writePublicJSON(filepath.Join(e.dir, name+".json"), observations)
+}
+
+func (e *e1Trial) forModes(stage string, f func(*e1Mode) error) error {
+	if e.setupErr != nil {
+		return e.setupErr
+	}
+	e.stage = stage
+	var errs error
+	for _, m := range e.modes {
+		err := f(m)
+		e.log.event("mode_result", map[string]any{"case": stage, "mode": m.task.Mode, "passed": err == nil})
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("%s: %w", m.tag, err))
+		}
+	}
+	return errs
+}
+
+func (e *e1Trial) seedOperation(label string) *operation {
+	for _, op := range e.seed.Operations {
+		if op.Key == "seed/"+label {
+			return op
+		}
+	}
+	return nil
+}
+
+func (e *e1Trial) rawAt(kind, id string, block uint64) ([]byte, error) {
+	tx, err := e.j.db.Begin(e.ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(context.Background())
+	return loadOptionalAt(e.ctx, tx, e.d.DeploymentID, api.Key(kind, id), &block)
+}
+
+func (e *e1Trial) domainAt(id string, block uint64) (api.Domain, error) {
+	raw, err := e.rawAt("domain", id, block)
+	var value api.Domain
+	if err == nil {
+		err = json.Unmarshal(raw, &value)
+	}
+	return value, err
+}
+
+func (e *e1Trial) gatewayFor(resolver *protocol.DIDWebResolver, bundle *policy.VerifiedBundle, now func() time.Time) (http.Handler, error) {
+	server, err := gateway.NewServer(gateway.Config{
+		DB: e.j.db, State: e.sp.GatewayAdapter(), Delivery: NewDeliveryService(e.j.db), DIDs: resolver,
+		Policy: bundle, DeploymentID: e.d.DeploymentID, ServiceDID: e.f.Identities["C"].ID,
+		Audience: "https://c.local", SupplierID: "urn:grad:supplier:C", NowFn: now,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return server.Handler(), nil
+}

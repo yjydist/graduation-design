@@ -1,0 +1,48 @@
+{
+  "runId": "run-3f8a7a6db26d582c",
+  "summaryVerdicts": 16,
+  "capturedGatewayRequests": 78,
+  "llmSessions": 8,
+  "llmToolCalls": 19,
+  "authorizationModes": {
+    "rp": {
+      "F06OrderId": "urn:grad:order:4eab56ee-41d2-4471-8631-e91829325f8b",
+      "F06CreationDecisionId": "urn:grad:decision:e6a49673-69e5-4019-9b81-c72a7b706fae",
+      "F06QuoteId": "urn:grad:quote:565c6339-0f9a-48e9-a3d2-64a0be8ff0b5",
+      "F06ChallengeIds": [
+        "urn:grad:challenge:f706f52e-6a73-423a-ae66-96ac3c231354",
+        "urn:grad:challenge:dc0c1e8f-6e7d-438e-a1f8-6c204636e447"
+      ],
+      "F07Denials": {
+        "AMOUNT_MISMATCH": "urn:grad:decision:878c9686-a835-4e6f-a76f-2e94128a227a",
+        "AMOUNT_LIMIT_EXCEEDED": "urn:grad:decision:7016b5d3-ca3b-4daf-8121-b55c6450c144"
+      },
+      "F08OrderId": "urn:grad:order:8fea6511-5c3c-4633-99cc-a456ffcfd796",
+      "F16EvidenceHash": "4d93291e6c9ef6f26f72c88e86eb4066a9ec3b5a35acbfec93f30a1cfee533b7"
+    },
+    "bm": {
+      "F06OrderId": "urn:grad:order:d7297627-92ea-4869-abaa-2acb5c6a6dbc",
+      "F06CreationDecisionId": "urn:grad:decision:9f5d934d-8c52-40cc-bbe1-c180fa76f587",
+      "F06QuoteId": "urn:grad:quote:0297cd1d-8e6a-4190-8179-7f426903bc40",
+      "F06ChallengeIds": [
+        "urn:grad:challenge:472c3d76-7ced-4e37-bbe5-895d73ebe1ad",
+        "urn:grad:challenge:d6407228-d5c4-4420-98e7-848cf021e850"
+      ],
+      "F07Denials": {
+        "AMOUNT_MISMATCH": "urn:grad:decision:7b0bb996-b135-4688-ac4f-43ff6cb4e169",
+        "AMOUNT_LIMIT_EXCEEDED": "urn:grad:decision:d45fc906-acb5-4073-a47f-0fd089ffa9c8"
+      },
+      "F08OrderId": "urn:grad:order:ef7ff7d5-e179-455e-831a-ff16dc38e9e1",
+      "F16EvidenceHash": "a7c76c6da3caf12711fad695c7672ffb9887bc64ffabf843b42f8d7ecc2f13d8"
+    }
+  },
+  "blocks": 106,
+  "storedQuotes": 11,
+  "storedOrders": 8,
+  "storedDecisions": 27,
+  "f06BlockIntervalAfterFirstDecision": {
+    "firstExclusive": 51,
+    "lastInclusive": 54,
+    "nonProbeWriteKeys": 0
+  }
+}

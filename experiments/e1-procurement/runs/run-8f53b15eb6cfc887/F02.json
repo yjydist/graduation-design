@@ -1,0 +1,63 @@
+{
+  "approveTx": "1f32c299e930674015bc7feb880ccc84eaf7b2c4c1c1e01acd2347470e2e6561",
+  "approved": {
+    "deploymentId": "8f1e32d8c38d7bc7f206d50e7f5b1f7ff91a3e35c0f0f4bc1721310f3b72901e",
+    "id": "urn:grad:link:U-UinB",
+    "sourceDomain": "A",
+    "sourceSubject": "did:web:a.local:u",
+    "sourceKeyVersion": 1,
+    "sourceAccountCommitment": "acee34aac9ba10c6758569b4d52fad202c1baede84a42b18ca1a5cd98af4a528",
+    "targetDomain": "B",
+    "targetSubject": "did:web:b.local:u-in-b",
+    "targetKeyVersion": 1,
+    "targetAccountCommitment": "38f5d002006814e5c0afd6d2c8ec45d232f72a9b25140ab9428e7e3b31929f10",
+    "proposalDigest": "b4e8790d8f667073b9c8bd61bf9d171cf929b9eb507f851f993327df13b5bd95",
+    "proposedAt": 1794965067,
+    "expiresAt": 1795055067,
+    "approvedBy": "did:web:b.local",
+    "approvedAt": 1794965067,
+    "effectiveActive": true,
+    "status": "ACTIVE",
+    "revision": 2
+  },
+  "proof": {
+    "proposal": {
+      "deploymentId": "8f1e32d8c38d7bc7f206d50e7f5b1f7ff91a3e35c0f0f4bc1721310f3b72901e",
+      "expiresAt": 1795055067,
+      "id": "urn:grad:link:U-UinB",
+      "proposedAt": 1794965067,
+      "sourceAccountCommitment": "acee34aac9ba10c6758569b4d52fad202c1baede84a42b18ca1a5cd98af4a528",
+      "sourceDomain": "A",
+      "sourceKeyId": "did:web:a.local:u#key-1",
+      "sourceKeyVersion": 1,
+      "sourceSubject": "did:web:a.local:u",
+      "targetAccountCommitment": "38f5d002006814e5c0afd6d2c8ec45d232f72a9b25140ab9428e7e3b31929f10",
+      "targetDomain": "B",
+      "targetKeyId": "did:web:b.local:u-in-b#key-1",
+      "targetKeyVersion": 1,
+      "targetSubject": "did:web:b.local:u-in-b"
+    },
+    "proposalDigest": "b4e8790d8f667073b9c8bd61bf9d171cf929b9eb507f851f993327df13b5bd95",
+    "sourceProofJws": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6YS5sb2NhbDp1I2tleS0xIiwidHlwIjoiZ3JhZC1saW5rLXByb29mK2p3dCJ9.eyJkZXBsb3ltZW50SWQiOiI4ZjFlMzJkOGMzOGQ3YmM3ZjIwNmQ1MGU3ZjViMWY3ZmY5MWEzZTM1YzBmMGY0YmMxNzIxMzEwZjNiNzI5MDFlIiwiZXhwaXJlc0F0IjoxNzk1MDU1MDY3LCJpZCI6InVybjpncmFkOmxpbms6VS1VaW5CIiwicHJvcG9zZWRBdCI6MTc5NDk2NTA2Nywic291cmNlQWNjb3VudENvbW1pdG1lbnQiOiJhY2VlMzRhYWM5YmExMGM2NzU4NTY5YjRkNTJmYWQyMDJjMWJhZWRlODRhNDJiMThjYTFhNWNkOThhZjRhNTI4Iiwic291cmNlRG9tYWluIjoiQSIsInNvdXJjZUtleUlkIjoiZGlkOndlYjphLmxvY2FsOnUja2V5LTEiLCJzb3VyY2VLZXlWZXJzaW9uIjoxLCJzb3VyY2VTdWJqZWN0IjoiZGlkOndlYjphLmxvY2FsOnUiLCJ0YXJnZXRBY2NvdW50Q29tbWl0bWVudCI6IjM4ZjVkMDAyMDA2ODE0ZTVjMGFmZDZkMmM4ZWM0NWQyMzJmNzJhOWIyNTE0MGFiOTQyOGU3ZTNiMzE5MjlmMTAiLCJ0YXJnZXREb21haW4iOiJCIiwidGFyZ2V0S2V5SWQiOiJkaWQ6d2ViOmIubG9jYWw6dS1pbi1iI2tleS0xIiwidGFyZ2V0S2V5VmVyc2lvbiI6MSwidGFyZ2V0U3ViamVjdCI6ImRpZDp3ZWI6Yi5sb2NhbDp1LWluLWIifQ.vSBog8wPDOZt7NctsWAmc2g5w5PGoYMTswXceQNCpqNGSNrgJAxWhYIM_M4rTHQMbkvM34Gd2SU0-nbfz2az9g",
+    "targetProofJws": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6Yi5sb2NhbDp1LWluLWIja2V5LTEiLCJ0eXAiOiJncmFkLWxpbmstcHJvb2Yrand0In0.eyJkZXBsb3ltZW50SWQiOiI4ZjFlMzJkOGMzOGQ3YmM3ZjIwNmQ1MGU3ZjViMWY3ZmY5MWEzZTM1YzBmMGY0YmMxNzIxMzEwZjNiNzI5MDFlIiwiZXhwaXJlc0F0IjoxNzk1MDU1MDY3LCJpZCI6InVybjpncmFkOmxpbms6VS1VaW5CIiwicHJvcG9zZWRBdCI6MTc5NDk2NTA2Nywic291cmNlQWNjb3VudENvbW1pdG1lbnQiOiJhY2VlMzRhYWM5YmExMGM2NzU4NTY5YjRkNTJmYWQyMDJjMWJhZWRlODRhNDJiMThjYTFhNWNkOThhZjRhNTI4Iiwic291cmNlRG9tYWluIjoiQSIsInNvdXJjZUtleUlkIjoiZGlkOndlYjphLmxvY2FsOnUja2V5LTEiLCJzb3VyY2VLZXlWZXJzaW9uIjoxLCJzb3VyY2VTdWJqZWN0IjoiZGlkOndlYjphLmxvY2FsOnUiLCJ0YXJnZXRBY2NvdW50Q29tbWl0bWVudCI6IjM4ZjVkMDAyMDA2ODE0ZTVjMGFmZDZkMmM4ZWM0NWQyMzJmNzJhOWIyNTE0MGFiOTQyOGU3ZTNiMzE5MjlmMTAiLCJ0YXJnZXREb21haW4iOiJCIiwidGFyZ2V0S2V5SWQiOiJkaWQ6d2ViOmIubG9jYWw6dS1pbi1iI2tleS0xIiwidGFyZ2V0S2V5VmVyc2lvbiI6MSwidGFyZ2V0U3ViamVjdCI6ImRpZDp3ZWI6Yi5sb2NhbDp1LWluLWIifQ.d5sb_gotUEf6ovuH0QKsA8Kw5xizaKbj6PvhVVGevLiFjzMT0j_I0Yd3mXFMyB0H52HdkopgtoyzBmEA5pGSfQ"
+  },
+  "proposeTx": "df0137c5a799f6ce4a75348c88ca68a1516d4f07b983a43e82a40f44c4c76a37",
+  "proposed": {
+    "deploymentId": "8f1e32d8c38d7bc7f206d50e7f5b1f7ff91a3e35c0f0f4bc1721310f3b72901e",
+    "id": "urn:grad:link:U-UinB",
+    "sourceDomain": "A",
+    "sourceSubject": "did:web:a.local:u",
+    "sourceKeyVersion": 1,
+    "sourceAccountCommitment": "acee34aac9ba10c6758569b4d52fad202c1baede84a42b18ca1a5cd98af4a528",
+    "targetDomain": "B",
+    "targetSubject": "did:web:b.local:u-in-b",
+    "targetKeyVersion": 1,
+    "targetAccountCommitment": "38f5d002006814e5c0afd6d2c8ec45d232f72a9b25140ab9428e7e3b31929f10",
+    "proposalDigest": "b4e8790d8f667073b9c8bd61bf9d171cf929b9eb507f851f993327df13b5bd95",
+    "proposedAt": 1794965067,
+    "expiresAt": 1795055067,
+    "effectiveActive": false,
+    "status": "PENDING",
+    "revision": 1
+  }
+}

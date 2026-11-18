@@ -1,0 +1,84 @@
+{
+  "A": {
+    "certification": {
+      "deploymentId": "10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b",
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "domainId": "A",
+      "issuerKeyVersion": 1,
+      "digest": "17f92c73202f794053483dfc3370372abbb61ace0da6a6854be314988f82250a",
+      "identityIssuers": [
+        {
+          "id": "did:web:a.local:issuer",
+          "appKeyVersion": 1,
+          "credentialTypes": [
+            "EnterpriseIdentityCredential"
+          ],
+          "claimNames": [
+            "domain",
+            "role"
+          ]
+        }
+      ],
+      "nbf": 1794967646,
+      "exp": 1795057646,
+      "status": "ACTIVE",
+      "revision": 1
+    },
+    "verifiedJWS": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6dC5sb2NhbCNrZXktMSIsInR5cCI6InZjK2p3dCJ9.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLHsiQHZvY2FiIjoiaHR0cHM6Ly9ncmFkLWF1dGguZXhhbXBsZS50ZXN0L3ZvY2FiIyJ9XSwiY3JlZGVudGlhbFN0YXR1cyI6eyJpZCI6InVybjpncmFkOmRvbWFpbi1jZXJ0aWZpY2F0aW9uOkEtdjEiLCJ0eXBlIjoiUmVnaXN0cnlEb21haW5DZXJ0aWZpY2F0aW9uU3RhdHVzIn0sImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImRvbWFpbklkIjoiQSIsImlkIjoiZGlkOndlYjphLmxvY2FsIiwiaWRlbnRpdHlJc3N1ZXJzIjpbeyJhcHBLZXlWZXJzaW9uIjoxLCJjbGFpbU5hbWVzIjpbImRvbWFpbiIsInJvbGUiXSwiY3JlZGVudGlhbFR5cGVzIjpbIkVudGVycHJpc2VJZGVudGl0eUNyZWRlbnRpYWwiXSwiaWQiOiJkaWQ6d2ViOmEubG9jYWw6aXNzdWVyIn1dfSwiZGVwbG95bWVudElkIjoiMTBjODNiOGZlYjAwZDIwMDdkYzNkNzQ5OWJhOWU1MzY0ODczNzE0MWVmZjkwNDU5ODlkYWY3OThkMDFiNTUxYiIsImV4cCI6MTc5NTA1NzY0NiwiaWQiOiJ1cm46Z3JhZDpkb21haW4tY2VydGlmaWNhdGlvbjpBLXYxIiwiaXNzIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyS2V5VmVyc2lvbiI6MSwibmJmIjoxNzk0OTY3NjQ2LCJzdWIiOiJkaWQ6d2ViOmEubG9jYWwiLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiRG9tYWluQXV0aG9yaXR5Q3JlZGVudGlhbCJdLCJ2YWxpZEZyb20iOiIyMDI2LTExLTE4VDAyOjA3OjI2WiIsInZhbGlkVW50aWwiOiIyMDI2LTExLTE5VDAzOjA3OjI2WiJ9.-kkX5eX4v7ndcjIyQW2O3b8fPgXk0ITy_6mZ3-5Sn5crmVyiBcZhhVxyEWIxC0SKf0Ya19BOoADwBKLdKwIa5g"
+  },
+  "B": {
+    "certification": {
+      "deploymentId": "10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b",
+      "certificationId": "urn:grad:domain-certification:B-v1",
+      "domainId": "B",
+      "issuerKeyVersion": 1,
+      "digest": "a1f62d4177b8a959593ee02751431d4e84f68eb45f2618bbd93010f17c501775",
+      "identityIssuers": [
+        {
+          "id": "did:web:b.local:issuer",
+          "appKeyVersion": 1,
+          "credentialTypes": [
+            "EnterpriseIdentityCredential"
+          ],
+          "claimNames": [
+            "domain",
+            "role"
+          ]
+        }
+      ],
+      "nbf": 1794967646,
+      "exp": 1795057646,
+      "status": "ACTIVE",
+      "revision": 1
+    },
+    "verifiedJWS": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6dC5sb2NhbCNrZXktMSIsInR5cCI6InZjK2p3dCJ9.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLHsiQHZvY2FiIjoiaHR0cHM6Ly9ncmFkLWF1dGguZXhhbXBsZS50ZXN0L3ZvY2FiIyJ9XSwiY3JlZGVudGlhbFN0YXR1cyI6eyJpZCI6InVybjpncmFkOmRvbWFpbi1jZXJ0aWZpY2F0aW9uOkItdjEiLCJ0eXBlIjoiUmVnaXN0cnlEb21haW5DZXJ0aWZpY2F0aW9uU3RhdHVzIn0sImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImRvbWFpbklkIjoiQiIsImlkIjoiZGlkOndlYjpiLmxvY2FsIiwiaWRlbnRpdHlJc3N1ZXJzIjpbeyJhcHBLZXlWZXJzaW9uIjoxLCJjbGFpbU5hbWVzIjpbImRvbWFpbiIsInJvbGUiXSwiY3JlZGVudGlhbFR5cGVzIjpbIkVudGVycHJpc2VJZGVudGl0eUNyZWRlbnRpYWwiXSwiaWQiOiJkaWQ6d2ViOmIubG9jYWw6aXNzdWVyIn1dfSwiZGVwbG95bWVudElkIjoiMTBjODNiOGZlYjAwZDIwMDdkYzNkNzQ5OWJhOWU1MzY0ODczNzE0MWVmZjkwNDU5ODlkYWY3OThkMDFiNTUxYiIsImV4cCI6MTc5NTA1NzY0NiwiaWQiOiJ1cm46Z3JhZDpkb21haW4tY2VydGlmaWNhdGlvbjpCLXYxIiwiaXNzIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyS2V5VmVyc2lvbiI6MSwibmJmIjoxNzk0OTY3NjQ2LCJzdWIiOiJkaWQ6d2ViOmIubG9jYWwiLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiRG9tYWluQXV0aG9yaXR5Q3JlZGVudGlhbCJdLCJ2YWxpZEZyb20iOiIyMDI2LTExLTE4VDAyOjA3OjI2WiIsInZhbGlkVW50aWwiOiIyMDI2LTExLTE5VDAzOjA3OjI2WiJ9.asvfmLFHBHZEEsZO28er70VatPJzSbHNmYT89ea-Qs8OPP2IUeCPZR9NRB4zHK-sHy2L-ihD8sQ8hS0Vqq4zzA"
+  },
+  "C": {
+    "certification": {
+      "deploymentId": "10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b",
+      "certificationId": "urn:grad:domain-certification:C-v1",
+      "domainId": "C",
+      "issuerKeyVersion": 1,
+      "digest": "294298209b8cdd3d7297046bfeb7e8600ddbd8f52b2c61ced65232371390e93d",
+      "identityIssuers": [
+        {
+          "id": "did:web:c.local:issuer",
+          "appKeyVersion": 1,
+          "credentialTypes": [
+            "EnterpriseIdentityCredential"
+          ],
+          "claimNames": [
+            "domain",
+            "role"
+          ]
+        }
+      ],
+      "nbf": 1794967646,
+      "exp": 1795057646,
+      "status": "ACTIVE",
+      "revision": 1
+    },
+    "verifiedJWS": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDp3ZWI6dC5sb2NhbCNrZXktMSIsInR5cCI6InZjK2p3dCJ9.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLHsiQHZvY2FiIjoiaHR0cHM6Ly9ncmFkLWF1dGguZXhhbXBsZS50ZXN0L3ZvY2FiIyJ9XSwiY3JlZGVudGlhbFN0YXR1cyI6eyJpZCI6InVybjpncmFkOmRvbWFpbi1jZXJ0aWZpY2F0aW9uOkMtdjEiLCJ0eXBlIjoiUmVnaXN0cnlEb21haW5DZXJ0aWZpY2F0aW9uU3RhdHVzIn0sImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImRvbWFpbklkIjoiQyIsImlkIjoiZGlkOndlYjpjLmxvY2FsIiwiaWRlbnRpdHlJc3N1ZXJzIjpbeyJhcHBLZXlWZXJzaW9uIjoxLCJjbGFpbU5hbWVzIjpbImRvbWFpbiIsInJvbGUiXSwiY3JlZGVudGlhbFR5cGVzIjpbIkVudGVycHJpc2VJZGVudGl0eUNyZWRlbnRpYWwiXSwiaWQiOiJkaWQ6d2ViOmMubG9jYWw6aXNzdWVyIn1dfSwiZGVwbG95bWVudElkIjoiMTBjODNiOGZlYjAwZDIwMDdkYzNkNzQ5OWJhOWU1MzY0ODczNzE0MWVmZjkwNDU5ODlkYWY3OThkMDFiNTUxYiIsImV4cCI6MTc5NTA1NzY0NiwiaWQiOiJ1cm46Z3JhZDpkb21haW4tY2VydGlmaWNhdGlvbjpDLXYxIiwiaXNzIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyIjoiZGlkOndlYjp0LmxvY2FsIiwiaXNzdWVyS2V5VmVyc2lvbiI6MSwibmJmIjoxNzk0OTY3NjQ2LCJzdWIiOiJkaWQ6d2ViOmMubG9jYWwiLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiRG9tYWluQXV0aG9yaXR5Q3JlZGVudGlhbCJdLCJ2YWxpZEZyb20iOiIyMDI2LTExLTE4VDAyOjA3OjI2WiIsInZhbGlkVW50aWwiOiIyMDI2LTExLTE5VDAzOjA3OjI2WiJ9.ohVlrBnUGkNkWLtpj6fEQdav22lxCAC0dcHCt47MBFtRURlI9U17Rkti5v6IFkpgNNDIc5fd3DKmuyYlxSidyA"
+  },
+  "wrongKeyPurpose": "DID_KEY_PURPOSE_INVALID: keyID \"did:web:a.local:issuer#key-1\" lacks authentication purpose in DID document \"did:web:a.local:issuer\""
+}

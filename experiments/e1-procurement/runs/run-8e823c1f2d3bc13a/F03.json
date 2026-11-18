@@ -1,0 +1,137 @@
+{
+  "A1": {
+    "before": "not committed",
+    "commit": {
+      "blockNumber": 19,
+      "blockHash": "f7a192c4eb56997b5bba2ce281416e91654d6b9b36ecc76c3a17dfc46bf2e8e7",
+      "validationCode": "VALID"
+    },
+    "confirmed": {
+      "deploymentId": "7cd165f3bbdef0393a7931dc215d8eea2a7f4e87dd8bf38e9a058c505b489231",
+      "credentialId": "urn:grad:credential:A1-v1",
+      "issuer": "did:web:a.local:issuer",
+      "subject": "did:web:a.local:a1",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "2eeb977e0de677fe2fea86058d0726dbfcd8861d381ec0c08e88bfe3386b90bf",
+      "nbf": 1794967427,
+      "exp": 1795057427,
+      "status": "ACTIVE",
+      "revision": 1
+    },
+    "txID": "17ade123d6174cc8c0b0373dd88cf4589bae7a31c74a20eecde493b481c163b4"
+  },
+  "B1": {
+    "before": "not committed",
+    "commit": {
+      "blockNumber": 23,
+      "blockHash": "e64d11af88838369c1f5e99431a101fa99ccc40372158d852fe72973a3797b84",
+      "validationCode": "VALID"
+    },
+    "confirmed": {
+      "deploymentId": "7cd165f3bbdef0393a7931dc215d8eea2a7f4e87dd8bf38e9a058c505b489231",
+      "credentialId": "urn:grad:credential:B1-v1",
+      "issuer": "did:web:b.local:issuer",
+      "subject": "did:web:b.local:b1",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "53e71a90ed0e242307ab579c054506d79fe32e059e8629c4a0178d46ea6c8f6f",
+      "nbf": 1794967427,
+      "exp": 1795057427,
+      "status": "ACTIVE",
+      "revision": 1
+    },
+    "txID": "33f6178225e9bd4af108721339661890f8887dd61b47dc6ca3ab6bda654fde1d"
+  },
+  "C": {
+    "before": "not committed",
+    "commit": {
+      "blockNumber": 27,
+      "blockHash": "63906fe5e9df44faee73904a63d2e3747b0d4ce3ccd1b3177900bfd0174d5234",
+      "validationCode": "VALID"
+    },
+    "confirmed": {
+      "deploymentId": "7cd165f3bbdef0393a7931dc215d8eea2a7f4e87dd8bf38e9a058c505b489231",
+      "credentialId": "urn:grad:credential:C-v1",
+      "issuer": "did:web:c.local:issuer",
+      "subject": "did:web:c.local:supplier",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "ab61a545a95de366f25d3e065fa622c6e89497628b3b23278b30473ed2c1a278",
+      "nbf": 1794967427,
+      "exp": 1795057427,
+      "status": "ACTIVE",
+      "revision": 1
+    },
+    "txID": "e5c7806f215d162268975fdbbbb5e97ea211e00d241b5365b1c10d9dfecd8e4d"
+  },
+  "PA": {
+    "before": "not committed",
+    "commit": {
+      "blockNumber": 15,
+      "blockHash": "cf3561af723ac88d2ceac59bf8b52a1bed83e13f226367fade797b3ea2c3fcf3",
+      "validationCode": "VALID"
+    },
+    "confirmed": {
+      "deploymentId": "7cd165f3bbdef0393a7931dc215d8eea2a7f4e87dd8bf38e9a058c505b489231",
+      "credentialId": "urn:grad:credential:PA-v1",
+      "issuer": "did:web:a.local:issuer",
+      "subject": "did:web:a.local:pa",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "6a3d19a90bdcbc535be416b89090c2d03cee50d8bf2abb80c9b3bca4b78842b8",
+      "nbf": 1794967427,
+      "exp": 1795057427,
+      "status": "ACTIVE",
+      "revision": 1
+    },
+    "txID": "611f3f5d2c16d2ef000073c25076f79a5e00b19708065e8d14ddf4962e95fcf5"
+  },
+  "U": {
+    "before": "not committed",
+    "commit": {
+      "blockNumber": 13,
+      "blockHash": "5989bf6cf146b52af5d996ac57895e0097646df04f3da6047f40700b65add036",
+      "validationCode": "VALID"
+    },
+    "confirmed": {
+      "deploymentId": "7cd165f3bbdef0393a7931dc215d8eea2a7f4e87dd8bf38e9a058c505b489231",
+      "credentialId": "urn:grad:credential:U-v1",
+      "issuer": "did:web:a.local:issuer",
+      "subject": "did:web:a.local:u",
+      "issuerKeyVersion": 1,
+      "appKeyVersion": 1,
+      "credentialType": "EnterpriseIdentityCredential",
+      "claimNames": [
+        "domain",
+        "role"
+      ],
+      "digest": "568e25f8f179afe21722484c975e48b5ac54197df894b030fd302238a4cdb095",
+      "nbf": 1794967427,
+      "exp": 1795057427,
+      "status": "ACTIVE",
+      "revision": 1
+    },
+    "txID": "82bff4e56f6f393e49fcd55cfcb4cc0fc2a30ead9b0de9ffdd559ba0395bc824"
+  }
+}

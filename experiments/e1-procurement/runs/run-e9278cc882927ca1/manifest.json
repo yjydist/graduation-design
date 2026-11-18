@@ -1,0 +1,98 @@
+{
+  "authorizationModes": [
+    "RESOURCE_PREAUTHORIZED",
+    "BUYER_MANDATE"
+  ],
+  "configuration": "B0",
+  "deployment": {
+    "channelId": "procurement",
+    "genesisHash": "25f1f90f0a5872fb9b80f6a01bc4f34162b1b83f7d22fbf476737b5f57ad6c7c",
+    "instanceId": "3034013d8e8740d3f8fa04118b6a3acabe7ba620c9d1c9ce80882dd64423a415",
+    "registryName": "authregistry",
+    "schemaVersion": "grad-auth-v1",
+    "deploymentId": "083336da6c5be4cbbd1e8e6ecdebe5166932bf983780b1c4e17110769277ea53",
+    "channelConfigSha256": "2a335367412acab37e83e24dd809719775b25b4d75363d098f1b1a0094d90e50",
+    "bootstrapSha256": "c5a85cd9eff83dfe27853272bde262b828b3ab48ae9079071b8e0357dfe09635",
+    "chaincodeBuildSha256": "d767d889775f1c08b25dc313e253dbb30c5b70367a4cc21f5a5c610eccef6c46",
+    "chaincodeSourceSha256": "56e5ecb94562b1668753389a1caa801cb17af429d9e54887b42aaa9c729cf50a",
+    "packageIds": {
+      "a": "authregistry_a_b7695380a21d:7616fa7a285924208d46f78361020bf4504037849f12498c552820dbc18e1dde",
+      "b": "authregistry_b_b7695380a21d:e21cc71763749bd393000155d970be58ed94e5383075c9a8c2192afc7425a5df",
+      "c": "authregistry_c_b7695380a21d:5c9a5d08bebeca9856122b39bc11118f191d2e75f8faef6ef75b9250bbe33389"
+    },
+    "definitionSha256": "8fbbe52338447e7f71a187133183c71b470219368e1cf1eb2bf28e1f63a6b917",
+    "definitionBlock": {
+      "blockNumber": 4,
+      "blockHash": "cfef8cb89c78c00c491746b6dcaf7909669baad114d81940c51297d012c9b205"
+    },
+    "definitionTxId": "3e60dbc483e68b7b9f1f417f8893748697b7feff550ca81493af9a2cb0b1630b",
+    "initializationBlock": {
+      "blockNumber": 5,
+      "blockHash": "ee954c6bc584535c8984ec6b8210dea4b7c4e8b982e83b8122aa0e5e98dd6cdf"
+    },
+    "bootstrap": {
+      "channelId": "procurement",
+      "genesisHash": "25f1f90f0a5872fb9b80f6a01bc4f34162b1b83f7d22fbf476737b5f57ad6c7c",
+      "instanceId": "3034013d8e8740d3f8fa04118b6a3acabe7ba620c9d1c9ce80882dd64423a415",
+      "registryName": "authregistry",
+      "schemaVersion": "grad-auth-v1",
+      "root": {
+        "rootDid": "did:web:t.local",
+        "managementIdentity": {
+          "mspId": "TMsp",
+          "certificateSha256": "af16b7736dcb0c1be046b238c75ddc4f1cb65832d859d24f3d2cb75a0cecab6a"
+        },
+        "didDocumentDigest": "616e4f013fb8b9e961c5fec18a0908ca0e203e1af763fb5e83ecd3a156414dc4",
+        "appKeyId": "did:web:t.local#key-1",
+        "appKeyVersion": 1,
+        "appPublicKey": "0452ec396828a719c6b88c67d46f09bd0d1e93a54871671ec3c88898d49bb4ddfb980f09a9f9161511cf4b22fcc6f34b01d790ff5e79cdda5eb1b93021230c2549"
+      },
+      "initializer": {
+        "mspId": "AMsp",
+        "certificateSha256": "8faad19e341dd352aaddb0fda711946778f9a58f9f09955e8159ebd3699ce3ae"
+      },
+      "taskCreator": {
+        "domainId": "A",
+        "subjectId": "did:web:a.local:u",
+        "managementIdentity": {
+          "mspId": "AMsp",
+          "certificateSha256": "5869faf2051226cb166bf39fe83d4fef4c8b125a56b04eb4910d84164135462a"
+        }
+      },
+      "resourceId": "67832b6e9ca3a7179a47e556095d3938929ea988345bd69d37a4895b3260b8c2",
+      "resourceOwner": "did:web:c.local:supplier",
+      "resourceManagement": {
+        "mspId": "CMsp",
+        "certificateSha256": "9963e45f132186a1a44a09e122f4ddace3b8cc34711c9fbe143276536bef3a00"
+      }
+    }
+  },
+  "experiment": "E1",
+  "fileSHA256": {
+    "docs/experiments/实验计划.md": "81f4f816ef26e80214c5501ea2c6db71dd16e87f6766199831d60c61df418cfc",
+    "docs/experiments/验证用例.md": "98397d20f5a8ed0a95478dc15fbea4d8a995b5d802a6d2e3bb60cfa6c56e349c",
+    "go.mod": "9f8063e4dd85920bb27169317382ee19df1f211da59825d8cacec73524480021",
+    "go.sum": "898c954ba13d003f0f9276f092503b82e384df288049e108e2de65ef3874fc3f",
+    "infra/fabric/compose.yaml": "4d06390e5ef16a01268b3168a946fd89e189b3b42e5d4e98244e40662d21fba4",
+    "internal/fabric/experiment_e1.go": "078a03eb6c93adfa98b57b570c0a20b94067b1fa6afe524b52147047afc41c99",
+    "internal/fabric/experiment_e1_cases.go": "f3f90b047322b59c205a48e7ab54f9abf04490628fecbec8865145f468eb1ef2",
+    "internal/fabric/experiment_e1_live.go": "255bf0a3a86a3b9dc7218ba58a29abab2e0e5427f46233b2225cef64e7ae8245",
+    "internal/fabric/seed.go": "4ee75643a3b37165f65715b653685d286cfa17d3152a611ff7116414f46be454",
+    "internal/fabric/verify.go": "8c221290015a60cf26b374d4f934c4a8a2bb07c11c7a454ea1d1df60f4a02a2c",
+    "mise.toml": "f13750d0cbd12f1592fa489885bf073444f43326afd041b5b68d02aa54568021"
+  },
+  "go": "go1.27.3",
+  "host": "darwin/arm64",
+  "instance": "/Users/yjydist/Desktop/graduation-design/.local/fabric-e1-formal-03",
+  "llm": {
+    "baseURL": "http://127.0.0.1:8317",
+    "maxSteps": 10,
+    "model": "deepseek-flash",
+    "provider": "anthropic"
+  },
+  "policyDigest": "3122fbda347714e32156eecc8ff0f6cedfa7c843fb3ab93b4d7d07c2bd36b74e",
+  "policyVersion": "1.0.0",
+  "runId": "run-e9278cc882927ca1",
+  "sourceCommit": "79125cc40855014c16fcfb0a962bc276202023d8",
+  "timeBase": "one host, UTC wall clock and in-process monotonic clock"
+}

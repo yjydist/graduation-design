@@ -1,0 +1,87 @@
+{
+  "runId": "run-f6b3cc4a627e1a49",
+  "status": "FAIL",
+  "stage": "cases",
+  "deploymentId": "a24dfd92df250599cade19176acc913b544c476c78ec2569e928c7bdb686a518",
+  "startedAt": "2026-11-18T02:59:04.981217Z",
+  "finishedAt": "2026-11-18T02:59:40.711715Z",
+  "cases": [
+    {
+      "name": "F01",
+      "pass": true
+    },
+    {
+      "name": "F02",
+      "pass": true
+    },
+    {
+      "name": "F03",
+      "pass": true
+    },
+    {
+      "name": "F04",
+      "pass": true
+    },
+    {
+      "name": "F05",
+      "pass": false,
+      "error": "rp: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}\nbm: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}"
+    },
+    {
+      "name": "F06",
+      "pass": false,
+      "error": "rp: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}\nbm: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}"
+    },
+    {
+      "name": "F07",
+      "pass": false,
+      "error": "rp: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}\nbm: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}"
+    },
+    {
+      "name": "F08",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F08\nbm: F06 package unavailable for F08"
+    },
+    {
+      "name": "F09",
+      "pass": false,
+      "error": "missing F06 order decision for rp"
+    },
+    {
+      "name": "F10",
+      "pass": false,
+      "error": "missing BM order package"
+    },
+    {
+      "name": "F11",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F11\nbm: F06 package unavailable for F11"
+    },
+    {
+      "name": "F12",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F12\nbm: F06 package unavailable for F12"
+    },
+    {
+      "name": "F13",
+      "pass": false,
+      "error": "rp: F06 verified access package is unavailable\nbm: F06 verified access package is unavailable"
+    },
+    {
+      "name": "F14",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F14\nbm: F06 package unavailable for F14"
+    },
+    {
+      "name": "F15",
+      "pass": false,
+      "error": "F06 package unavailable for F15 rp"
+    },
+    {
+      "name": "F16",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F16\nbm: F06 package unavailable for F16"
+    }
+  ],
+  "error": "F05: rp: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}\nbm: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}\nF06: rp: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}\nbm: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}\nF07: rp: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}\nbm: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"You have insufficient credits to make this request. Please purchase more credits to continue using the service.\",\"type\":\"invalid_request_error\",\"code\":\"BAD_REQUEST\"}\nF08: rp: F06 package unavailable for F08\nbm: F06 package unavailable for F08\nF09: missing F06 order decision for rp\nF10: missing BM order package\nF11: rp: F06 package unavailable for F11\nbm: F06 package unavailable for F11\nF12: rp: F06 package unavailable for F12\nbm: F06 package unavailable for F12\nF13: rp: F06 verified access package is unavailable\nbm: F06 verified access package is unavailable\nF14: rp: F06 package unavailable for F14\nbm: F06 package unavailable for F14\nF15: F06 package unavailable for F15 rp\nF16: rp: F06 package unavailable for F16\nbm: F06 package unavailable for F16"
+}

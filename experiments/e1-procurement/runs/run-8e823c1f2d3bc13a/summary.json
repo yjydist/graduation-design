@@ -1,0 +1,87 @@
+{
+  "runId": "run-8e823c1f2d3bc13a",
+  "status": "FAIL",
+  "stage": "cases",
+  "deploymentId": "7cd165f3bbdef0393a7931dc215d8eea2a7f4e87dd8bf38e9a058c505b489231",
+  "startedAt": "2026-11-18T03:03:25.378535Z",
+  "finishedAt": "2026-11-18T03:03:56.382441Z",
+  "cases": [
+    {
+      "name": "F01",
+      "pass": true
+    },
+    {
+      "name": "F02",
+      "pass": true
+    },
+    {
+      "name": "F03",
+      "pass": true
+    },
+    {
+      "name": "F04",
+      "pass": true
+    },
+    {
+      "name": "F05",
+      "pass": false,
+      "error": "rp: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"unknown provider for model deepseek-v4.1-flash\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\",\"param\":\"model\"}\nbm: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"unknown provider for model deepseek-v4.1-flash\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\",\"param\":\"model\"}"
+    },
+    {
+      "name": "F06",
+      "pass": false,
+      "error": "rp: F05 did not confirm the leaf grant required for F06\nbm: F05 did not confirm the leaf grant required for F06"
+    },
+    {
+      "name": "F07",
+      "pass": false,
+      "error": "rp: F05 did not confirm the leaf grant required for F07\nbm: F05 did not confirm the leaf grant required for F07"
+    },
+    {
+      "name": "F08",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F08\nbm: F06 package unavailable for F08"
+    },
+    {
+      "name": "F09",
+      "pass": false,
+      "error": "missing F06 order decision for rp"
+    },
+    {
+      "name": "F10",
+      "pass": false,
+      "error": "missing BM order package"
+    },
+    {
+      "name": "F11",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F11\nbm: F06 package unavailable for F11"
+    },
+    {
+      "name": "F12",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F12\nbm: F06 package unavailable for F12"
+    },
+    {
+      "name": "F13",
+      "pass": false,
+      "error": "rp: F06 verified access package is unavailable\nbm: F06 verified access package is unavailable"
+    },
+    {
+      "name": "F14",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F14\nbm: F06 package unavailable for F14"
+    },
+    {
+      "name": "F15",
+      "pass": false,
+      "error": "F06 package unavailable for F15 rp"
+    },
+    {
+      "name": "F16",
+      "pass": false,
+      "error": "rp: F06 package unavailable for F16\nbm: F06 package unavailable for F16"
+    }
+  ],
+  "error": "F05: rp: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"unknown provider for model deepseek-v4.1-flash\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\",\"param\":\"model\"}\nbm: openai chat completions step 1: POST \"http://127.0.0.1:8317/v1/chat/completions\": 400 Bad Request {\"message\":\"unknown provider for model deepseek-v4.1-flash\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\",\"param\":\"model\"}\nF06: rp: F05 did not confirm the leaf grant required for F06\nbm: F05 did not confirm the leaf grant required for F06\nF07: rp: F05 did not confirm the leaf grant required for F07\nbm: F05 did not confirm the leaf grant required for F07\nF08: rp: F06 package unavailable for F08\nbm: F06 package unavailable for F08\nF09: missing F06 order decision for rp\nF10: missing BM order package\nF11: rp: F06 package unavailable for F11\nbm: F06 package unavailable for F11\nF12: rp: F06 package unavailable for F12\nbm: F06 package unavailable for F12\nF13: rp: F06 verified access package is unavailable\nbm: F06 verified access package is unavailable\nF14: rp: F06 package unavailable for F14\nbm: F06 package unavailable for F14\nF15: F06 package unavailable for F15 rp\nF16: rp: F06 package unavailable for F16\nbm: F06 package unavailable for F16"
+}

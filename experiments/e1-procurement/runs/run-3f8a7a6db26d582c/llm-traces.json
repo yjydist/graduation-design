@@ -1,0 +1,931 @@
+[
+  {
+    "Case": "F05",
+    "Mode": "RESOURCE_PREAUTHORIZED",
+    "Prompt": "You are A1. Inspect your wallet for taskId=\"2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad\" authorizationMode=\"RESOURCE_PREAUTHORIZED\". Parent G1 is \"654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f\". Task budget for B1 is 1000 CNY (100000 minor units), and B1 must not delegate further. Decide the appropriate narrowed ceiling and remaining depth, then call delegate_grant once with issuerActor=A1, subjectActor=B1, parentGrantId as above, grantId=\"0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1\" and the exact task and mode. Conclude after the anchored tool result.",
+    "Started": "2026-11-18T03:07:34.670983Z",
+    "Finished": "2026-11-18T03:07:41.228499Z",
+    "Result": {
+      "provider": "openai",
+      "model": "deepseek-flash",
+      "finalText": "Delegation complete and anchored.\n\n**Decision rationale**\n- Parent G1 (`654b2be4…`) held by A1: `maxAmountMinor: 500000` (5000 CNY), `remainingDepth: 1`, mode `RESOURCE_PREAUTHORIZED`.\n- Task budget for B1 is 1000 CNY → narrowed ceiling **100000 minor units** (≤ parent ceiling).\n- B1 must not delegate further → `remainingDepth` must be strictly less than parent's 1 → **0**.\n\n**Anchored result for G2** (`0b4a6adf…cb7e1`)\n- Issuer: A1 (`did:web:a.local:a1`) → Grantee: B1 (`did:web:b.local:b1`)\n- `maxAmountMinor: 100000`, `remainingDepth: 0`, currency CNY\n- Mode: `RESOURCE_PREAUTHORIZED`\n- Actions: `order.create`, `quote.read`; resources `urn:grad:resource:C:orders`, `urn:grad:resource:C:quotes`; supplier `urn:grad:supplier:C`\n- taskId bound to `2efe4602…ea82ad`, `anchored: true`, `ancestorCount: 3`, exp 1795057646 (clamped to parent)\n\nB1 now holds a leaf grant permitting quote/order actions within 1000 CNY for this task, with no further delegation possible.",
+      "llmLatencyMs": 5951,
+      "totalDurationMs": 6550,
+      "toolCallsCount": 2,
+      "steps": 3,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "inspect_wallet",
+          "arguments": {
+            "actor": "A1",
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad"
+          },
+          "output": {
+            "actor": "A1",
+            "deploymentId": "10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b",
+            "did": "did:web:a.local:a1",
+            "domainId": "A",
+            "grants": [
+              {
+                "actions": [
+                  "order.create",
+                  "quote.read"
+                ],
+                "ancestorCount": 2,
+                "anchored": true,
+                "audience": "https://c.local",
+                "authorizationMode": "RESOURCE_PREAUTHORIZED",
+                "currency": "CNY",
+                "exp": 1795057646,
+                "grantId": "654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f",
+                "granteeDid": "did:web:a.local:a1",
+                "issuerDid": "did:web:a.local:u",
+                "maxAmountMinor": 500000,
+                "nbf": 1794967646,
+                "parentId": "71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991",
+                "principalDomain": "A",
+                "remainingDepth": 1,
+                "resources": [
+                  "urn:grad:resource:C:orders",
+                  "urn:grad:resource:C:quotes"
+                ],
+                "rootId": "71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991",
+                "suppliers": [
+                  "urn:grad:supplier:C"
+                ],
+                "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad",
+                "trustPathCount": 3
+              }
+            ],
+            "roles": [
+              "AGENT"
+            ]
+          },
+          "rawText": "{\"actor\":\"A1\",\"deploymentId\":\"10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b\",\"did\":\"did:web:a.local:a1\",\"domainId\":\"A\",\"grants\":[{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":2,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"RESOURCE_PREAUTHORIZED\",\"currency\":\"CNY\",\"exp\":1795057646,\"grantId\":\"654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f\",\"granteeDid\":\"did:web:a.local:a1\",\"issuerDid\":\"did:web:a.local:u\",\"maxAmountMinor\":500000,\"nbf\":1794967646,\"parentId\":\"71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991\",\"principalDomain\":\"A\",\"remainingDepth\":1,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad\",\"trustPathCount\":3}],\"roles\":[\"AGENT\"]}",
+          "isError": false,
+          "durationMs": 6
+        },
+        {
+          "step": 2,
+          "toolName": "delegate_grant",
+          "arguments": {
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1",
+            "issuerActor": "A1",
+            "maxAmountMinor": 100000,
+            "parentGrantId": "654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f",
+            "remainingDepth": 0,
+            "subjectActor": "B1",
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad"
+          },
+          "output": {
+            "anchored": true,
+            "grant": {
+              "actions": [
+                "order.create",
+                "quote.read"
+              ],
+              "ancestorCount": 3,
+              "anchored": true,
+              "audience": "https://c.local",
+              "authorizationMode": "RESOURCE_PREAUTHORIZED",
+              "currency": "CNY",
+              "exp": 1795057646,
+              "grantId": "0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1",
+              "granteeDid": "did:web:b.local:b1",
+              "issuerDid": "did:web:a.local:a1",
+              "maxAmountMinor": 100000,
+              "nbf": 1794971253,
+              "parentId": "654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f",
+              "principalDomain": "A",
+              "remainingDepth": 0,
+              "resources": [
+                "urn:grad:resource:C:orders",
+                "urn:grad:resource:C:quotes"
+              ],
+              "rootId": "71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991",
+              "suppliers": [
+                "urn:grad:supplier:C"
+              ],
+              "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad",
+              "trustPathCount": 3
+            },
+            "note": "signed and anchored onto Fabric registry"
+          },
+          "rawText": "{\"anchored\":true,\"grant\":{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":3,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"RESOURCE_PREAUTHORIZED\",\"currency\":\"CNY\",\"exp\":1795057646,\"grantId\":\"0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1\",\"granteeDid\":\"did:web:b.local:b1\",\"issuerDid\":\"did:web:a.local:a1\",\"maxAmountMinor\":100000,\"nbf\":1794971253,\"parentId\":\"654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f\",\"principalDomain\":\"A\",\"remainingDepth\":0,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad\",\"trustPathCount\":3},\"note\":\"signed and anchored onto Fabric registry\"}",
+          "isError": false,
+          "durationMs": 591
+        }
+      ]
+    },
+    "Error": ""
+  },
+  {
+    "Case": "F05",
+    "Mode": "BUYER_MANDATE",
+    "Prompt": "You are A1. Inspect your wallet for taskId=\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\" authorizationMode=\"BUYER_MANDATE\". Parent G1 is \"e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9\". Task budget for B1 is 1000 CNY (100000 minor units), and B1 must not delegate further. Decide the appropriate narrowed ceiling and remaining depth, then call delegate_grant once with issuerActor=A1, subjectActor=B1, parentGrantId as above, grantId=\"c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7\" and the exact task and mode. Conclude after the anchored tool result.",
+    "Started": "2026-11-18T03:07:41.232787Z",
+    "Finished": "2026-11-18T03:07:47.643737Z",
+    "Result": {
+      "provider": "openai",
+      "model": "deepseek-flash",
+      "finalText": "Done. Wallet inspection and delegation completed.\n\n**Inspection (A1, BUYER_MANDATE, task `e4eadcb0…8b5f`)**\n- A1 DID: `did:web:a.local:a1`\n- Parent grant G1 `e7d45827…acb9`: mode BUYER_MANDATE, currency CNY, `maxAmountMinor` = 500000, `remainingDepth` = 1, exp 1795057646, actions `order.create`/`quote.read`, supplier/resources scoped to C.\n\n**Decision rationale**\n- **Ceiling:** the task budget for B1 is 1000 CNY = 100000 minor units, which is strictly below the parent's 500000 ceiling → narrowed to **100000**.\n- **Remaining depth:** parent depth is 1 and a child must be strictly less; since B1 must not delegate further, depth was set to **0**.\n- Mode and task were kept identical to the parent (BUYER_MANDATE, same taskId).\n\n**Result (anchored)**\n- Grant `c1ede2ed…cdb7` issued by `did:web:a.local:a1` to `did:web:b.local:b1`, anchored on the Fabric registry.\n- `maxAmountMinor` 100000, `remainingDepth` 0, authorizationMode BUYER_MANDATE, currency CNY, same taskId, parent G1, root `b9ceee2a…3a4b`, exp 1795057646.\n\nNo further action needed; B1 now holds a non-delegable, budget-capped leaf grant.",
+      "llmLatencyMs": 5745,
+      "totalDurationMs": 6402,
+      "toolCallsCount": 2,
+      "steps": 3,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "inspect_wallet",
+          "arguments": {
+            "actor": "A1",
+            "authorizationMode": "BUYER_MANDATE",
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f"
+          },
+          "output": {
+            "actor": "A1",
+            "deploymentId": "10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b",
+            "did": "did:web:a.local:a1",
+            "domainId": "A",
+            "grants": [
+              {
+                "actions": [
+                  "order.create",
+                  "quote.read"
+                ],
+                "ancestorCount": 2,
+                "anchored": true,
+                "audience": "https://c.local",
+                "authorizationMode": "BUYER_MANDATE",
+                "currency": "CNY",
+                "exp": 1795057646,
+                "grantId": "e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9",
+                "granteeDid": "did:web:a.local:a1",
+                "issuerDid": "did:web:a.local:u",
+                "maxAmountMinor": 500000,
+                "nbf": 1794967646,
+                "parentId": "b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b",
+                "principalDomain": "A",
+                "remainingDepth": 1,
+                "resources": [
+                  "urn:grad:resource:C:orders",
+                  "urn:grad:resource:C:quotes"
+                ],
+                "rootId": "b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b",
+                "suppliers": [
+                  "urn:grad:supplier:C"
+                ],
+                "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f",
+                "trustPathCount": 2
+              }
+            ],
+            "roles": [
+              "AGENT"
+            ]
+          },
+          "rawText": "{\"actor\":\"A1\",\"deploymentId\":\"10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b\",\"did\":\"did:web:a.local:a1\",\"domainId\":\"A\",\"grants\":[{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":2,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"BUYER_MANDATE\",\"currency\":\"CNY\",\"exp\":1795057646,\"grantId\":\"e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9\",\"granteeDid\":\"did:web:a.local:a1\",\"issuerDid\":\"did:web:a.local:u\",\"maxAmountMinor\":500000,\"nbf\":1794967646,\"parentId\":\"b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b\",\"principalDomain\":\"A\",\"remainingDepth\":1,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\",\"trustPathCount\":2}],\"roles\":[\"AGENT\"]}",
+          "isError": false,
+          "durationMs": 2
+        },
+        {
+          "step": 2,
+          "toolName": "delegate_grant",
+          "arguments": {
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7",
+            "issuerActor": "A1",
+            "maxAmountMinor": 100000,
+            "parentGrantId": "e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9",
+            "remainingDepth": 0,
+            "subjectActor": "B1",
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f"
+          },
+          "output": {
+            "anchored": true,
+            "grant": {
+              "actions": [
+                "order.create",
+                "quote.read"
+              ],
+              "ancestorCount": 3,
+              "anchored": true,
+              "audience": "https://c.local",
+              "authorizationMode": "BUYER_MANDATE",
+              "currency": "CNY",
+              "exp": 1795057646,
+              "grantId": "c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7",
+              "granteeDid": "did:web:b.local:b1",
+              "issuerDid": "did:web:a.local:a1",
+              "maxAmountMinor": 100000,
+              "nbf": 1794971259,
+              "parentId": "e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9",
+              "principalDomain": "A",
+              "remainingDepth": 0,
+              "resources": [
+                "urn:grad:resource:C:orders",
+                "urn:grad:resource:C:quotes"
+              ],
+              "rootId": "b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b",
+              "suppliers": [
+                "urn:grad:supplier:C"
+              ],
+              "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f",
+              "trustPathCount": 2
+            },
+            "note": "signed and anchored onto Fabric registry"
+          },
+          "rawText": "{\"anchored\":true,\"grant\":{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":3,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"BUYER_MANDATE\",\"currency\":\"CNY\",\"exp\":1795057646,\"grantId\":\"c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7\",\"granteeDid\":\"did:web:b.local:b1\",\"issuerDid\":\"did:web:a.local:a1\",\"maxAmountMinor\":100000,\"nbf\":1794971259,\"parentId\":\"e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9\",\"principalDomain\":\"A\",\"remainingDepth\":0,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\",\"trustPathCount\":2},\"note\":\"signed and anchored onto Fabric registry\"}",
+          "isError": false,
+          "durationMs": 652
+        }
+      ]
+    },
+    "Error": ""
+  },
+  {
+    "Case": "F06",
+    "Mode": "RESOURCE_PREAUTHORIZED",
+    "Prompt": "You are B1. For all calls actor=B1, taskId=\"2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad\", grantId=\"0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1\", authorizationMode=\"RESOURCE_PREAUTHORIZED\", productId=\"urn:grad:product:P1\", quantity=1. Use the actual returned quoteId, never a placeholder. Call request_quote once with idempotencyKey=\"e1-rp-q800-quote\". Check the returned total is 80000 CNY minor units. Use that quote to call create_order once with amountMinor=80000 and idempotencyKey=\"e1-rp-q800\". End after the actual order result.",
+    "Started": "2026-11-18T03:07:47.653414Z",
+    "Finished": "2026-11-18T03:07:53.32219Z",
+    "Result": {
+      "provider": "openai",
+      "model": "deepseek-flash",
+      "finalText": "Both steps completed successfully.\n\n**Quote result:**\n- Quote ID: `urn:grad:quote:565c6339-0f9a-48e9-a3d2-64a0be8ff0b5`\n- Unit price / total: 80000 CNY minor units (confirmed exactly as expected)\n- Decision: ALLOW\n\n**Order result:**\n- Order ID: `urn:grad:order:4eab56ee-41d2-4471-8631-e91829325f8b`\n- Action ID: `urn:grad:action:4f82b390-cf3f-4bad-9016-abc05ebe1e75`\n- Status: COMPLETED\n- Amount: 80000 CNY minor units\n- Bound to quote `urn:grad:quote:565c6339-0f9a-48e9-a3d2-64a0be8ff0b5`\n- sendRevision: 1\n- Decision: ALLOW\n\nThe order was created successfully against the actual returned quoteId, with the amount matching the quote total of 80000 CNY minor units.",
+      "llmLatencyMs": 5254,
+      "totalDurationMs": 5658,
+      "toolCallsCount": 2,
+      "steps": 3,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "request_quote",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1",
+            "idempotencyKey": "e1-rp-q800-quote",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad"
+          },
+          "output": {
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:3b42ab17-1eab-49dd-9d76-07b449bc7d45",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:565c6339-0f9a-48e9-a3d2-64a0be8ff0b5",
+            "statusCode": 200,
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad",
+            "totalAmountMinor": 80000,
+            "unitPriceMinor": 80000,
+            "validUntil": 1794971569
+          },
+          "rawText": "{\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:3b42ab17-1eab-49dd-9d76-07b449bc7d45\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:565c6339-0f9a-48e9-a3d2-64a0be8ff0b5\",\"statusCode\":200,\"taskId\":\"2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad\",\"totalAmountMinor\":80000,\"unitPriceMinor\":80000,\"validUntil\":1794971569}",
+          "isError": false,
+          "durationMs": 188
+        },
+        {
+          "step": 2,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 80000,
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1",
+            "idempotencyKey": "e1-rp-q800",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:565c6339-0f9a-48e9-a3d2-64a0be8ff0b5",
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad"
+          },
+          "output": {
+            "actionId": "urn:grad:action:4f82b390-cf3f-4bad-9016-abc05ebe1e75",
+            "actionStatus": "COMPLETED",
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:e6a49673-69e5-4019-9b81-c72a7b706fae",
+            "orderId": "urn:grad:order:4eab56ee-41d2-4471-8631-e91829325f8b",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:565c6339-0f9a-48e9-a3d2-64a0be8ff0b5",
+            "sendRevision": 1,
+            "statusCode": 200,
+            "totalAmountMinor": 80000
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:4f82b390-cf3f-4bad-9016-abc05ebe1e75\",\"actionStatus\":\"COMPLETED\",\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:e6a49673-69e5-4019-9b81-c72a7b706fae\",\"orderId\":\"urn:grad:order:4eab56ee-41d2-4471-8631-e91829325f8b\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:565c6339-0f9a-48e9-a3d2-64a0be8ff0b5\",\"sendRevision\":1,\"statusCode\":200,\"totalAmountMinor\":80000}",
+          "isError": false,
+          "durationMs": 214
+        }
+      ]
+    },
+    "Error": ""
+  },
+  {
+    "Case": "F06",
+    "Mode": "BUYER_MANDATE",
+    "Prompt": "You are B1. For all calls actor=B1, taskId=\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\", grantId=\"c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7\", authorizationMode=\"BUYER_MANDATE\", productId=\"urn:grad:product:P1\", quantity=1. Use the actual returned quoteId, never a placeholder. Call request_quote once with idempotencyKey=\"e1-bm-q800-quote\". Check the returned total is 80000 CNY minor units. Use that quote to call create_order once with amountMinor=80000 and idempotencyKey=\"e1-bm-q800\". End after the actual order result.",
+    "Started": "2026-11-18T03:07:53.331587Z",
+    "Finished": "2026-11-18T03:08:00.443882Z",
+    "Result": {
+      "provider": "openai",
+      "model": "deepseek-flash",
+      "finalText": "Done — the order completed on the first submission.\n\n**Summary**\n\n| Step | Result |\n|---|---|\n| Wallet inspection | B1 grant `c1ede2ed…1cdb7` valid: BUYER_MANDATE, CNY, ceiling 100,000 minor, actions `quote.read` + `order.create`, task-bound, remainingDepth 0 |\n| `request_quote` (`e1-bm-q800-quote`) | ALLOW — quoteId `urn:grad:quote:0297cd1d-8e6a-4190-8179-7f426903bc40`, unit 80,000, **total 80,000 CNY minor units** ✓ matches expected, valid until 1794971576 |\n| `create_order` (`e1-bm-q800`) | **COMPLETED** — orderId `urn:grad:order:d7297627-92ea-4869-abaa-2acb5c6a6dbc`, decision ALLOW, sendRevision 1, statusCode 200, total 80,000 CNY minor |\n\nThe quote total checked out at exactly 80,000 CNY minor units before ordering, so the order proceeded with `amountMinor=80000`. The returned order status is terminal (`COMPLETED`) with a resolved orderId — no `OUTCOME_UNKNOWN`, so no reconciliation was needed and no retries were issued.",
+      "llmLatencyMs": 6519,
+      "totalDurationMs": 7102,
+      "toolCallsCount": 3,
+      "steps": 4,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "inspect_wallet",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "BUYER_MANDATE",
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f"
+          },
+          "output": {
+            "actor": "B1",
+            "deploymentId": "10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b",
+            "did": "did:web:b.local:b1",
+            "domainId": "B",
+            "grants": [
+              {
+                "actions": [
+                  "order.create",
+                  "quote.read"
+                ],
+                "ancestorCount": 3,
+                "anchored": true,
+                "audience": "https://c.local",
+                "authorizationMode": "BUYER_MANDATE",
+                "currency": "CNY",
+                "exp": 1795057646,
+                "grantId": "c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7",
+                "granteeDid": "did:web:b.local:b1",
+                "issuerDid": "did:web:a.local:a1",
+                "maxAmountMinor": 100000,
+                "nbf": 1794971259,
+                "parentId": "e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9",
+                "principalDomain": "A",
+                "remainingDepth": 0,
+                "resources": [
+                  "urn:grad:resource:C:orders",
+                  "urn:grad:resource:C:quotes"
+                ],
+                "rootId": "b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b",
+                "suppliers": [
+                  "urn:grad:supplier:C"
+                ],
+                "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f",
+                "trustPathCount": 2
+              }
+            ],
+            "roles": [
+              "AGENT"
+            ]
+          },
+          "rawText": "{\"actor\":\"B1\",\"deploymentId\":\"10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b\",\"did\":\"did:web:b.local:b1\",\"domainId\":\"B\",\"grants\":[{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":3,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"BUYER_MANDATE\",\"currency\":\"CNY\",\"exp\":1795057646,\"grantId\":\"c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7\",\"granteeDid\":\"did:web:b.local:b1\",\"issuerDid\":\"did:web:a.local:a1\",\"maxAmountMinor\":100000,\"nbf\":1794971259,\"parentId\":\"e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9\",\"principalDomain\":\"A\",\"remainingDepth\":0,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\",\"trustPathCount\":2}],\"roles\":[\"AGENT\"]}",
+          "isError": false,
+          "durationMs": 3
+        },
+        {
+          "step": 2,
+          "toolName": "request_quote",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7",
+            "idempotencyKey": "e1-bm-q800-quote",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f"
+          },
+          "output": {
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:e3f4a580-2189-4068-9196-7ab2b76c05f4",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:0297cd1d-8e6a-4190-8179-7f426903bc40",
+            "statusCode": 200,
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f",
+            "totalAmountMinor": 80000,
+            "unitPriceMinor": 80000,
+            "validUntil": 1794971576
+          },
+          "rawText": "{\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:e3f4a580-2189-4068-9196-7ab2b76c05f4\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:0297cd1d-8e6a-4190-8179-7f426903bc40\",\"statusCode\":200,\"taskId\":\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\",\"totalAmountMinor\":80000,\"unitPriceMinor\":80000,\"validUntil\":1794971576}",
+          "isError": false,
+          "durationMs": 275
+        },
+        {
+          "step": 3,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 80000,
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7",
+            "idempotencyKey": "e1-bm-q800",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:0297cd1d-8e6a-4190-8179-7f426903bc40",
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f"
+          },
+          "output": {
+            "actionId": "urn:grad:action:1d4d230a-582a-46df-b695-b2c0644aae54",
+            "actionStatus": "COMPLETED",
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:9f5d934d-8c52-40cc-bbe1-c180fa76f587",
+            "orderId": "urn:grad:order:d7297627-92ea-4869-abaa-2acb5c6a6dbc",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:0297cd1d-8e6a-4190-8179-7f426903bc40",
+            "sendRevision": 1,
+            "statusCode": 200,
+            "totalAmountMinor": 80000
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:1d4d230a-582a-46df-b695-b2c0644aae54\",\"actionStatus\":\"COMPLETED\",\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:9f5d934d-8c52-40cc-bbe1-c180fa76f587\",\"orderId\":\"urn:grad:order:d7297627-92ea-4869-abaa-2acb5c6a6dbc\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:0297cd1d-8e6a-4190-8179-7f426903bc40\",\"sendRevision\":1,\"statusCode\":200,\"totalAmountMinor\":80000}",
+          "isError": false,
+          "durationMs": 302
+        }
+      ]
+    },
+    "Error": ""
+  },
+  {
+    "Case": "F07",
+    "Mode": "RESOURCE_PREAUTHORIZED",
+    "Prompt": "You are B1. For all calls actor=B1, taskId=\"2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad\", grantId=\"0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1\", authorizationMode=\"RESOURCE_PREAUTHORIZED\", productId=\"urn:grad:product:P1\", quantity=1. Use the actual returned quoteId, never a placeholder. Call request_quote with idempotencyKey=\"e1-rp-q1200-quote\". The expected total is 120000 CNY minor units. Using its real quoteId, send two required, separate negative controls to the isolated gateway. First call create_order with amountMinor=80000 and idempotencyKey=\"e1-rp-q1200-mismatch\" to test quote mismatch. Then call create_order with the true amountMinor=120000 and idempotencyKey=\"e1-rp-q1200-over\" to test grant ceiling. Both must be sent to the gateway even if you already expect rejection. Finish only after both tool results.",
+    "Started": "2026-11-18T03:08:00.452767Z",
+    "Finished": "2026-11-18T03:08:09.807424Z",
+    "Result": {
+      "provider": "openai",
+      "model": "deepseek-flash",
+      "finalText": "Both negative controls have been submitted to the isolated gateway and denied for real. Summary:\n\n**Quote (allowed)**\n- quoteId: `urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077`\n- productId `urn:grad:product:P1`, quantity 1, unitPrice 120000, totalAmountMinor **120000 CNY**\n- Decision ALLOW, decisionId `urn:grad:decision:56749cb3-a211-411b-bc6a-2350a4ef924c`\n\n**Negative control 1 — quote mismatch (`e1-rp-q1200-mismatch`)**\n- Submitted amountMinor=80000 against the 120000 quote\n- Real result: **DENY**, statusCode 409, errorCode `AMOUNT_MISMATCH`\n- Message: request amountMinor 80000 != quote totalAmountMinor 120000\n- actionId `urn:grad:action:e4859542-fe3f-49c2-8da0-8ef1309bbf53` (actionStatus FAILED, sendRevision 1)\n\n**Negative control 2 — grant ceiling (`e1-rp-q1200-over`)**\n- Submitted the true amountMinor=120000 (matching the quote)\n- Real result: **DENY**, statusCode 403, errorCode `AMOUNT_LIMIT_EXCEEDED`\n- Message: order amountMinor 120000 exceeds grant path maxAmountMinor 100000\n- actionId `urn:grad:action:cb4fcdc9-dece-4a9c-a3c1-ee64b6235d83` (actionStatus FAILED, sendRevision 1)\n\nNotes for you: the grant `0b4a6adf…` carries a 100000 minor-unit ceiling on its path, so even a fully price-correct 120000 order is not affordable under this grant — a widened/narrowed delegation or a cheaper quantity would be required to actually procure P1. Both failures returned explicit FAILED statuses with no ambiguity, so no reconciliation case appears necessary; no purchase was completed and no external action was taken.",
+      "llmLatencyMs": 8582,
+      "totalDurationMs": 9344,
+      "toolCallsCount": 3,
+      "steps": 4,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "request_quote",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1",
+            "idempotencyKey": "e1-rp-q1200-quote",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad"
+          },
+          "output": {
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:56749cb3-a211-411b-bc6a-2350a4ef924c",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077",
+            "statusCode": 200,
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad",
+            "totalAmountMinor": 120000,
+            "unitPriceMinor": 120000,
+            "validUntil": 1794971582
+          },
+          "rawText": "{\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:56749cb3-a211-411b-bc6a-2350a4ef924c\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077\",\"statusCode\":200,\"taskId\":\"2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad\",\"totalAmountMinor\":120000,\"unitPriceMinor\":120000,\"validUntil\":1794971582}",
+          "isError": false,
+          "durationMs": 297
+        },
+        {
+          "step": 2,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 80000,
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1",
+            "idempotencyKey": "e1-rp-q1200-mismatch",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077",
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad"
+          },
+          "output": {
+            "actionId": "urn:grad:action:e4859542-fe3f-49c2-8da0-8ef1309bbf53",
+            "actionStatus": "FAILED",
+            "currency": "CNY",
+            "decision": "DENY",
+            "decisionId": "urn:grad:decision:878c9686-a835-4e6f-a76f-2e94128a227a",
+            "errorCode": "AMOUNT_MISMATCH",
+            "errorMessage": "AMOUNT_MISMATCH: request amountMinor 80000 != quote \"urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077\" totalAmountMinor 120000",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077",
+            "sendRevision": 1,
+            "statusCode": 409
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:e4859542-fe3f-49c2-8da0-8ef1309bbf53\",\"actionStatus\":\"FAILED\",\"currency\":\"CNY\",\"decision\":\"DENY\",\"decisionId\":\"urn:grad:decision:878c9686-a835-4e6f-a76f-2e94128a227a\",\"errorCode\":\"AMOUNT_MISMATCH\",\"errorMessage\":\"AMOUNT_MISMATCH: request amountMinor 80000 != quote \\\"urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077\\\" totalAmountMinor 120000\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077\",\"sendRevision\":1,\"statusCode\":409}",
+          "isError": false,
+          "durationMs": 179
+        },
+        {
+          "step": 3,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 120000,
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "0b4a6adfe2fdabb3c255ba5a4ae73643ce26aefb7ae09d66d2e2acfc145cb7e1",
+            "idempotencyKey": "e1-rp-q1200-over",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077",
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad"
+          },
+          "output": {
+            "actionId": "urn:grad:action:cb4fcdc9-dece-4a9c-a3c1-ee64b6235d83",
+            "actionStatus": "FAILED",
+            "currency": "CNY",
+            "decision": "DENY",
+            "decisionId": "urn:grad:decision:7016b5d3-ca3b-4daf-8121-b55c6450c144",
+            "errorCode": "AMOUNT_LIMIT_EXCEEDED",
+            "errorMessage": "AMOUNT_LIMIT_EXCEEDED: order amountMinor 120000 exceeds grant path maxAmountMinor 100000",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077",
+            "sendRevision": 1,
+            "statusCode": 403
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:cb4fcdc9-dece-4a9c-a3c1-ee64b6235d83\",\"actionStatus\":\"FAILED\",\"currency\":\"CNY\",\"decision\":\"DENY\",\"decisionId\":\"urn:grad:decision:7016b5d3-ca3b-4daf-8121-b55c6450c144\",\"errorCode\":\"AMOUNT_LIMIT_EXCEEDED\",\"errorMessage\":\"AMOUNT_LIMIT_EXCEEDED: order amountMinor 120000 exceeds grant path maxAmountMinor 100000\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:05f7451d-5d81-497c-9da2-b358b330a077\",\"sendRevision\":1,\"statusCode\":403}",
+          "isError": false,
+          "durationMs": 283
+        }
+      ]
+    },
+    "Error": ""
+  },
+  {
+    "Case": "F07",
+    "Mode": "BUYER_MANDATE",
+    "Prompt": "You are B1. For all calls actor=B1, taskId=\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\", grantId=\"c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7\", authorizationMode=\"BUYER_MANDATE\", productId=\"urn:grad:product:P1\", quantity=1. Use the actual returned quoteId, never a placeholder. Call request_quote with idempotencyKey=\"e1-bm-q1200-quote\". The expected total is 120000 CNY minor units. Using its real quoteId, send two required, separate negative controls to the isolated gateway. First call create_order with amountMinor=80000 and idempotencyKey=\"e1-bm-q1200-mismatch\" to test quote mismatch. Then call create_order with the true amountMinor=120000 and idempotencyKey=\"e1-bm-q1200-over\" to test grant ceiling. Both must be sent to the gateway even if you already expect rejection. Finish only after both tool results.",
+    "Started": "2026-11-18T03:08:09.817096Z",
+    "Finished": "2026-11-18T03:08:19.045506Z",
+    "Result": {
+      "provider": "openai",
+      "model": "deepseek-flash",
+      "finalText": "Both required negative controls have been submitted to the isolated gateway and returned real denials. Summary:\n\n**Quote (binding)**\n- quoteId: `urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886`\n- Product: `urn:grad:product:P1`, quantity 1, total: **120000 CNY minor** (unit 120000)\n- Decision: ALLOW (decisionId `urn:grad:decision:3a51eb6a-7598-4f05-a8ba-b007cb49d7a2`)\n\n**Negative control 1 — quote mismatch** (`e1-bm-q1200-mismatch`, amountMinor=80000)\n- Result: **DENY**, statusCode 409, `AMOUNT_MISMATCH`\n- Detail: requested 80000 ≠ quote total 120000\n- actionId `urn:grad:action:dceeffdb-641e-443c-a8c7-31ee1c9363e5`, decisionId `urn:grad:decision:7b0bb996-b135-4688-ac4f-43ff6cb4e169`, sendRevision 1\n\n**Negative control 2 — grant ceiling** (`e1-bm-q1200-over`, amountMinor=120000)\n- Result: **DENY**, statusCode 403, `AMOUNT_LIMIT_EXCEEDED`\n- Detail: order 120000 exceeds grant path maxAmountMinor **100000**\n- actionId `urn:grad:action:847d4ad5-ea2b-45be-8896-2291fa7910fa`, decisionId `urn:grad:decision:d45fc906-acb5-4073-a47f-0fd089ffa9c8`, sendRevision 1\n\n**Observation:** Grant `c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7` carries a ceiling of 100000 minor, which is below this quote's 120000 total — so even a correctly-matched order at the true amount would be rejected on limit. No order was created and nothing external was purchased. If a legitimate purchase at 120000 is intended, a re-issued/narrowed grant with a ceiling ≥ 120000 (e.g., via delegation/replacement from A1) would be needed before any real order.",
+      "llmLatencyMs": 8553,
+      "totalDurationMs": 9219,
+      "toolCallsCount": 3,
+      "steps": 4,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "request_quote",
+          "arguments": {
+            "actor": "B1",
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7",
+            "idempotencyKey": "e1-bm-q1200-quote",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f"
+          },
+          "output": {
+            "currency": "CNY",
+            "decision": "ALLOW",
+            "decisionId": "urn:grad:decision:3a51eb6a-7598-4f05-a8ba-b007cb49d7a2",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886",
+            "statusCode": 200,
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f",
+            "totalAmountMinor": 120000,
+            "unitPriceMinor": 120000,
+            "validUntil": 1794971591
+          },
+          "rawText": "{\"currency\":\"CNY\",\"decision\":\"ALLOW\",\"decisionId\":\"urn:grad:decision:3a51eb6a-7598-4f05-a8ba-b007cb49d7a2\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886\",\"statusCode\":200,\"taskId\":\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\",\"totalAmountMinor\":120000,\"unitPriceMinor\":120000,\"validUntil\":1794971591}",
+          "isError": false,
+          "durationMs": 176
+        },
+        {
+          "step": 2,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 80000,
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7",
+            "idempotencyKey": "e1-bm-q1200-mismatch",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886",
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f"
+          },
+          "output": {
+            "actionId": "urn:grad:action:dceeffdb-641e-443c-a8c7-31ee1c9363e5",
+            "actionStatus": "FAILED",
+            "currency": "CNY",
+            "decision": "DENY",
+            "decisionId": "urn:grad:decision:7b0bb996-b135-4688-ac4f-43ff6cb4e169",
+            "errorCode": "AMOUNT_MISMATCH",
+            "errorMessage": "AMOUNT_MISMATCH: request amountMinor 80000 != quote \"urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886\" totalAmountMinor 120000",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886",
+            "sendRevision": 1,
+            "statusCode": 409
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:dceeffdb-641e-443c-a8c7-31ee1c9363e5\",\"actionStatus\":\"FAILED\",\"currency\":\"CNY\",\"decision\":\"DENY\",\"decisionId\":\"urn:grad:decision:7b0bb996-b135-4688-ac4f-43ff6cb4e169\",\"errorCode\":\"AMOUNT_MISMATCH\",\"errorMessage\":\"AMOUNT_MISMATCH: request amountMinor 80000 != quote \\\"urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886\\\" totalAmountMinor 120000\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886\",\"sendRevision\":1,\"statusCode\":409}",
+          "isError": false,
+          "durationMs": 189
+        },
+        {
+          "step": 3,
+          "toolName": "create_order",
+          "arguments": {
+            "actor": "B1",
+            "amountMinor": 120000,
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "c1ede2eda620865f699bf16905f1f129b641bbd6b938973e6d4d4c069481cdb7",
+            "idempotencyKey": "e1-bm-q1200-over",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886",
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f"
+          },
+          "output": {
+            "actionId": "urn:grad:action:847d4ad5-ea2b-45be-8896-2291fa7910fa",
+            "actionStatus": "FAILED",
+            "currency": "CNY",
+            "decision": "DENY",
+            "decisionId": "urn:grad:decision:d45fc906-acb5-4073-a47f-0fd089ffa9c8",
+            "errorCode": "AMOUNT_LIMIT_EXCEEDED",
+            "errorMessage": "AMOUNT_LIMIT_EXCEEDED: order amountMinor 120000 exceeds grant path maxAmountMinor 100000",
+            "productId": "urn:grad:product:P1",
+            "quantity": 1,
+            "quoteId": "urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886",
+            "sendRevision": 1,
+            "statusCode": 403
+          },
+          "rawText": "{\"actionId\":\"urn:grad:action:847d4ad5-ea2b-45be-8896-2291fa7910fa\",\"actionStatus\":\"FAILED\",\"currency\":\"CNY\",\"decision\":\"DENY\",\"decisionId\":\"urn:grad:decision:d45fc906-acb5-4073-a47f-0fd089ffa9c8\",\"errorCode\":\"AMOUNT_LIMIT_EXCEEDED\",\"errorMessage\":\"AMOUNT_LIMIT_EXCEEDED: order amountMinor 120000 exceeds grant path maxAmountMinor 100000\",\"productId\":\"urn:grad:product:P1\",\"quantity\":1,\"quoteId\":\"urn:grad:quote:e797c032-4c1f-4ebc-adc9-e17f6b5b7886\",\"sendRevision\":1,\"statusCode\":403}",
+          "isError": false,
+          "durationMs": 298
+        }
+      ]
+    },
+    "Error": ""
+  },
+  {
+    "Case": "F15",
+    "Mode": "RESOURCE_PREAUTHORIZED",
+    "Prompt": "You are A1. Inspect your wallet for taskId=\"2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad\" authorizationMode=\"RESOURCE_PREAUTHORIZED\". Parent G1 is \"654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f\". Task budget for B1 is 1000 CNY (100000 minor units), and B1 must not delegate further. Decide the appropriate narrowed ceiling and remaining depth, then call delegate_grant once with issuerActor=A1, subjectActor=B1, parentGrantId as above, grantId=\"f47e490a5f1c4281af4bf15ebd55bec9021490bc83f60a263eb548f0887485cf\" and the exact task and mode. Conclude after the anchored tool result.",
+    "Started": "2026-11-18T03:08:42.559656Z",
+    "Finished": "2026-11-18T03:08:48.455259Z",
+    "Result": {
+      "provider": "openai",
+      "model": "deepseek-flash",
+      "finalText": "Delegation complete and anchored.\n\n**Wallet inspection (A1):** Parent G1 (`654b2be4…283f`) held for task `2efe4602…82ad` in RESOURCE_PREAUTHORIZED mode — delegate `did:web:a.local:a1`, max 500000 minor CNY, remainingDepth 1, actions `order.create`/`quote.read`, suppliers `urn:grad:supplier:C`, exp 1795057646.\n\n**Narrowing decisions:**\n- **Ceiling:** 100000 minor units (1000 CNY) — exactly the B1 task budget, strictly below the parent's 500000 ceiling. No slack above the task budget was granted.\n- **Remaining depth:** 0 — must be strictly less than the parent's 1, and 0 enforces \"B1 must not delegate further.\"\n- Mode inherited as RESOURCE_PREAUTHORIZED; resources, suppliers, and taskId carry over from the parent.\n\n**Result:** Child grant `f47e490a…485cf` issued to `did:web:b.local:b1`, signed and anchored onto the Fabric registry (anchored: true, ancestorCount 3, trustPathCount 3). No further actions taken — no quotes or orders were requested, and no external purchases were made.",
+      "llmLatencyMs": 5057,
+      "totalDurationMs": 5887,
+      "toolCallsCount": 2,
+      "steps": 3,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "inspect_wallet",
+          "arguments": {
+            "actor": "A1",
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad"
+          },
+          "output": {
+            "actor": "A1",
+            "deploymentId": "10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b",
+            "did": "did:web:a.local:a1",
+            "domainId": "A",
+            "grants": [
+              {
+                "actions": [
+                  "order.create",
+                  "quote.read"
+                ],
+                "ancestorCount": 2,
+                "anchored": true,
+                "audience": "https://c.local",
+                "authorizationMode": "RESOURCE_PREAUTHORIZED",
+                "currency": "CNY",
+                "exp": 1795057646,
+                "grantId": "654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f",
+                "granteeDid": "did:web:a.local:a1",
+                "issuerDid": "did:web:a.local:u",
+                "maxAmountMinor": 500000,
+                "nbf": 1794967646,
+                "parentId": "71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991",
+                "principalDomain": "A",
+                "remainingDepth": 1,
+                "resources": [
+                  "urn:grad:resource:C:orders",
+                  "urn:grad:resource:C:quotes"
+                ],
+                "rootId": "71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991",
+                "suppliers": [
+                  "urn:grad:supplier:C"
+                ],
+                "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad",
+                "trustPathCount": 3
+              }
+            ],
+            "roles": [
+              "AGENT"
+            ]
+          },
+          "rawText": "{\"actor\":\"A1\",\"deploymentId\":\"10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b\",\"did\":\"did:web:a.local:a1\",\"domainId\":\"A\",\"grants\":[{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":2,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"RESOURCE_PREAUTHORIZED\",\"currency\":\"CNY\",\"exp\":1795057646,\"grantId\":\"654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f\",\"granteeDid\":\"did:web:a.local:a1\",\"issuerDid\":\"did:web:a.local:u\",\"maxAmountMinor\":500000,\"nbf\":1794967646,\"parentId\":\"71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991\",\"principalDomain\":\"A\",\"remainingDepth\":1,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad\",\"trustPathCount\":3}],\"roles\":[\"AGENT\"]}",
+          "isError": false,
+          "durationMs": 4
+        },
+        {
+          "step": 2,
+          "toolName": "delegate_grant",
+          "arguments": {
+            "authorizationMode": "RESOURCE_PREAUTHORIZED",
+            "grantId": "f47e490a5f1c4281af4bf15ebd55bec9021490bc83f60a263eb548f0887485cf",
+            "issuerActor": "A1",
+            "maxAmountMinor": 100000,
+            "parentGrantId": "654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f",
+            "remainingDepth": 0,
+            "subjectActor": "B1",
+            "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad"
+          },
+          "output": {
+            "anchored": true,
+            "grant": {
+              "actions": [
+                "order.create",
+                "quote.read"
+              ],
+              "ancestorCount": 3,
+              "anchored": true,
+              "audience": "https://c.local",
+              "authorizationMode": "RESOURCE_PREAUTHORIZED",
+              "currency": "CNY",
+              "exp": 1795057646,
+              "grantId": "f47e490a5f1c4281af4bf15ebd55bec9021490bc83f60a263eb548f0887485cf",
+              "granteeDid": "did:web:b.local:b1",
+              "issuerDid": "did:web:a.local:a1",
+              "maxAmountMinor": 100000,
+              "nbf": 1794971320,
+              "parentId": "654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f",
+              "principalDomain": "A",
+              "remainingDepth": 0,
+              "resources": [
+                "urn:grad:resource:C:orders",
+                "urn:grad:resource:C:quotes"
+              ],
+              "rootId": "71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991",
+              "suppliers": [
+                "urn:grad:supplier:C"
+              ],
+              "taskId": "2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad",
+              "trustPathCount": 3
+            },
+            "note": "signed and anchored onto Fabric registry"
+          },
+          "rawText": "{\"anchored\":true,\"grant\":{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":3,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"RESOURCE_PREAUTHORIZED\",\"currency\":\"CNY\",\"exp\":1795057646,\"grantId\":\"f47e490a5f1c4281af4bf15ebd55bec9021490bc83f60a263eb548f0887485cf\",\"granteeDid\":\"did:web:b.local:b1\",\"issuerDid\":\"did:web:a.local:a1\",\"maxAmountMinor\":100000,\"nbf\":1794971320,\"parentId\":\"654b2be417a28afe6a7f393b4f2ca1e39b20f338b3a02495cae8396d172b283f\",\"principalDomain\":\"A\",\"remainingDepth\":0,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"71ac4dd5cc471fcd32db1c1a0b7736dad17a3318cd4eb42c86bfdf5083557991\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"2efe4602f1aa28b24a1aa3d85d0edeee67ab1038624b454ca6429e5aa1ea82ad\",\"trustPathCount\":3},\"note\":\"signed and anchored onto Fabric registry\"}",
+          "isError": false,
+          "durationMs": 825
+        }
+      ]
+    },
+    "Error": ""
+  },
+  {
+    "Case": "F15",
+    "Mode": "BUYER_MANDATE",
+    "Prompt": "You are A1. Inspect your wallet for taskId=\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\" authorizationMode=\"BUYER_MANDATE\". Parent G1 is \"e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9\". Task budget for B1 is 1000 CNY (100000 minor units), and B1 must not delegate further. Decide the appropriate narrowed ceiling and remaining depth, then call delegate_grant once with issuerActor=A1, subjectActor=B1, parentGrantId as above, grantId=\"a1078993c82f36ab36a8a56495980daccf91e0964d90954fe58ccb0c8614cb98\" and the exact task and mode. Conclude after the anchored tool result.",
+    "Started": "2026-11-18T03:08:48.651355Z",
+    "Finished": "2026-11-18T03:08:55.288377Z",
+    "Result": {
+      "provider": "openai",
+      "model": "deepseek-flash",
+      "finalText": "Delegation complete and anchored.\n\n**Narrowing decision**\n- `maxAmountMinor`: **100000** (B1's 1000 CNY task budget) — narrowed from parent's 500000.\n- `remainingDepth`: **0** — strictly less than parent G1's depth of 1, so B1 has no further delegation capability.\n\n**Anchored result (grant `a1078993…614cb98`)**\n| Field | Value |\n|---|---|\n| Issuer → Grantee | `did:web:a.local:a1` → `did:web:b.local:b1` |\n| Parent | `e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9` |\n| Task | `e4eadcb0…8a198b5f` (bound) |\n| Mode / Currency | BUYER_MANDATE / CNY |\n| Actions | order.create, quote.read |\n| Resource / Supplier | urn:grad:resource:C:orders, urn:grad:resource:C:quotes / urn:grad:supplier:C |\n| Ceiling | 100000 minor |\n| remainingDepth | 0 |\n| Anchored | true (Fabric registry), audience `https://c.local`, exp 1795057646 (clamped to parent) |\n\nB1 now holds a task-bound, 1000 CNY-capped mandate with no sub-delegation rights.",
+      "llmLatencyMs": 5825,
+      "totalDurationMs": 6632,
+      "toolCallsCount": 2,
+      "steps": 3,
+      "toolTraces": [
+        {
+          "step": 1,
+          "toolName": "inspect_wallet",
+          "arguments": {
+            "actor": "A1",
+            "authorizationMode": "BUYER_MANDATE",
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f"
+          },
+          "output": {
+            "actor": "A1",
+            "deploymentId": "10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b",
+            "did": "did:web:a.local:a1",
+            "domainId": "A",
+            "grants": [
+              {
+                "actions": [
+                  "order.create",
+                  "quote.read"
+                ],
+                "ancestorCount": 2,
+                "anchored": true,
+                "audience": "https://c.local",
+                "authorizationMode": "BUYER_MANDATE",
+                "currency": "CNY",
+                "exp": 1795057646,
+                "grantId": "e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9",
+                "granteeDid": "did:web:a.local:a1",
+                "issuerDid": "did:web:a.local:u",
+                "maxAmountMinor": 500000,
+                "nbf": 1794967646,
+                "parentId": "b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b",
+                "principalDomain": "A",
+                "remainingDepth": 1,
+                "resources": [
+                  "urn:grad:resource:C:orders",
+                  "urn:grad:resource:C:quotes"
+                ],
+                "rootId": "b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b",
+                "suppliers": [
+                  "urn:grad:supplier:C"
+                ],
+                "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f",
+                "trustPathCount": 2
+              }
+            ],
+            "roles": [
+              "AGENT"
+            ]
+          },
+          "rawText": "{\"actor\":\"A1\",\"deploymentId\":\"10c83b8feb00d2007dc3d7499ba9e53648737141eff9045989daf798d01b551b\",\"did\":\"did:web:a.local:a1\",\"domainId\":\"A\",\"grants\":[{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":2,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"BUYER_MANDATE\",\"currency\":\"CNY\",\"exp\":1795057646,\"grantId\":\"e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9\",\"granteeDid\":\"did:web:a.local:a1\",\"issuerDid\":\"did:web:a.local:u\",\"maxAmountMinor\":500000,\"nbf\":1794967646,\"parentId\":\"b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b\",\"principalDomain\":\"A\",\"remainingDepth\":1,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\",\"trustPathCount\":2}],\"roles\":[\"AGENT\"]}",
+          "isError": false,
+          "durationMs": 2
+        },
+        {
+          "step": 2,
+          "toolName": "delegate_grant",
+          "arguments": {
+            "authorizationMode": "BUYER_MANDATE",
+            "grantId": "a1078993c82f36ab36a8a56495980daccf91e0964d90954fe58ccb0c8614cb98",
+            "issuerActor": "A1",
+            "maxAmountMinor": 100000,
+            "parentGrantId": "e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9",
+            "remainingDepth": 0,
+            "subjectActor": "B1",
+            "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f"
+          },
+          "output": {
+            "anchored": true,
+            "grant": {
+              "actions": [
+                "order.create",
+                "quote.read"
+              ],
+              "ancestorCount": 3,
+              "anchored": true,
+              "audience": "https://c.local",
+              "authorizationMode": "BUYER_MANDATE",
+              "currency": "CNY",
+              "exp": 1795057646,
+              "grantId": "a1078993c82f36ab36a8a56495980daccf91e0964d90954fe58ccb0c8614cb98",
+              "granteeDid": "did:web:b.local:b1",
+              "issuerDid": "did:web:a.local:a1",
+              "maxAmountMinor": 100000,
+              "nbf": 1794971327,
+              "parentId": "e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9",
+              "principalDomain": "A",
+              "remainingDepth": 0,
+              "resources": [
+                "urn:grad:resource:C:orders",
+                "urn:grad:resource:C:quotes"
+              ],
+              "rootId": "b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b",
+              "suppliers": [
+                "urn:grad:supplier:C"
+              ],
+              "taskId": "e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f",
+              "trustPathCount": 2
+            },
+            "note": "signed and anchored onto Fabric registry"
+          },
+          "rawText": "{\"anchored\":true,\"grant\":{\"actions\":[\"order.create\",\"quote.read\"],\"ancestorCount\":3,\"anchored\":true,\"audience\":\"https://c.local\",\"authorizationMode\":\"BUYER_MANDATE\",\"currency\":\"CNY\",\"exp\":1795057646,\"grantId\":\"a1078993c82f36ab36a8a56495980daccf91e0964d90954fe58ccb0c8614cb98\",\"granteeDid\":\"did:web:b.local:b1\",\"issuerDid\":\"did:web:a.local:a1\",\"maxAmountMinor\":100000,\"nbf\":1794971327,\"parentId\":\"e7d458274c1c1f3a95d28c5f91ec07421f86774f0ac56535b0724252b660acb9\",\"principalDomain\":\"A\",\"remainingDepth\":0,\"resources\":[\"urn:grad:resource:C:orders\",\"urn:grad:resource:C:quotes\"],\"rootId\":\"b9ceee2a97e6cfda2eaea85ea99455f2198ac7b53d67490770dab93fc1683a4b\",\"suppliers\":[\"urn:grad:supplier:C\"],\"taskId\":\"e4eadcb0119c9ea75869514e26eb2f03ce43bb2d88aa2316045269808a198b5f\",\"trustPathCount\":2},\"note\":\"signed and anchored onto Fabric registry\"}",
+          "isError": false,
+          "durationMs": 803
+        }
+      ]
+    },
+    "Error": ""
+  }
+]

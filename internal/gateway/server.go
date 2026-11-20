@@ -99,6 +99,33 @@ type Config struct {
 	// BeforeLockHead is an optional deterministic test hook invoked inside the execute transaction
 	// right after locking business rows and before acquiring the state source checkpoint lock.
 	BeforeLockHead func(attempt int)
+	// OnDecisionCommitted is an optional callback invoked immediately after a decision transaction commits.
+	OnDecisionCommitted func(DecisionTiming)
+	// BeforeWriteResponse is an optional test hook invoked after transaction commit and before writing the HTTP response.
+	BeforeWriteResponse func(decisionID string)
+}
+
+// DecisionTiming captures sub-second post-lock decision and business commit timestamps linked by decisionId.
+type DecisionTiming struct {
+	DecisionID          string    `json:"decisionId"`
+	RequestID           string    `json:"requestId"`
+	ChallengeID         string    `json:"challengeId"`
+	Action              string    `json:"action"`
+	Outcome             string    `json:"outcome"`
+	Code                string    `json:"code"`
+	StateSource         string    `json:"stateSource"`
+	BlockNumber         int64     `json:"blockNumber"`
+	BlockHash           string    `json:"blockHash"`
+	ProbeTxID           string    `json:"probeTxId"`
+	ProbeBlock          int64     `json:"probeBlock"`
+	ProbeSentAt         time.Time `json:"probeSentAt"`
+	ProbeDeadline       time.Time `json:"probeDeadline"`
+	ProbeSentMonoNs     int64     `json:"probeSentMonoNs"`
+	ProbeDeadlineMonoNs int64     `json:"probeDeadlineMonoNs"`
+	ProbeCheckedMonoNs  int64     `json:"probeCheckedMonoNs"`
+	DecisionAtSec       int64     `json:"decisionAtSec"`
+	DecisionAt          time.Time `json:"decisionAt"`
+	CommittedAt         time.Time `json:"committedAt"`
 }
 
 // Server serves REST endpoints for C's resource access gateway.
@@ -177,10 +204,13 @@ type DecisionRecord struct {
 	ProbeBlock            int64      `json:"probeBlock"`
 	ProbeSentAt           int64      `json:"probeSentAt"`
 	ProbeDeadline         int64      `json:"probeDeadline"`
+	ProbeSentAtNs         *int64     `json:"probeSentAtNs,omitempty"`
+	ProbeDeadlineNs       *int64     `json:"probeDeadlineNs,omitempty"`
 	ProbeSentMonoNs       int64      `json:"probeSentMonoNs"`
 	ProbeDeadlineMonoNs   int64      `json:"probeDeadlineMonoNs"`
 	ProbeCheckedMonoNs    *int64     `json:"probeCheckedMonoNs"`
 	DecisionAt            int64      `json:"decisionAt"`
+	DecisionAtNs          *int64     `json:"decisionAtNs,omitempty"`
 	RootDID               string     `json:"rootDid"`
 	RootKeyVersion        int64      `json:"rootKeyVersion"`
 	DomainID              string     `json:"domainId,omitempty"`
@@ -212,7 +242,7 @@ func (d DecisionRecord) MarshalJSON() ([]byte, error) {
 	if err = json.Unmarshal(raw, &fields); err != nil {
 		return nil, err
 	}
-	for _, key := range []string{"blockNumber", "blockHash", "revocationEpoch", "probeTxId", "probeBlock", "probeSentAt", "probeDeadline", "probeSentMonoNs", "probeDeadlineMonoNs"} {
+	for _, key := range []string{"blockNumber", "blockHash", "revocationEpoch", "probeTxId", "probeBlock", "probeSentAt", "probeDeadline", "probeSentAtNs", "probeDeadlineNs", "probeSentMonoNs", "probeDeadlineMonoNs"} {
 		fields[key] = json.RawMessage("null")
 	}
 	return json.Marshal(fields)
@@ -764,7 +794,8 @@ func (s *Server) handleGetDecision(w http.ResponseWriter, r *http.Request) {
 		COALESCE(probe_tx_id,''), COALESCE(probe_block,0), COALESCE(probe_sent_at,0), COALESCE(probe_deadline,0), COALESCE(probe_sent_mono_ns,0), COALESCE(probe_deadline_mono_ns,0), decision_at,
 		root_did, root_key_version, domain_id, certification_id, certification_digest, domain_revision,
 		identity_issuer, policy_digest, context_version, context_risk_level, context_observed_at,
-		context_access_deadline, effective_deadline, grant_path, failed_object_id, state_source, revision, state_read_at, state_rechecks, probe_checked_mono_ns
+		context_access_deadline, effective_deadline, grant_path, failed_object_id, state_source, revision, state_read_at, state_rechecks, probe_checked_mono_ns,
+		decision_at_ns, probe_sent_at_ns, probe_deadline_ns
 		FROM decisions WHERE deployment_id=$1 AND decision_id=$2`,
 		s.cfg.DeploymentID, decID,
 	).Scan(
@@ -774,6 +805,7 @@ func (s *Server) handleGetDecision(w http.ResponseWriter, r *http.Request) {
 		&rec.RootDID, &rec.RootKeyVersion, &domID, &certID, &certDigest, &rec.DomainRevision,
 		&idIssuer, &rec.PolicyDigest, &rec.ContextVersion, &rec.ContextRiskLevel, &rec.ContextObservedAt,
 		&rec.ContextAccessDeadline, &rec.EffectiveDeadline, &rec.GrantPath, &failedObj, &rec.StateSource, &rec.Revision, &rec.StateReadAt, &rec.StateRechecks, &rec.ProbeCheckedMonoNs,
+		&rec.DecisionAtNs, &rec.ProbeSentAtNs, &rec.ProbeDeadlineNs,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeErrorResponse(w, r, http.StatusNotFound, protocol.ErrCodeInvalidSchema, nil, "decision not found")

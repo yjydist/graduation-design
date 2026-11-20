@@ -80,6 +80,9 @@ func (s *Server) handleExecute(w http.ResponseWriter, r *http.Request) {
 		if retry {
 			continue
 		}
+		if s.cfg.BeforeWriteResponse != nil && outcome != nil && outcome.decisionID != "" {
+			s.cfg.BeforeWriteResponse(outcome.decisionID)
+		}
 		if err != nil {
 			var decPtr *string
 			if outcome != nil && outcome.decisionID != "" {
@@ -488,10 +491,13 @@ func (s *Server) executeInTx(
 	if err := tx.QueryRow(ctx, `SELECT EXTRACT(EPOCH FROM clock_timestamp())::bigint`).Scan(&dbClockSec); err != nil {
 		return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "query clock_timestamp()", err)
 	}
+	decisionTime := time.Now().UTC()
 	decisionSec := dbClockSec
 	if s.cfg.NowFn != nil {
-		decisionSec = s.cfg.NowFn().Unix()
+		decisionTime = s.cfg.NowFn().UTC()
+		decisionSec = decisionTime.Unix()
 	}
+	decisionAtNs := decisionTime.UnixNano()
 
 	probe, err := s.cfg.State.CheckFresh(ctx, pre.view)
 	if err != nil {
@@ -551,10 +557,13 @@ func (s *Server) executeInTx(
 			ProbeBlock:            int64(probe.ProbeBlock),
 			ProbeSentAt:           probe.SentAt.Unix(),
 			ProbeDeadline:         probe.Deadline.Unix(),
+			ProbeSentAtNs:         probeTimeNs(pre.view, probe.SentAt),
+			ProbeDeadlineNs:       probeTimeNs(pre.view, probe.Deadline),
 			ProbeSentMonoNs:       probe.SentMonoNs,
 			ProbeDeadlineMonoNs:   probe.DeadlineMonoNs,
 			ProbeCheckedMonoNs:    checkedProbe(pre.view, probe),
 			DecisionAt:            decisionSec,
+			DecisionAtNs:          &decisionAtNs,
 			RootDID:               pre.rootDID,
 			RootKeyVersion:        pre.rootKeyVersion,
 			DomainID:              pre.domainID,
@@ -575,6 +584,29 @@ func (s *Server) executeInTx(
 		}
 		if err := tx.Commit(ctx); err != nil {
 			return nil, protocol.WrapError(protocol.ErrCodeStateUnavailable, "commit deny decision", err)
+		}
+		if s.cfg.OnDecisionCommitted != nil {
+			s.cfg.OnDecisionCommitted(DecisionTiming{
+				DecisionID:          decID,
+				RequestID:           reqID,
+				ChallengeID:         pre.pkg.ChallengeID,
+				Action:              pre.pkg.Request.Action,
+				Outcome:             "DENY",
+				Code:                code,
+				StateSource:         pre.view.StateSource,
+				BlockNumber:         pre.view.BlockNumber,
+				BlockHash:           pre.view.BlockHash,
+				ProbeTxID:           probe.TxID,
+				ProbeBlock:          int64(probe.ProbeBlock),
+				ProbeSentAt:         probe.SentAt.UTC(),
+				ProbeDeadline:       probe.Deadline.UTC(),
+				ProbeSentMonoNs:     probe.SentMonoNs,
+				ProbeDeadlineMonoNs: probe.DeadlineMonoNs,
+				ProbeCheckedMonoNs:  probe.CheckedMonoNs,
+				DecisionAtSec:       decisionSec,
+				DecisionAt:          decisionTime,
+				CommittedAt:         s.now().UTC(),
+			})
 		}
 		return &txExecOutcome{decisionID: decID}, protocol.NewError(code, reason)
 	}
@@ -833,10 +865,13 @@ func (s *Server) executeInTx(
 		ProbeBlock:            int64(probe.ProbeBlock),
 		ProbeSentAt:           probe.SentAt.Unix(),
 		ProbeDeadline:         probe.Deadline.Unix(),
+		ProbeSentAtNs:         probeTimeNs(pre.view, probe.SentAt),
+		ProbeDeadlineNs:       probeTimeNs(pre.view, probe.Deadline),
 		ProbeSentMonoNs:       probe.SentMonoNs,
 		ProbeDeadlineMonoNs:   probe.DeadlineMonoNs,
 		ProbeCheckedMonoNs:    checkedProbe(pre.view, probe),
 		DecisionAt:            decisionSec,
+		DecisionAtNs:          &decisionAtNs,
 		RootDID:               pre.rootDID,
 		RootKeyVersion:        pre.rootKeyVersion,
 		DomainID:              pre.domainID,
@@ -878,6 +913,29 @@ func (s *Server) executeInTx(
 	if err := tx.Commit(ctx); err != nil {
 		return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "commit allow execute transaction", err)
 	}
+	if s.cfg.OnDecisionCommitted != nil {
+		s.cfg.OnDecisionCommitted(DecisionTiming{
+			DecisionID:          decID,
+			RequestID:           reqID,
+			ChallengeID:         pre.pkg.ChallengeID,
+			Action:              pre.pkg.Request.Action,
+			Outcome:             "ALLOW",
+			Code:                "ALLOW",
+			StateSource:         pre.view.StateSource,
+			BlockNumber:         pre.view.BlockNumber,
+			BlockHash:           pre.view.BlockHash,
+			ProbeTxID:           probe.TxID,
+			ProbeBlock:          int64(probe.ProbeBlock),
+			ProbeSentAt:         probe.SentAt.UTC(),
+			ProbeDeadline:       probe.Deadline.UTC(),
+			ProbeSentMonoNs:     probe.SentMonoNs,
+			ProbeDeadlineMonoNs: probe.DeadlineMonoNs,
+			ProbeCheckedMonoNs:  probe.CheckedMonoNs,
+			DecisionAtSec:       decisionSec,
+			DecisionAt:          decisionTime,
+			CommittedAt:         s.now().UTC(),
+		})
+	}
 
 	return &txExecOutcome{
 		decisionID: decID,
@@ -913,14 +971,16 @@ func insertDecisionRow(ctx context.Context, tx pgx.Tx, d DecisionRecord) error {
 		probe_tx_id, probe_block, probe_sent_at, probe_deadline, probe_sent_mono_ns, probe_deadline_mono_ns, decision_at,
 		root_did, root_key_version, domain_id, certification_id, certification_digest, domain_revision,
 		identity_issuer, policy_digest, context_version, context_risk_level, context_observed_at,
-		context_access_deadline, effective_deadline, grant_path, failed_object_id, state_source, revision, state_read_at, state_rechecks, probe_checked_mono_ns
+		context_access_deadline, effective_deadline, grant_path, failed_object_id, state_source, revision, state_read_at, state_rechecks, probe_checked_mono_ns,
+		decision_at_ns, probe_sent_at_ns, probe_deadline_ns
 	) VALUES(
 		$1,$2,$3,$4,$5,$6,$7,$8,
 		$9,$10,$11,$12,$13,$14,$15,$16,
 		$17,$18,$19,$20,$21,$22,$23,
 		$24,$25,$26,$27,$28,$29,
 		$30,$31,$32,$33,$34,
-		$35,$36,$37,$38,$39,$40,$41,$42,$43
+		$35,$36,$37,$38,$39,$40,$41,$42,$43,
+		$44,$45,$46
 	)`,
 		d.DeploymentID, d.DecisionID, d.RequestID, d.ChallengeID, d.Actor, d.TaskID, d.Action, d.IdempotencyKey,
 		d.Outcome, d.Code, reasonPtr, d.QuoteID, d.OrderID, fabricColumn(d, d.BlockNumber), fabricColumn(d, d.BlockHash), fabricColumn(d, d.RevocationEpoch),
@@ -929,6 +989,7 @@ func insertDecisionRow(ctx context.Context, tx pgx.Tx, d DecisionRecord) error {
 		idIssPtr, d.PolicyDigest, d.ContextVersion, d.ContextRiskLevel, d.ContextObservedAt,
 		d.ContextAccessDeadline, d.EffectiveDeadline, d.GrantPath, d.FailedObjectID,
 		d.StateSource, d.Revision, d.StateReadAt, d.StateRechecks, d.ProbeCheckedMonoNs,
+		d.DecisionAtNs, fabricColumn(d, d.ProbeSentAtNs), fabricColumn(d, d.ProbeDeadlineNs),
 	)
 	return err
 }
@@ -1040,5 +1101,13 @@ func checkedProbe(view *ConsistentSnapshot, p ProbeInfo) *int64 {
 		return nil
 	}
 	v := p.CheckedMonoNs
+	return &v
+}
+
+func probeTimeNs(view *ConsistentSnapshot, t time.Time) *int64 {
+	if view.StateSource != StateFabric || t.IsZero() {
+		return nil
+	}
+	v := t.UTC().UnixNano()
 	return &v
 }

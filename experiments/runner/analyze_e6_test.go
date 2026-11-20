@@ -146,3 +146,39 @@ func TestAnalyzeE6InsufficientTimeResolutionClassification(t *testing.T) {
 		t.Fatalf("expected insufficient_time_resolution classification, got status=%s ambiguous=%+v", ia.WindowStatus, ia.AmbiguousTimingSamples)
 	}
 }
+
+func TestAnalyzeE6MultiInstanceIntervalAggregation(t *testing.T) {
+	const base int64 = 1_700_000_000_000_000_000
+	rev1 := fmt.Sprintf("run-e6-fixture,RESOURCE_PREAUTHORIZED,B0,grant-g1,tx-rev,50,hash50,0,VALID,%d,%d,%d,gw-1,probe1,%d,50,1000,5000,20,host-utc-unix-ns,1000,0,CONFIRMED,",
+		base+100_000_000, base+200_000_000, base+210_000_000, base+215_000_000)
+	rev2 := fmt.Sprintf("run-e6-fixture,RESOURCE_PREAUTHORIZED,B0,grant-g1,tx-rev,50,hash50,0,VALID,%d,%d,%d,gw-2,probe2,%d,50,1000,5000,20,host-utc-unix-ns,1000,0,CONFIRMED,",
+		base+100_000_000, base+200_000_000, base+210_000_000, base+216_000_000)
+
+	// gw-1 intervals: 20ms, 20ms, 55ms (median=20ms, max=55ms)
+	// gw-2 intervals: 20ms, 21ms, 62ms (median=21ms, max=62ms)
+	// Total across instances must have max=62ms (NOT max of medians = 21ms).
+	makeReq := func(inst, role string, seq int, intervalNs int64, decNs int64) string {
+		return fmt.Sprintf("run-e6-fixture,RESOURCE_PREAUTHORIZED,B0,probe,%s,%s,%d,%d,%d,%d,%d,%d,%d,1700000000,k-%s-%d,r-%s-%d,c-%s-%d,d-%s-%d,o-%s-%d,200,ALLOW,ALLOW,allowed,49,hash49,ACTIVE,ptx1,49,%d,%d,1000,%d,5000001000,host-utc-unix-ns,1000,",
+			inst, role, seq, decNs-5_000_000, intervalNs, decNs-5_000_000, decNs, decNs+1_000_000, decNs+2_000_000,
+			inst, seq, inst, seq, inst, seq, inst, seq, inst, seq, base, base+5_000_000_000, decNs-base)
+	}
+	reqs := []string{
+		makeReq("gw-1", "probe1", 1, 20_000_000, base+110_000_000),
+		makeReq("gw-1", "probe1", 2, 20_000_000, base+130_000_000),
+		makeReq("gw-1", "probe1", 3, 55_000_000, base+185_000_000),
+		makeReq("gw-2", "probe2", 1, 20_000_000, base+110_000_000),
+		makeReq("gw-2", "probe2", 2, 21_000_000, base+131_000_000),
+		makeReq("gw-2", "probe2", 3, 62_000_000, base+193_000_000),
+	}
+
+	rep, err := AnalyzeE6Run(writeE6Fixture(t, []string{rev1, rev2}, reqs), filepath.Join(t.TempDir(), "out"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.TotalAccounting.MaxIntervalMs == nil || math.Abs(*rep.TotalAccounting.MaxIntervalMs-62.0) > 0.001 {
+		t.Fatalf("expected totalAccounting.maxActualIntervalMs=62.0, got %v", rep.TotalAccounting.MaxIntervalMs)
+	}
+	if rep.TotalAccounting.MedianIntervalMs == nil || math.Abs(*rep.TotalAccounting.MedianIntervalMs-21.0) > 0.001 {
+		t.Fatalf("expected totalAccounting.medianActualIntervalMs=21.0, got %v", rep.TotalAccounting.MedianIntervalMs)
+	}
+}

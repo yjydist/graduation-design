@@ -203,7 +203,7 @@ func AnalyzeE6Run(runDir, outDir string) (*E6RecomputedReport, error) {
 
 	var allIntervals []float64
 	for _, rr := range revRows {
-		ia := analyzeE6Instance(rr, reqByInstance[rr["instance_id"]])
+		ia, instIntervals := analyzeE6Instance(rr, reqByInstance[rr["instance_id"]])
 		if rep.Mode == "" {
 			rep.Mode = rr["mode"]
 		}
@@ -232,9 +232,7 @@ func AnalyzeE6Run(runDir, outDir string) (*E6RecomputedReport, error) {
 		rep.TotalAccounting.Allowed += ia.Accounting.Allowed
 		rep.TotalAccounting.Denied += ia.Accounting.Denied
 		rep.TotalAccounting.Error += ia.Accounting.Error
-		if ia.Accounting.MedianIntervalMs != nil {
-			allIntervals = append(allIntervals, *ia.Accounting.MedianIntervalMs)
-		}
+		allIntervals = append(allIntervals, instIntervals...)
 		if !ia.Passed {
 			rep.Passed = false
 		}
@@ -261,7 +259,7 @@ func AnalyzeE6Run(runDir, outDir string) (*E6RecomputedReport, error) {
 	return rep, nil
 }
 
-func analyzeE6Instance(rev map[string]string, rows []map[string]string) *E6InstanceAnalysis {
+func analyzeE6Instance(rev map[string]string, rows []map[string]string) (*E6InstanceAnalysis, []float64) {
 	ia := &E6InstanceAnalysis{
 		InstanceID:        rev["instance_id"],
 		ProbeRole:         rev["probe_role"],
@@ -590,7 +588,7 @@ func analyzeE6Instance(rev map[string]string, rows []map[string]string) *E6Insta
 	if ia.TAdoptNs == nil && revConfirmed {
 		ia.CensoringReasons = append(ia.CensoringReasons, "adopt_r_unobserved")
 	}
-	return ia
+	return ia, actualIntervalsMs
 }
 
 func renderE6RecomputedMarkdown(rep *E6RecomputedReport) string {

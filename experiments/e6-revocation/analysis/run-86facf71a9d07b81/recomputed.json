@@ -119,8 +119,8 @@
     "denied": 1000,
     "error": 2,
     "availabilityRate": 1,
-    "medianActualIntervalMs": 20.000041,
-    "maxActualIntervalMs": 20.000041
+    "medianActualIntervalMs": 19.999959,
+    "maxActualIntervalMs": 20.267792
   },
   "totalViolations": 0,
   "totalDelayedSamples": 0,

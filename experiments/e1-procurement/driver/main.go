@@ -281,6 +281,9 @@ func (e *e1Trial) saveManifest() error {
 	if e.bundle != nil {
 		manifest["policyDigest"] = e.bundle.PolicyDigest
 	}
+	if fixtureSum, err := sha256File(e.instance.registrySubPath("fixtures.json")); err == nil {
+		manifest["fixtureDigest"] = fixtureSum
+	}
 	return e.save("manifest", manifest)
 }
 

@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -319,7 +321,12 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 		return fmt.Errorf("verify policy bundle: %w", err)
 	}
 
-	// Merge deployment, effective probe settings, clock metadata, and revocation targets into manifest.json.
+	// Merge deployment, effective probe settings, clock metadata, fixture/policy digests, and revocation targets into manifest.json.
+	var fixtureDigest any
+	if rawFixtures, readErr := os.ReadFile(filepath.Join(cfg.dir, "registry", "fixtures.json")); readErr == nil {
+		sum := sha256.Sum256(rawFixtures)
+		fixtureDigest = hex.EncodeToString(sum[:])
+	}
 	if err := mergeJSON(filepath.Join(cfg.out, "manifest.json"), map[string]any{
 		"deployment": map[string]any{
 			"deploymentId":          d.DeploymentID,
@@ -331,6 +338,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 			"chaincodeBuildSha256":  d.BuildDigest,
 		},
 		"policyDigest":      bundle.PolicyDigest,
+		"fixtureDigest":     fixtureDigest,
 		"clockTimebase":     clockTimebaseHostUTC,
 		"clockResolutionNs": clockResNs,
 		"clockErrorNs":      int64(0),

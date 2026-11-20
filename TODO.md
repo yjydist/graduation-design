@@ -91,7 +91,7 @@
 - [x] 核对固定构建轮次的模型工具轨迹和网关请求. `run-3f8a7a6db26d582c` 记录 8 个真实模型会话, 19 次工具调用和 78 次网关请求. [模型轨迹](experiments/e1-procurement/runs/run-3f8a7a6db26d582c/llm-traces.json), [请求](experiments/e1-procurement/runs/run-3f8a7a6db26d582c/requests.csv), [对账](experiments/e1-procurement/runs/run-3f8a7a6db26d582c/audit.json).
 - [x] 对账固定构建轮次的 RP/BM 采购效果. `run-3f8a7a6db26d582c` 中两种根各创建一笔 800 元订单, 1200 元原价和改报的四个负例均无订单或订单业务键. [结果与主库核对](experiments/e1-procurement/result.md#5-固定构建复跑), [对账文件](experiments/e1-procurement/runs/run-3f8a7a6db26d582c/audit.json).
 - [x] 整理迁移前和固定构建中的失败轮次. 已记录失败运行 ID, 首个受阻阶段和处理结果. [迁移前异常](experiments/e1-procurement/result.md#4-失败轮次与结论边界), [固定构建异常](experiments/e1-procurement/result.md#5-固定构建复跑).
-- [ ] 从固定构建轮次的原始请求, 模型及主库记录离线重算 RP/BM 结果. 交付与已发布计数核对过的结果表, 附分析版本, 运行 ID 和输入文件.
+- [x] 从固定构建轮次的原始请求, 模型及主库记录离线重算 RP/BM 结果. `run-3f8a7a6db26d582c` 在 `e1-analyzer/v1` 下只读复算通过并与已发布计数一致, 另核对失败样本 `run-f6b3cc4a627e1a49` 的缺测识别. [复算表](experiments/e1-procurement/analysis/run-3f8a7a6db26d582c/recomputed-table.md), [复算 JSON](experiments/e1-procurement/analysis/run-3f8a7a6db26d582c/recomputed.json), [报告说明](experiments/e1-procurement/result.md#6-离线复算与来源引用).
 
 ### E2 安全与状态机检查
 
@@ -151,10 +151,10 @@
 
 [E6 方法](docs/experiments/E6-撤销窗口.md), [结果模板](experiments/e6-revocation/result.md). M3 [预跑时间线](infra/fabric/evidence/m3-recovery/original/run-f71a13453be0384e/m3-e6-revocation-window.json)用于核对观测点.
 
-- [ ] 校验网关锁后定案采集点和实际时钟精度. 交付按决定 ID 区分定案, 业务提交和响应的样例, 含原探针及延迟响应对照.
-- [ ] 完成 RP 隔离短跑. 交付撤销原 txID, 首次 VALID, 视图应用, 实例采用, 定案及响应的关联时间线.
-- [ ] 完成 BM 隔离短跑. 交付独立实例时间线, 探测计划与实际发送数, 标出漏探测和缺测原因.
-- [ ] 离线复算一轮窗口. 交付从原始记录得到的最后允许, 首次拒绝, 窗口及样本对账.
+- [x] 校验网关锁后定案采集点和实际时钟精度. 已持久化 `decision_at_ns` 与亚秒探针时点并增加 `OnDecisionCommitted` 钩子, 延迟响应回归测试核对定案, 业务提交与响应分离且原秒级期限判据通过. [定案时点回归](internal/gateway/decision_timing_test.go).
+- [x] 完成 RP 隔离短跑. `run-c3a21eb94efa9dcc` 导出撤销原 txID, `t_valid`, `t_apply`, 双实例 `t_adopt`, 定案及响应关联记录 (`0` 违规放行, 分辨率 `1000 ns`). [RP 撤销时间线](experiments/e6-revocation/runs/run-c3a21eb94efa9dcc/revocations.csv), [RP 汇总](experiments/e6-revocation/runs/run-c3a21eb94efa9dcc/summary.json).
+- [x] 完成 BM 隔离短跑. `run-86facf71a9d07b81` 在独立隔离实例完成双实例持续探针采样, 计划与完成数 `1106/1106`, `0` 漏探测与 `0` 违规放行. [BM 撤销时间线](experiments/e6-revocation/runs/run-86facf71a9d07b81/revocations.csv), [BM 汇总](experiments/e6-revocation/runs/run-86facf71a9d07b81/summary.json).
+- [x] 离线复算一轮窗口. 停止服务后用 `e6-analyzer/v1` 对 `run-c3a21eb94efa9dcc` 与 `run-86facf71a9d07b81` 重算阶段耗时, 窗口, 删失归类与样本对账, 原始目录摘要不变. [RP 复算表](experiments/e6-revocation/analysis/run-c3a21eb94efa9dcc/recomputed-table.md), [BM 复算表](experiments/e6-revocation/analysis/run-86facf71a9d07b81/recomputed-table.md), [E6 短跑报告](experiments/e6-revocation/result.md).
 - [ ] 完成主要场景正式重复. 交付至少 30 次独立运行的清单与汇总, 核对每轮时长, 业务前置条件及违规放行.
 - [ ] 核验并扫描 `deltaState` 为 1/5/15 秒. 交付各档实际生效配置, 原探针时点, 撤销窗口和可用率对照.
 - [ ] 完成撤销对象专项. 交付不同撤销对象及合法兄弟支的对照表.

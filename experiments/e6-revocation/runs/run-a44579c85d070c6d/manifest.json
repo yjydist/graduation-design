@@ -1,0 +1,155 @@
+{
+  "authorizationModes": [
+    "RESOURCE_PREAUTHORIZED"
+  ],
+  "basePort": 19320,
+  "binarySHA256": {
+    "driver": "c8c7983734b16fb76bd8445e87edbe58ab2e87f70454782b11f0a7c5690c2a84"
+  },
+  "buildDurationMs": 1272,
+  "clock": "host-utc-unix-ns and per-process monotonic ns",
+  "clockErrorNs": 0,
+  "clockResolutionNs": 1000,
+  "clockTimebase": "host-utc-unix-ns",
+  "configuration": "B0",
+  "deployment": {
+    "chaincodeBuildSha256": "cd8114086378258720821c72e5921a8bda34163fd7e162b006f74630c068b5df",
+    "chaincodeSourceSha256": "f85b2512ab2a610d997311b5b0babaeed7c29ba133b36dc65db2f4eb96bf57d3",
+    "channelId": "procurement",
+    "deploymentId": "d503cadf111feb8ca3b304684e13970e0c8b4ce9f2deea032b4d420bfdd30a67",
+    "genesisHash": "6bd27564ee3f57828f6e7d0c8d938c3b2fddc848e4ccbee1c93c449af873ae1c",
+    "instanceId": "9f47abe29b9539dbe7a3c7b86a551691b4b2f483cd70238366804ab6550611f3",
+    "registryName": "authregistry"
+  },
+  "driverSnapshot": {
+    "archiveFile": "driver-source.tar.gz",
+    "archiveSha256": "1a841065d7d08b38715745bf011c4d03c163d6515ed9699c521b649641fd43a9",
+    "includedFiles": [
+      "docs/experiments/E6-撤销窗口.md",
+      "docs/experiments/实验计划.md",
+      "experiments/e6-revocation/driver/main.go",
+      "experiments/runner/analyze_e1.go",
+      "experiments/runner/analyze_e1_test.go",
+      "experiments/runner/analyze_e6.go",
+      "experiments/runner/analyze_e6_test.go",
+      "experiments/runner/e1_run.go",
+      "experiments/runner/e6_run.go",
+      "experiments/runner/main.go",
+      "experiments/runner/manifest.go",
+      "experiments/runner/run.go",
+      "experiments/runner/runner_test.go",
+      "experiments/runner/scan.go",
+      "go.mod",
+      "go.sum",
+      "infra/fabric/compose.yaml",
+      "mise.toml"
+    ],
+    "workspaceCommit": "208ac63f02dbab41450e452717f02219630b0453",
+    "workspaceDirty": true
+  },
+  "driverType": "deterministic-wallet-tools",
+  "effectiveSampling": {
+    "authorizationMode": "RESOURCE_PREAUTHORIZED",
+    "configuration": "B0",
+    "detectIntervalMs": 20,
+    "gatewayInstances": 2,
+    "leafGrantId": "41e75bff02be5657fc95375c65e436caf1c2b85189d9c2ecbfdef1a570458fbf",
+    "modeShort": "RP",
+    "postRevokeDurMs": 10000,
+    "probeIntervalMs": 1000,
+    "probeLifetimeMs": 5000,
+    "revokeAfterMs": 1000,
+    "revokedGrantId": "04370ba4dd186d43c0df436a906d9943336b093ab650b89fc7ff774153cd0a34",
+    "rootGrantId": "1b5d6b998f658b7f5b1f3f49115249160974c8670ca0f155a376aaf790f10d48",
+    "taskId": "e52824178a9d6200cf0d1f8f24c7b3e5f6372cca23d01595c27b32c56b7fe8e3"
+  },
+  "experiment": "E6",
+  "fileSHA256": {
+    "docs/experiments/E6-撤销窗口.md": "ffa4f58f451e71749e1b4c15415e75a75c401c5c9c117adaf4c14a6d414c227d",
+    "docs/experiments/实验计划.md": "059a7801357d092c9dfa43945e6b9722f857afea20a8cc4ec072f2b6550b8a54",
+    "experiments/e6-revocation/driver/main.go": "57e2d548fb512b2bd862db7242e3469e9bfadc89e2524ace95722396f08cfa36",
+    "experiments/runner/analyze_e1.go": "e06c87d48b2a60cdd068b542a29039f6618c6aea45d51edced342625c3ac8662",
+    "experiments/runner/analyze_e1_test.go": "ed535dc734b441189ef67095f27f97c0f396ae7f8f23df8e33afbcba03ea0cbe",
+    "experiments/runner/analyze_e6.go": "0e669cd8d2c768e005c892c8958d6770f9dd4a2d3f111dd63246e07aee786933",
+    "experiments/runner/analyze_e6_test.go": "1141d8c8c79aef5cd0fcfbc980153d7854cd8cee5f0532f9c7cc79d812d8ec3c",
+    "experiments/runner/e1_run.go": "a107d60a024407f8aa388d8c44c0500e11b83531eb8f93568c48a9632247f6f2",
+    "experiments/runner/e6_run.go": "bd99870d63d2fe2a3ee216174988e75067fed6722bbe2523dc2352b9f05af2a7",
+    "experiments/runner/main.go": "9f2dc333b80f154725dae8685d77685c3ec6ecd9a2ff2a6e4c5c87fcb9683dd6",
+    "experiments/runner/manifest.go": "d76dcd94dc58dfb9a77f93fb67b281a825c33083d44f2b99a3ecf397c69531a6",
+    "experiments/runner/run.go": "2feaca74df21e27a352bef17ad1248127bc65bfd4764113ef065d31c0a6408d1",
+    "experiments/runner/runner_test.go": "1b83d3676cafa69c1e0c9b7ea39332e994a250ebb5074150e6513d876898fde2",
+    "experiments/runner/scan.go": "dfb78af76ee6f94661fb348b28bd718ecc3b22d15b749c7e5df533dd4df48e61",
+    "go.mod": "9f8063e4dd85920bb27169317382ee19df1f211da59825d8cacec73524480021",
+    "go.sum": "898c954ba13d003f0f9276f092503b82e384df288049e108e2de65ef3874fc3f",
+    "infra/fabric/compose.yaml": "4d06390e5ef16a01268b3168a946fd89e189b3b42e5d4e98244e40662d21fba4",
+    "mise.toml": "70ae7a7a515f39741aedcfc1358ca0df207a3b4803f636e169efc94027f09128"
+  },
+  "finishedAt": "2026-11-20T02:16:00.658036Z",
+  "fixtureDigest": null,
+  "go": "go1.27.3",
+  "host": "darwin/arm64",
+  "instance": "/Users/yjydist/Desktop/graduation-design/.local/fabric-e6-rp-short-2",
+  "networkEnv": {
+    "COMPOSE_PROJECT_NAME": "grad-fabric-51902308084c",
+    "FABRIC_ADMIN_A": "19324",
+    "FABRIC_ADMIN_B": "19325",
+    "FABRIC_ADMIN_C": "19326",
+    "FABRIC_ADMIN_D": "19327",
+    "FABRIC_ADMIN_X": "19328",
+    "FABRIC_DB": "19329",
+    "FABRIC_ORDERER_A": "19323",
+    "FABRIC_PEER_A": "19320",
+    "FABRIC_PEER_B": "19321",
+    "FABRIC_PEER_C": "19322"
+  },
+  "plan": {
+    "authorizationModes": [
+      "RESOURCE_PREAUTHORIZED"
+    ],
+    "configuration": "B0",
+    "driverType": "deterministic-wallet-tools",
+    "experiment": "E6",
+    "items": [
+      {
+        "id": "warmup-order",
+        "kind": "positive",
+        "mode": "RESOURCE_PREAUTHORIZED"
+      },
+      {
+        "id": "revoke-G1",
+        "kind": "revocation",
+        "mode": "RESOURCE_PREAUTHORIZED"
+      },
+      {
+        "id": "post-revocation-window",
+        "kind": "probing",
+        "mode": "RESOURCE_PREAUTHORIZED"
+      }
+    ],
+    "sampling": {
+      "clockTimebase": "host-utc-unix-ns",
+      "delegationDepth": 2,
+      "descendantCount": 1,
+      "detectIntervalMs": 20,
+      "gatewayInstances": 2,
+      "modeShort": "RP",
+      "postRevokeDurMs": 10000,
+      "probeIntervalMs": 1000,
+      "probeLifetimeMs": 5000,
+      "revocationTarget": "G1",
+      "revokeAfterMs": 1000
+    }
+  },
+  "policyDigest": "554bec62ab9cb91264528e83801561239020a82ee36777dec3165953d032e828",
+  "runId": "run-a44579c85d070c6d",
+  "schemaVersion": "grad-experiment-manifest-v1",
+  "secretScan": {
+    "passed": true,
+    "files": 6
+  },
+  "sourceCommit": "208ac63f02dbab41450e452717f02219630b0453",
+  "stage": "execution",
+  "startedAt": "2026-11-20T02:15:17.569791Z",
+  "status": "FAIL",
+  "sutSource": "workspace"
+}

@@ -1,0 +1,35 @@
+{
+  "runId": "run-a44579c85d070c6d",
+  "experiment": "E6",
+  "status": "FAIL",
+  "stage": "execution",
+  "startedAt": "2026-11-20T02:15:17.569791Z",
+  "finishedAt": "2026-11-20T02:16:00.658036Z",
+  "exitCode": 1,
+  "diagnostic": "execute E6 driver: /Users/yjydist/Desktop/graduation-design/.local/e6-build.105521932/e6-driver -revision 208ac63f02dbab41450e452717f02219630b0453 -dir /Users/yjydist/Desktop/graduation-design/.local/fabric-e6-rp-short-2 -out /Users/yjydist/Desktop/graduation-design/experiments/e6-revocation/runs/run-a44579c85d070c6d -mode RP -configuration B0 -probe-interval 1s -probe-lifetime 5s -detect-interval 20ms -revoke-after 1s -duration 10s -instances 2: exit status 1 (see driver.log)",
+  "error": "execute E6 driver: /Users/yjydist/Desktop/graduation-design/.local/e6-build.105521932/e6-driver -revision 208ac63f02dbab41450e452717f02219630b0453 -dir /Users/yjydist/Desktop/graduation-design/.local/fabric-e6-rp-short-2 -out /Users/yjydist/Desktop/graduation-design/experiments/e6-revocation/runs/run-a44579c85d070c6d -mode RP -configuration B0 -probe-interval 1s -probe-lifetime 5s -detect-interval 20ms -revoke-after 1s -duration 10s -instances 2: exit status 1 (see driver.log)",
+  "plannedCount": 3,
+  "executedCount": 0,
+  "missingCount": 3,
+  "missingItems": [
+    {
+      "id": "warmup-order/RESOURCE_PREAUTHORIZED",
+      "status": "not_executed",
+      "reason": "not executed: failed during execution"
+    },
+    {
+      "id": "revoke-G1/RESOURCE_PREAUTHORIZED",
+      "status": "not_executed",
+      "reason": "not executed: failed during execution"
+    },
+    {
+      "id": "post-revocation-window/RESOURCE_PREAUTHORIZED",
+      "status": "not_executed",
+      "reason": "not executed: failed during execution"
+    }
+  ],
+  "secretScan": {
+    "passed": true,
+    "files": 6
+  }
+}

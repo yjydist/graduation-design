@@ -1,0 +1,56 @@
+{
+  "runId": "run-c3a21eb94efa9dcc",
+  "experiment": "E6",
+  "status": "PASS",
+  "stage": "finalize",
+  "deploymentId": "8e1c847ad62d69f3b4a3e27e28f93717f07801ab3685c2a761b39c84d6241377",
+  "startedAt": "2026-11-20T02:16:44.084008Z",
+  "finishedAt": "2026-11-20T02:17:37.765096Z",
+  "exitCode": 0,
+  "plannedCount": 3,
+  "executedCount": 3,
+  "missingCount": 0,
+  "secretScan": {
+    "passed": true,
+    "files": 8
+  },
+  "revocation": {
+    "blockHash": "ff477b7b745c6b512d7848b8b3e423068b252c50ff2633eaa0914285d0ee1e76",
+    "blockNumberR": 46,
+    "grantId": "66c1cdf05a2a69052605fb76731a17b6d3565601ae282d68a496b9294c2d625d",
+    "tApplyNs": 1795141047722920000,
+    "tSubmitNs": 1795141047627183000,
+    "tValidNs": 1795141047720525000,
+    "txId": "5c534b5f15a850766d0cf1790191335bff218bedd0d2083c5087b5f67f6e362c",
+    "txIndex": 0,
+    "validationCode": "VALID"
+  },
+  "instances": {
+    "gw-1": {
+      "adoptBlockH": 46,
+      "probeRole": "probe1",
+      "tAdoptNs": 1795141047733558000
+    },
+    "gw-2": {
+      "adoptBlockH": 46,
+      "probeRole": "probe2",
+      "tAdoptNs": 1795141047733221000
+    }
+  },
+  "requestAccounting": {
+    "allowed": 108,
+    "completed": 1104,
+    "denied": 994,
+    "error": 2,
+    "missed": 2,
+    "planned": 1106,
+    "started": 1104,
+    "timeout": 0,
+    "warmup": 2
+  },
+  "mode": "RESOURCE_PREAUTHORIZED",
+  "modeShort": "RP",
+  "configuration": "B0",
+  "clockTimebase": "host-utc-unix-ns",
+  "clockResolutionNs": 1000
+}

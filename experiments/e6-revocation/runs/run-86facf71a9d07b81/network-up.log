@@ -1,0 +1,77 @@
+a.local
+b.local
+c.local
+t.local
+x.local
+[34m2026-11-20 10:17:49.885 CST 0001 INFO[0m [common.tools.configtxgen] [34;1mmain[0m -> Loading configuration
+[34m2026-11-20 10:17:49.886 CST 0002 INFO[0m [common.tools.configtxgen.localconfig] [34;1mcompleteInitialization[0m -> orderer type: BFT
+[34m2026-11-20 10:17:49.886 CST 0003 INFO[0m [common.tools.configtxgen.localconfig] [34;1mLoad[0m -> Loaded configuration: /Users/yjydist/Desktop/graduation-design/.local/fabric-e6-bm-short/configtx.yaml
+[34m2026-11-20 10:17:49.889 CST 0004 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Generating genesis block
+[34m2026-11-20 10:17:49.889 CST 0005 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Creating application channel genesis block
+[34m2026-11-20 10:17:49.890 CST 0006 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Writing genesis block
+ Network grad-fabric-51ba85150aa7_default Creating 
+ Volume grad-fabric-51ba85150aa7_peer-c Creating 
+ Volume grad-fabric-51ba85150aa7_orderer-c Creating 
+ Volume grad-fabric-51ba85150aa7_peer-b Creating 
+ Volume grad-fabric-51ba85150aa7_db Creating 
+ Volume grad-fabric-51ba85150aa7_orderer-a Creating 
+ Volume grad-fabric-51ba85150aa7_orderer-b Creating 
+ Volume grad-fabric-51ba85150aa7_orderer-d Creating 
+ Volume grad-fabric-51ba85150aa7_peer-a Creating 
+ Volume grad-fabric-51ba85150aa7_peer-c Created 
+ Volume grad-fabric-51ba85150aa7_orderer-d Created 
+ Volume grad-fabric-51ba85150aa7_peer-a Created 
+ Volume grad-fabric-51ba85150aa7_orderer-c Created 
+ Volume grad-fabric-51ba85150aa7_orderer-a Created 
+ Volume grad-fabric-51ba85150aa7_peer-b Created 
+ Volume grad-fabric-51ba85150aa7_orderer-b Created 
+ Volume grad-fabric-51ba85150aa7_db Created 
+ Network grad-fabric-51ba85150aa7_default Created 
+ Container grad-fabric-51ba85150aa7-peer-c-1 Creating 
+ Container grad-fabric-51ba85150aa7-peer-a-1 Creating 
+ Container grad-fabric-51ba85150aa7-orderer-a-1 Creating 
+ Container grad-fabric-51ba85150aa7-orderer-b-1 Creating 
+ Container grad-fabric-51ba85150aa7-peer-b-1 Creating 
+ Container grad-fabric-51ba85150aa7-db-1 Creating 
+ Container grad-fabric-51ba85150aa7-orderer-c-1 Creating 
+ Container grad-fabric-51ba85150aa7-orderer-d-1 Creating 
+ Container grad-fabric-51ba85150aa7-peer-c-1 Created 
+ Container grad-fabric-51ba85150aa7-orderer-a-1 Created 
+ Container grad-fabric-51ba85150aa7-peer-b-1 Created 
+ Container grad-fabric-51ba85150aa7-db-1 Created 
+ Container grad-fabric-51ba85150aa7-orderer-b-1 Created 
+ Container grad-fabric-51ba85150aa7-orderer-d-1 Created 
+ Container grad-fabric-51ba85150aa7-peer-a-1 Created 
+ Container grad-fabric-51ba85150aa7-orderer-c-1 Created 
+ Container grad-fabric-51ba85150aa7-peer-c-1 Starting 
+ Container grad-fabric-51ba85150aa7-orderer-c-1 Starting 
+ Container grad-fabric-51ba85150aa7-peer-a-1 Starting 
+ Container grad-fabric-51ba85150aa7-orderer-d-1 Starting 
+ Container grad-fabric-51ba85150aa7-orderer-a-1 Starting 
+ Container grad-fabric-51ba85150aa7-db-1 Starting 
+ Container grad-fabric-51ba85150aa7-peer-b-1 Starting 
+ Container grad-fabric-51ba85150aa7-orderer-b-1 Starting 
+ Container grad-fabric-51ba85150aa7-peer-c-1 Started 
+ Container grad-fabric-51ba85150aa7-orderer-c-1 Started 
+ Container grad-fabric-51ba85150aa7-peer-a-1 Started 
+ Container grad-fabric-51ba85150aa7-orderer-d-1 Started 
+ Container grad-fabric-51ba85150aa7-orderer-a-1 Started 
+ Container grad-fabric-51ba85150aa7-db-1 Started 
+ Container grad-fabric-51ba85150aa7-peer-b-1 Started 
+ Container grad-fabric-51ba85150aa7-orderer-b-1 Started 
+ Container grad-fabric-51ba85150aa7-db-1 Waiting 
+ Container grad-fabric-51ba85150aa7-orderer-b-1 Waiting 
+ Container grad-fabric-51ba85150aa7-peer-a-1 Waiting 
+ Container grad-fabric-51ba85150aa7-orderer-c-1 Waiting 
+ Container grad-fabric-51ba85150aa7-orderer-d-1 Waiting 
+ Container grad-fabric-51ba85150aa7-peer-c-1 Waiting 
+ Container grad-fabric-51ba85150aa7-peer-b-1 Waiting 
+ Container grad-fabric-51ba85150aa7-orderer-a-1 Waiting 
+ Container grad-fabric-51ba85150aa7-peer-a-1 Healthy 
+ Container grad-fabric-51ba85150aa7-orderer-a-1 Healthy 
+ Container grad-fabric-51ba85150aa7-peer-b-1 Healthy 
+ Container grad-fabric-51ba85150aa7-orderer-c-1 Healthy 
+ Container grad-fabric-51ba85150aa7-orderer-b-1 Healthy 
+ Container grad-fabric-51ba85150aa7-orderer-d-1 Healthy 
+ Container grad-fabric-51ba85150aa7-peer-c-1 Healthy 
+ Container grad-fabric-51ba85150aa7-db-1 Healthy 

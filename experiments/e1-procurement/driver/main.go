@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"graduation-design/internal/agent"
@@ -25,9 +27,11 @@ import (
 )
 
 type verdict struct {
-	Name  string `json:"name"`
-	Pass  bool   `json:"pass"`
-	Error string `json:"error,omitempty"`
+	Name          string `json:"name"`
+	Pass          bool   `json:"pass"`
+	Status        string `json:"status,omitempty"`
+	MissingReason string `json:"missingReason,omitempty"`
+	Error         string `json:"error,omitempty"`
 }
 
 type report struct {
@@ -117,7 +121,9 @@ func (e *e1Trial) run() (err error) {
 		e.cfg.BaseURL = base.String()
 	}
 	e.cfg.MaxSteps = max(e.cfg.MaxSteps, 10)
-	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Minute)
+	sigCtx, stopSig := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSig()
+	ctx, cancel := context.WithTimeout(sigCtx, 12*time.Minute)
 	e.ctx = ctx
 	defer cancel()
 	e.eventFile, err = os.Create(filepath.Join(e.dir, "events.jsonl"))
@@ -147,13 +153,23 @@ func (e *e1Trial) run() (err error) {
 		{"F14", e.offlineRoot}, {"F15", e.renewAuthority}, {"F16", e.evidenceBindings},
 	} {
 		e.stage = item.name
-		e.event("case_start", e.stage)
-		caseErr := ctx.Err()
-		if caseErr == nil {
-			caseErr = item.run()
+		if ctx.Err() != nil {
+			reason := fmt.Sprintf("aborted before %s: %v", item.name, ctx.Err())
+			entry := verdict{Name: item.name, Pass: false, Status: "not_executed", MissingReason: reason, Error: reason}
+			r.Cases = append(r.Cases, entry)
+			e.event("case_result", entry)
+			err = errors.Join(err, ctx.Err())
+			continue
 		}
-		entry := verdict{Name: item.name, Pass: caseErr == nil}
+		e.event("case_start", e.stage)
+		caseErr := item.run()
+		entry := verdict{Name: item.name, Pass: caseErr == nil, Status: "passed"}
 		if caseErr != nil {
+			entry.Status = "failed"
+			if ctx.Err() != nil {
+				entry.Status = "aborted"
+				entry.MissingReason = fmt.Sprintf("aborted during %s: %v", item.name, ctx.Err())
+			}
 			entry.Error = e.redact(caseErr.Error())
 			err = errors.Join(err, fmt.Errorf("%s: %s", item.name, entry.Error))
 		}
@@ -240,12 +256,27 @@ func (e *e1Trial) saveManifest() error {
 		}
 		inputs[name] = hash
 	}
-	manifest := map[string]any{
+	manifest := map[string]any{}
+	if existingRaw, readErr := os.ReadFile(filepath.Join(e.dir, "manifest.json")); readErr == nil {
+		_ = json.Unmarshal(existingRaw, &manifest)
+	}
+	updates := map[string]any{
 		"experiment": "E1", "runId": e.id, "sourceCommit": e.revision, "binarySHA256": binaries, "fileSHA256": inputs,
 		"instance": e.instance.dir, "deployment": e.d.Raw, "host": runtime.GOOS + "/" + runtime.GOARCH, "go": runtime.Version(),
 		"configuration":      "Fabric fixed-height, static signature cache disabled; real lease acquired using ledgerctl check and handed to the existing StateProvider",
 		"authorizationModes": []string{api.RP, api.BM},
 		"llm":                map[string]any{"provider": e.cfg.Provider, "model": e.cfg.Model, "configuredBaseURL": e.configuredURL, "baseURL": e.cfg.BaseURL, "maxSteps": e.cfg.MaxSteps},
+	}
+	for k, v := range updates {
+		if k == "fileSHA256" {
+			if prev, ok := manifest[k].(map[string]any); ok {
+				for fk, fv := range inputs {
+					prev[fk] = fv
+				}
+				continue
+			}
+		}
+		manifest[k] = v
 	}
 	if e.bundle != nil {
 		manifest["policyDigest"] = e.bundle.PolicyDigest

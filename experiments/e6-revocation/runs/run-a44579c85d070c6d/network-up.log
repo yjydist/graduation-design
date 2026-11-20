@@ -1,0 +1,77 @@
+a.local
+b.local
+c.local
+t.local
+x.local
+[34m2026-11-20 10:15:19.049 CST 0001 INFO[0m [common.tools.configtxgen] [34;1mmain[0m -> Loading configuration
+[34m2026-11-20 10:15:19.051 CST 0002 INFO[0m [common.tools.configtxgen.localconfig] [34;1mcompleteInitialization[0m -> orderer type: BFT
+[34m2026-11-20 10:15:19.051 CST 0003 INFO[0m [common.tools.configtxgen.localconfig] [34;1mLoad[0m -> Loaded configuration: /Users/yjydist/Desktop/graduation-design/.local/fabric-e6-rp-short-2/configtx.yaml
+[34m2026-11-20 10:15:19.053 CST 0004 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Generating genesis block
+[34m2026-11-20 10:15:19.053 CST 0005 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Creating application channel genesis block
+[34m2026-11-20 10:15:19.054 CST 0006 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Writing genesis block
+ Network grad-fabric-51902308084c_default Creating 
+ Volume grad-fabric-51902308084c_orderer-d Creating 
+ Volume grad-fabric-51902308084c_orderer-c Creating 
+ Volume grad-fabric-51902308084c_db Creating 
+ Volume grad-fabric-51902308084c_orderer-a Creating 
+ Volume grad-fabric-51902308084c_orderer-b Creating 
+ Volume grad-fabric-51902308084c_peer-b Creating 
+ Volume grad-fabric-51902308084c_peer-a Creating 
+ Volume grad-fabric-51902308084c_peer-c Creating 
+ Volume grad-fabric-51902308084c_orderer-d Created 
+ Volume grad-fabric-51902308084c_orderer-c Created 
+ Volume grad-fabric-51902308084c_db Created 
+ Volume grad-fabric-51902308084c_peer-b Created 
+ Volume grad-fabric-51902308084c_peer-c Created 
+ Volume grad-fabric-51902308084c_peer-a Created 
+ Volume grad-fabric-51902308084c_orderer-a Created 
+ Volume grad-fabric-51902308084c_orderer-b Created 
+ Network grad-fabric-51902308084c_default Created 
+ Container grad-fabric-51902308084c-peer-c-1 Creating 
+ Container grad-fabric-51902308084c-orderer-b-1 Creating 
+ Container grad-fabric-51902308084c-orderer-d-1 Creating 
+ Container grad-fabric-51902308084c-peer-a-1 Creating 
+ Container grad-fabric-51902308084c-peer-b-1 Creating 
+ Container grad-fabric-51902308084c-db-1 Creating 
+ Container grad-fabric-51902308084c-orderer-a-1 Creating 
+ Container grad-fabric-51902308084c-orderer-c-1 Creating 
+ Container grad-fabric-51902308084c-peer-b-1 Created 
+ Container grad-fabric-51902308084c-peer-a-1 Created 
+ Container grad-fabric-51902308084c-orderer-d-1 Created 
+ Container grad-fabric-51902308084c-orderer-a-1 Created 
+ Container grad-fabric-51902308084c-db-1 Created 
+ Container grad-fabric-51902308084c-peer-c-1 Created 
+ Container grad-fabric-51902308084c-orderer-b-1 Created 
+ Container grad-fabric-51902308084c-orderer-c-1 Created 
+ Container grad-fabric-51902308084c-peer-c-1 Starting 
+ Container grad-fabric-51902308084c-orderer-b-1 Starting 
+ Container grad-fabric-51902308084c-db-1 Starting 
+ Container grad-fabric-51902308084c-orderer-a-1 Starting 
+ Container grad-fabric-51902308084c-orderer-d-1 Starting 
+ Container grad-fabric-51902308084c-orderer-c-1 Starting 
+ Container grad-fabric-51902308084c-peer-a-1 Starting 
+ Container grad-fabric-51902308084c-peer-b-1 Starting 
+ Container grad-fabric-51902308084c-peer-c-1 Started 
+ Container grad-fabric-51902308084c-orderer-b-1 Started 
+ Container grad-fabric-51902308084c-db-1 Started 
+ Container grad-fabric-51902308084c-orderer-a-1 Started 
+ Container grad-fabric-51902308084c-orderer-d-1 Started 
+ Container grad-fabric-51902308084c-orderer-c-1 Started 
+ Container grad-fabric-51902308084c-peer-a-1 Started 
+ Container grad-fabric-51902308084c-peer-b-1 Started 
+ Container grad-fabric-51902308084c-orderer-d-1 Waiting 
+ Container grad-fabric-51902308084c-db-1 Waiting 
+ Container grad-fabric-51902308084c-peer-b-1 Waiting 
+ Container grad-fabric-51902308084c-peer-c-1 Waiting 
+ Container grad-fabric-51902308084c-orderer-b-1 Waiting 
+ Container grad-fabric-51902308084c-orderer-a-1 Waiting 
+ Container grad-fabric-51902308084c-peer-a-1 Waiting 
+ Container grad-fabric-51902308084c-orderer-c-1 Waiting 
+ Container grad-fabric-51902308084c-orderer-b-1 Healthy 
+ Container grad-fabric-51902308084c-orderer-d-1 Healthy 
+ Container grad-fabric-51902308084c-orderer-a-1 Healthy 
+ Container grad-fabric-51902308084c-peer-b-1 Healthy 
+ Container grad-fabric-51902308084c-peer-c-1 Healthy 
+ Container grad-fabric-51902308084c-orderer-c-1 Healthy 
+ Container grad-fabric-51902308084c-peer-a-1 Healthy 
+ Container grad-fabric-51902308084c-db-1 Healthy 

@@ -71,8 +71,27 @@
 启动 Docker, 通过环境提供 `LLM_API_KEY`, 为每轮选择新的实例目录及端口. 模型与接口地址见[实验用 LLM 配置](../README.md#实验用-llm-配置).
 
 ```bash
-bash experiments/e1-procurement/run.sh 79125cc40855014c16fcfb0a962bc276202023d8 \
-  .local/fabric-e1-rerun 19100
+mise run experiment:run -- --experiment E1 \
+  --revision 79125cc40855014c16fcfb0a962bc276202023d8 \
+  --instance .local/fabric-e1-rerun \
+  --port 19100
 ```
 
-脚本自动部署并登记实验材料, 为每次尝试分配新的运行 ID. 运行清单记录固定提交, 二进制摘要, 驱动源码摘要, 模型标识和实际 API 地址.
+入口在构建前分配新运行 ID 并写入初始清单与源码快照, 运行中补录二进制摘要, 驱动源码摘要, 模型标识和实际 API 地址, 结束后执行容器安全收尾和公开导出敏感字段检查.
+
+## 6 离线复算与来源引用
+
+在脱离 Fabric, PostgreSQL 和模型服务的离线环境下, 使用分析版本 `e1-analyzer/v1` 对固定构建通过批次 `run-3f8a7a6db26d582c` 与失败批次 `run-f6b3cc4a627e1a49` 进行只读复算, 派生文件与原始目录分离保存.
+
+```bash
+mise run experiment:analyze -- --experiment E1 \
+  --run-dir experiments/e1-procurement/runs/run-3f8a7a6db26d582c \
+  --out experiments/e1-procurement/analysis/run-3f8a7a6db26d582c
+```
+
+| 源运行 ID | 分析版本 | 离线复算结论 | 关键计数 | 原始文件与派生输出 |
+| --- | --- | --- | --- | --- |
+| `run-3f8a7a6db26d582c` | `e1-analyzer/v1` | `PASS` (对账通过, 与 `audit.json` 一致) | F01-F16 `16/16`, 8 模型会话, 19 次工具调用, 78 次网关请求, 11 报价, 8 订单, 27 决定, 106 连续区块, F06 区间非探针写入 0 | 原始: [清单](runs/run-3f8a7a6db26d582c/manifest.json), [请求](runs/run-3f8a7a6db26d582c/requests.csv), [模型轨迹](runs/run-3f8a7a6db26d582c/llm-traces.json), [主库决定](runs/run-3f8a7a6db26d582c/db-decisions.json), [主库订单](runs/run-3f8a7a6db26d582c/db-orders.json); 派生: [复算 JSON](analysis/run-3f8a7a6db26d582c/recomputed.json), [复算表](analysis/run-3f8a7a6db26d582c/recomputed-table.md) |
+| `run-f6b3cc4a627e1a49` | `e1-analyzer/v1` | `FAIL` (识别 F05 上游余额不足及后续阻断缺测) | F01-F16 `4/16`, 6 次模型异常会话, 0 次工具调用, 2 次网关请求, 缺失 F08/F14/F15/F16 用例文件 | 原始: [清单](runs/run-f6b3cc4a627e1a49/manifest.json), [汇总](runs/run-f6b3cc4a627e1a49/summary.json), [模型记录](runs/run-f6b3cc4a627e1a49/llm-traces.json); 派生: [复算 JSON](analysis/run-f6b3cc4a627e1a49/recomputed.json), [复算表](analysis/run-f6b3cc4a627e1a49/recomputed-table.md) |
+
+同一输入在 `e1-analyzer/v1` 下重复执行产生逐字节一致的 `recomputed.json`, 且复算前后 `runs/run-3f8a7a6db26d582c/` 内全部原始文件的 SHA-256 摘要保持不变.

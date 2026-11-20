@@ -88,7 +88,7 @@ func (e *e1Trial) copyRunMaterials() error {
 			return err
 		}
 	}
-	for _, name := range []string{"did", "certifications", "credentials", "grants", "ca"} {
+	for _, name := range []string{"did", "certifications", "grants", "ca"} {
 		root := e.instance.registrySubPath(name)
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil {
@@ -114,7 +114,27 @@ func (e *e1Trial) copyRunMaterials() error {
 			return err
 		}
 	}
-	return nil
+	// Export only SHA-256 digests for SD-JWT credentials so full disclosures stay out of public evidence.
+	credDigests := map[string]string{}
+	credRoot := e.instance.registrySubPath("credentials")
+	if err := filepath.WalkDir(credRoot, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
+		}
+		rel, err := filepath.Rel(credRoot, path)
+		if err != nil {
+			return err
+		}
+		sum, err := sha256File(path)
+		if err != nil {
+			return err
+		}
+		credDigests[filepath.ToSlash(rel)] = sum
+		return nil
+	}); err != nil {
+		return err
+	}
+	return writePublicJSON(filepath.Join(top, "registry", "credentials-digests.json"), credDigests)
 }
 
 func (e *e1Trial) exportBlocks(ctx context.Context) (err error) {

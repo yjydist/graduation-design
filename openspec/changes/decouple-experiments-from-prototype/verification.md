@@ -59,3 +59,22 @@
 - 原型的构建和测试依赖图只从 `cmd/`, `internal/` 和 `chaincode/` 展开, 校验结果中无实验包. 项目构建, 离线测试, 使用隔离 PostgreSQL 的串行测试及基线测试通过. E1 驱动通过编译.
 - 最终代码通过 `mise run ledger:verify` 的 33/33 项集成回归. 相较迁移中间轮的 34 项, 窗口采样已移出, 撤销与过期拒绝各自的业务回归通过. 本轮使用确定性工具和本地协议模拟执行相关验证. [集成回归汇总](../../../infra/fabric/evidence/integration/decouple-experiments/final/run-bcaa7b32cd3dcec6/summary.json), [原始事件](../../../infra/fabric/evidence/integration/decouple-experiments/final/run-bcaa7b32cd3dcec6/events.jsonl).
 - `mise run experiment:baseline` 在最终代码上的独立运行 `baseline-ba8cb1aa67eacdcc` 通过 12/12, 登记回读一致, 夹具摘要与双轮参考相同. 正式实验工作流的提案和设计均已引用新入口. [最终基线汇总](../../../infra/fabric/evidence/baseline/verification/decouple-experiments/final/summary.json), [运行清单](../../../infra/fabric/evidence/baseline/verification/decouple-experiments/final/manifest.json).
+
+## 独立复核
+
+复核提交 `208ac63f02dbab41450e452717f02219630b0453`. 12/12 项任务已标记完成, OpenSpec 严格校验通过. 变更显式配置 `skip_specs: true`, 增量规范覆盖, 需求实现映射和规范场景覆盖不适用.
+
+- 原型构建, 未使用测试结果缓存的项目测试和实验测试通过. 原型及其测试的传递依赖中有 0 个实验包. 原型 CLI 对两个旧命令均返回未知命令, 已有归档和原始证据字节未变.
+- 用新建的独立 Fabric 实例复跑完整回归 `run-60dfc20846c7183f`, 通过 33/33. 用另一实例定点复跑 `management-http-recovery`, `run-c95a671081c99daf` 通过 1/1. 极短期限的运行 `run-2df0440405834da5` 非零退出, 并记录预检超时.
+- 从 CSV 重算历史参考轮, 固定构建双轮和最终轮, 核对计划, 订单副作用和两种来源的登记回读. 新实例基线 `baseline-167a530670fc5f8f` 同样通过 12/12. 每轮均有 6 笔唯一新订单, 6 笔超额拒绝且无订单或订单业务键副作用, 两个来源各回读 39 项登记锚点. 新轮清单的 112 项源码和配置指纹与已保存的最终轮一致. 准备失败复跑 `baseline-104e6f934c995eea` 非零退出, 保留 24 条未执行计划. 本次复跑原始记录保存在本机 `.local/verify-decouple-XmOF1z/`.
+
+### 警告
+
+- 项目回归仍会根据继承的环境配置调用真实模型并生成轨迹. 本次完整回归继承了 mise 的 Anthropic 配置, 采购闭环, 改派和核账各执行了一条真实模型轨迹. 建议将真实模型轨迹移至显式实验入口, 项目回归保留确定性工具和本地协议模拟. 入口见 `internal/fabric/integration_procurement_test.go:577` 和 `internal/fabric/integration_lifecycle_test.go:1483`.
+- `ledger:verify --timeout` 在构建子进程用的 `ledgerctl` 之后才开始计时, 同时 Go 测试的总计时已禁用. 本次 `--timeout 1ns` 仍先经过约 0.95 秒的测试入口准备才进入超时留证. 建议将传入的期限覆盖子进程构建, 并为构建失败保留预检诊断. 见 `internal/fabric/integration_test.go:41` 和 `mise.toml:58`.
+
+### 建议
+
+- `ledger:seed` 的任务帮助仍包含阶段名 `D0`. 可按能力描述为"提交 Fabric 登记夹具". 见 `mise.toml:45`.
+
+无关键问题, 有 2 项警告和 1 项建议. 可以归档.

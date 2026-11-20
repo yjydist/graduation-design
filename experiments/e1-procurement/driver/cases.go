@@ -688,7 +688,7 @@ func (e *e1Trial) renewAuthority() error {
 	if err := writePublicFile(e.instance.registrySubPath("certifications", "B.jws"), []byte(rotatedCert)); err != nil {
 		return err
 	}
-	if err := e.save("F15-new-credential", map[string]any{"credential": credential, "signedPresentation": signed.PresentationPrefix, "operation": registered}); err != nil {
+	if err := e.save("F15-new-credential", map[string]any{"credential": credential, "presentationDigest": api.Digest([]byte(signed.PresentationPrefix)), "operation": registered}); err != nil {
 		return err
 	}
 	return e.forModes(func(m *e1Mode) error {
@@ -788,9 +788,15 @@ func (e *e1Trial) evidenceBindings() error {
 		pending.Credentials = maps.Clone(history.Snapshot.Credentials)
 		delete(pending.Credentials, result.LeafCredential.Claims.ID)
 		_, pendingErr := protocol.VerifyAccessEvidencePackage(e.ctx, m.pkg, &pending, resolver, m.chal)
-		if err := e.save("F16-"+m.tag, map[string]any{"height": height, "challenge": m.chal, "originalRecords": m.pkg.TrustPaths,
+		publicChallenge := map[string]any{
+			"challengeId": m.chal.ChallengeID,
+			"audience":    m.chal.Audience,
+			"issuedAt":    m.chal.IssuedAt,
+			"expiresAt":   m.chal.ExpiresAt,
+		}
+		if err := e.save("F16-"+m.tag, map[string]any{"height": height, "challenge": publicChallenge, "originalRecords": m.pkg.TrustPaths,
 			"grantJWS": m.pkg.Grants, "canonicalEvidence": string(canonical), "walletEvidenceHash": evidenceHash,
-			"verifiedEvidenceHash": result.Bindings.EvidenceHash, "originalKBJWT": kbJWT,
+			"verifiedEvidenceHash": result.Bindings.EvidenceHash, "kbJwtDigest": api.Digest([]byte(kbJWT)),
 			"kbEvidenceHash": kb.GradBinding.EvidenceHash, "changedEvidenceHash": changed.EvidenceHash,
 			"absentCredentialControl": fmt.Sprint(pendingErr), "byteChangeError": fmt.Sprint(byteErr), "orderChangeError": fmt.Sprint(orderErr)}); err != nil {
 			return err

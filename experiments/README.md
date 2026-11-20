@@ -9,7 +9,7 @@
 | E3 | [动态调整与恢复](../docs/experiments/E3-动态调整与恢复.md) | 待建 | 待建 |
 | E4 | [微基准](../docs/experiments/E4-微基准.md) | 待建 | 待建 |
 | E5 | [开放到达负载](../docs/experiments/E5-开放到达负载.md) | 待建 | 待建 |
-| E6 | [撤销窗口](../docs/experiments/E6-撤销窗口.md) | 待建 | [结果模板](e6-revocation/result.md) |
+| E6 | [撤销窗口](../docs/experiments/E6-撤销窗口.md) | [独立驱动](e6-revocation/README.md) | [短跑结果与模板](e6-revocation/result.md) |
 | E7 | [故障与并发](../docs/experiments/E7-故障与并发.md) | 待建 | 待建 |
 | E8 | [账本与通信开销](../docs/experiments/E8-账本与通信开销.md) | 待建 | 待建 |
 

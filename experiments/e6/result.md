@@ -1,10 +1,10 @@
 # E6 撤销窗口实验结果
 
-**状态.** 已完成 RP 与 BM 各一轮隔离短跑及离线复算验收; 主要场景 30 次独立重复, `deltaState` 1/5/15 秒参数扫描及深度/后代数扩展待正式采样. [独立驱动说明](README.md), [E6 方法](../../docs/experiments/E6-撤销窗口.md).
+**状态.** 已完成 RP 与 BM 各一轮隔离短跑及离线复算验收; 主要场景 30 次独立重复, `deltaState` 1/5/15 秒参数扫描及深度/后代数扩展待正式采样. [独立驱动说明](README.md), [E6 方法](method.md).
 
 ## 1 实验问题与判据
 
-测量上级委托 G1 被撤销后, 各网关实例还能沿旧路径成功下单多久. 对每个实例记录可信 Peer 首次观测原撤销交易为 `VALID` 的时点 `t_valid`, 以及最后一次允许的 `t_last_allow,j`. 按[E6 方法](../../docs/experiments/E6-撤销窗口.md)计算确认后的窗口, 同时报告相对首次提交的窗口, 标记确认后允许未观测到的轮次, 并注明探测分辨率和删失原因.
+测量上级委托 G1 被撤销后, 各网关实例还能沿旧路径成功下单多久. 对每个实例记录可信 Peer 首次观测原撤销交易为 `VALID` 的时点 `t_valid`, 以及最后一次允许的 `t_last_allow,j`. 按[E6 方法](method.md)计算确认后的窗口, 同时报告相对首次提交的窗口, 标记确认后允许未观测到的轮次, 并注明探测分辨率和删失原因.
 
 采用撤销块或更高块后仍允许旧路径, 或在所用原探针到期时及之后仍允许, 均判为失败. 锁后定案 (`decision_at_ns`), 业务提交 (`committed_at_ns`) 与客户端响应 (`responded_at_ns`) 分别记录.
 
@@ -26,7 +26,7 @@
 
 ## 3 短跑离线复算结果
 
-停止 Fabric 与 PostgreSQL 容器后, 使用 `mise run experiment:analyze -- --experiment E6` (`e6-analyzer/v1`) 对两轮隔离短跑进行只读复算, 原始目录保持不变.
+停止 Fabric 与 PostgreSQL 容器后, 使用 `mise -C experiments run experiment:analyze -- --experiment E6` (`e6-analyzer/v1`) 对两轮隔离短跑进行只读复算, 原始目录保持不变.
 
 | 配置与实例 | 源运行 ID | `t_valid-t_submit` (ms) | `t_apply-t_valid` (ms) | `t_adopt-t_apply` (ms) | 确认后窗口 (ms) | 相对提交窗口 (ms) | 窗口状态 | 违规放行数 | 计划 / 完成 / 漏探测 / 超时 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

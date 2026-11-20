@@ -102,7 +102,11 @@ func TestInitialManifestAndSnapshotReconstructionBeforeBuild(t *testing.T) {
 			t.Fatalf("reconstructed %s hash mismatch: got %s want %s", rel, got, expectedHash)
 		}
 	}
-	for _, mustHave := range []string{"mise.toml", "experiments/runner/run.go", "experiments/e1-procurement/driver/main.go", "experiments/llm.env"} {
+	for _, mustHave := range []string{
+		"mise.toml", "experiments/mise.toml", "experiments/runner/run.go",
+		"experiments/e1/driver/main.go", "experiments/llm.env",
+		"experiments/e1/method.md", "experiments/实验计划.md", "experiments/验证用例.md",
+	} {
 		if _, ok := extracted[mustHave]; !ok {
 			t.Fatalf("snapshot archive missing essential orchestrator/driver file %s", mustHave)
 		}
@@ -124,13 +128,34 @@ func TestManifestEnrichedWithBinariesAndIsolatedInstance(t *testing.T) {
 		return "", false
 	}
 	deps.ArchiveCommit = func(_ context.Context, _, _, destDir string) error {
-		return os.MkdirAll(filepath.Join(destDir, "infra", "fabric"), 0755)
+		driverDir := filepath.Join(destDir, e1DriverDir)
+		if err := os.MkdirAll(driverDir, 0755); err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(driverDir, "obsolete.go"), []byte("package obsolete"), 0644)
 	}
 	deps.RunCmd = func(_ context.Context, dir string, _ []string, logPath string, name string, args ...string) error {
 		if logPath != "" {
 			_ = os.WriteFile(logPath, []byte("ok\n"), 0644)
 		}
 		if name == "go" && len(args) >= 3 && args[0] == "build" && args[1] == "-o" {
+			if args[len(args)-1] == "./"+e1DriverDir {
+				stagedDir := filepath.Join(dir, e1DriverDir)
+				if _, err := os.Stat(filepath.Join(stagedDir, "obsolete.go")); !os.IsNotExist(err) {
+					t.Fatalf("archived driver file was carried into the build: %v", err)
+				}
+				stagedHash, err := sha256File(filepath.Join(stagedDir, "main.go"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				manifest, err := readJSONMap(filepath.Join(outRoot, "run-fixed-e1", "manifest.json"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if stagedHash != manifest["fileSHA256"].(map[string]any)[e1DriverDir+"/main.go"] {
+					t.Fatal("fixed build driver does not match the recorded snapshot")
+				}
+			}
 			return os.WriteFile(args[2], []byte("binary:"+filepath.Base(args[2])), 0755)
 		}
 		if name == "sh" && len(args) >= 4 && args[1] == "rebuild" {
@@ -167,6 +192,7 @@ func TestManifestEnrichedWithBinariesAndIsolatedInstance(t *testing.T) {
 		InstanceDir: instanceDir,
 		BasePort:    19500,
 		OutRoot:     outRoot,
+		RunID:       "run-fixed-e1",
 	}, deps)
 	if err != nil {
 		t.Fatalf("ExecuteRun failed: %v", err)

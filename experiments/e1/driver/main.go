@@ -244,12 +244,8 @@ func (e *e1Trial) saveManifest() error {
 		}
 		binaries[name] = value
 	}
-	driverFiles, err := filepath.Glob("experiments/e1-procurement/driver/*.go")
-	if err != nil || len(driverFiles) == 0 {
-		return fmt.Errorf("driver source files were not included in the build environment")
-	}
 	inputs := map[string]string{}
-	for _, name := range append(driverFiles, "go.mod", "go.sum", "infra/fabric/compose.yaml", "docs/experiments/实验计划.md", "docs/experiments/验证用例.md") {
+	for _, name := range []string{"go.mod", "go.sum", "infra/fabric/compose.yaml"} {
 		hash, err := sha256File(name)
 		if err != nil {
 			return err

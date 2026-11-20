@@ -231,7 +231,7 @@ func (s *Server) runPrecheck(
 		}
 	}
 
-	// 4. Full cryptographic evidence + chain verification on consistent snapshot (with optional B1 signature cache).
+	// 4. Verify cryptographic evidence and the chain on a consistent snapshot, with optional signature caching.
 	verified, err := protocol.VerifyAccessEvidencePackageWithCache(ctx, pkg, snap, s.cfg.DIDs, chalCtx, s.cfg.SignatureCache)
 	if err != nil {
 		return nil, err

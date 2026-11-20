@@ -2,7 +2,7 @@
 
 ## 1 实验范围与配置
 
-迁移前的四轮实验中, 两个独立重建的三域 Fabric 网络通过 F01-F16 共 16 项, RP (`RESOURCE_PREAUTHORIZED`) 与 BM (`BUYER_MANDATE`) 均完成采购闭环. 四轮原始记录与各自的源码一并保留. 驱动迁移后的固定构建验证见第 5 节. [E1 方法](../../docs/experiments/E1-采购功能闭环.md), [F01-F16 判据](../../docs/experiments/验证用例.md#1-采购闭环), [旧批次源码归档](source-archive/README.md).
+迁移前的四轮实验中, 两个独立重建的三域 Fabric 网络通过 F01-F16 共 16 项, RP (`RESOURCE_PREAUTHORIZED`) 与 BM (`BUYER_MANDATE`) 均完成采购闭环. 四轮原始记录与各自的源码一并保留. 驱动迁移后的固定构建验证见第 5 节. [E1 方法](method.md), [F01-F16 判据](../验证用例.md#1-采购闭环), [旧批次源码归档](source-archive/README.md).
 
 - 采用 B0, 由 C 在每次请求装配 Fabric 一致视图并使用本地探针, 关闭跨请求静态验签缓存. 每轮的部署标识, 创世块, 链码包标识及源码指纹见运行清单.
 - 通过 Anthropic SDK 和本地模型代理调用 `deepseek-flash`. A1 读取 G1 后签发并逐跳交付 G2, B1 对独立的 RP/BM 任务发起询价与下单. 两个钱包各从已交付的 G1 装入父路径, 实验用 G2 在运行中由 A1 创建. F15 换钥后再由 A1 签发叶子委托.
@@ -71,7 +71,7 @@
 启动 Docker, 通过环境提供 `LLM_API_KEY`, 为每轮选择新的实例目录及端口. 模型与接口地址见[实验用 LLM 配置](../README.md#实验用-llm-配置).
 
 ```bash
-mise run experiment:run -- --experiment E1 \
+mise -C experiments run experiment:run -- --experiment E1 \
   --revision 79125cc40855014c16fcfb0a962bc276202023d8 \
   --instance .local/fabric-e1-rerun \
   --port 19100
@@ -84,9 +84,9 @@ mise run experiment:run -- --experiment E1 \
 在脱离 Fabric, PostgreSQL 和模型服务的离线环境下, 使用分析版本 `e1-analyzer/v1` 对固定构建通过批次 `run-3f8a7a6db26d582c` 与失败批次 `run-f6b3cc4a627e1a49` 进行只读复算, 派生文件与原始目录分离保存.
 
 ```bash
-mise run experiment:analyze -- --experiment E1 \
-  --run-dir experiments/e1-procurement/runs/run-3f8a7a6db26d582c \
-  --out experiments/e1-procurement/analysis/run-3f8a7a6db26d582c
+mise -C experiments run experiment:analyze -- --experiment E1 \
+  --run-dir experiments/e1/runs/run-3f8a7a6db26d582c \
+  --out experiments/e1/analysis/run-3f8a7a6db26d582c
 ```
 
 | 源运行 ID | 分析版本 | 离线复算结论 | 关键计数 | 原始文件与派生输出 |

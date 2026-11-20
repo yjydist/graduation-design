@@ -228,7 +228,7 @@ type DecisionRecord struct {
 	FailedObjectID        *string    `json:"failedObjectId,omitempty"`
 }
 
-// MarshalJSON preserves the existing Fabric fields while expressing their absence for C0.
+// MarshalJSON preserves the existing Fabric fields and marks them absent for central state.
 func (d DecisionRecord) MarshalJSON() ([]byte, error) {
 	type record DecisionRecord
 	raw, err := json.Marshal(record(d))

@@ -129,7 +129,17 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 		return err
 	}
 	e.Manifest["binary_sha256"] = api.Digest(binary)
-	for _, path := range []string{"go.mod", "go.sum", "mise.toml", "infra/fabric/compose.yaml", "infra/fabric/channel.sh", "infra/fabric/network.sh", "internal/protocol/contexts/vc-v2.json", "experiments/baseline/baseline.json"} {
+	for _, path := range []string{
+		"go.mod",
+		"go.sum",
+		"mise.toml",
+		"infra/fabric/compose.yaml",
+		"infra/fabric/channel.sh",
+		"infra/fabric/network.sh",
+		"internal/protocol/contexts/vc-v2.json",
+		"experiments/mise.toml",
+		"experiments/baseline/baseline.json",
+	} {
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			return err

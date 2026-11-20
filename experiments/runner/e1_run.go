@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const e1DriverDir = "experiments/e1/driver"
+
 func prepareE1Plan(rc *runContext) (RunPlan, map[string]any, string, []string, error) {
 	llmEnvPath := filepath.Join(rc.repoRoot, "experiments", "llm.env")
 	fileEnv, err := parseEnvFile(llmEnvPath)
@@ -57,8 +59,8 @@ func prepareE1Plan(rc *runContext) (RunPlan, map[string]any, string, []string, e
 		AuthorizationModes: []string{"RESOURCE_PREAUTHORIZED", "BUYER_MANDATE"},
 		Items:              items,
 		Sampling: map[string]any{
-			"cases":             "F01-F16",
-			"llmDriverCases":    []string{"F05", "F06", "F07", "F15"},
+			"cases":              "F01-F16",
+			"llmDriverCases":     []string{"F05", "F06", "F07", "F15"},
 			"deterministicCases": []string{"F01", "F02", "F03", "F04", "F08", "F09", "F10", "F11", "F12", "F13", "F14", "F16"},
 		},
 	}
@@ -78,13 +80,14 @@ func prepareE1Plan(rc *runContext) (RunPlan, map[string]any, string, []string, e
 		"go.mod",
 		"go.sum",
 		"infra/fabric/compose.yaml",
+		"experiments/mise.toml",
 		"experiments/llm.env",
-		"experiments/e1-procurement/run.sh",
-		"experiments/e1-procurement/driver/*.go",
+		"experiments/e1/run.sh",
+		e1DriverDir + "/*.go",
 		"experiments/runner/*.go",
-		"docs/experiments/实验计划.md",
-		"docs/experiments/验证用例.md",
-		"docs/experiments/E1-采购功能闭环.md",
+		"experiments/实验计划.md",
+		"experiments/验证用例.md",
+		"experiments/e1/method.md",
 	}
 	return plan, llmMeta, apiKey, patterns, nil
 }
@@ -101,32 +104,8 @@ func executeE1Run(ctx context.Context, rc *runContext) error {
 		// while recording workspaceCommit, workspaceDirty, and binary/file SHA-256 digests.
 		buildDir = rc.repoRoot
 		sutSource = "workspace"
-	} else {
-		if err := rc.deps.ArchiveCommit(ctx, rc.repoRoot, rc.sourceCommit, rc.workDir); err != nil {
-			return fmt.Errorf("export commit %s: %w", rc.sourceCommit, err)
-		}
-		driverDst := filepath.Join(rc.workDir, "experiments", "e1-procurement", "driver")
-		if err := os.MkdirAll(driverDst, 0755); err != nil {
-			return err
-		}
-		driverSrcFiles, err := filepath.Glob(filepath.Join(rc.repoRoot, "experiments", "e1-procurement", "driver", "*.go"))
-		if err != nil || len(driverSrcFiles) == 0 {
-			return fmt.Errorf("E1 driver sources missing")
-		}
-		for _, src := range driverSrcFiles {
-			raw, err := os.ReadFile(src)
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(filepath.Join(driverDst, filepath.Base(src)), raw, 0644); err != nil {
-				return err
-			}
-		}
-		localTools := filepath.Join(rc.repoRoot, ".local", "fabric-tools")
-		if info, err := os.Stat(localTools); err == nil && info.IsDir() {
-			_ = os.MkdirAll(filepath.Join(rc.workDir, ".local"), 0755)
-			_ = os.Symlink(localTools, filepath.Join(rc.workDir, ".local", "fabric-tools"))
-		}
+	} else if err := prepareFixedBuild(ctx, rc, e1DriverDir); err != nil {
+		return err
 	}
 
 	buildStart := time.Now()
@@ -136,7 +115,7 @@ func executeE1Run(ctx context.Context, rc *runContext) error {
 	if err := rc.deps.RunCmd(ctx, buildDir, nil, buildLog, "go", "build", "-o", ledgerctlBin, "./cmd/ledgerctl"); err != nil {
 		return fmt.Errorf("build ledgerctl: %w", err)
 	}
-	if err := rc.deps.RunCmd(ctx, buildDir, nil, buildLog, "go", "build", "-o", driverBin, "./experiments/e1-procurement/driver"); err != nil {
+	if err := rc.deps.RunCmd(ctx, buildDir, nil, buildLog, "go", "build", "-o", driverBin, "./"+e1DriverDir); err != nil {
 		return fmt.Errorf("build e1-driver: %w", err)
 	}
 

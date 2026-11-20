@@ -1,12 +1,16 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -68,6 +72,63 @@ type runContext struct {
 	stage           string
 	secrets         []string
 	llmConfig       map[string]any
+}
+
+func prepareFixedBuild(ctx context.Context, rc *runContext, driverDir string) error {
+	if err := rc.deps.ArchiveCommit(ctx, rc.repoRoot, rc.sourceCommit, rc.workDir); err != nil {
+		return fmt.Errorf("export commit %s: %w", rc.sourceCommit, err)
+	}
+
+	// Replace any driver from the exported project with the exact driver recorded for this run.
+	driverDst := filepath.Join(rc.workDir, driverDir)
+	if err := os.RemoveAll(driverDst); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(driverDst, 0755); err != nil {
+		return err
+	}
+	snapshot, err := os.Open(filepath.Join(rc.runDir, "driver-source.tar.gz"))
+	if err != nil {
+		return err
+	}
+	defer snapshot.Close()
+	gz, err := gzip.NewReader(snapshot)
+	if err != nil {
+		return err
+	}
+	defer gz.Close()
+	entries := tar.NewReader(gz)
+	count := 0
+	for {
+		entry, err := entries.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if entry.Typeflag != tar.TypeReg || path.Dir(entry.Name) != driverDir || path.Ext(entry.Name) != ".go" {
+			continue
+		}
+		raw, err := io.ReadAll(entries)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(driverDst, path.Base(entry.Name)), raw, 0644); err != nil {
+			return err
+		}
+		count++
+	}
+	if count == 0 {
+		return fmt.Errorf("driver source snapshot contains no Go files under %s", driverDir)
+	}
+
+	localTools := filepath.Join(rc.repoRoot, ".local", "fabric-tools")
+	if info, err := os.Stat(localTools); err == nil && info.IsDir() {
+		_ = os.MkdirAll(filepath.Join(rc.workDir, ".local"), 0755)
+		_ = os.Symlink(localTools, filepath.Join(rc.workDir, ".local", "fabric-tools"))
+	}
+	return nil
 }
 
 func defaultRunnerDeps() RunnerDeps {
@@ -176,7 +237,7 @@ func ExecuteRun(ctx context.Context, opts RunOptions, deps RunnerDeps) (*RunResu
 	var defaultOutRoot string
 	switch exp {
 	case "E1":
-		defaultOutRoot = filepath.Join(repoRoot, "experiments", "e1-procurement", "runs")
+		defaultOutRoot = filepath.Join(repoRoot, "experiments", "e1", "runs")
 		plan, llmMeta, apiKey, patterns, err := prepareE1Plan(rc)
 		if err != nil {
 			return nil, err
@@ -189,7 +250,7 @@ func ExecuteRun(ctx context.Context, opts RunOptions, deps RunnerDeps) (*RunResu
 		extraManifest = map[string]any{"llm": llmMeta}
 		snapshotPatterns = patterns
 	case "E6":
-		defaultOutRoot = filepath.Join(repoRoot, "experiments", "e6-revocation", "runs")
+		defaultOutRoot = filepath.Join(repoRoot, "experiments", "e6", "runs")
 		plan, patterns, err := prepareE6Plan(rc)
 		if err != nil {
 			return nil, err
@@ -620,17 +681,17 @@ func prepareE6Plan(rc *runContext) (RunPlan, []string, error) {
 		AuthorizationModes: []string{authMode},
 		Items:              items,
 		Sampling: map[string]any{
-			"modeShort":         mode,
-			"revocationTarget":  "G1",
-			"gatewayInstances":  instances,
-			"probeIntervalMs":   probeInterval.Milliseconds(),
-			"probeLifetimeMs":   probeLifetime.Milliseconds(),
-			"detectIntervalMs":  detectInterval.Milliseconds(),
-			"revokeAfterMs":     revokeAfter.Milliseconds(),
-			"postRevokeDurMs":   duration.Milliseconds(),
-			"delegationDepth":   2,
-			"descendantCount":   1,
-			"clockTimebase":     "host-utc-unix-ns",
+			"modeShort":        mode,
+			"revocationTarget": "G1",
+			"gatewayInstances": instances,
+			"probeIntervalMs":  probeInterval.Milliseconds(),
+			"probeLifetimeMs":  probeLifetime.Milliseconds(),
+			"detectIntervalMs": detectInterval.Milliseconds(),
+			"revokeAfterMs":    revokeAfter.Milliseconds(),
+			"postRevokeDurMs":  duration.Milliseconds(),
+			"delegationDepth":  2,
+			"descendantCount":  1,
+			"clockTimebase":    "host-utc-unix-ns",
 		},
 	}
 	if rc.opts.Seed != 0 {
@@ -642,10 +703,11 @@ func prepareE6Plan(rc *runContext) (RunPlan, []string, error) {
 		"go.mod",
 		"go.sum",
 		"infra/fabric/compose.yaml",
-		"docs/experiments/实验计划.md",
-		"docs/experiments/E6-撤销窗口.md",
+		"experiments/mise.toml",
+		"experiments/实验计划.md",
+		"experiments/e6/method.md",
 		"experiments/runner/*.go",
-		"experiments/e6-revocation/driver/*.go",
+		e6DriverDir + "/*.go",
 	}
 	return plan, patterns, nil
 }

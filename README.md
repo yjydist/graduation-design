@@ -15,19 +15,27 @@ flowchart TB
 
 身份采用三域共同认可的权威机构 T 作为唯一信任根. T 认证 A/B/C 域及 IA/IB/IC 的签发资格, 各域机构证明本域用户, 智能体和服务的身份. 采购委托由业务方签发, C 独立决定销售准入. 见[跨域身份与信任](docs/design/跨域身份与信任.md).
 
+本仓库提供两个入口. [毕设项目](#毕设项目)涵盖设计, 实现, 部署和回归. [论文实验](experiments/README.md)按 E1-E8 组织研究问题, 方法, 运行和结果, 通过项目接口测量已固定的项目构建.
+
+## 毕设项目
+
 | 想做什么 | 从这里开始 |
 | --- | --- |
 | 看懂一次采购为何获准或被拒 | [采购场景与总体设计](docs/design/采购场景与总体设计.md) |
-| 查任务书要求与对应证据 | [毕设要求](毕设要求.md), [设计导航与需求追踪](docs/design/AGENTS.md) |
+| 查任务书要求对应的设计与实现 | [毕设要求](毕设要求.md), [设计导航与需求追踪](docs/design/AGENTS.md#从任务书到实现) |
 | 搭建网络, 编写验证器 | [技术栈](docs/implementation/技术栈.md), [实现导航](docs/implementation/AGENTS.md) |
 | 复跑 Fabric D0 | [网络与 ledgerctl](infra/fabric/README.md), [Fabric 证据](infra/fabric/evidence/README.md) |
-| 运行 C0/B0/B1 采购基线 | [隔离实例与实验命令](infra/fabric/README.md#5-三组采购基线实验), [采购基线主规范](openspec/specs/reproducible-procurement-experiments/spec.md) |
-| 测量撤销后还能下单多久 | [E6 撤销窗口](docs/experiments/E6-撤销窗口.md), [实验导航](docs/experiments/AGENTS.md) |
-| 查 E1-E8 方法, 复跑入口和论文图表来源 | [正式实验索引](experiments/README.md) |
 | 查阶段状态, 任务和验证证据 | [任务安排与退出条件](TODO.md) |
 | 阅读论文或准备写作 | [文献清单](paper/论文.md), [全文与笔记索引](paper/README.md) |
 
-## 复跑 Fabric 集成回归
+### 构建与单元测试
+
+```bash
+mise run ledger:build
+mise run test:unit
+```
+
+### 复跑 Fabric 集成回归
 
 在 arm64 主机启动 Docker, 然后在项目根目录执行.
 

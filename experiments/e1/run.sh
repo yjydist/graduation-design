@@ -10,7 +10,7 @@ experiment=$(cd "$(dirname "$0")" && pwd)
 repo=$(git -C "$experiment" rev-parse --show-toplevel)
 cd "$repo"
 
-exec mise exec -- go run ./experiments/runner run \
+exec mise -C experiments run experiment:run -- \
     --experiment E1 \
     --revision "$1" \
     --instance "$2" \

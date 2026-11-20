@@ -34,7 +34,7 @@ func hashDirFiles(t *testing.T, root string) map[string]string {
 
 func TestAnalyzeE1OfflinePassRunMatchesPublishedAuditAndIsImmutable(t *testing.T) {
 	repo := testRepoRoot(t)
-	runDir := filepath.Join(repo, "experiments", "e1-procurement", "runs", "run-3f8a7a6db26d582c")
+	runDir := filepath.Join(repo, "experiments", "e1", "runs", "run-3f8a7a6db26d582c")
 	beforeHashes := hashDirFiles(t, runDir)
 
 	out1 := filepath.Join(t.TempDir(), "out1")
@@ -94,7 +94,7 @@ func TestAnalyzeE1OfflinePassRunMatchesPublishedAuditAndIsImmutable(t *testing.T
 
 func TestAnalyzeE1OfflineFailedRunDetectsFailureAndMissing(t *testing.T) {
 	repo := testRepoRoot(t)
-	runDir := filepath.Join(repo, "experiments", "e1-procurement", "runs", "run-8e823c1f2d3bc13a")
+	runDir := filepath.Join(repo, "experiments", "e1", "runs", "run-8e823c1f2d3bc13a")
 	out := filepath.Join(t.TempDir(), "failed-out")
 
 	rep, err := AnalyzeE1Run(runDir, out)

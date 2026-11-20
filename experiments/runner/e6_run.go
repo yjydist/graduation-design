@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"time"
 )
+
+const e6DriverDir = "experiments/e6/driver"
 
 func executeE6Run(ctx context.Context, rc *runContext) error {
 	manifestPath := filepath.Join(rc.runDir, "manifest.json")
@@ -21,38 +22,14 @@ func executeE6Run(ctx context.Context, rc *runContext) error {
 		// while still recording workspaceCommit, workspaceDirty, and binary/file SHA-256 digests.
 		buildDir = rc.repoRoot
 		sutSource = "workspace"
-	} else {
-		if err := rc.deps.ArchiveCommit(ctx, rc.repoRoot, rc.sourceCommit, rc.workDir); err != nil {
-			return fmt.Errorf("export commit %s: %w", rc.sourceCommit, err)
-		}
-		driverDst := filepath.Join(rc.workDir, "experiments", "e6-revocation", "driver")
-		if err := os.MkdirAll(driverDst, 0755); err != nil {
-			return err
-		}
-		driverSrcFiles, err := filepath.Glob(filepath.Join(rc.repoRoot, "experiments", "e6-revocation", "driver", "*.go"))
-		if err != nil || len(driverSrcFiles) == 0 {
-			return fmt.Errorf("E6 driver sources missing")
-		}
-		for _, src := range driverSrcFiles {
-			raw, err := os.ReadFile(src)
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(filepath.Join(driverDst, filepath.Base(src)), raw, 0644); err != nil {
-				return err
-			}
-		}
-		localTools := filepath.Join(rc.repoRoot, ".local", "fabric-tools")
-		if info, err := os.Stat(localTools); err == nil && info.IsDir() {
-			_ = os.MkdirAll(filepath.Join(rc.workDir, ".local"), 0755)
-			_ = os.Symlink(localTools, filepath.Join(rc.workDir, ".local", "fabric-tools"))
-		}
+	} else if err := prepareFixedBuild(ctx, rc, e6DriverDir); err != nil {
+		return err
 	}
 
 	buildStart := time.Now()
 	buildLog := filepath.Join(rc.runDir, "build.log")
 	driverBin := filepath.Join(rc.workDir, "e6-driver")
-	if err := rc.deps.RunCmd(ctx, buildDir, nil, buildLog, "go", "build", "-o", driverBin, "./experiments/e6-revocation/driver"); err != nil {
+	if err := rc.deps.RunCmd(ctx, buildDir, nil, buildLog, "go", "build", "-o", driverBin, "./"+e6DriverDir); err != nil {
 		return fmt.Errorf("build e6-driver: %w", err)
 	}
 	driverHash, err := sha256File(driverBin)

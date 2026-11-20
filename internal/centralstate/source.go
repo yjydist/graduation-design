@@ -1,4 +1,4 @@
-// Package centralstate implements the explicitly selected C0 registry in the business primary database.
+// Package centralstate implements a registry backed by the business primary database.
 package centralstate
 
 import (
@@ -30,7 +30,7 @@ type Source struct {
 }
 
 // Initialize atomically installs the shared trusted registration input at revision 1.
-// The caller selects an independent, empty experiment database explicitly.
+// The caller explicitly selects an independent, empty database.
 func Initialize(ctx context.Context, db *pgxpool.Pool, snap *protocol.SnapshotView) (*Source, error) {
 	if snap == nil || snap.DeploymentID == "" {
 		return nil, fmt.Errorf("central registration input required")

@@ -114,6 +114,9 @@ func ExecuteRun(ctx context.Context, opts RunOptions, deps RunnerDeps) (*RunResu
 		return nil, fmt.Errorf("experiment must be E1 or E6, got %q", opts.Experiment)
 	}
 	opts.Experiment = exp
+	if opts.WorkspaceSUT && opts.Revision != "" && opts.Revision != "HEAD" {
+		return nil, fmt.Errorf("--workspace-sut cannot be combined with explicit --revision %q", opts.Revision)
+	}
 	if opts.Revision == "" {
 		opts.Revision = "HEAD"
 	}
@@ -357,7 +360,20 @@ func (rc *runContext) finalize(ctx context.Context, runErr error) (RunSummary, e
 					seenIDs[name] = true
 				}
 				statusStr, _ := m["status"].(string)
-				if statusStr != "not_executed" {
+				if statusStr == "not_executed" {
+					reason, _ := m["missingReason"].(string)
+					if reason == "" {
+						reason, _ = m["error"].(string)
+					}
+					if reason == "" {
+						reason = fmt.Sprintf("not executed during %s", rc.stage)
+					}
+					summary.MissingItems = append(summary.MissingItems, MissingItem{
+						ID:     name,
+						Status: "not_executed",
+						Reason: redactSecrets(reason, rc.secrets),
+					})
+				} else {
 					executed++
 				}
 			}

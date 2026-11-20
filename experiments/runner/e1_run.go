@@ -94,40 +94,49 @@ func executeE1Run(ctx context.Context, rc *runContext) error {
 
 	// Stage: build
 	rc.stage = "build"
-	if err := rc.deps.ArchiveCommit(ctx, rc.repoRoot, rc.sourceCommit, rc.workDir); err != nil {
-		return fmt.Errorf("export commit %s: %w", rc.sourceCommit, err)
-	}
-	driverDst := filepath.Join(rc.workDir, "experiments", "e1-procurement", "driver")
-	if err := os.MkdirAll(driverDst, 0755); err != nil {
-		return err
-	}
-	driverSrcFiles, err := filepath.Glob(filepath.Join(rc.repoRoot, "experiments", "e1-procurement", "driver", "*.go"))
-	if err != nil || len(driverSrcFiles) == 0 {
-		return fmt.Errorf("E1 driver sources missing")
-	}
-	for _, src := range driverSrcFiles {
-		raw, err := os.ReadFile(src)
-		if err != nil {
+	buildDir := rc.workDir
+	sutSource := "git-archive"
+	if rc.opts.WorkspaceSUT {
+		// Build directly from the current repository workspace when testing uncommitted SUT changes,
+		// while recording workspaceCommit, workspaceDirty, and binary/file SHA-256 digests.
+		buildDir = rc.repoRoot
+		sutSource = "workspace"
+	} else {
+		if err := rc.deps.ArchiveCommit(ctx, rc.repoRoot, rc.sourceCommit, rc.workDir); err != nil {
+			return fmt.Errorf("export commit %s: %w", rc.sourceCommit, err)
+		}
+		driverDst := filepath.Join(rc.workDir, "experiments", "e1-procurement", "driver")
+		if err := os.MkdirAll(driverDst, 0755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(driverDst, filepath.Base(src)), raw, 0644); err != nil {
-			return err
+		driverSrcFiles, err := filepath.Glob(filepath.Join(rc.repoRoot, "experiments", "e1-procurement", "driver", "*.go"))
+		if err != nil || len(driverSrcFiles) == 0 {
+			return fmt.Errorf("E1 driver sources missing")
 		}
-	}
-	localTools := filepath.Join(rc.repoRoot, ".local", "fabric-tools")
-	if info, err := os.Stat(localTools); err == nil && info.IsDir() {
-		_ = os.MkdirAll(filepath.Join(rc.workDir, ".local"), 0755)
-		_ = os.Symlink(localTools, filepath.Join(rc.workDir, ".local", "fabric-tools"))
+		for _, src := range driverSrcFiles {
+			raw, err := os.ReadFile(src)
+			if err != nil {
+				return err
+			}
+			if err := os.WriteFile(filepath.Join(driverDst, filepath.Base(src)), raw, 0644); err != nil {
+				return err
+			}
+		}
+		localTools := filepath.Join(rc.repoRoot, ".local", "fabric-tools")
+		if info, err := os.Stat(localTools); err == nil && info.IsDir() {
+			_ = os.MkdirAll(filepath.Join(rc.workDir, ".local"), 0755)
+			_ = os.Symlink(localTools, filepath.Join(rc.workDir, ".local", "fabric-tools"))
+		}
 	}
 
 	buildStart := time.Now()
 	buildLog := filepath.Join(rc.runDir, "build.log")
 	ledgerctlBin := filepath.Join(rc.workDir, "ledgerctl")
 	driverBin := filepath.Join(rc.workDir, "e1-driver")
-	if err := rc.deps.RunCmd(ctx, rc.workDir, nil, buildLog, "go", "build", "-o", ledgerctlBin, "./cmd/ledgerctl"); err != nil {
+	if err := rc.deps.RunCmd(ctx, buildDir, nil, buildLog, "go", "build", "-o", ledgerctlBin, "./cmd/ledgerctl"); err != nil {
 		return fmt.Errorf("build ledgerctl: %w", err)
 	}
-	if err := rc.deps.RunCmd(ctx, rc.workDir, nil, buildLog, "go", "build", "-o", driverBin, "./experiments/e1-procurement/driver"); err != nil {
+	if err := rc.deps.RunCmd(ctx, buildDir, nil, buildLog, "go", "build", "-o", driverBin, "./experiments/e1-procurement/driver"); err != nil {
 		return fmt.Errorf("build e1-driver: %w", err)
 	}
 
@@ -140,8 +149,9 @@ func executeE1Run(ctx context.Context, rc *runContext) error {
 		binaries[name] = sum
 	}
 	if _, err := mergeManifest(manifestPath, map[string]any{
-		"stage":         "build",
-		"binarySHA256":  binaries,
+		"stage":           "build",
+		"sutSource":       sutSource,
+		"binarySHA256":    binaries,
 		"buildDurationMs": time.Since(buildStart).Milliseconds(),
 	}); err != nil {
 		return err
@@ -150,7 +160,7 @@ func executeE1Run(ctx context.Context, rc *runContext) error {
 	// Stage: network / preparation
 	rc.stage = "network"
 	netLog := filepath.Join(rc.runDir, "network-up.log")
-	if err := rc.deps.RunCmd(ctx, rc.workDir, nil, netLog, "sh", "infra/fabric/network.sh", "rebuild", rc.instanceDir, strconv.Itoa(rc.opts.BasePort)); err != nil {
+	if err := rc.deps.RunCmd(ctx, buildDir, nil, netLog, "sh", "infra/fabric/network.sh", "rebuild", rc.instanceDir, strconv.Itoa(rc.opts.BasePort)); err != nil {
 		return fmt.Errorf("prepare isolated Fabric network: %w", err)
 	}
 	netMeta := readPublicNetworkEnv(filepath.Join(rc.instanceDir, "network.env"))
@@ -168,7 +178,7 @@ func executeE1Run(ctx context.Context, rc *runContext) error {
 		"LLM_BASE_URL="+fmt.Sprint(rc.llmConfig["configuredBaseURL"]),
 		"LLM_MODEL="+fmt.Sprint(rc.llmConfig["model"]),
 	)
-	if err := rc.deps.RunCmd(ctx, rc.workDir, env, filepath.Join(rc.runDir, "driver.log"), driverBin,
+	if err := rc.deps.RunCmd(ctx, buildDir, env, filepath.Join(rc.runDir, "driver.log"), driverBin,
 		"-revision", rc.sourceCommit,
 		"-ledgerctl", ledgerctlBin,
 		"-dir", rc.instanceDir,

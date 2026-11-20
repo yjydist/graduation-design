@@ -493,3 +493,146 @@ func TestSensitiveFieldScannerDetectsAllRestrictedMaterial(t *testing.T) {
 		t.Fatalf("expected clean scan to pass, got %+v", clean)
 	}
 }
+
+func TestFinalizeCountsDriverMarkedNotExecutedCases(t *testing.T) {
+	repo := testRepoRoot(t)
+	tmp := t.TempDir()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	deps := defaultRunnerDeps()
+	deps.RepoRoot = repo
+	deps.LookupEnv = func(key string) (string, bool) {
+		if key == "LLM_API_KEY" {
+			return "secret-key-graceful-abort", true
+		}
+		return "", false
+	}
+	deps.ArchiveCommit = func(_ context.Context, _, _, destDir string) error {
+		return os.MkdirAll(filepath.Join(destDir, "infra", "fabric"), 0755)
+	}
+	deps.RunCmd = func(_ context.Context, _ string, _ []string, logPath string, name string, args ...string) error {
+		if name == "go" && len(args) >= 3 && args[0] == "build" {
+			return os.WriteFile(args[2], []byte("fake-bin"), 0755)
+		}
+		if name == "sh" && len(args) >= 4 && args[1] == "rebuild" {
+			_ = os.MkdirAll(args[2], 0755)
+			return os.WriteFile(filepath.Join(args[2], "network.env"), []byte("FABRIC_DB=19535\n"), 0644)
+		}
+		for i := 0; i < len(args)-1; i++ {
+			if args[i] == "-out" {
+				out := args[i+1]
+				// Simulate E1 driver catching SIGINT and explicitly writing F05-F16 as not_executed.
+				cases := make([]map[string]any, 0, 16)
+				for k := 1; k <= 4; k++ {
+					cases = append(cases, map[string]any{"name": "F" + pad2(k), "pass": true, "status": "passed"})
+				}
+				for k := 5; k <= 16; k++ {
+					cases = append(cases, map[string]any{
+						"name":          "F" + pad2(k),
+						"pass":          false,
+						"status":        "not_executed",
+						"missingReason": "aborted before F" + pad2(k) + ": context canceled",
+					})
+				}
+				raw, _ := json.Marshal(map[string]any{"runId": filepath.Base(out), "status": "FAIL", "cases": cases})
+				_ = os.WriteFile(filepath.Join(out, "summary.json"), raw, 0644)
+				cancel()
+				return context.Canceled
+			}
+		}
+		return nil
+	}
+	deps.TeardownFabric = func(_ context.Context, _, _, logPath string) error {
+		return os.WriteFile(logPath, []byte("stopped\n"), 0644)
+	}
+
+	res, err := ExecuteRun(ctx, RunOptions{
+		Experiment:  "E1",
+		Revision:    "HEAD",
+		InstanceDir: filepath.Join(tmp, "iso-driver-abort"),
+		BasePort:    19535,
+		OutRoot:     filepath.Join(tmp, "runs"),
+	}, deps)
+	if err == nil {
+		t.Fatalf("expected abort error")
+	}
+	if res.Summary.Status != "ABORTED" || res.Summary.ExecutedCount != 4 || res.Summary.MissingCount != 12 || len(res.Summary.MissingItems) != 12 {
+		t.Fatalf("expected 4 executed and 12 missing items, got executed=%d missing=%d len=%d",
+			res.Summary.ExecutedCount, res.Summary.MissingCount, len(res.Summary.MissingItems))
+	}
+	if res.Summary.MissingItems[0].ID != "F05" || !strings.Contains(res.Summary.MissingItems[0].Reason, "aborted before F05") {
+		t.Fatalf("unexpected first missing item: %+v", res.Summary.MissingItems[0])
+	}
+}
+
+func TestWorkspaceSUTConflictAndE1WorkspaceMode(t *testing.T) {
+	repo := testRepoRoot(t)
+	tmp := t.TempDir()
+	deps := defaultRunnerDeps()
+	deps.RepoRoot = repo
+
+	// Combining --workspace-sut with an explicit non-HEAD revision must fail fast.
+	_, err := ExecuteRun(context.Background(), RunOptions{
+		Experiment:   "E1",
+		Revision:     "79125cc40855014c16fcfb0a962bc276202023d8",
+		InstanceDir:  filepath.Join(tmp, "iso-ws-conflict"),
+		BasePort:     19560,
+		OutRoot:      filepath.Join(tmp, "runs"),
+		WorkspaceSUT: true,
+	}, deps)
+	if err == nil || !strings.Contains(err.Error(), "--workspace-sut") {
+		t.Fatalf("expected --workspace-sut revision conflict error, got %v", err)
+	}
+
+	// E1 with --workspace-sut builds directly from repoRoot without calling ArchiveCommit and records sutSource=workspace.
+	archiveCalled := false
+	var buildDirSeen string
+	deps.LookupEnv = func(key string) (string, bool) {
+		if key == "LLM_API_KEY" {
+			return "secret-key-e1-ws-1234", true
+		}
+		return "", false
+	}
+	deps.ArchiveCommit = func(_ context.Context, _, _, _ string) error {
+		archiveCalled = true
+		return nil
+	}
+	deps.RunCmd = func(_ context.Context, dir string, _ []string, logPath string, name string, args ...string) error {
+		if logPath != "" {
+			_ = os.WriteFile(logPath, []byte("ok\n"), 0644)
+		}
+		if name == "go" && len(args) >= 3 && args[0] == "build" {
+			buildDirSeen = dir
+			return os.WriteFile(args[2], []byte("fake-bin"), 0755)
+		}
+		if name == "sh" && len(args) >= 4 && args[1] == "rebuild" {
+			_ = os.MkdirAll(args[2], 0755)
+			return os.WriteFile(filepath.Join(args[2], "network.env"), []byte("FABRIC_DB=19565\n"), 0644)
+		}
+		return nil
+	}
+	deps.TeardownFabric = func(_ context.Context, _, _, logPath string) error {
+		return os.WriteFile(logPath, []byte("down\n"), 0644)
+	}
+	res, err := ExecuteRun(context.Background(), RunOptions{
+		Experiment:   "E1",
+		Revision:     "HEAD",
+		InstanceDir:  filepath.Join(tmp, "iso-e1-ws"),
+		BasePort:     19565,
+		OutRoot:      filepath.Join(tmp, "runs"),
+		WorkspaceSUT: true,
+	}, deps)
+	if err != nil {
+		t.Fatalf("E1 --workspace-sut failed: %v", err)
+	}
+	if archiveCalled || buildDirSeen != repo {
+		t.Fatalf("expected build from repoRoot without ArchiveCommit, got archiveCalled=%v buildDir=%q", archiveCalled, buildDirSeen)
+	}
+	m, err := readJSONMap(filepath.Join(res.RunDir, "manifest.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m["sutSource"] != "workspace" {
+		t.Fatalf("expected sutSource=workspace in manifest, got %v", m["sutSource"])
+	}
+}

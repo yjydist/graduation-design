@@ -1,6 +1,6 @@
 # 毕设实施与验收
 
-当前处于 [M4 实验, 演示与论文阶段](#m4-实验-演示与论文). 任务书结束日期为 2027-05-21. [正式实验索引](experiments/README.md), [实验共用方法](docs/experiments/实验计划.md), [实验工作流变更任务](openspec/changes/standardize-experiment-workflow/tasks.md).
+当前处于 [M4 实验, 演示与论文阶段](#m4-实验-演示与论文). 任务书结束日期为 2027-05-21. [正式实验索引](experiments/README.md), [实验共用方法](docs/experiments/实验计划.md), [实验工作流归档任务](openspec/changes/archive/2026-11-20-standardize-experiment-workflow/tasks.md).
 
 每项完成后附运行 ID, 报告章节或核验文件. 周报可直接引用交付物, 概述实际配置, 结果和缺测. 复跑保留原运行及失败证据.
 

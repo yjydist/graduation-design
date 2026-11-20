@@ -2,7 +2,7 @@
 
 ## M4 采购基线
 
-独立基线入口迁移后, 用同一个固定构建和种子 `1109` 重建两轮, 每轮通过 12/12, 逻辑输入和数据库副作用与迁移前参考轮一致. [双轮对照](baseline/verification/decouple-experiments/comparison.json), [运行与留证核验](../../../openspec/changes/decouple-experiments-from-prototype/verification.md#迁移后的固定构建双轮对照).
+独立基线入口迁移后, 用同一个固定构建和种子 `1109` 重建两轮, 每轮通过 12/12, 逻辑输入和数据库副作用与迁移前参考轮一致. [双轮对照](baseline/verification/decouple-experiments/comparison.json), [运行与留证核验](../../../openspec/changes/archive/2026-11-20-decouple-experiments-from-prototype/verification.md#迁移后的固定构建双轮对照).
 
 能力命名和回归入口迁移后的最终构建, 独立采购基线通过 12/12, 项目集成回归通过 33/33. [基线汇总](baseline/verification/decouple-experiments/final/summary.json), [集成回归汇总](integration/decouple-experiments/final/run-bcaa7b32cd3dcec6/summary.json), [旧部署兼容核对](integration/decouple-experiments/legacy-compatibility.json).
 

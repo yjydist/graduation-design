@@ -476,9 +476,9 @@ func (j journal) recover(ctx context.Context, key string, submitOverride func(co
 		return op, err
 	}
 	if op.BroadcastAt != nil {
-		commit, err := p.original(ctx, op, prepared)
+		commit, observedAt, err := p.originalObserved(ctx, op, prepared)
 		if err == nil {
-			op.confirm(commit)
+			op.confirmAt(commit, observedAt)
 			return op, j.save(ctx, conn, op)
 		}
 	} else {
@@ -506,11 +506,11 @@ func (j journal) recover(ctx context.Context, key string, submitOverride func(co
 		return op, j.save(ctx, conn, op)
 	}
 	op.Observation = "broadcast acknowledged"
-	commit, err := p.original(ctx, op, prepared)
+	commit, observedAt, err := p.originalObserved(ctx, op, prepared)
 	if err != nil {
 		op.Observation += "; " + err.Error()
 	} else {
-		op.confirm(commit)
+		op.confirmAt(commit, observedAt)
 	}
 	return op, j.save(ctx, conn, op)
 }
@@ -548,10 +548,16 @@ func (p *peerClient) commitStatus(ctx context.Context, txID string) (*gw.CommitS
 }
 
 func (p *peerClient) original(ctx context.Context, op *operation, prepared *gw.PreparedTransaction) (*outcome, error) {
+	c, _, err := p.originalObserved(ctx, op, prepared)
+	return c, err
+}
+
+func (p *peerClient) originalObserved(ctx context.Context, op *operation, prepared *gw.PreparedTransaction) (*outcome, time.Time, error) {
 	seen, seenErr := p.commitStatus(ctx, op.TxID)
+	observedAt := time.Now().UTC()
 	b, err := p.queryBlock(ctx, "GetBlockByTxID", op.TxID)
 	if err != nil {
-		return nil, fmt.Errorf("original transaction is not available: %w", err)
+		return nil, time.Time{}, fmt.Errorf("original transaction is not available: %w", err)
 	}
 	match := func(b *block) *outcome {
 		for _, t := range b.Transactions {
@@ -563,26 +569,32 @@ func (p *peerClient) original(ctx context.Context, op *operation, prepared *gw.P
 	}
 	if found := match(b); found != nil && (seenErr != nil || seen.Result == pb.TxValidationCode_DUPLICATE_TXID ||
 		(seen.BlockNumber == found.Number && seen.Result.String() == found.Code)) {
-		return found, nil
+		return found, observedAt, nil
 	}
 	// Some indexes can report a replay. Search earlier blocks for the original signed envelope.
 	for n := uint64(0); n < b.Number; n++ {
 		old, err := p.getBlock(ctx, n)
 		if err != nil {
-			return nil, err
+			return nil, time.Time{}, err
 		}
 		if found := match(old); found != nil && (seenErr != nil || seen.Result == pb.TxValidationCode_DUPLICATE_TXID ||
 			(seen.BlockNumber == found.Number && seen.Result.String() == found.Code)) {
-			return found, nil
+			return found, observedAt, nil
 		}
 	}
-	return nil, fmt.Errorf("could not bind original signed transaction to the Peer validation result")
+	return nil, time.Time{}, fmt.Errorf("could not bind original signed transaction to the Peer validation result")
 }
 
 func (op *operation) confirm(commit *outcome) {
+	op.confirmAt(commit, time.Now().UTC())
+}
+
+func (op *operation) confirmAt(commit *outcome, observedAt time.Time) {
 	op.Commit, op.Stage = commit, "COMMIT"
-	now := time.Now().UTC()
-	op.ObservedAt = &now
+	if observedAt.IsZero() {
+		observedAt = time.Now().UTC()
+	}
+	op.ObservedAt = &observedAt
 	switch commit.Code {
 	case "VALID":
 		op.Status = "CONFIRMED"

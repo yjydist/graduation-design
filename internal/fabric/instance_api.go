@@ -57,7 +57,96 @@ func (i *instance) SyncSeedDeliveries(ctx context.Context, db *pgxpool.Pool, d *
 }
 
 func (i *instance) StartStateProvider(ctx context.Context, db *pgxpool.Pool, d *Deployment, probeRole, grant string) (*StateProvider, func(), error) {
-	runtime := &online{view: view{db: db, d: d}, instance: i, role: probeRole, interval: api.ProbeInterval, timeLimit: api.ProbeLifetime}
+	return i.StartObservedStateProvider(ctx, db, d, probeRole, grant, api.ProbeInterval, api.ProbeLifetime, nil)
+}
+
+// BlockAppliedEvent reports a validated Fabric block applied to C's PostgreSQL view.
+type BlockAppliedEvent struct {
+	BlockNumber uint64    `json:"blockNumber"`
+	BlockHash   string    `json:"blockHash"`
+	AppliedAt   time.Time `json:"appliedAt"`
+}
+
+// AdoptEvent reports a gateway instance adopting a consistent Fabric view height and probe lease.
+type AdoptEvent struct {
+	TxID           string    `json:"txId"`
+	ProbeBlock     uint64    `json:"probeBlockNumber"`
+	BlockNumber    uint64    `json:"blockNumber"`
+	BlockHash      string    `json:"blockHash"`
+	SentAt         time.Time `json:"sentAt"`
+	Deadline       time.Time `json:"deadline"`
+	AdoptedAt      time.Time `json:"adoptedAt"`
+	SentMonoNs     int64     `json:"sentMonoNs"`
+	DeadlineMonoNs int64     `json:"deadlineMonoNs"`
+	AdoptedMonoNs  int64     `json:"adoptedMonoNs"`
+}
+
+// RevocationEvent captures original-tx revocation submission and trusted-peer VALID observation.
+type RevocationEvent struct {
+	OperationKey    string    `json:"operationKey"`
+	TxID            string    `json:"txId"`
+	Role            string    `json:"role"`
+	GrantID         string    `json:"grantId"`
+	BlockNumber     uint64    `json:"blockNumber"`
+	BlockHash       string    `json:"blockHash"`
+	TxIndex         int       `json:"transactionIndex"`
+	ValidationCode  string    `json:"validationCode"`
+	Status          string    `json:"status"`
+	SubmittedAt     time.Time `json:"submittedAt"`
+	ValidObservedAt time.Time `json:"validObservedAt"`
+}
+
+// StartObservedStateProvider starts a continuous StateProvider with custom probe cadence/lifetime
+// and an optional host-timebase observer for block_applied, adopt, probe_sent, and probe_commit_observed events.
+func (i *instance) StartObservedStateProvider(
+	ctx context.Context,
+	db *pgxpool.Pool,
+	d *Deployment,
+	probeRole, grant string,
+	probeInterval, probeLifetime time.Duration,
+	observe func(event string, at time.Time, details any),
+) (*StateProvider, func(), error) {
+	if probeInterval <= 0 {
+		probeInterval = api.ProbeInterval
+	}
+	if probeLifetime <= 0 {
+		probeLifetime = api.ProbeLifetime
+	}
+	var rawObserve streamObserver
+	if observe != nil {
+		rawObserve = func(kind string, fields any) {
+			at := time.Now().UTC()
+			switch v := fields.(type) {
+			case point:
+				observe(kind, at, BlockAppliedEvent{BlockNumber: v.Number, BlockHash: v.Hash, AppliedAt: at})
+			case *probeEvidence:
+				if v != nil {
+					observe(kind, at, AdoptEvent{
+						TxID:           v.TxID,
+						ProbeBlock:     v.ProbeBlock,
+						BlockNumber:    v.View.Number,
+						BlockHash:      v.View.Hash,
+						SentAt:         v.Sent.UTC(),
+						Deadline:       v.Deadline.UTC(),
+						AdoptedAt:      v.Adopted.UTC(),
+						SentMonoNs:     v.SentMono,
+						DeadlineMonoNs: v.DeadlineMono,
+						AdoptedMonoNs:  v.AdoptedMono,
+					})
+				}
+			default:
+				observe(kind, at, fields)
+			}
+		}
+	}
+	runtime := &online{
+		view:      view{db: db, d: d},
+		instance:  i,
+		role:      probeRole,
+		interval:  probeInterval,
+		timeLimit: probeLifetime,
+		observe:   rawObserve,
+	}
 	stop, err := runtime.start(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -69,6 +158,61 @@ func (i *instance) StartStateProvider(ctx context.Context, db *pgxpool.Pool, d *
 		return nil, nil, err
 	}
 	return NewStateProvider(db, d, runtime), stop, nil
+}
+
+// RevokeGrant submits an original-txID RevokeGrant management operation and returns its submit and VALID timings.
+func (i *instance) RevokeGrant(ctx context.Context, db *pgxpool.Pool, d *Deployment, opKey, role, grantID, reason string) (*RevocationEvent, error) {
+	var rawGrant []byte
+	if err := db.QueryRow(ctx, `SELECT value FROM fabric_current WHERE deployment=$1 AND key=$2`, d.DeploymentID, api.Key("grant", grantID)).Scan(&rawGrant); err != nil {
+		return nil, fmt.Errorf("load current grant %s before revocation: %w", grantID, err)
+	}
+	var current api.Grant
+	if err := json.Unmarshal(rawGrant, &current); err != nil {
+		return nil, fmt.Errorf("decode current grant %s: %w", grantID, err)
+	}
+	mut := api.Mutation{
+		Bound:            api.Bound{DeploymentID: d.DeploymentID},
+		ID:               current.ID,
+		ExpectedRevision: current.Revision,
+		ExpectedDigest:   current.Digest,
+		Reason:           reason,
+	}
+	payload, err := json.Marshal(mut)
+	if err != nil {
+		return nil, err
+	}
+	j := journal{instance: i, db: db, deploymentID: d.DeploymentID}
+	op, err := j.write(ctx, opKey, role, "RevokeGrant", payload)
+	if err != nil {
+		return nil, err
+	}
+	if op == nil || op.Status != "CONFIRMED" || op.Commit == nil || op.Commit.Code != "VALID" {
+		status := ""
+		obs := ""
+		if op != nil {
+			status = op.Status
+			obs = op.Observation
+		}
+		return nil, fmt.Errorf("RevokeGrant did not confirm VALID: status=%s observation=%s", status, obs)
+	}
+	ev := &RevocationEvent{
+		OperationKey:   op.Key,
+		TxID:           op.TxID,
+		Role:           role,
+		GrantID:        grantID,
+		BlockNumber:    op.Commit.Number,
+		BlockHash:      op.Commit.Hash,
+		TxIndex:        op.Commit.Index,
+		ValidationCode: op.Commit.Code,
+		Status:         op.Status,
+	}
+	if op.BroadcastAt != nil {
+		ev.SubmittedAt = op.BroadcastAt.UTC()
+	}
+	if op.ObservedAt != nil {
+		ev.ValidObservedAt = op.ObservedAt.UTC()
+	}
+	return ev, nil
 }
 
 // ApplyCommittedRegistry applies the committed prefix reported by the trusted peer.

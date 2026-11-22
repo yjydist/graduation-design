@@ -445,8 +445,8 @@ func prepareE1Plan(rc *runContext) (RunPlan, map[string]any, string, []string, e
 		return RunPlan{}, nil, "", nil, fmt.Errorf("LLM_PROVIDER, LLM_BASE_URL and LLM_MODEL must be set in experiments/llm.env")
 	}
 	parsed, err := url.Parse(baseURL)
-	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.User != nil {
-		return RunPlan{}, nil, "", nil, fmt.Errorf("invalid LLM_BASE_URL %q", baseURL)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return RunPlan{}, nil, "", nil, fmt.Errorf("LLM_BASE_URL must be an HTTP(S) endpoint without credentials, query parameters or fragment")
 	}
 	effectiveURL := baseURL
 	if provider == "openai" && (parsed.Path == "" || parsed.Path == "/") {
@@ -492,7 +492,6 @@ func prepareE1Plan(rc *runContext) (RunPlan, map[string]any, string, []string, e
 		"experiments/go.mod",
 		"experiments/go.sum",
 		"experiments/mise.toml",
-		"experiments/llm.env",
 		"experiments/e1/run.sh",
 		"experiments/harness/*.go",
 		"experiments/cmd/exp/*.go",

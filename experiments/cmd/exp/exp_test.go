@@ -184,6 +184,7 @@ func TestRunPlanOnlyAndSourceSnapshotReconstruction(t *testing.T) {
 
 	fileHashes := manifest["fileSHA256"].(map[string]any)
 	extracted := extractTarGz(t, archivePath)
+	assert.NotContains(t, extracted, "experiments/llm.env")
 	for rel, expectedHash := range fileHashes {
 		content, exists := extracted[rel]
 		require.True(t, exists, "snapshot archive missing recorded file %s", rel)
@@ -196,10 +197,47 @@ func TestRunPlanOnlyAndSourceSnapshotReconstruction(t *testing.T) {
 		"experiments/harness/io.go",
 		"experiments/cmd/exp/run.go",
 		"experiments/e1/driver/main.go",
-		"experiments/llm.env",
 	} {
 		assert.Contains(t, extracted, mustHave)
 	}
+}
+
+func TestE1PlanExportsOnlyPublicModelConfiguration(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(root, "experiments"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "go.work"), []byte("go 1.27"), 0o644))
+	secret := "private-fixture-value"
+	config := "LLM_PROVIDER=openai\nLLM_MODEL=test-model\nLLM_BASE_URL=https://example.test\nEXTRA_TOKEN=" + secret
+	require.NoError(t, os.WriteFile(filepath.Join(root, "experiments", "llm.env"), []byte(config), 0o600))
+	deps := RunnerDeps{
+		RepoRoot:     root,
+		GitResolve:   func(context.Context, string, string) (string, error) { return "test-revision", nil },
+		GitWorkspace: func(context.Context, string) (string, bool, error) { return "test-revision", false, nil },
+		LookupEnv:    func(string) (string, bool) { return "", false },
+	}
+	opts := RunOptions{Experiment: "E1", PlanOnly: true, BasePort: 19500, InstanceDir: filepath.Join(root, "instance")}
+	result, err := ExecuteRun(t.Context(), opts, deps)
+	require.NoError(t, err)
+	files := extractTarGz(t, filepath.Join(result.RunDir, "driver-source.tar.gz"))
+	assert.NotContains(t, files, "experiments/llm.env")
+	for path, content := range files {
+		assert.NotContains(t, string(content), secret, path)
+	}
+	raw, err := os.ReadFile(filepath.Join(result.RunDir, "manifest.json"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), secret)
+	var manifest struct{ LLM map[string]string }
+	require.NoError(t, json.Unmarshal(raw, &manifest))
+	assert.Equal(t, "test-model", manifest.LLM["model"])
+	assert.Equal(t, "openai", manifest.LLM["provider"])
+	assert.Equal(t, "https://example.test/v1", manifest.LLM["baseURL"])
+
+	deps.LookupEnv = func(key string) (string, bool) {
+		return "https://example.test/?token=" + secret, key == "LLM_BASE_URL"
+	}
+	_, err = ExecuteRun(t.Context(), opts, deps)
+	require.Error(t, err)
+	assert.NotContains(t, err.Error(), secret)
 }
 
 func TestRunE6PlanOnlyAndValidation(t *testing.T) {

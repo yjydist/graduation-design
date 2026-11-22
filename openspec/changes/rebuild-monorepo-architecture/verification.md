@@ -1,5 +1,57 @@
 # rebuild-monorepo-architecture 核验报告
 
+## 6 项警告的修复复核
+
+基于 `ec86062` 的工作区已修复该次核验的全部 6 项警告. 已执行的检查发现 0 项严重问题, 0 项剩余警告. E1 真实模型会话的端到端场景仍待核实, 本次未确认归档就绪.
+
+| 维度 | 复核结果 |
+| --- | --- |
+| 完整性 | 原任务 18/18 已勾选, 5 份增量规范共 7 项修改要求均有实现. |
+| 正确性 | 已对管理操作的线上 JSON, 幂等重试, 旧版本预检和实验模型记录执行针对性回归. 23 个场景中, E1 真实模型会话的端到端证据仍不完整, 当前环境未设置 `LLM_API_KEY`. |
+| 一致性 | 四模块依赖边界检查通过. 管理服务和 Fabric 日志使用共享错误码, 链码提案解析单独限制适用范围. |
+
+| 原警告 | 修复与验证 |
+| --- | --- |
+| 1. 操作查询字段 | 原交易日志保存实际观测 Peer 和交易索引. 服务在同一事务内持久化提交证据, 查询以 `failureCode`, `transactionIndex`, `observedPeer` 返回. 数据库回归逐字段检查三种状态, 实机测试经管理 HTTP 撤销委托后将查询结果与原交易逐项比对. [数据库回归](../../../platform/registrysvc/operations_db_test.go), [Fabric 实机回归](../../../platform/runtime/stack_live_test.go). |
+| 2. JSON 字段顺序影响重试 | 普通管理请求使用协议 JCS 规范化后计算正文摘要. 同一作用域内调换字段顺序仍返回 202 和原操作 ID, 正文值不同返回 409. [受理实现](../../../platform/registrysvc/operations.go), [幂等回归](../../../platform/registrysvc/operations_db_test.go). |
+| 3. 操作键跨身份和方法碰撞 | 数据库约束, 事务锁和操作 ID 使用部署, 已认证调用者, 管理方法对应的 POST 路径及客户端键. Fabric 首次提交和恢复共用该操作 ID 作为日志键. 注册双证明受理也使用相同规则. 回归覆盖跨方法, 跨身份, 重启重试及重复注册确认. [登记表](../../../platform/migrations/003_registrysvc.sql), [注册回归](../../../platform/registrysvc/identity_db_test.go). |
+| 4. 替换委托缺少预检 | 受理端用 `old.id` 查询原委托并比较 `old.expectedRevision`. 过时请求返回 409 STATE_CHANGED, 数据库无待提交操作, 后端提交次数为 0. 当前版本返回 202. [预检与回归](../../../platform/registrysvc/operations_db_test.go). |
+| 5. 请求名与响应模型混用 | 两种 SDK 均逐步保存响应中的模型标识. E1 清单分别记录请求名和去重后的响应模型集合, 离线分析器从轨迹独立重建该集合并核对. 两种 SDK 均通过请求别名与响应名不同的测试, 离线回归也验证了清单声称使用未观测模型时核对失败. [双 SDK 回归](../../../platform/agent/agent_test.go), [离线复算回归](../../../experiments/cmd/exp/exp_test.go). |
+| 6. 错误码多处定义 | `OPERATION_UNKNOWN`, `ENDORSEMENT_REJECTED`, `COMMIT_INVALID` 均由登记共享包定义. 提案解析回归确认这 3 个服务级码不能充当链码拒绝原因. [规范错误码](../../../protocol/registry/errors.go), [提案解析回归](../../../platform/state/fabric/instance_test.go). |
+
+通过 OpenSpec 严格校验, CLI 构建, 项目单测, PostgreSQL 集成测试, 实验模块测试和隔离 Fabric 实机验收. 实机 6 个顶层用例均通过, 验收实例已停止. 本机日志位于 `.local/monorepo-warning-fixes-ay2fpehn/final-verify.log`. E1 的计划模式已通过真实 CLI 生成清单, 本轮 SDK 调用使用测试服务.
+
+## 提交 `ec86062` 的归档判断
+
+已执行的检查发现 0 项严重问题, 6 项警告. E1 真实模型会话的场景覆盖尚未完全核实, 本次无法确认归档就绪.
+
+| 维度 | 结果 |
+| --- | --- |
+| 完整性 | OpenSpec 聚合任务 18/18 已勾选. 5 份增量规范的 7 项修改要求均找到实现. 新增, 删除和重命名要求均为 0. |
+| 正确性 | 7/7 项要求已映射, 已逐项检查 23 个场景. 管理操作的返回字段, 幂等行为, 版本预检和 E1 模型标识存在下列偏差. 场景覆盖部分未核实, 当前环境未设置 `LLM_API_KEY`, 可定位的新架构 E1 计划未执行模型会话. |
+| 一致性 | 已核对 5 项设计决策及代码组织. 四模块依赖方向, 状态源分层, 钱包与网关边界, 库选型和链码摘要范围有实现及回归证据. 统一错误码表仍有一处设计偏差. |
+
+### 警告
+
+| 项目 | 发现与修正建议 |
+| --- | --- |
+| 1. 操作查询的返回字段 | `platform/registrysvc/operations.go:57` 将失败码序列化为 `errorCode`. 查询处理器直接输出该结构, 增量场景要求的 `failureCode` 缺失. REST 契约所列的 `transactionIndex` 和 `observedPeer` 也没有投影到查询响应. 建议从原交易证据补齐字段, 对 PENDING, CONFIRMED 和 FAILED 的原始 HTTP JSON 分别断言字段名和值. [规范场景](specs/authorization-registry/spec.md), [查询契约](../../../docs/implementation/REST接口与响应码.md). |
+| 2. 同一请求调整 JSON 字段顺序后重试冲突 | `platform/registrysvc/operations.go:471` 对普通请求使用 `json.Compact` 计算摘要, 保留对象字段原序. PostgreSQL 定向检查中, 首次受理后仅交换字段顺序即返回 409 IDEMPOTENCY_CONFLICT. 建议复用 `protocol.CanonicalizeJSON` 生成契约要求的 JCS 输入, 回归断言第二次返回 202 和原 operationId. [幂等契约](../../../docs/implementation/REST接口与响应码.md). |
+| 3. 管理操作键的唯一范围过宽 | `platform/migrations/003_registrysvc.sql:20` 仅按部署和操作键唯一. `platform/registrysvc/operations.go:492` 的锁和查找也只按这两项, 不同管理方法使用同一键时实测返回 409. 建议按登录管理身份, 方法和路径区分操作键, 同步调整 operationId 及底层交易日志键, 覆盖跨方法与跨身份独立受理. [幂等契约](../../../docs/implementation/REST接口与响应码.md). |
+| 4. 替换委托跳过受理前版本预检 | `protocol/registry/types.go:285` 将旧委托的版本放在 `old.expectedRevision`, `platform/registrysvc/operations.go:534` 仅读取顶层版本, `CurrentRevision` 也没有 ReplaceGrant 分支. 旧版本请求可先得到 202. 建议用替换请求的旧委托 ID 查当前版本, 覆盖过时请求返回 409 STATE_CHANGED 且未写入待提交操作. [管理交易要求](specs/authorization-registry/spec.md). |
+| 5. E1 仅记录配置中的模型名 | `platform/agent/llm.go:216` 和 `:293` 用请求配置填充结果, 两个 SDK 循环都未记录响应中的模型标识. `experiments/e1/driver/main.go:299` 同样只写配置名. 当服务解析模型别名时, 无法从清单或轨迹确定服务实际报告的模型. 建议分别保存请求名与响应模型标识, 用两者不同的 SDK 响应覆盖清单与用例轨迹. [真实模型场景](specs/reproducible-procurement-experiments/spec.md). |
+| 6. 管理交易错误码存在多个来源 | `platform/registrysvc/operations.go:34` 在服务内定义了 3 个错误码, `platform/state/fabric/journal.go:107` 和 `:288` 重复使用其中两个字符串. 它们未列入 `protocol/registry/errors.go` 的规范表. 建议集中定义这些平台规范码, 同时保留链码提案拒绝码的适用范围, 增加异步失败码映射回归. [统一错误码设计](design.md). |
+
+### 本轮验证证据
+
+- OpenSpec 严格校验, CLI 构建, 项目单测, PostgreSQL 集成测试和实验模块测试通过. 协议, 链码及实验包另以 `-count=1` 重跑通过.
+- 在新建的隔离 Fabric 实例上执行部署, 播种, 状态检查及实机验收. 6 个顶层实机用例全部通过, 包含真实子进程的 `ledgerctl check`, `inspect` 和 MCP 握手. 本轮实例已停止. 本机日志位于 `.local/verify-head-n5f0c4_2/verify.log`.
+- PostgreSQL 定向检查通过真实的 `Service.Accept` 和操作视图序列化观察受理结果, 版本源使用固定当前版本的测试后端. 记录位于 `.local/verify-head-n5f0c4_2/management-contract.log`. 以上版本预检发现针对受理阶段.
+- 依赖图检查通过. 项目模块及测试无实验依赖, 实验的普通导入和两类测试导入均未引用平台私有包. 状态源不依赖钱包或网关, 登记模型的传递依赖均为标准库.
+- 本轮以当前分析器复算已有 E6 双实例原始样本. RP 完成 1112/1112 个采样, BM 完成 1104/1104 个采样, 两组均为 0 次违规和 1 个延迟响应. 派生结果位于 `.local/verify-head-n5f0c4_2/analysis-rp` 和 `analysis-bm`. E1 计划和 SDK 测试能验证配置与工具调用代码, 真实会话记录仍缺少本轮实测证据.
+
+## 前次核验记录
+
 首次核验对象为提交 `aaa5ba9`, 比较基线为 `ccfbb10`. 复核对象为基于该提交的修复工作区. 原 4 项警告均已处理, 已执行的检查未发现严重问题或剩余警告. E1 真实模型场景仅部分核实, 归档就绪性尚未确认.
 
 | 维度 | 结果 |

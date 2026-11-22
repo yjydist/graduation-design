@@ -7,11 +7,15 @@ CGO_ENABLED = "0"
 
 [tasks."ledger:build"]
 description = "构建 build/ledgerctl 可执行文件"
-run = "go build -o build/ledgerctl ./cmd/ledgerctl"
+run = "go build -o build/ledgerctl grad/platform/cmd/ledgerctl"
 
 [tasks."test:unit"]
-description = "运行离线单元测试"
-run = "go test ./cmd/... ./internal/... ./chaincode/..."
+description = "运行项目三模块离线单元测试 (protocol, chaincode, platform)"
+run = "go test grad/protocol/... grad/chaincode/... grad/platform/..."
+
+[tasks."test:db"]
+description = "运行 platform PostgreSQL 集成测试 (//go:build db)"
+run = "go test -tags=db -count=1 grad/platform/..."
 
 [tasks."fabric:config"]
 description = "校验隔离的 Fabric Compose 配置"
@@ -35,20 +39,20 @@ run = "sh infra/fabric/network.sh rebuild"
 
 [tasks."ledger:deploy"]
 description = "安装, 三域批准并初始化 Fabric 登记链码"
-run = "go run ./cmd/ledgerctl deploy"
+run = "go run grad/platform/cmd/ledgerctl deploy"
 
 [tasks."ledger:seed"]
-description = "提交 Fabric D0 合成登记夹具"
-run = "go run ./cmd/ledgerctl seed"
+description = "生成协议夹具并提交 Fabric 登记锚点与交付"
+run = "go run grad/platform/cmd/ledgerctl seed"
 
 [tasks."ledger:check"]
 description = "使用本进程的提交探针装配在线 Fabric 视图"
-run = "go run ./cmd/ledgerctl check"
+run = "go run grad/platform/cmd/ledgerctl check"
 
 [tasks."ledger:inspect"]
 description = "按 --block 复查 Fabric 历史"
-run = "go run ./cmd/ledgerctl inspect"
+run = "go run grad/platform/cmd/ledgerctl inspect"
 
 [tasks."ledger:verify"]
-description = "运行 Fabric 集成回归并保存独立证据"
-run = "go test -v -count=1 -timeout=0 ./internal/fabric -run '^TestFabricIntegration$' -args -fabric-live"
+description = "运行 Fabric 实机集成验收 (//go:build fabriclive, 需设置绝对路径 FABRIC_INSTANCE)"
+run = "go test -tags=fabriclive -v -count=1 -timeout=0 grad/platform/state/fabric grad/platform/runtime"

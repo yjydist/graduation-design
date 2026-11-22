@@ -8,9 +8,10 @@ import (
 	"slices"
 	"time"
 
-	api "graduation-design/internal/fabricapi"
-	"graduation-design/internal/gateway"
-	"graduation-design/internal/protocol"
+	"grad/platform/gateway"
+	"grad/platform/state/fabric"
+	"grad/protocol"
+	"grad/protocol/registry"
 )
 
 func (e *e1Trial) bootstrap() error {
@@ -18,8 +19,8 @@ func (e *e1Trial) bootstrap() error {
 	if err != nil {
 		return err
 	}
-	var actual api.Bootstrap
-	if err := json.Unmarshal(check.Records[api.BootstrapKey], &actual); err != nil {
+	var actual registry.Bootstrap
+	if err := json.Unmarshal(check.Records[registry.BootstrapKey], &actual); err != nil {
 		return err
 	}
 	if actual != e.d.Bootstrap || check.DeploymentID != e.d.DeploymentID {
@@ -35,43 +36,39 @@ func (e *e1Trial) bootstrap() error {
 		if err != nil {
 			return err
 		}
-		var before api.Domain
+		var before registry.Domain
 		if err := json.Unmarshal(beforeRaw, &before); err != nil {
 			return err
 		}
-		after, err := currentRecord[api.Domain](e, "domain", id)
+		after, err := currentRecord[registry.Domain](e, "domain", id)
 		if err != nil {
 			return err
 		}
-		if before.Status != api.Pending || after.Status != api.Active || after.Certification == "" ||
+		if before.Status != registry.Pending || after.Status != registry.Active || after.Certification == "" ||
 			(id == "A" && after.PurchasingAuthority != e.f.Identities["PA"].ID) {
 			return fmt.Errorf("incorrect pending or active state for %s", id)
 		}
 		domains[id] = map[string]any{"pending": before, "active": after, "pendingBlock": op.Commit.Number}
 	}
-	return e.save("F01", map[string]any{"root": actual.Root, "domains": domains, "checkpoint": check.point, "manifest": e.d.Raw})
+	return e.save("F01", map[string]any{"root": actual.Root, "domains": domains, "checkpoint": check.Point, "manifest": e.d.Raw})
 }
 
 func (e *e1Trial) checkLinkedAccountIsolation() error {
 	mode := e.modes[0]
 	account := e.f.Identities["U-in-B"]
-	key, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "U-in-B.key.pem"))
+	key, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "U-in-B.key.pem"))
 	if err != nil {
 		return err
 	}
 	read := func(parts ...string) (string, error) {
-		raw, err := os.ReadFile(e.instance.registrySubPath(parts...))
+		raw, err := os.ReadFile(e.inst.RegistryPath(parts...))
 		return string(raw), err
 	}
 	pres, err := read("credentials", "U-in-B.sdjwt")
 	if err != nil {
 		return err
 	}
-	role := "C"
-	if svc, ok := e.f.Credentials["C-service"]; ok && svc.ID == mode.g0.IssuerCredential {
-		role = "C-service"
-	}
-	service, err := read("credentials", role+".sdjwt")
+	service, err := read("credentials", "C.sdjwt")
 	if err != nil {
 		return err
 	}
@@ -88,9 +85,10 @@ func (e *e1Trial) checkLinkedAccountIsolation() error {
 		paths = append(paths, protocol.TrustPathEntry{Issuer: e.f.Domains[id].Issuers[0].ID, DomainCertification: jws})
 	}
 	req := protocol.AccessRequest{
-		SchemaVersion: api.Schema, DeploymentID: e.d.DeploymentID, Actor: account.ID, PrincipalDomain: "A",
-		AuthorizationMode: api.RP, TaskID: mode.task.ID, Audience: "https://c.local", Resource: "urn:grad:resource:C:quotes",
-		Action: "quote.read", SupplierID: "urn:grad:supplier:C", ProductID: gateway.DefaultProductID, Quantity: 1, Currency: "CNY", IdempotencyKey: "e1-linked-account",
+		SchemaVersion: registry.Schema, DeploymentID: e.d.DeploymentID, Actor: account.ID, PrincipalDomain: "A",
+		AuthorizationMode: registry.RP, TaskID: mode.task.ID, Audience: "https://c.local", Resource: registry.ResourceQuotes,
+		Action: registry.ActionQuoteRead, SupplierID: gateway.DefaultSupplierID, ProductID: gateway.DefaultProductID,
+		Quantity: 1, Currency: gateway.DefaultCurrency, IdempotencyKey: "e1-linked-account",
 	}
 	if _, err := e.ensureTaskContextNormal(e.server.Handler(), mode.task.ID, time.Now().Unix()); err != nil {
 		return err
@@ -115,21 +113,21 @@ func (e *e1Trial) checkLinkedAccountIsolation() error {
 
 func (e *e1Trial) trust() error {
 	root := e.d.Bootstrap.Root
-	rootPub, _, err := protocol.ParseAppPublicKey(root.PublicKey)
+	rootPub, err := protocol.ParseAppPublicKey(root.PublicKey)
 	if err != nil {
 		return err
 	}
 	evidence := map[string]any{}
 	for _, name := range []string{"A", "B", "C"} {
-		domain, err := currentRecord[api.Domain](e, "domain", name)
+		domain, err := currentRecord[registry.Domain](e, "domain", name)
 		if err != nil {
 			return err
 		}
-		anchor, err := currentRecord[api.Certification](e, "certification", domain.Certification)
+		anchor, err := currentRecord[registry.Certification](e, "certification", domain.Certification)
 		if err != nil {
 			return err
 		}
-		raw, err := os.ReadFile(e.instance.registrySubPath("certifications", name+".jws"))
+		raw, err := os.ReadFile(e.inst.RegistryPath("certifications", name+".jws"))
 		if err != nil {
 			return err
 		}
@@ -137,16 +135,15 @@ func (e *e1Trial) trust() error {
 		if err != nil {
 			return err
 		}
-		scopes := make([]protocol.IssuerScope, len(anchor.Scopes))
-		for i, scope := range anchor.Scopes {
-			scopes[i] = protocol.IssuerScope{ID: scope.ID, AppKeyVersion: scope.KeyVersion, CredentialTypes: scope.Types, ClaimNames: scope.Claims}
-		}
-		if domain.Status != api.Active || anchor.Status != api.Active || !anchor.Interval.Current(time.Now(), 0) {
+		if domain.Status != registry.Active || anchor.Status != registry.Active || !anchor.Interval.Current(time.Now(), 0) {
 			return fmt.Errorf("inactive trust path for %s", name)
 		}
-		if err := cert.VerifyAgainstChain(digest, protocol.DomainAnchorState{RootDID: root.DID, RootKeyVersion: root.KeyVersion,
-			DomainID: name, DomainDID: domain.DID, DomainIssuers: domain.Issuers, CertificationID: anchor.ID, CertificationNBF: anchor.NBF,
-			CertificationEXP: anchor.EXP, CertificationDig: anchor.Digest, CertificationScope: scopes}); err != nil {
+		if err := cert.VerifyAgainstChain(digest, protocol.DomainAnchorState{
+			RootDID: root.DID, RootKeyVersion: root.KeyVersion,
+			DomainID: name, DomainDID: domain.DID, DomainIssuers: domain.Issuers,
+			CertificationID: anchor.ID, CertificationNBF: anchor.NBF,
+			CertificationEXP: anchor.EXP, CertificationDig: anchor.Digest, CertificationScope: anchor.Scopes,
+		}); err != nil {
 			return err
 		}
 		evidence[name] = map[string]any{"certification": anchor, "verifiedJWS": string(raw)}
@@ -156,14 +153,11 @@ func (e *e1Trial) trust() error {
 			return err
 		}
 	}
-	if _, ok := e.f.Credentials["C-service"]; ok {
-		if err := e.verifyIdentityCredential("C-service", e.f.Identities["C"]); err != nil {
-			return err
-		}
-	}
 	ia := e.f.Domains["A"].Issuers[0]
-	_, _, _, purposeErr := e.resolver.ResolveDID(e.ctx, ia.ID, protocol.DIDResolutionExpectation{ExpectedDigest: ia.DocumentDigest,
-		ExpectedKeyID: ia.KeyID, ExpectedKeyVersion: ia.KeyVersion, ExpectedPublicKeyHex: ia.PublicKey, RequiredPurpose: protocol.KeyPurposeAuthentication})
+	_, _, _, purposeErr := e.resolver.ResolveDID(e.ctx, ia.ID, protocol.DIDResolutionExpectation{
+		ExpectedDigest: ia.DocumentDigest, ExpectedKeyID: ia.KeyID, ExpectedKeyVersion: ia.KeyVersion,
+		ExpectedPublicKeyHex: ia.PublicKey, RequiredPurpose: protocol.KeyPurposeAuthentication,
+	})
 	if !protocol.HasCode(purposeErr, protocol.ErrCodeDIDKeyPurposeInvalid) {
 		return fmt.Errorf("assertion-only issuer key returned %v", purposeErr)
 	}
@@ -171,26 +165,30 @@ func (e *e1Trial) trust() error {
 	return e.save("F04", evidence)
 }
 
-func (e *e1Trial) verifyIdentityCredential(role string, id api.Identity) error {
-	anchor, err := currentRecord[api.Credential](e, "credential", e.f.Credentials[role].ID)
+func (e *e1Trial) verifyIdentityCredential(role string, id registry.Identity) error {
+	anchor, err := currentRecord[registry.Credential](e, "credential", e.f.Credentials[role].ID)
 	if err != nil {
 		return err
 	}
-	issuer, err := currentRecord[api.Identity](e, "identity", anchor.Issuer)
+	issuer, err := currentRecord[registry.Identity](e, "identity", anchor.Issuer)
 	if err != nil {
 		return err
 	}
-	raw, err := os.ReadFile(e.instance.registrySubPath("credentials", role+".sdjwt"))
+	raw, err := os.ReadFile(e.inst.RegistryPath("credentials", role+".sdjwt"))
 	if err != nil {
 		return err
 	}
-	_, pub, _, err := e.resolver.ResolveDID(e.ctx, issuer.ID, protocol.DIDResolutionExpectation{ExpectedDigest: issuer.DocumentDigest, ExpectedKeyID: issuer.KeyID,
-		ExpectedKeyVersion: issuer.KeyVersion, ExpectedPublicKeyHex: issuer.PublicKey, RequiredPurpose: protocol.KeyPurposeAssertionMethod})
+	_, pub, _, err := e.resolver.ResolveDID(e.ctx, issuer.ID, protocol.DIDResolutionExpectation{
+		ExpectedDigest: issuer.DocumentDigest, ExpectedKeyID: issuer.KeyID,
+		ExpectedKeyVersion: issuer.KeyVersion, ExpectedPublicKeyHex: issuer.PublicKey, RequiredPurpose: protocol.KeyPurposeAssertionMethod,
+	})
 	if err != nil {
 		return err
 	}
-	_, _, _, err = e.resolver.ResolveDID(e.ctx, id.ID, protocol.DIDResolutionExpectation{ExpectedDigest: id.DocumentDigest, ExpectedKeyID: id.KeyID,
-		ExpectedKeyVersion: id.KeyVersion, ExpectedPublicKeyHex: id.PublicKey, RequiredPurpose: protocol.KeyPurposeAuthentication})
+	_, _, _, err = e.resolver.ResolveDID(e.ctx, id.ID, protocol.DIDResolutionExpectation{
+		ExpectedDigest: id.DocumentDigest, ExpectedKeyID: id.KeyID,
+		ExpectedKeyVersion: id.KeyVersion, ExpectedPublicKeyHex: id.PublicKey, RequiredPurpose: protocol.KeyPurposeAuthentication,
+	})
 	if err != nil {
 		return err
 	}
@@ -199,20 +197,20 @@ func (e *e1Trial) verifyIdentityCredential(role string, id api.Identity) error {
 		return err
 	}
 	expectedRole := ""
-	if role == "C" || role == "C-service" {
+	if role == "C" {
 		expectedRole = "supplier-service"
 	}
-	domain, err := currentRecord[api.Domain](e, "domain", id.Domain)
+	domain, err := currentRecord[registry.Domain](e, "domain", id.Domain)
 	if err != nil {
 		return err
 	}
-	cert, err := currentRecord[api.Certification](e, "certification", domain.Certification)
+	cert, err := currentRecord[registry.Certification](e, "certification", domain.Certification)
 	if err != nil {
 		return err
 	}
-	if anchor.Status != api.Active || anchor.Digest != cred.AnchorDigest || cred.Domain != id.Domain || issuer.Domain != id.Domain ||
-		(expectedRole != "" && cred.Role != expectedRole) || !slices.ContainsFunc(cert.Scopes, func(scope api.Scope) bool {
-		return scope.ID == issuer.ID && scope.KeyVersion == anchor.IssuerKeyVersion && slices.Contains(scope.Types, anchor.Type)
+	if anchor.Status != registry.Active || anchor.Digest != cred.AnchorDigest || cred.Domain != id.Domain || issuer.Domain != id.Domain ||
+		(expectedRole != "" && cred.Role != expectedRole) || !slices.ContainsFunc(cert.Scopes, func(scope registry.IssuerScope) bool {
+		return scope.ID == issuer.ID && scope.AppKeyVersion == anchor.IssuerKeyVersion && slices.Contains(scope.CredentialTypes, anchor.Type)
 	}) {
 		return fmt.Errorf("%s credential differs from the committed trust path", role)
 	}

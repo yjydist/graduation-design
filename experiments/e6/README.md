@@ -1,10 +1,10 @@
 # E6 撤销窗口实验驱动
 
-E6 通过共用工作流入口 `mise -C experiments run experiment:run` 编排执行, 使用确定性钱包工具与持续运行的状态提供器 (`probe1` 与 `probe2` 两个独立原探针共享 C 的 PostgreSQL 视图), 测量 U 撤销上级委托 G1 后的撤销窗口与阶段耗时. 方法与判据见 [E6 方法](method.md), 短跑与后续正式结果见[结果报告](result.md).
+E6 通过统一实验 CLI (`cmd/exp`) 的 `mise -C experiments run experiment:run` 编排执行, 使用确定性钱包工具与持续运行的状态提供器 (`probe1` 与 `probe2` 两个独立原探针共享 C 的 PostgreSQL 视图), 测量 U 撤销上级委托 G1 后的撤销窗口与阶段耗时. 方法与判据见 [E6 方法](method.md), 结果模板与后续正式批次见[结果报告](result.md).
 
 ## 运行
 
-启动 Docker, 在项目根目录指定模式 (`RP` 或 `BM`), 全新的隔离实例目录及可用起始端口. 当前短跑使用现有 1 秒探针发送间隔与 5 秒探针寿命 (`deltaState = 5s`), 默认 20 ms 计划探测间隔及双网关实例 (`gw-1`, `gw-2`).
+启动 Docker, 在项目根目录指定模式 (`RP` 或 `BM`), 全新的隔离实例目录及可用起始端口. 默认短跑使用 1 秒探针发送间隔与 5 秒探针寿命 (`deltaState = 5s`), 20 ms 计划探测间隔及双网关实例 (`gw-1`, `gw-2`).
 
 ```bash
 # RP 隔离短跑
@@ -21,6 +21,18 @@ mise -C experiments run experiment:run -- --experiment E6 \
   --mode BM \
   --instance .local/fabric-e6-bm-short \
   --port 19400 \
+  --duration 10s \
+  --revoke-after 1s \
+  --instances 2
+```
+
+也可在 `experiments/` 目录直接调用 `exp` CLI:
+
+```bash
+cd experiments && go run ./cmd/exp run --experiment E6 \
+  --mode RP \
+  --instance .local/fabric-e6-rp-short \
+  --port 19300 \
   --duration 10s \
   --revoke-after 1s \
   --instances 2

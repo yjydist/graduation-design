@@ -1,4 +1,4 @@
-package main
+package baseline
 
 import (
 	"bytes"
@@ -11,153 +11,253 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
+	goruntime "runtime"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"graduation-design/internal/agent"
-	"graduation-design/internal/centralstate"
-	"graduation-design/internal/fabric"
-	api "graduation-design/internal/fabricapi"
-	"graduation-design/internal/gateway"
-	"graduation-design/internal/protocol"
+
+	"grad/experiments/harness"
+	"grad/platform/agent"
+	"grad/platform/gateway"
+	"grad/platform/registrysvc"
+	"grad/platform/runtime"
+	"grad/platform/state"
+	"grad/platform/state/central"
+	"grad/platform/state/fabric"
+	"grad/protocol"
+	"grad/protocol/registry"
 )
 
-type baselineOptions struct {
-	Dir, Out, C0Database string
-	Seed                 int
-	RequestTimeout       time.Duration
-}
-type baselineRun struct {
-	options      baselineOptions
-	inputs       *Inputs
-	evidence     *Evidence
-	runID, stage string
-	i            *fabric.Instance
-	dir          string
-	d            *fabric.Deployment
-	f            *fabric.Fixtures
-	db, c0db     *pgxpool.Pool
-	c0           *centralstate.Source
-	resolver     *protocol.DIDWebResolver
-	passed       bool
+const (
+	// DefaultSeed is the default paired fixture seed for the three-group baseline.
+	DefaultSeed = 1109
+	// DefaultRequestTimeout is the default timeout per deterministic wallet action.
+	DefaultRequestTimeout = 15 * time.Second
+	// DefaultTimeout is the default total preparation and execution timeout.
+	DefaultTimeout = 10 * time.Minute
+)
+
+var c0DatabaseRe = regexp.MustCompile(`^baseline_[a-z0-9_]{1,48}$`)
+
+// Options configures a three-group (C0/B0/B1) paired procurement baseline run.
+type Options struct {
+	Dir            string
+	C0Database     string
+	OutDir         string
+	Seed           int
+	RequestTimeout time.Duration
+	Timeout        time.Duration
 }
 
-func runBaseline(ctx context.Context, opts baselineOptions) (e *Evidence, err error) {
+// RunResult returns the evidence directory and final summary for a baseline run.
+type RunResult struct {
+	EvidenceDirectory string  `json:"evidence_directory"`
+	Summary           Summary `json:"summary"`
+}
+
+type baselineRun struct {
+	options  Options
+	repoRoot string
+	inputs   *Inputs
+	evidence *Evidence
+	runID    string
+	stage    string
+	i        *fabric.Instance
+	dir      string
+	d        *fabric.Deployment
+	f        *runtime.Fixtures
+	db, c0db *pgxpool.Pool
+	c0       *central.Source
+	resolver *protocol.DIDWebResolver
+	passed   bool
+}
+
+// Validate checks CLI-level baseline options before creating the output directory.
+func (o Options) Validate() error {
+	if strings.TrimSpace(o.Dir) == "" || strings.TrimSpace(o.C0Database) == "" || strings.TrimSpace(o.OutDir) == "" ||
+		o.RequestTimeout <= 0 || o.Timeout <= 0 {
+		return fmt.Errorf("explicit dir, c0-database, out and positive timeouts required")
+	}
+	if !c0DatabaseRe.MatchString(o.C0Database) {
+		return fmt.Errorf("C0 database must be a new name matching baseline_[a-z0-9_]{1,48}")
+	}
+	return nil
+}
+
+// Run executes the C0/B0/B1 paired procurement baseline and exports manifest.json,
+// requests.csv, order_checks.csv, and summary.json into opts.OutDir.
+func Run(ctx context.Context, opts Options) (res *RunResult, err error) {
+	if err := opts.Validate(); err != nil {
+		return nil, err
+	}
 	in, err := Baseline(opts.Seed)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(ctx, opts.Timeout)
+	defer cancel()
+
 	var id [8]byte
-	rand.Read(id[:])
+	if _, err := rand.Read(id[:]); err != nil {
+		return nil, err
+	}
 	runID := fmt.Sprintf("baseline-%x", id)
-	e, err = NewEvidence(opts.Out, runID, in)
+	e, err := NewEvidence(opts.OutDir, runID, in)
 	if err != nil {
 		return nil, err
 	}
-	r := &baselineRun{options: opts, inputs: in, evidence: e, runID: runID, stage: "preparation"}
+	r := &baselineRun{
+		options:  opts,
+		inputs:   in,
+		evidence: e,
+		runID:    runID,
+		stage:    "preparation",
+	}
 	defer func() {
 		if err != nil {
 			r.failure("run", r.stage, err)
-			for _, row := range e.Requests {
-				if row["disposition"] == "dropped" && row["failure_stage"] == "preparation" {
-					row["failure_stage"] = r.stage
+			for i := range e.Requests {
+				row := &e.Requests[i]
+				if row.Disposition == "dropped" && row.FailureStage.Valid && row.FailureStage.Value == "preparation" {
+					row.FailureStage = someString(r.stage)
 				}
 			}
 		}
 		r.passed = r.compare()
-		e.Summary["request_accounting"] = e.Account()
-		e.Summary["passed"] = err == nil && r.passed
+		e.Summary.RequestAccounting = e.Account()
+		e.Summary.Passed = err == nil && r.passed
 		err = errors.Join(err, e.Save())
-		scanErr := scanBaselineEvidence(e.Directory, r.dir)
-		e.Summary["secret_scan"] = map[string]any{"passed": scanErr == nil, "files": 4}
+
+		findings, scanErr := harness.ScanExports(e.Directory, harness.CollectInstanceSecrets(r.dir)...)
+		if scanErr == nil && len(findings) > 0 {
+			scanErr = fmt.Errorf("sensitive data detected in baseline exports: %s", findings[0].String())
+		}
+		e.Summary.SecretScan = &SecretScanSummary{
+			Passed:   scanErr == nil,
+			Files:    4,
+			Findings: len(findings),
+		}
 		if scanErr != nil {
-			e.Summary["passed"] = false
+			e.Summary.Passed = false
 			r.failure("run", "secret-scan", scanErr)
 		}
 		err = errors.Join(err, scanErr, e.Save())
+		res = &RunResult{EvidenceDirectory: e.Directory, Summary: e.Summary}
 	}()
+
 	if err = e.Save(); err != nil {
-		return e, err
+		return nil, err
 	}
 	if err = r.prepare(ctx); err != nil {
-		return e, err
+		return nil, err
 	}
 	defer r.db.Close()
 	defer r.c0db.Close()
+
 	didServer, resolver, err := r.i.StartRegistryDIDResolver(r.d)
 	if err != nil {
-		return e, err
+		return nil, err
 	}
 	defer didServer.Close()
 	r.resolver = resolver
+
 	for _, name := range in.Fixture.Configurations {
 		if err = r.configuration(ctx, name); err != nil {
-			return e, err
+			return nil, err
 		}
 	}
 	r.stage = "comparison"
 	r.passed = r.compare()
 	if !r.passed {
-		return e, fmt.Errorf("baseline business or paired checks failed")
+		return nil, fmt.Errorf("baseline business or paired checks failed")
 	}
-	return e, nil
+	return nil, nil
 }
 
 func (r *baselineRun) prepare(ctx context.Context) error {
 	e := r.evidence
-	e.Manifest["go_version"] = runtime.Version()
-	e.Manifest["host"] = runtime.GOOS + "/" + runtime.GOARCH
-	e.Manifest["clock"] = "UTC wall clock and per-process monotonic nanoseconds"
-	commit, err := exec.CommandContext(ctx, "git", "rev-parse", "HEAD").Output()
+	repoRoot, err := harness.RepoRoot()
 	if err != nil {
 		return err
 	}
-	e.Manifest["source_commit"] = strings.TrimSpace(string(commit))
-	locks := map[string]string{}
+	r.repoRoot = repoRoot
+
+	e.Manifest["go_version"] = goruntime.Version()
+	e.Manifest["host"] = goruntime.GOOS + "/" + goruntime.GOARCH
+	e.Manifest["clock"] = "UTC wall clock and per-process monotonic nanoseconds"
+	e.Manifest["clock_resolution_ns"] = harness.MeasureClockResolutionNs(2000)
+
+	commit, _, err := harness.GitHeadRevision(repoRoot)
+	if err != nil {
+		return err
+	}
+	e.Manifest["source_commit"] = commit
+
 	exe, err := os.Executable()
 	if err != nil {
 		return err
 	}
-	binary, err := os.ReadFile(exe)
+	binaryDigest, err := harness.SHA256File(exe)
 	if err != nil {
 		return err
 	}
-	e.Manifest["binary_sha256"] = api.Digest(binary)
-	for _, path := range []string{
-		"go.mod",
-		"go.sum",
+	e.Manifest["binary_sha256"] = binaryDigest
+
+	locks := map[string]string{}
+	for _, rel := range []string{
+		"go.work",
+		"protocol/go.mod",
+		"chaincode/go.mod",
+		"platform/go.mod",
+		"experiments/go.mod",
 		"mise.toml",
 		"infra/fabric/compose.yaml",
 		"infra/fabric/channel.sh",
 		"infra/fabric/network.sh",
-		"internal/protocol/contexts/vc-v2.json",
+		"protocol/contexts/vc-v2.json",
 		"experiments/mise.toml",
 		"experiments/baseline/baseline.json",
 	} {
-		raw, err := os.ReadFile(path)
+		digest, err := harness.SHA256File(filepath.Join(repoRoot, filepath.FromSlash(rel)))
 		if err != nil {
 			return err
 		}
-		locks[path] = api.Digest(raw)
+		locks[rel] = digest
 	}
-	// Pin the actual working source as well as HEAD when implementing an uncommitted change.
-	for _, root := range []string{"internal", "cmd", "chaincode", "experiments/baseline"} {
-		if err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return err
+	// Pin the actual working source tree as well as HEAD.
+	for _, tree := range []string{
+		"protocol",
+		"chaincode",
+		"platform",
+		"experiments/cmd",
+		"experiments/harness",
+		"experiments/baseline",
+	} {
+		absTree := filepath.Join(repoRoot, filepath.FromSlash(tree))
+		if _, statErr := os.Stat(absTree); errors.Is(statErr, os.ErrNotExist) && tree == "experiments/cmd" {
+			continue
+		}
+		if err := filepath.WalkDir(absTree, func(path string, d os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
 			}
-			if !d.IsDir() && strings.HasSuffix(path, ".go") {
-				raw, err := os.ReadFile(path)
+			if d.IsDir() {
+				return nil
+			}
+			if strings.HasSuffix(path, ".go") || strings.HasSuffix(path, ".sql") {
+				digest, err := harness.SHA256File(path)
 				if err != nil {
 					return err
 				}
-				locks[filepath.ToSlash(path)] = api.Digest(raw)
+				rel, err := filepath.Rel(repoRoot, path)
+				if err != nil {
+					return err
+				}
+				locks[filepath.ToSlash(rel)] = digest
 			}
 			return nil
 		}); err != nil {
@@ -165,9 +265,7 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 		}
 	}
 	e.Manifest["artifact_locks"] = locks
-	if !regexp.MustCompile(`^baseline_[a-z0-9_]{1,48}$`).MatchString(r.options.C0Database) {
-		return fmt.Errorf("C0 database must be a new name matching baseline_[a-z0-9_]{1,48}")
-	}
+
 	if err := r.claimInstance(); err != nil {
 		return err
 	}
@@ -177,7 +275,8 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	d, err := i.Deploy(ctx)
+
+	d, err := i.Deploy(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -185,8 +284,15 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	e.Manifest["deployment_id"] = d.DeploymentID
 	e.Manifest["channel_id"] = d.ChannelID
 	e.Manifest["genesis_hash"] = d.GenesisHash
-	e.Manifest["chaincode"] = map[string]any{"name": d.RegistryName, "version": fabric.RegistryVersion, "sequence": fabric.RegistrySequence, "source_digest": d.SourceDigest, "build_digest": d.BuildDigest}
+	e.Manifest["chaincode"] = map[string]any{
+		"name":          d.RegistryName,
+		"version":       fabric.RegistryVersion,
+		"sequence":      fabric.RegistrySequence,
+		"source_digest": d.SourceDigest,
+		"build_digest":  d.BuildDigest,
+	}
 	e.Manifest["root"] = d.Bootstrap.Root
+
 	db, err := i.Database(ctx)
 	if err != nil {
 		return err
@@ -202,8 +308,9 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 			}
 		}
 	}()
+
 	setup := baselineProcurement(d.DeploymentID, r.inputs)
-	report, err := i.SeedProcurement(ctx, db, d, setup)
+	report, err := runtime.SeedProcurement(ctx, i, db, d, setup)
 	if err != nil {
 		return err
 	}
@@ -214,6 +321,7 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	}
 	e.Manifest["material_digest"] = centralInput.MaterialDigest
 	e.Manifest["registry_input_digest"] = centralInput.InputDigest
+
 	// CREATE DATABASE is deliberate and never reuses or clears an existing database.
 	if _, err = db.Exec(ctx, `CREATE DATABASE `+pgx.Identifier{r.options.C0Database}.Sanitize()); err != nil {
 		return err
@@ -228,8 +336,15 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	if err = c0db.Ping(ctx); err != nil {
 		return err
 	}
-	e.Manifest["topology"] = map[string]any{"fabric_instance": r.dir, "fabric_database": db.Config().ConnConfig.Database, "centralized_database": r.options.C0Database, "peer_domains": []string{"A", "B", "C"}, "orderers": 4}
-	if r.c0, err = centralstate.Initialize(ctx, c0db, centralInput.Snapshot); err != nil {
+	e.Manifest["topology"] = map[string]any{
+		"fabric_instance":      r.dir,
+		"fabric_database":      db.Config().ConnConfig.Database,
+		"centralized_database": r.options.C0Database,
+		"peer_domains":         []string{"A", "B", "C"},
+		"orderers":             4,
+	}
+
+	if r.c0, err = central.Initialize(ctx, c0db, centralInput.Snapshot); err != nil {
 		return err
 	}
 	r.stage = "registry-readback"
@@ -240,16 +355,14 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 		return err
 	}
 	r.stage = "preparation"
-	if err = fabric.EnsureOperationSchema(ctx, c0db); err != nil {
-		return err
-	}
+
 	if err = gateway.EnsureSchema(ctx, c0db, d.DeploymentID, r.inputs.Fixture.Supplier); err != nil {
 		return err
 	}
 	if err = gateway.EnsureSchema(ctx, db, d.DeploymentID, r.inputs.Fixture.Supplier); err != nil {
 		return err
 	}
-	if err = i.SyncSeedDeliveries(ctx, c0db, d, report); err != nil {
+	if err = runtime.SyncSeedDeliveries(ctx, i, c0db, d, report); err != nil {
 		return err
 	}
 	e.Manifest["configurations"] = []any{}
@@ -258,49 +371,33 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 }
 
 func (r *baselineRun) claimInstance() error {
-	dir, err := filepath.Abs(r.options.Dir)
+	repoRoot := r.repoRoot
+	if repoRoot == "" {
+		var err error
+		repoRoot, err = harness.RepoRoot()
+		if err != nil {
+			wd, wdErr := os.Getwd()
+			if wdErr != nil {
+				return err
+			}
+			repoRoot = wd
+		}
+	}
+	dir, err := harness.ValidateIsolatedInstance(repoRoot, r.options.Dir, false)
 	if err != nil {
 		return err
 	}
-	defaultDir, err := filepath.Abs(".local/fabric-d0")
+	inst, err := fabric.OpenInstance(dir)
 	if err != nil {
 		return err
 	}
-	if dir == defaultDir {
-		return fmt.Errorf("baseline requires an explicitly isolated Fabric instance")
-	}
-	dir, err = filepath.EvalSymlinks(dir)
-	if err != nil {
-		return err
-	}
-	root, err := os.OpenRoot(dir)
-	if err != nil {
-		return err
-	}
-	defer root.Close()
-	target, err := root.Stat(".")
-	if err != nil {
-		return err
-	}
-	defaultInfo, err := os.Stat(defaultDir)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("stat default Fabric instance: %w", err)
-	}
-	if err == nil && os.SameFile(target, defaultInfo) {
-		return fmt.Errorf("baseline requires an explicitly isolated Fabric instance")
-	}
-	i, err := fabric.OpenInstance(dir)
-	if err != nil {
-		return err
-	}
-	r.i = i
-	r.dir = dir
-	claim, err := root.OpenFile("baseline-run", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-	if err != nil {
+	// Baseline claims an instance permanently (no release) so failed runs cannot reuse it.
+	if _, err := harness.ClaimInstance(dir, "baseline-run", r.runID); err != nil {
 		return fmt.Errorf("baseline instance is already claimed: %w", err)
 	}
-	_, err = claim.WriteString(r.runID + "\n")
-	return errors.Join(err, claim.Close())
+	r.i = inst
+	r.dir = dir
+	return nil
 }
 
 func (r *baselineRun) configuration(ctx context.Context, name string) error {
@@ -310,10 +407,10 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 		return err
 	}
 	db := r.db
-	var state gateway.StateSource
+	var src state.StateSource
 	if name == "C0" {
 		db = r.c0db
-		state = r.c0
+		src = r.c0
 	} else {
 		role := "probe1"
 		if name == "B1" {
@@ -324,8 +421,9 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 			return err
 		}
 		defer stop()
-		state = provider.GatewayAdapter()
+		src = provider
 	}
+
 	bundle, err := r.inputs.Policy(r.d.DeploymentID, r.f.Identities["C"].ID, r.d.Bootstrap.Root, r.f.RPTask.EXP, r.f.BMTask.EXP)
 	if err != nil {
 		return err
@@ -334,56 +432,96 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 		return fmt.Errorf("policy digest differs across groups")
 	}
 	r.evidence.Manifest["policy_digest"] = bundle.PolicyDigest
+
 	cache := profile.NewSignatureCache()
-	srv, err := gateway.NewServer(gateway.Config{DB: db, State: state, Delivery: fabric.NewDeliveryService(db), DIDs: r.resolver, Policy: bundle, SignatureCache: cache, DeploymentID: r.d.DeploymentID, ServiceDID: r.f.Identities["C"].ID, Audience: "https://c.local", SupplierID: r.inputs.Fixture.Supplier, VerifierID: r.runID + "-" + name})
+	srv, err := gateway.NewServer(gateway.ServerConfig{
+		DB:             db,
+		State:          src,
+		CertChecker:    registrysvc.NewDeliveryService(db, r.d.DeploymentID),
+		DIDs:           r.resolver,
+		Policy:         bundle,
+		SignatureCache: cache,
+		DeploymentID:   r.d.DeploymentID,
+		ServiceDID:     r.f.Identities["C"].ID,
+		Audience:       "https://c.local",
+		SupplierID:     r.inputs.Fixture.Supplier,
+		VerifierID:     r.runID + "-" + name,
+	})
 	if err != nil {
 		return err
 	}
-	meta := map[string]any{"configuration": name, "state_source": profile.StateSource, "database": db.Config().ConnConfig.Database, "gateway_instance": r.runID + "-" + name, "signature_cache": profile.SignatureCache, "probe_interval_seconds": nil, "probe_lifetime_seconds": nil}
+
+	meta := map[string]any{
+		"configuration":          name,
+		"state_source":           profile.StateSource,
+		"database":               db.Config().ConnConfig.Database,
+		"gateway_instance":       r.runID + "-" + name,
+		"signature_cache":        profile.SignatureCache,
+		"probe_interval_seconds": nil,
+		"probe_lifetime_seconds": nil,
+	}
 	if name != "C0" {
-		meta["probe_interval_seconds"] = int64(api.ProbeInterval.Seconds())
-		meta["probe_lifetime_seconds"] = int64(api.ProbeLifetime.Seconds())
+		meta["probe_interval_seconds"] = int64(registry.ProbeInterval.Seconds())
+		meta["probe_lifetime_seconds"] = int64(registry.ProbeLifetime.Seconds())
 	}
 	r.evidence.Manifest["configurations"] = append(r.evidence.Manifest["configurations"].([]any), meta)
+
 	// A fresh wallet keeps intents and quotes isolated while sharing the exact signed chain.
-	var active Row
-	wrapped := r.observe(srv.Handler(), func() Row { return active })
-	wallet, err := r.i.BuildWallet(ctx, r.d, r.f, db, wrapped)
+	var active *RequestRow
+	wrapped := r.observe(srv.Handler(), func() *RequestRow { return active })
+	wallet, err := runtime.BuildWallet(ctx, r.i, r.d, r.f, db, wrapped)
 	if err != nil {
 		return err
 	}
+
 	for n, c := range r.inputs.Cases {
 		if c.Configuration != name {
 			continue
 		}
 		r.stage = "case-prepare"
 		task, leaf := r.f.RPTask, r.f.RPG2
-		if c.Mode == api.BM {
+		if c.Mode == registry.BM {
 			task, leaf = r.f.BMTask, r.f.BMG2
 		}
-		qrow, orow, check := r.evidence.Requests[2*n], r.evidence.Requests[2*n+1], r.evidence.Orders[n]
+		qrow := &r.evidence.Requests[2*n]
+		orow := &r.evidence.Requests[2*n+1]
+		check := &r.evidence.Orders[n]
 		qkey := r.runID + "-" + name + "-" + c.CaseID + "-q"
 		okey := r.runID + "-" + name + "-" + c.CaseID + "-o"
-		for _, row := range []Row{qrow, orow, check} {
-			row["task_id"] = task.ID
-			row["actor"] = r.f.Identities["B1"].ID
-		}
-		qrow["idempotency_key"] = qkey
-		orow["idempotency_key"] = okey
-		check["idempotency_key"] = okey
-		orow["quote_id"] = nil
+
+		qrow.TaskID = someString(task.ID)
+		qrow.Actor = someString(r.f.Identities["B1"].ID)
+		qrow.IdempotencyKey = someString(qkey)
+
+		orow.TaskID = someString(task.ID)
+		orow.Actor = someString(r.f.Identities["B1"].ID)
+		orow.IdempotencyKey = someString(okey)
+		orow.QuoteID = nullString{}
+
+		check.TaskID = someString(task.ID)
+		check.IdempotencyKey = someString(okey)
+
 		if time.Now().Unix() >= min(task.EXP, r.f.Certifications["B"].Certification.EXP) {
 			return fmt.Errorf("baseline materials expired")
 		}
-		if _, err = db.Exec(ctx, `UPDATE catalog_prices SET unit_price_minor=$3 WHERE deployment_id=$1 AND product_id=$2`, r.d.DeploymentID, r.inputs.Fixture.Product, c.AmountMinor); err != nil {
+		if _, err = db.Exec(ctx,
+			`UPDATE catalog_prices SET unit_price_minor=$3 WHERE deployment_id=$1 AND product_id=$2`,
+			r.d.DeploymentID, r.inputs.Fixture.Product, c.AmountMinor,
+		); err != nil {
 			return err
 		}
 		var price int64
-		if err = db.QueryRow(ctx, `SELECT unit_price_minor FROM catalog_prices WHERE deployment_id=$1 AND product_id=$2`, r.d.DeploymentID, r.inputs.Fixture.Product).Scan(&price); err != nil || price != c.AmountMinor {
+		if err = db.QueryRow(ctx,
+			`SELECT unit_price_minor FROM catalog_prices WHERE deployment_id=$1 AND product_id=$2`,
+			r.d.DeploymentID, r.inputs.Fixture.Product,
+		).Scan(&price); err != nil || price != c.AmountMinor {
 			return fmt.Errorf("catalog price readback failed: %w", err)
 		}
 		var contextVersion int64
-		err = db.QueryRow(ctx, `SELECT context_version FROM trusted_contexts WHERE deployment_id=$1 AND task_id=$2`, r.d.DeploymentID, task.ID).Scan(&contextVersion)
+		err = db.QueryRow(ctx,
+			`SELECT context_version FROM trusted_contexts WHERE deployment_id=$1 AND task_id=$2`,
+			r.d.DeploymentID, task.ID,
+		).Scan(&contextVersion)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
@@ -391,26 +529,51 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 			return err
 		}
 		var before int64
-		if err = db.QueryRow(ctx, `SELECT count(*) FROM orders WHERE deployment_id=$1 AND task_id=$2`, r.d.DeploymentID, task.ID).Scan(&before); err != nil {
+		if err = db.QueryRow(ctx,
+			`SELECT count(*) FROM orders WHERE deployment_id=$1 AND task_id=$2`,
+			r.d.DeploymentID, task.ID,
+		).Scan(&before); err != nil {
 			return err
 		}
-		check["order_rows_before"] = before
+		check.OrderRowsBefore = someInt64(before)
+
 		active = qrow
 		var quoted agent.RequestQuoteOutput
 		r.action(ctx, qrow, cache, func(call context.Context) error {
 			var err error
-			quoted, err = wallet.RequestQuote(call, agent.RequestQuoteInput{Actor: "B1", GrantID: leaf.ID, TaskID: task.ID, AuthorizationMode: c.Mode, ProductID: r.inputs.Fixture.Product, Quantity: 1, IdempotencyKey: qkey})
+			quoted, err = wallet.RequestQuote(call, agent.RequestQuoteInput{
+				Actor:             "B1",
+				GrantID:           leaf.ID,
+				TaskID:            task.ID,
+				AuthorizationMode: c.Mode,
+				ProductID:         r.inputs.Fixture.Product,
+				Quantity:          1,
+				IdempotencyKey:    qkey,
+			})
 			return err
 		})
 		quoteID := r.checkQuote(ctx, db, qrow, orow, check)
 		if quoteID == "" {
+			active = nil
 			continue
 		}
+
 		active = orow
-		orow["quote_id"] = quoteID
-		orow["amount_minor"] = quoted.TotalAmountMinor
+		orow.QuoteID = someString(quoteID)
+		orow.AmountMinor = quoted.TotalAmountMinor
 		r.action(ctx, orow, cache, func(call context.Context) error {
-			_, err := wallet.CreateOrder(call, agent.CreateOrderInput{Actor: "B1", GrantID: leaf.ID, TaskID: task.ID, AuthorizationMode: c.Mode, QuoteID: quoteID, ProductID: r.inputs.Fixture.Product, Quantity: 1, AmountMinor: quoted.TotalAmountMinor, Currency: r.inputs.Fixture.Currency, IdempotencyKey: okey})
+			_, err := wallet.CreateOrder(call, agent.CreateOrderInput{
+				Actor:             "B1",
+				GrantID:           leaf.ID,
+				TaskID:            task.ID,
+				AuthorizationMode: c.Mode,
+				QuoteID:           quoteID,
+				ProductID:         r.inputs.Fixture.Product,
+				Quantity:          1,
+				AmountMinor:       quoted.TotalAmountMinor,
+				Currency:          r.inputs.Fixture.Currency,
+				IdempotencyKey:    okey,
+			})
 			return err
 		})
 		r.checkDecision(ctx, db, orow, "order-decision")
@@ -445,39 +608,46 @@ func setNormalContext(handler http.Handler, taskID string, version, deadline int
 	return json.Unmarshal(rec.Body.Bytes(), &result)
 }
 
-func (r *baselineRun) action(ctx context.Context, row Row, cache *protocol.SignatureCache, run func(context.Context) error) {
-	row["started_at"] = time.Now().UTC()
-	row["disposition"] = "error"
-	row["failure_stage"] = "wallet"
+func (r *baselineRun) action(ctx context.Context, row *RequestRow, cache *protocol.SignatureCache, run func(context.Context) error) {
+	row.StartedAt = someTime(time.Now().UTC())
+	row.Disposition = "error"
+	row.FailureStage = someString("wallet")
 	hits, misses := cache.Hits(), cache.Misses()
 	call, cancel := context.WithTimeout(ctx, r.options.RequestTimeout)
 	defer cancel()
 	err := run(call)
-	row["finished_at"] = time.Now().UTC()
-	row["signature_cache_hits"] = cache.Hits() - hits
-	row["signature_cache_misses"] = cache.Misses() - misses
-	if row["disposition"] == "timeout" || errors.Is(call.Err(), context.DeadlineExceeded) || errors.Is(err, context.DeadlineExceeded) {
-		if row["disposition"] != "timeout" {
-			row["failure_stage"] = "wallet"
+	row.FinishedAt = someTime(time.Now().UTC())
+	row.SignatureCacheHits = someInt64(cache.Hits() - hits)
+	row.SignatureCacheMisses = someInt64(cache.Misses() - misses)
+
+	if row.Disposition == "timeout" || errors.Is(call.Err(), context.DeadlineExceeded) || errors.Is(err, context.DeadlineExceeded) {
+		if row.Disposition != "timeout" {
+			row.FailureStage = someString("wallet")
 		}
-		row["disposition"] = "timeout"
+		row.Disposition = "timeout"
 		err = context.DeadlineExceeded
 	}
-	stage, _ := row["failure_stage"].(string)
+	stage := ""
+	if row.FailureStage.Valid {
+		stage = row.FailureStage.Value
+	}
 	if err != nil {
 		if stage == "" {
 			stage = "wallet"
-			row["failure_stage"] = stage
+			row.FailureStage = someString(stage)
 		}
 		r.failureRow(row, stage, err)
 	} else if stage == "challenge" || stage == "execute" {
-		code, _ := row["code"].(string)
+		code := ""
+		if row.Code.Valid {
+			code = row.Code.Value
+		}
 		r.failureRow(row, stage, protocol.NewError(code, "gateway request failed"))
 	}
 }
 
 // observe retains only public identifiers and measurements, never raw evidence or disclosure bodies.
-func (r *baselineRun) observe(next http.Handler, current func() Row) http.Handler {
+func (r *baselineRun) observe(next http.Handler, current func() *RequestRow) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		row := current()
 		if row == nil {
@@ -489,7 +659,7 @@ func (r *baselineRun) observe(next http.Handler, current func() Row) http.Handle
 		if req.URL.Path == "/v1/access/execute" {
 			raw, err := io.ReadAll(req.Body)
 			if err != nil {
-				http.Error(w, "request read failed", 400)
+				http.Error(w, "request read failed", http.StatusBadRequest)
 				return
 			}
 			req.Body = io.NopCloser(bytes.NewReader(raw))
@@ -498,12 +668,15 @@ func (r *baselineRun) observe(next http.Handler, current func() Row) http.Handle
 				Request     protocol.AccessRequest `json:"request"`
 			}
 			if json.Unmarshal(raw, &pkg) == nil {
-				row["challenge_id"] = pkg.ChallengeID
-				hash, err := pkg.Request.Hash(false)
-				if err == nil {
-					row["request_hash"] = hash
+				if pkg.ChallengeID != "" {
+					row.ChallengeID = someString(pkg.ChallengeID)
 				}
-				row["amount_minor"] = pkg.Request.AmountMinor
+				if hash, err := pkg.Request.Hash(false); err == nil {
+					row.RequestHash = someString(hash)
+				}
+				if pkg.Request.AmountMinor != 0 {
+					row.AmountMinor = pkg.Request.AmountMinor
+				}
 			}
 		}
 		next.ServeHTTP(rec, req)
@@ -511,16 +684,16 @@ func (r *baselineRun) observe(next http.Handler, current func() Row) http.Handle
 		switch req.URL.Path {
 		case "/v1/auth/challenges":
 			stage = "challenge"
-			row["challenge_ns"] = time.Since(start).Nanoseconds()
+			row.ChallengeNs = someInt64(time.Since(start).Nanoseconds())
 			if rec.Code == http.StatusCreated {
 				var c gateway.ChallengeResponse
-				if json.Unmarshal(rec.Body.Bytes(), &c) == nil {
-					row["challenge_id"] = c.ChallengeID
+				if json.Unmarshal(rec.Body.Bytes(), &c) == nil && c.ChallengeID != "" {
+					row.ChallengeID = someString(c.ChallengeID)
 				}
 			} else {
-				row["http_status"] = rec.Code
-				row["disposition"] = "error"
-				row["failure_stage"] = stage
+				row.HTTPStatus = someInt64(int64(rec.Code))
+				row.Disposition = "error"
+				row.FailureStage = someString(stage)
 				requestID := rec.Header().Get("X-Request-Id")
 				var body gateway.ErrorBody
 				if json.Unmarshal(rec.Body.Bytes(), &body) == nil {
@@ -528,60 +701,70 @@ func (r *baselineRun) observe(next http.Handler, current func() Row) http.Handle
 						requestID = body.RequestID
 					}
 					if body.Code != "" {
-						row["code"] = body.Code
+						row.Code = someString(body.Code)
 					}
 				}
 				if requestID != "" {
-					row["request_id"] = requestID
+					row.RequestID = someString(requestID)
 				}
 			}
 		case "/v1/access/execute":
 			stage = "execute"
-			row["execute_ns"] = time.Since(start).Nanoseconds()
-			row["http_status"] = rec.Code
-			row["request_id"] = rec.Header().Get("X-Request-Id")
+			row.ExecuteNs = someInt64(time.Since(start).Nanoseconds())
+			row.HTTPStatus = someInt64(int64(rec.Code))
+			if reqID := rec.Header().Get("X-Request-Id"); reqID != "" {
+				row.RequestID = someString(reqID)
+			}
 			var body struct {
-				RequestID  string            `json:"requestId"`
-				DecisionID *string           `json:"decisionId"`
-				Code       string            `json:"code"`
-				Quote      *gateway.QuoteDTO `json:"quote"`
-				Order      *gateway.OrderDTO `json:"order"`
+				RequestID  string                `json:"requestId"`
+				DecisionID *string               `json:"decisionId"`
+				Code       string                `json:"code"`
+				Quote      *gateway.QuotePayload `json:"quote"`
+				Order      *gateway.OrderPayload `json:"order"`
 			}
 			if json.Unmarshal(rec.Body.Bytes(), &body) == nil {
 				if body.RequestID != "" {
-					row["request_id"] = body.RequestID
+					row.RequestID = someString(body.RequestID)
 				}
 				if body.DecisionID != nil && *body.DecisionID != "" {
-					row["decision_id"] = *body.DecisionID
+					row.DecisionID = someString(*body.DecisionID)
 				}
-				row["code"] = body.Code
-				if body.Quote != nil {
-					row["quote_id"] = body.Quote.QuoteID
+				if body.Code != "" {
+					row.Code = someString(body.Code)
+				}
+				if body.Quote != nil && body.Quote.QuoteID != "" {
+					row.QuoteID = someString(body.Quote.QuoteID)
 				}
 				if body.Order != nil {
-					row["quote_id"] = body.Order.QuoteID
-					row["order_id"] = body.Order.OrderID
-					row["order_status"] = body.Order.Status
-					row["order_amount_minor"] = body.Order.TotalAmountMinor
+					if body.Order.QuoteID != "" {
+						row.QuoteID = someString(body.Order.QuoteID)
+					}
+					if body.Order.OrderID != "" {
+						row.OrderID = someString(body.Order.OrderID)
+					}
+					if body.Order.Status != "" {
+						row.httpOrderStatus = someString(body.Order.Status)
+					}
+					row.httpOrderAmountMinor = someInt64(body.Order.TotalAmountMinor)
 				}
 			}
-			row["failure_stage"] = stage
+			row.FailureStage = someString(stage)
 			switch rec.Code {
 			case http.StatusOK:
-				row["disposition"] = "allowed"
-				row["failure_stage"] = nil
+				row.Disposition = "allowed"
+				row.FailureStage = nullString{}
 			case http.StatusForbidden:
-				row["disposition"] = "denied"
-				if row["decision_id"] != nil {
-					row["failure_stage"] = nil
+				row.Disposition = "denied"
+				if row.DecisionID.Valid {
+					row.FailureStage = nullString{}
 				}
 			default:
-				row["disposition"] = "error"
+				row.Disposition = "error"
 			}
 		}
 		if stage != "" && errors.Is(req.Context().Err(), context.DeadlineExceeded) {
-			row["disposition"] = "timeout"
-			row["failure_stage"] = stage
+			row.Disposition = "timeout"
+			row.FailureStage = someString(stage)
 		}
 		for key, values := range rec.Header() {
 			for _, v := range values {
@@ -602,51 +785,57 @@ func (r *baselineRun) failure(scope, stage string, err error) {
 	if errors.Is(err, context.DeadlineExceeded) {
 		code = "deadline exceeded"
 	}
-	f := map[string]any{"scope": scope, "failure_stage": stage, "reason": code}
-	r.evidence.Summary["failures"] = append(r.evidence.Summary["failures"].([]any), f)
+	r.evidence.Summary.Failures = append(r.evidence.Summary.Failures, FailureRecord{
+		Scope:        scope,
+		FailureStage: stage,
+		Reason:       code,
+	})
 }
 
-func (r *baselineRun) failureRow(row Row, stage string, err error) {
-	r.failure(fmt.Sprint(row["configuration"], "/", row["case_id"], "/", row["action"]), stage, err)
-	list := r.evidence.Summary["failures"].([]any)
-	entry := list[len(list)-1].(map[string]any)
-	for _, key := range []string{"configuration", "case_id", "action", "http_status", "code", "request_id", "challenge_id", "decision_id"} {
-		entry[key] = row[key]
-	}
+func (r *baselineRun) failureRow(row *RequestRow, stage string, err error) {
+	r.failure(row.Configuration+"/"+row.CaseID+"/"+row.Action, stage, err)
+	entry := &r.evidence.Summary.Failures[len(r.evidence.Summary.Failures)-1]
+	entry.Configuration = row.Configuration
+	entry.CaseID = row.CaseID
+	entry.Action = row.Action
+	entry.HTTPStatus = row.HTTPStatus.intPtr()
+	entry.Code = row.Code.ptr()
+	entry.RequestID = row.RequestID.ptr()
+	entry.ChallengeID = row.ChallengeID.ptr()
+	entry.DecisionID = row.DecisionID.ptr()
 }
 
-func (r *baselineRun) checkDecision(ctx context.Context, db *pgxpool.Pool, row Row, stage string) {
-	if row["failure_stage"] == "challenge" || (row["failure_stage"] == "execute" && row["decision_id"] == nil) {
+func (r *baselineRun) checkDecision(ctx context.Context, db *pgxpool.Pool, row *RequestRow, stage string) {
+	if row.FailureStage.Valid && (row.FailureStage.Value == "challenge" || (row.FailureStage.Value == "execute" && !row.DecisionID.Valid)) {
 		return
 	}
 	if err := r.decision(ctx, db, row); err != nil {
 		r.failureRow(row, stage, err)
-		if row["failure_stage"] == nil {
-			row["failure_stage"] = stage
+		if !row.FailureStage.Valid {
+			row.FailureStage = someString(stage)
 		}
 	}
 }
 
-func (r *baselineRun) checkQuote(ctx context.Context, db *pgxpool.Pool, quote, order, check Row) string {
+func (r *baselineRun) checkQuote(ctx context.Context, db *pgxpool.Pool, quote, order *RequestRow, check *OrderCheckRow) string {
 	r.checkDecision(ctx, db, quote, "quote-check")
-	quoteID, _ := quote["quote_id"].(string)
-	if quote["disposition"] == "allowed" && quote["failure_stage"] == nil && quoteID != "" {
-		return quoteID
+	if quote.Disposition == "allowed" && !quote.FailureStage.Valid && quote.QuoteID.Valid && quote.QuoteID.Value != "" {
+		return quote.QuoteID.Value
 	}
-	order["failure_stage"] = "quote-dependency"
-	check["failure_reason"] = "quote dependency failed"
+	order.FailureStage = someString("quote-dependency")
+	check.FailureReason = someString("quote dependency failed")
 	return ""
 }
 
-func (r *baselineRun) checkOrder(ctx context.Context, db *pgxpool.Pool, c Case, row, check Row, before int64, quoteID string) {
-	if row["failure_stage"] == "challenge" {
-		check["quote_id"] = quoteID
-		check["failure_reason"] = "order challenge failed"
+func (r *baselineRun) checkOrder(ctx context.Context, db *pgxpool.Pool, c Case, row *RequestRow, check *OrderCheckRow, before int64, quoteID string) {
+	if row.FailureStage.Valid && row.FailureStage.Value == "challenge" {
+		check.QuoteID = someString(quoteID)
+		check.FailureReason = someString("order challenge failed")
 		return
 	}
 	if err := r.orderCheck(ctx, db, c, row, check, before, quoteID); err != nil {
 		r.failureRow(row, "primary-check", err)
-		check["failure_reason"] = "primary database query failed"
-		check["verdict"] = "FAIL"
+		check.FailureReason = someString("primary database query failed")
+		check.Verdict = "FAIL"
 	}
 }

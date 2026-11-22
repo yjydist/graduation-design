@@ -17,6 +17,9 @@ import (
 	"github.com/hyperledger/fabric-protos-go-apiv2/ledger/rwset/kvrwset"
 	pb "github.com/hyperledger/fabric-protos-go-apiv2/peer"
 	"google.golang.org/protobuf/proto"
+
+	"grad/experiments/harness"
+	"grad/platform/state/fabric"
 )
 
 func writePublicJSON(path string, value any) error {
@@ -31,10 +34,7 @@ func writePublicFile(path string, b []byte) error {
 	if bytes.Contains(b, []byte("-----BEGIN ")) && bytes.Contains(b, []byte("PRIVATE KEY-----")) {
 		return fmt.Errorf("private key in evidence file %s", filepath.Base(path))
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
-	return os.WriteFile(path, b, 0644)
+	return harness.WriteAtomic(path, b, 0o644)
 }
 
 func (e *e1Trial) finish() (err error) {
@@ -69,9 +69,12 @@ func (e *e1Trial) finish() (err error) {
 }
 
 func (e *e1Trial) copyRunMaterials() error {
+	if e.inst == nil {
+		return nil
+	}
 	top := filepath.Join(e.dir, "materials")
 	for _, name := range []string{"network.env", "genesis.pb", "configtx.yaml", "cryptogen.yaml", "orderer-a.json", "orderer-b.json", "orderer-c.json", "orderer-d.json"} {
-		raw, err := os.ReadFile(filepath.Join(e.instance.dir, name))
+		raw, err := os.ReadFile(filepath.Join(e.inst.Dir(), name))
 		if err != nil {
 			return err
 		}
@@ -80,7 +83,7 @@ func (e *e1Trial) copyRunMaterials() error {
 		}
 	}
 	for _, name := range []string{"deployment.json", "approval.json", "bootstrap.json", "definition.json", "initialization.json", "fixtures.json", "context-manifest.json", "vc-v2.context.json"} {
-		raw, err := os.ReadFile(e.instance.registrySubPath(name))
+		raw, err := os.ReadFile(e.inst.RegistryPath(name))
 		if err != nil {
 			return err
 		}
@@ -89,7 +92,7 @@ func (e *e1Trial) copyRunMaterials() error {
 		}
 	}
 	for _, name := range []string{"did", "certifications", "grants", "ca"} {
-		root := e.instance.registrySubPath(name)
+		root := e.inst.RegistryPath(name)
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil {
 				return err
@@ -116,7 +119,7 @@ func (e *e1Trial) copyRunMaterials() error {
 	}
 	// Export only SHA-256 digests for SD-JWT credentials so full disclosures stay out of public evidence.
 	credDigests := map[string]string{}
-	credRoot := e.instance.registrySubPath("credentials")
+	credRoot := e.inst.RegistryPath("credentials")
 	if err := filepath.WalkDir(credRoot, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() {
 			return err
@@ -125,7 +128,7 @@ func (e *e1Trial) copyRunMaterials() error {
 		if err != nil {
 			return err
 		}
-		sum, err := sha256File(path)
+		sum, err := harness.SHA256File(path)
 		if err != nil {
 			return err
 		}
@@ -150,7 +153,7 @@ func (e *e1Trial) exportBlocks(ctx context.Context) (err error) {
 	defer func() { err = errors.Join(err, index.Close()) }()
 	enc := json.NewEncoder(index)
 	for rows.Next() {
-		var p point
+		var p fabric.Point
 		var parent string
 		var raw []byte
 		if err := rows.Scan(&p.Number, &p.Hash, &parent, &raw); err != nil {

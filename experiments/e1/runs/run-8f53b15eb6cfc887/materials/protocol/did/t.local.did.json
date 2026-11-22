@@ -1,1 +1,0 @@
-{"assertionMethod":["did:web:t.local#key-1"],"id":"did:web:t.local","verificationMethod":[{"controller":"did:web:t.local","id":"did:web:t.local#key-1","publicKeyJwk":{"crv":"P-256","kty":"EC","x":"mKn09IpTcBfwEzUfXu35jsNaaW4khlBvT-YAADOSxsE","y":"_j_SbbqF4UyHM8ckoSBgDmWgLnF4bIXxTelUQN6Aayw"},"type":"JsonWebKey"}]}

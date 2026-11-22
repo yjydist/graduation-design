@@ -3,24 +3,22 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/csv"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 
-	"graduation-design/internal/agent"
-	"graduation-design/internal/fabric"
-	api "graduation-design/internal/fabricapi"
-	"graduation-design/internal/gateway"
-	"graduation-design/internal/protocol"
+	"grad/experiments/harness"
+	"grad/platform/agent"
+	"grad/platform/gateway"
+	"grad/platform/registrysvc"
+	"grad/platform/state/fabric"
+	"grad/protocol"
+	"grad/protocol/registry"
 )
 
 type e1Trace struct {
@@ -36,6 +34,28 @@ type e1HTTPRecord struct {
 	Status                                                                  int
 	RequestID, ChallengeID, DecisionID, RequestHash, QuoteID, OrderID, Code string
 	AmountMinor                                                             int64
+}
+
+type e1HTTPCSVRow struct {
+	Case        string `csv:"case"`
+	Mode        string `csv:"authorization_mode"`
+	Method      string `csv:"method"`
+	Path        string `csv:"path"`
+	TaskID      string `csv:"task_id"`
+	Action      string `csv:"action"`
+	Key         string `csv:"idempotency_key"`
+	StartedAt   string `csv:"started_at"`
+	FinishedAt  string `csv:"finished_at"`
+	DurationNs  int64  `csv:"duration_ns"`
+	HTTPStatus  int    `csv:"http_status"`
+	RequestID   string `csv:"request_id"`
+	ChallengeID string `csv:"challenge_id"`
+	DecisionID  string `csv:"decision_id"`
+	RequestHash string `csv:"request_hash"`
+	QuoteID     string `csv:"quote_id"`
+	OrderID     string `csv:"order_id"`
+	Code        string `csv:"code"`
+	AmountMinor int64  `csv:"amount_minor"`
 }
 
 func (e *e1Trial) observe(m *e1Mode, next http.Handler) http.Handler {
@@ -70,8 +90,8 @@ func (e *e1Trial) observe(m *e1Mode, next http.Handler) http.Handler {
 		case "/v1/access/execute":
 			var data struct {
 				RequestID, DecisionID, Code string
-				Quote                       *gateway.QuoteDTO
-				Order                       *gateway.OrderDTO
+				Quote                       *gateway.QuotePayload
+				Order                       *gateway.OrderPayload
 			}
 			if json.Unmarshal(rec.Body.Bytes(), &data) == nil {
 				row.DecisionID, row.Code = data.DecisionID, data.Code
@@ -100,46 +120,62 @@ func (e *e1Trial) observe(m *e1Mode, next http.Handler) http.Handler {
 	})
 }
 
+func toE1HTTPCSVRows(records []e1HTTPRecord) []e1HTTPCSVRow {
+	rows := make([]e1HTTPCSVRow, 0, len(records))
+	for _, row := range records {
+		rows = append(rows, e1HTTPCSVRow{
+			Case:        row.Case,
+			Mode:        row.Mode,
+			Method:      row.Method,
+			Path:        row.Path,
+			TaskID:      row.TaskID,
+			Action:      row.Action,
+			Key:         row.Key,
+			StartedAt:   row.Started.UTC().Format(time.RFC3339Nano),
+			FinishedAt:  row.Finished.UTC().Format(time.RFC3339Nano),
+			DurationNs:  row.Finished.Sub(row.Started).Nanoseconds(),
+			HTTPStatus:  row.Status,
+			RequestID:   row.RequestID,
+			ChallengeID: row.ChallengeID,
+			DecisionID:  row.DecisionID,
+			RequestHash: row.RequestHash,
+			QuoteID:     row.QuoteID,
+			OrderID:     row.OrderID,
+			Code:        row.Code,
+			AmountMinor: row.AmountMinor,
+		})
+	}
+	return rows
+}
+
 func (e *e1Trial) writeHTTP() error {
-	f, err := os.Create(filepath.Join(e.dir, "requests.csv"))
-	if err != nil {
-		return err
-	}
-	w := csv.NewWriter(f)
-	_ = w.Write([]string{"case", "authorization_mode", "method", "path", "task_id", "action", "idempotency_key", "started_at", "finished_at", "duration_ns", "http_status", "request_id", "challenge_id", "decision_id", "request_hash", "quote_id", "order_id", "code", "amount_minor"})
-	for _, row := range e.requests {
-		_ = w.Write([]string{row.Case, row.Mode, row.Method, row.Path, row.TaskID, row.Action, row.Key,
-			row.Started.UTC().Format(time.RFC3339Nano), row.Finished.UTC().Format(time.RFC3339Nano), strconv.FormatInt(row.Finished.Sub(row.Started).Nanoseconds(), 10),
-			strconv.Itoa(row.Status), row.RequestID, row.ChallengeID, row.DecisionID, row.RequestHash, row.QuoteID, row.OrderID, row.Code, strconv.FormatInt(row.AmountMinor, 10)})
-	}
-	w.Flush()
-	return errors.Join(w.Error(), f.Close())
+	return harness.WriteCSV(filepath.Join(e.dir, "requests.csv"), toE1HTTPCSVRows(e.requests))
 }
 
 func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 	aID := e.f.Identities["A1"]
-	aPriv, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "A1.key.pem"))
+	aPriv, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "A1.key.pem"))
 	if err != nil {
 		return nil, err
 	}
-	aSD, err := os.ReadFile(e.instance.registrySubPath("credentials", "A1.sdjwt"))
+	aSD, err := os.ReadFile(e.inst.RegistryPath("credentials", "A1.sdjwt"))
 	if err != nil {
 		return nil, err
 	}
 	paths := make([]protocol.TrustPathEntry, 0, 3)
 	certs := make(map[string]string)
 	for _, dom := range []string{"A", "B", "C"} {
-		raw, err := os.ReadFile(e.instance.registrySubPath("certifications", dom+".jws"))
+		raw, err := os.ReadFile(e.inst.RegistryPath("certifications", dom+".jws"))
 		if err != nil {
 			return nil, err
 		}
 		certs[dom] = string(raw)
-		if m.task.Mode == api.RP || dom != "C" {
+		if m.task.Mode == registry.RP || dom != "C" {
 			paths = append(paths, protocol.TrustPathEntry{Issuer: e.f.Domains[dom].Issuers[0].ID, DomainCertification: string(raw)})
 		}
 	}
-	ds := fabric.NewDeliveryService(e.db)
-	var parentReceipt fabric.GrantDeliveryPackage
+	ds := registrysvc.NewDeliveryService(e.db, e.d.DeploymentID)
+	var parentReceipt registrysvc.GrantDeliveryPackage
 	var parentRaw []byte
 	if err := e.db.QueryRow(e.ctx, `SELECT package_json FROM grant_outbox WHERE deployment_id=$1 AND recipient=$2 AND grant_id=$3`, e.d.DeploymentID, aID.ID, m.g1.ID).Scan(&parentRaw); err != nil {
 		return nil, fmt.Errorf("read G1 delivery: %w", err)
@@ -156,20 +192,27 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 		return nil, fmt.Errorf("G1 confirmed wallet receipt count=%d: %v", parentReceiptCount, err)
 	}
 	w, err := agent.NewWalletContext(agent.WalletConfig{
-		DeploymentID: e.d.DeploymentID, Audience: "https://c.local", SupplierID: "urn:grad:supplier:C", SupplierDID: e.f.Identities["C"].ID,
-		DefaultTaskSpec: e.f.ProcurementTaskSpec, Currency: "CNY", DB: e.db, HTTPHandler: e.observe(m, e.server.Handler()), Now: time.Now,
+		DeploymentID:    e.d.DeploymentID,
+		Audience:        "https://c.local",
+		SupplierID:      gateway.DefaultSupplierID,
+		SupplierDID:     e.f.Identities["C"].ID,
+		DefaultTaskSpec: e.f.ProcurementTaskSpec,
+		Currency:        gateway.DefaultCurrency,
+		DB:              e.db,
+		HTTPHandler:     e.observe(m, e.server.Handler()),
+		Now:             time.Now,
 		AnchorChildFunc: func(ctx context.Context, req agent.AnchorChildGrantRequest) (*agent.AnchorChildGrantResult, error) {
 			c := req.Claims
 			if req.IssuerActor != "A1" || req.GranteeDID != e.f.Identities["B1"].ID || c.ID != m.leafID || req.ParentID != m.g1.ID ||
 				c.TaskID != m.task.ID || c.AuthorizationMode != m.task.Mode {
 				return nil, fmt.Errorf("child grant escaped the E1 fixture")
 			}
-			record := api.Grant{
-				Bound: api.Bound{DeploymentID: e.d.DeploymentID}, ID: c.ID, Schema: api.Schema,
+			record := registry.Grant{
+				Bound: registry.Bound{DeploymentID: e.d.DeploymentID}, ID: c.ID, Schema: registry.Schema,
 				Parent: req.ParentID, ParentDigest: derefStr(c.ParentDigest), Root: c.RootID, Task: c.TaskID, Mode: c.AuthorizationMode,
 				Domain: c.PrincipalDomain, Resource: c.ResourceID, Issuer: c.Issuer, Grantee: c.Grantee, IssuerKeyVersion: c.IssuerKeyVersion,
 				GranteeKeyVersion: c.GranteeKeyVersion, IssuerCredential: c.IssuerCredentialID, GranteeCredential: c.GranteeCredentialID,
-				Depth: uint8(c.RemainingDepth), Digest: req.GrantDigest, Interval: api.Interval{NBF: c.NBF, EXP: c.EXP},
+				Depth: uint8(c.RemainingDepth), Digest: req.GrantDigest, Interval: registry.Interval{NBF: c.NBF, EXP: c.EXP},
 			}
 			op, err := e.op("e1-"+m.tag+"-live-g2-"+m.leafID[:12], "A1", "RegisterGrant", record, "VALID")
 			if err != nil {
@@ -182,10 +225,24 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 			if err != nil {
 				return nil, err
 			}
-			rootPub, _, _ := protocol.ParseAppPublicKey(e.d.Bootstrap.Root.PublicKey)
-			iaPub, _, _ := protocol.ParseAppPublicKey(e.f.Domains["A"].Issuers[0].PublicKey)
-			pkg := fabric.GrantDeliveryPackage{DeploymentID: e.d.DeploymentID, Recipient: c.Grantee, GrantID: c.ID, GrantJWS: req.RawGrantJWS,
-				TaskSpec: e.f.ProcurementTaskSpec, ServicePresentation: string(aSD), DomainCertificationJWS: certs["A"], AncestorGrants: []string{g0Raw, g1Raw}}
+			rootPub, err := protocol.ParseAppPublicKey(e.d.Bootstrap.Root.PublicKey)
+			if err != nil {
+				return nil, err
+			}
+			iaPub, err := protocol.ParseAppPublicKey(e.f.Domains["A"].Issuers[0].PublicKey)
+			if err != nil {
+				return nil, err
+			}
+			pkg := registrysvc.GrantDeliveryPackage{
+				DeploymentID:           e.d.DeploymentID,
+				Recipient:              c.Grantee,
+				GrantID:                c.ID,
+				GrantJWS:               req.RawGrantJWS,
+				TaskSpec:               e.f.ProcurementTaskSpec,
+				ServicePresentation:    string(aSD),
+				DomainCertificationJWS: certs["A"],
+				AncestorGrants:         []string{g0Raw, g1Raw},
+			}
 			if _, err := ds.PublishGrantOutbox(ctx, snap.Snapshot, pkg, rootPub, iaPub, &aPriv.PublicKey, op.TxID, int64(op.Commit.Number), true, time.Now().Unix()); err != nil {
 				return nil, err
 			}
@@ -204,16 +261,19 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 	}
 	for _, role := range []string{"A1", "B1"} {
 		id := e.f.Identities[role]
-		key, err := loadECPrivateKeyPEM(e.instance.privatePath("app", role+".key.pem"))
+		key, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", role+".key.pem"))
 		if err != nil {
 			return nil, err
 		}
-		sd, err := os.ReadFile(e.instance.registrySubPath("credentials", role+".sdjwt"))
+		sd, err := os.ReadFile(e.inst.RegistryPath("credentials", role+".sdjwt"))
 		if err != nil {
 			return nil, err
 		}
-		if err := w.RegisterActor(agent.ActorConfig{Actor: role, DID: id.ID, KeyID: id.KeyID, CredentialID: e.f.Credentials[role].ID,
-			KeyVersion: id.KeyVersion, DomainID: id.Domain, EntityType: id.Kind, Roles: []string{id.Kind}, PrivateKey: key, SDJWTPresentation: string(sd)}); err != nil {
+		if err := w.RegisterActor(agent.Signer{
+			Actor: role, DID: id.ID, KeyID: id.KeyID, CredentialID: e.f.Credentials[role].ID,
+			KeyVersion: id.KeyVersion, DomainID: id.Domain, EntityType: id.Kind, Roles: []string{id.Kind},
+			PrivateKey: key, SDJWTPresentation: string(sd),
+		}); err != nil {
 			return nil, err
 		}
 	}
@@ -230,20 +290,20 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 		return nil, fmt.Errorf("parent ceilings or depths differ from F05")
 	}
 	rootRole := "PA"
-	if m.task.Mode == api.RP {
+	if m.task.Mode == registry.RP {
 		rootRole = "C"
-		if svc, ok := e.f.Credentials["C-service"]; ok && svc.ID == root.IssuerCredentialID {
-			rootRole = "C-service"
-		}
 	}
-	rootSD, err := os.ReadFile(e.instance.registrySubPath("credentials", rootRole+".sdjwt"))
+	rootSD, err := os.ReadFile(e.inst.RegistryPath("credentials", rootRole+".sdjwt"))
 	if err != nil {
 		return nil, err
 	}
-	if err := w.AddGrantBundle(agent.GrantBundle{Claims: parent, RawGrantJWS: g1Raw, TaskSpec: e.f.ProcurementTaskSpec,
+	if err := w.AddGrantBundle(agent.GrantBundle{
+		Claims: parent, RawGrantJWS: g1Raw, TaskSpec: e.f.ProcurementTaskSpec,
 		Revision: 1, ChainRawGrants: []string{g0Raw, g1Raw}, Anchored: true, TrustPaths: paths,
-		AncestorCredentials: []protocol.AncestorCredential{{CredentialID: root.IssuerCredentialID, Presentation: string(rootSD)},
-			{CredentialID: e.f.Credentials["U"].ID, Presentation: parentReceipt.ServicePresentation}},
+		AncestorCredentials: []protocol.AncestorCredential{
+			{CredentialID: root.IssuerCredentialID, Presentation: string(rootSD)},
+			{CredentialID: e.f.Credentials["U"].ID, Presentation: parentReceipt.ServicePresentation},
+		},
 	}); err != nil {
 		return nil, err
 	}
@@ -258,19 +318,19 @@ func (e *e1Trial) live(m *e1Mode, prompt string) (*agent.RunResult, error) {
 	call, cancel := context.WithTimeout(e.ctx, 80*time.Second)
 	defer cancel()
 	cfg := e.cfg
-	cfg.SystemPrompt = "You are the MCP procurement agent in an isolated synthetic experiment. Only use configured wallet tools and the identifiers in this task. Do not invent tool results. For an explicitly requested negative control against the test gateway, submit the specified request once and report the real denial. Never perform external purchases."
+	cfg.SystemPrompt = "You are the MCP procurement agent in an isolated test experiment. Only use configured wallet tools and the identifiers in this task. Do not invent tool results. For an explicitly requested negative control against the test gateway, submit the specified request once and report the real denial. Never perform external purchases."
 	var callErr error
 	tr.Result, callErr = agent.RunAgentTask(call, agent.NewMCPServer(m.wallet), cfg, prompt)
 	tr.Finished = time.Now().UTC()
 	if callErr != nil {
-		tr.Error = redactE1(callErr, cfg.APIKey)
+		tr.Error = harness.RedactSecrets(callErr.Error(), cfg.APIKey)
 	}
 	e.traces = append(e.traces, tr)
 	if err := e.save("llm-traces", e.traces); err != nil {
 		return nil, err
 	}
 	if tr.Error != "" {
-		return tr.Result, errors.New(tr.Error)
+		return tr.Result, fmt.Errorf("%s", tr.Error)
 	}
 	return tr.Result, nil
 }
@@ -391,8 +451,4 @@ func (e *e1Trial) overLimit(m *e1Mode) error {
 		return fmt.Errorf("F07 actual Q1200=%v, amount mismatch denied=%v, over limit denied=%v, new orders=%d", quoted, mismatched, denied, after-before)
 	}
 	return nil
-}
-
-func redactE1(err error, secret string) string {
-	return strings.ReplaceAll(err.Error(), secret, "[REDACTED]")
 }

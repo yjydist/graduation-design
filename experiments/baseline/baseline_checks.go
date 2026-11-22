@@ -1,11 +1,9 @@
-package main
+package baseline
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -13,251 +11,429 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func (r *baselineRun) decision(ctx context.Context, db *pgxpool.Pool, row Row) error {
-	if row["decision_id"] == nil {
+type decisionDBRow struct {
+	StateSource           string     `db:"state_source"`
+	Revision              *int64     `db:"revision"`
+	StateReadAt           *time.Time `db:"state_read_at"`
+	BlockNumber           *int64     `db:"block_number"`
+	BlockHash             *string    `db:"block_hash"`
+	ProbeTxID             *string    `db:"probe_tx_id"`
+	ProbeBlock            *int64     `db:"probe_block"`
+	ProbeSentAt           *int64     `db:"probe_sent_at"`
+	ProbeDeadline         *int64     `db:"probe_deadline"`
+	ProbeSentMonoNs       *int64     `db:"probe_sent_mono_ns"`
+	ProbeDeadlineMonoNs   *int64     `db:"probe_deadline_mono_ns"`
+	ProbeCheckedMonoNs    *int64     `db:"probe_checked_mono_ns"`
+	ContextVersion        *int64     `db:"context_version"`
+	ContextObservedAt     *int64     `db:"context_observed_at"`
+	ContextAccessDeadline *int64     `db:"context_access_deadline"`
+	DecisionAt            *int64     `db:"decision_at"`
+	EffectiveDeadline     *int64     `db:"effective_deadline"`
+	StateRechecks         *int64     `db:"state_rechecks"`
+	RequestID             string     `db:"request_id"`
+	ChallengeID           string     `db:"challenge_id"`
+	TaskID                string     `db:"task_id"`
+	Actor                 string     `db:"actor"`
+	IdempotencyKey        string     `db:"idempotency_key"`
+	Outcome               string     `db:"outcome"`
+	Code                  string     `db:"code"`
+	QuoteID               *string    `db:"quote_id"`
+	OrderID               *string    `db:"order_id"`
+}
+
+func fromInt64Ptr(p *int64) nullInt64 {
+	if p == nil {
+		return nullInt64{}
+	}
+	return someInt64(*p)
+}
+
+func fromStringPtr(p *string) nullString {
+	if p == nil {
+		return nullString{}
+	}
+	return someString(*p)
+}
+
+func fromTimePtr(p *time.Time) nullTime {
+	if p == nil {
+		return nullTime{}
+	}
+	return someTime(*p)
+}
+
+func fromUnixPtr(p *int64) nullTime {
+	if p == nil {
+		return nullTime{}
+	}
+	return someTime(time.Unix(*p, 0).UTC())
+}
+
+func equalNullStringPtr(n nullString, p *string) bool {
+	if !n.Valid && p == nil {
+		return true
+	}
+	if n.Valid && p != nil {
+		return n.Value == *p
+	}
+	return false
+}
+
+func (r *baselineRun) decision(ctx context.Context, db *pgxpool.Pool, row *RequestRow) error {
+	if !row.DecisionID.Valid {
 		return fmt.Errorf("no decision returned")
 	}
-	var raw []byte
-	if err := db.QueryRow(ctx, `SELECT to_jsonb(d) FROM decisions d WHERE deployment_id=$1 AND decision_id=$2`, r.d.DeploymentID, row["decision_id"]).Scan(&raw); err != nil {
+	rows, err := db.Query(ctx, `
+		SELECT state_source, revision, state_read_at, block_number, block_hash,
+			probe_tx_id, probe_block, probe_sent_at, probe_deadline,
+			probe_sent_mono_ns, probe_deadline_mono_ns, probe_checked_mono_ns,
+			context_version, context_observed_at, context_access_deadline,
+			decision_at, effective_deadline, state_rechecks,
+			request_id, challenge_id, task_id, actor, idempotency_key,
+			outcome, code, quote_id, order_id
+		FROM decisions
+		WHERE deployment_id=$1 AND decision_id=$2`,
+		r.d.DeploymentID, row.DecisionID.Value,
+	)
+	if err != nil {
 		return err
 	}
-	var d map[string]any
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.UseNumber()
-	if err := decoder.Decode(&d); err != nil {
+	d, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[decisionDBRow])
+	if err != nil {
 		return err
 	}
-	for _, key := range []string{"state_source", "revision", "state_read_at", "block_number", "block_hash", "probe_tx_id", "probe_block", "probe_sent_mono_ns", "probe_deadline_mono_ns", "context_version", "state_rechecks", "probe_checked_mono_ns"} {
-		row[key] = d[key]
-	}
-	for _, key := range []string{"probe_sent_at", "probe_deadline", "context_observed_at", "context_access_deadline", "decision_at", "effective_deadline"} {
-		if value, ok := d[key].(json.Number); ok {
-			sec, err := value.Int64()
-			if err != nil {
-				return err
-			}
-			row[key] = time.Unix(sec, 0).UTC()
-		} else {
-			row[key] = nil
-		}
-	}
-	if row["request_id"] != d["request_id"] || row["challenge_id"] != d["challenge_id"] || row["task_id"] != d["task_id"] || row["actor"] != d["actor"] || row["idempotency_key"] != d["idempotency_key"] || row["code"] != d["code"] {
+
+	row.StateSource = someString(d.StateSource)
+	row.Revision = fromInt64Ptr(d.Revision)
+	row.StateReadAt = fromTimePtr(d.StateReadAt)
+	row.BlockNumber = fromInt64Ptr(d.BlockNumber)
+	row.BlockHash = fromStringPtr(d.BlockHash)
+	row.ProbeTxID = fromStringPtr(d.ProbeTxID)
+	row.ProbeBlock = fromInt64Ptr(d.ProbeBlock)
+	row.ProbeSentAt = fromUnixPtr(d.ProbeSentAt)
+	row.ProbeDeadline = fromUnixPtr(d.ProbeDeadline)
+	row.ProbeSentMonoNs = fromInt64Ptr(d.ProbeSentMonoNs)
+	row.ProbeDeadlineMonoNs = fromInt64Ptr(d.ProbeDeadlineMonoNs)
+	row.ProbeCheckedMonoNs = fromInt64Ptr(d.ProbeCheckedMonoNs)
+	row.ContextVersion = fromInt64Ptr(d.ContextVersion)
+	row.ContextObservedAt = fromUnixPtr(d.ContextObservedAt)
+	row.ContextAccessDeadline = fromUnixPtr(d.ContextAccessDeadline)
+	row.DecisionAt = fromUnixPtr(d.DecisionAt)
+	row.EffectiveDeadline = fromUnixPtr(d.EffectiveDeadline)
+	row.StateRechecks = fromInt64Ptr(d.StateRechecks)
+
+	if !row.RequestID.Valid || row.RequestID.Value != d.RequestID ||
+		!row.ChallengeID.Valid || row.ChallengeID.Value != d.ChallengeID ||
+		!row.TaskID.Valid || row.TaskID.Value != d.TaskID ||
+		!row.Actor.Valid || row.Actor.Value != d.Actor ||
+		!row.IdempotencyKey.Valid || row.IdempotencyKey.Value != d.IdempotencyKey ||
+		!row.Code.Valid || row.Code.Value != d.Code {
 		return fmt.Errorf("HTTP decision association mismatch")
 	}
-	if row["disposition"] == "allowed" && d["outcome"] != "ALLOW" || row["disposition"] == "denied" && d["outcome"] != "DENY" {
+	if row.Disposition == "allowed" && d.Outcome != "ALLOW" || row.Disposition == "denied" && d.Outcome != "DENY" {
 		return fmt.Errorf("HTTP disposition differs from stored decision")
 	}
-	if row["disposition"] == "allowed" && (row["quote_id"] != d["quote_id"] || row["order_id"] != d["order_id"]) {
+	if row.Disposition == "allowed" && (!equalNullStringPtr(row.QuoteID, d.QuoteID) || !equalNullStringPtr(row.OrderID, d.OrderID)) {
 		return fmt.Errorf("HTTP resource IDs differ from stored decision")
 	}
+
 	var consumed *int64
 	var challengeDecision *string
 	var requestHash string
-	if err := db.QueryRow(ctx, `SELECT consumed_at,decision_id,request_hash FROM challenges WHERE deployment_id=$1 AND challenge_id=$2`, r.d.DeploymentID, row["challenge_id"]).Scan(&consumed, &challengeDecision, &requestHash); err != nil {
+	if err := db.QueryRow(ctx,
+		`SELECT consumed_at, decision_id, request_hash FROM challenges WHERE deployment_id=$1 AND challenge_id=$2`,
+		r.d.DeploymentID, row.ChallengeID.Value,
+	).Scan(&consumed, &challengeDecision, &requestHash); err != nil {
 		return err
 	}
-	if consumed == nil || challengeDecision == nil || *challengeDecision != row["decision_id"] || requestHash != row["request_hash"] {
+	if consumed == nil || challengeDecision == nil || *challengeDecision != row.DecisionID.Value ||
+		!row.RequestHash.Valid || requestHash != row.RequestHash.Value {
 		return fmt.Errorf("challenge and decision association mismatch")
 	}
 	return nil
 }
 
-func (r *baselineRun) orderCheck(ctx context.Context, db *pgxpool.Pool, c Case, row, check Row, before int64, quoteID string) error {
-	check["quote_id"] = quoteID
-	check["challenge_id"] = row["challenge_id"]
-	check["decision_id"] = row["decision_id"]
+func (r *baselineRun) orderCheck(ctx context.Context, db *pgxpool.Pool, c Case, row *RequestRow, check *OrderCheckRow, before int64, quoteID string) error {
+	check.QuoteID = someString(quoteID)
+	check.ChallengeID = row.ChallengeID
+	check.DecisionID = row.DecisionID
+
 	tx, err := db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(context.Background())
+
 	var after, keys, quoteAmount int64
-	if err = tx.QueryRow(ctx, `SELECT count(*) FROM orders WHERE deployment_id=$1 AND task_id=$2`, r.d.DeploymentID, row["task_id"]).Scan(&after); err != nil {
+	if err = tx.QueryRow(ctx,
+		`SELECT count(*) FROM orders WHERE deployment_id=$1 AND task_id=$2`,
+		r.d.DeploymentID, row.TaskID.Value,
+	).Scan(&after); err != nil {
 		return err
 	}
-	check["order_rows_after"] = after
-	if err = tx.QueryRow(ctx, `SELECT count(*) FROM business_keys WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND action='order.create' AND idempotency_key=$4`, r.d.DeploymentID, row["actor"], row["task_id"], row["idempotency_key"]).Scan(&keys); err != nil {
+	check.OrderRowsAfter = someInt64(after)
+
+	if err = tx.QueryRow(ctx,
+		`SELECT count(*) FROM business_keys WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND action='order.create' AND idempotency_key=$4`,
+		r.d.DeploymentID, row.Actor.Value, row.TaskID.Value, row.IdempotencyKey.Value,
+	).Scan(&keys); err != nil {
 		return err
 	}
-	check["order_key_rows"] = keys
+	check.OrderKeyRows = someInt64(keys)
+
 	var qActor, qTask string
-	if err = tx.QueryRow(ctx, `SELECT total_amount_minor,actor,task_id FROM quotes WHERE deployment_id=$1 AND quote_id=$2`, r.d.DeploymentID, quoteID).Scan(&quoteAmount, &qActor, &qTask); err != nil {
+	if err = tx.QueryRow(ctx,
+		`SELECT total_amount_minor, actor, task_id FROM quotes WHERE deployment_id=$1 AND quote_id=$2`,
+		r.d.DeploymentID, quoteID,
+	).Scan(&quoteAmount, &qActor, &qTask); err != nil {
 		return err
 	}
-	check["quote_amount_minor"] = quoteAmount
+	check.QuoteAmountMinor = someInt64(quoteAmount)
+
 	var consumed *int64
 	var challengeDecision *string
 	var requestHash string
-	if err = tx.QueryRow(ctx, `SELECT consumed_at,decision_id,request_hash FROM challenges WHERE deployment_id=$1 AND challenge_id=$2`, r.d.DeploymentID, row["challenge_id"]).Scan(&consumed, &challengeDecision, &requestHash); err != nil {
+	if err = tx.QueryRow(ctx,
+		`SELECT consumed_at, decision_id, request_hash FROM challenges WHERE deployment_id=$1 AND challenge_id=$2`,
+		r.d.DeploymentID, row.ChallengeID.Value,
+	).Scan(&consumed, &challengeDecision, &requestHash); err != nil {
 		return err
 	}
-	check["challenge_consumed"] = consumed != nil
-	if row["decision_id"] == nil && row["failure_stage"] == "execute" {
-		check["verdict"] = "FAIL"
-		check["failure_reason"] = "order execution returned no decision"
+	check.ChallengeConsumed = someBool(consumed != nil)
+
+	if !row.DecisionID.Valid && row.FailureStage.Valid && row.FailureStage.Value == "execute" {
+		check.Verdict = "FAIL"
+		check.FailureReason = someString("order execution returned no decision")
 		return tx.Commit(ctx)
 	}
+
 	var outcome, code string
-	if err = tx.QueryRow(ctx, `SELECT outcome,code FROM decisions WHERE deployment_id=$1 AND decision_id=$2`, r.d.DeploymentID, row["decision_id"]).Scan(&outcome, &code); err != nil {
+	if err = tx.QueryRow(ctx,
+		`SELECT outcome, code FROM decisions WHERE deployment_id=$1 AND decision_id=$2`,
+		r.d.DeploymentID, row.DecisionID.Value,
+	).Scan(&outcome, &code); err != nil {
 		return err
 	}
-	check["decision_outcome"] = outcome
-	check["decision_code"] = code
+	check.DecisionOutcome = someString(outcome)
+	check.DecisionCode = someString(code)
+
 	var ownOrders int64
-	if err = tx.QueryRow(ctx, `SELECT count(*) FROM orders WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND idempotency_key=$4`, r.d.DeploymentID, row["actor"], row["task_id"], row["idempotency_key"]).Scan(&ownOrders); err != nil {
+	if err = tx.QueryRow(ctx,
+		`SELECT count(*) FROM orders WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND idempotency_key=$4`,
+		r.d.DeploymentID, row.Actor.Value, row.TaskID.Value, row.IdempotencyKey.Value,
+	).Scan(&ownOrders); err != nil {
 		return err
 	}
-	httpOK := row["http_status"] == c.ExpectedStatus && row["code"] == c.ExpectedCode && row["failure_stage"] == nil
-	primaryOK := quoteAmount == c.AmountMinor && qActor == row["actor"] && qTask == row["task_id"] &&
-		consumed != nil && challengeDecision != nil && *challengeDecision == row["decision_id"] && requestHash == row["request_hash"]
+
+	httpOK := row.HTTPStatus.Valid && row.HTTPStatus.Value == int64(c.ExpectedStatus) &&
+		row.Code.Valid && row.Code.Value == c.ExpectedCode &&
+		!row.FailureStage.Valid
+	primaryOK := quoteAmount == c.AmountMinor &&
+		row.Actor.Valid && qActor == row.Actor.Value &&
+		row.TaskID.Valid && qTask == row.TaskID.Value &&
+		consumed != nil && challengeDecision != nil &&
+		row.DecisionID.Valid && *challengeDecision == row.DecisionID.Value &&
+		row.RequestHash.Valid && requestHash == row.RequestHash.Value
+
 	if c.AmountMinor == 80000 {
 		var id, status, decision, qid string
 		var amount int64
 		if ownOrders == 1 {
-			if err = tx.QueryRow(ctx, `SELECT order_id,status,decision_id,quote_id,total_amount_minor FROM orders WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND idempotency_key=$4`, r.d.DeploymentID, row["actor"], row["task_id"], row["idempotency_key"]).Scan(&id, &status, &decision, &qid, &amount); err != nil {
+			if err = tx.QueryRow(ctx,
+				`SELECT order_id, status, decision_id, quote_id, total_amount_minor FROM orders WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND idempotency_key=$4`,
+				r.d.DeploymentID, row.Actor.Value, row.TaskID.Value, row.IdempotencyKey.Value,
+			).Scan(&id, &status, &decision, &qid, &amount); err != nil {
 				return err
 			}
-			check["order_id"] = id
-			check["order_status"] = status
-			check["creation_decision_id"] = decision
+			check.OrderID = someString(id)
+			check.OrderStatus = someString(status)
+			check.CreationDecisionID = someString(decision)
 		}
 		var keyStatus, keyResource, keyDecision string
 		if keys == 1 {
-			if err = tx.QueryRow(ctx, `SELECT status,resource_id,decision_id FROM business_keys WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND action='order.create' AND idempotency_key=$4`, r.d.DeploymentID, row["actor"], row["task_id"], row["idempotency_key"]).Scan(&keyStatus, &keyResource, &keyDecision); err != nil {
+			if err = tx.QueryRow(ctx,
+				`SELECT status, resource_id, decision_id FROM business_keys WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND action='order.create' AND idempotency_key=$4`,
+				r.d.DeploymentID, row.Actor.Value, row.TaskID.Value, row.IdempotencyKey.Value,
+			).Scan(&keyStatus, &keyResource, &keyDecision); err != nil {
 				return err
 			}
-			check["order_key_status"] = keyStatus
+			check.OrderKeyStatus = someString(keyStatus)
 		}
-		httpOK = httpOK && id != "" && row["order_id"] == id && row["quote_id"] == quoteID &&
-			row["order_status"] == "CREATED" && row["order_amount_minor"] == c.AmountMinor
-		primaryOK = primaryOK && after == before+1 && keys == 1 && ownOrders == 1 && outcome == "ALLOW" && code == "ALLOW" &&
-			status == "CREATED" && decision == row["decision_id"] && qid == quoteID && amount == c.AmountMinor &&
+		httpOK = httpOK && id != "" &&
+			row.OrderID.Valid && row.OrderID.Value == id &&
+			row.QuoteID.Valid && row.QuoteID.Value == quoteID &&
+			row.httpOrderStatus.Valid && row.httpOrderStatus.Value == "CREATED" &&
+			row.httpOrderAmountMinor.Valid && row.httpOrderAmountMinor.Value == c.AmountMinor
+		primaryOK = primaryOK && after == before+1 && keys == 1 && ownOrders == 1 &&
+			outcome == "ALLOW" && code == "ALLOW" &&
+			status == "CREATED" && decision == row.DecisionID.Value && qid == quoteID && amount == c.AmountMinor &&
 			keyStatus == "COMPLETED" && keyResource == id && keyDecision == decision
 	} else {
-		httpOK = httpOK && row["order_id"] == nil
-		primaryOK = primaryOK && after == before && ownOrders == 0 && keys == 0 && outcome == "DENY" && code == "AMOUNT_LIMIT_EXCEEDED"
+		httpOK = httpOK && !row.OrderID.Valid
+		primaryOK = primaryOK && after == before && ownOrders == 0 && keys == 0 &&
+			outcome == "DENY" && code == "AMOUNT_LIMIT_EXCEEDED"
 	}
+
 	if httpOK && primaryOK {
-		check["verdict"] = "PASS"
-		check["failure_reason"] = nil
+		check.Verdict = "PASS"
+		check.FailureReason = nullString{}
 	} else {
-		check["verdict"] = "FAIL"
-		check["failure_reason"] = "HTTP and primary database facts did not meet the paired case expectation"
+		check.Verdict = "FAIL"
+		check.FailureReason = someString("HTTP and primary database facts did not meet the paired case expectation")
 	}
 	return tx.Commit(ctx)
 }
 
 func (r *baselineRun) compare() bool {
-	caseResults := []any{}
-	pairResults := []any{}
-	by := map[string]map[string]int{}
-	passed := len(r.evidence.Summary["failures"].([]any)) == 0
+	caseResults := make([]CaseResult, 0, len(r.inputs.Cases))
+	pairResults := make([]PairResult, 0, 4)
+	by := map[string]GroupSummary{}
+	passed := len(r.evidence.Summary.Failures) == 0
 	seenChallenges := map[string]bool{}
+
 	for n, c := range r.inputs.Cases {
-		q, o, check := r.evidence.Requests[2*n], r.evidence.Requests[2*n+1], r.evidence.Orders[n]
+		q := &r.evidence.Requests[2*n]
+		o := &r.evidence.Requests[2*n+1]
+		check := &r.evidence.Orders[n]
 		profile, _ := BaselineConfiguration(c.Configuration)
-		ok := check["verdict"] == "PASS" && q["http_status"] == 200 && q["code"] == "ALLOW" && q["failure_stage"] == nil
-		for _, row := range []Row{q, o} {
-			challenge, _ := row["challenge_id"].(string)
-			if challenge == "" || seenChallenges[challenge] {
+
+		ok := check.Verdict == "PASS" &&
+			q.HTTPStatus.Valid && q.HTTPStatus.Value == 200 &&
+			q.Code.Valid && q.Code.Value == "ALLOW" &&
+			!q.FailureStage.Valid
+
+		for _, row := range []*RequestRow{q, o} {
+			if !row.ChallengeID.Valid || row.ChallengeID.Value == "" || seenChallenges[row.ChallengeID.Value] {
 				ok = false
 			}
-			seenChallenges[challenge] = true
-			if row["state_source"] != profile.StateSource {
+			if row.ChallengeID.Valid {
+				seenChallenges[row.ChallengeID.Value] = true
+			}
+			if !row.StateSource.Valid || row.StateSource.Value != profile.StateSource {
 				ok = false
 			}
 			if c.Configuration == "C0" {
-				if row["revision"] == nil || row["state_read_at"] == nil || row["block_number"] != nil || row["probe_tx_id"] != nil {
+				if !row.Revision.Valid || !row.StateReadAt.Valid || row.BlockNumber.Valid || row.ProbeTxID.Valid {
 					ok = false
 				}
 			} else {
-				if row["revision"] != nil || row["state_read_at"] != nil || !validBaselineFabricEvidence(row) {
+				if row.Revision.Valid || row.StateReadAt.Valid || !validBaselineFabricEvidence(row) {
 					ok = false
 				}
 			}
-			if c.Configuration != "B1" && row["signature_cache_hits"] != int64(0) {
+			if c.Configuration != "B1" && (!row.SignatureCacheHits.Valid || row.SignatureCacheHits.Value != 0) {
 				ok = false
 			}
 		}
+
 		if !ok {
 			passed = false
 		}
 		key := c.Configuration + "/" + c.Mode
-		if by[key] == nil {
-			by[key] = map[string]int{"cases": 0, "passed": 0, "failed": 0}
-		}
-		by[key]["cases"]++
+		grp := by[key]
+		grp.Cases++
 		if ok {
-			by[key]["passed"]++
+			grp.Passed++
 		} else {
-			by[key]["failed"]++
+			grp.Failed++
 		}
-		caseResults = append(caseResults, map[string]any{"configuration": c.Configuration, "case_id": c.CaseID, "mode": c.Mode, "amount_minor": c.AmountMinor, "expected_status": c.ExpectedStatus, "actual_status": o["http_status"], "expected_code": c.ExpectedCode, "actual_code": o["code"], "order_delta": delta(check), "order_key_rows": check["order_key_rows"], "passed": ok})
+		by[key] = grp
+
+		caseResults = append(caseResults, CaseResult{
+			Configuration:  c.Configuration,
+			CaseID:         c.CaseID,
+			Mode:           c.Mode,
+			AmountMinor:    c.AmountMinor,
+			ExpectedStatus: c.ExpectedStatus,
+			ExpectedCode:   c.ExpectedCode,
+			ActualStatus:   o.HTTPStatus.intPtr(),
+			ActualCode:     o.Code.ptr(),
+			OrderDelta:     orderDelta(check),
+			OrderKeyRows:   check.OrderKeyRows.ptr(),
+			Passed:         ok,
+		})
 	}
+
 	for n := 0; n < 4; n++ {
 		ok := true
 		for _, offset := range []int{4, 8} {
-			a, b := r.evidence.Requests[2*n+1], r.evidence.Requests[2*(n+offset)+1]
-			x, y := r.evidence.Orders[n], r.evidence.Orders[n+offset]
-			if a["http_status"] != b["http_status"] || a["code"] != b["code"] || x["verdict"] != "PASS" || y["verdict"] != "PASS" || delta(x) != delta(y) || x["order_key_rows"] != y["order_key_rows"] {
+			a := &r.evidence.Requests[2*n+1]
+			b := &r.evidence.Requests[2*(n+offset)+1]
+			x := &r.evidence.Orders[n]
+			y := &r.evidence.Orders[n+offset]
+			if a.HTTPStatus != b.HTTPStatus || a.Code != b.Code ||
+				x.Verdict != "PASS" || y.Verdict != "PASS" ||
+				!equalInt64Ptr(orderDelta(x), orderDelta(y)) ||
+				x.OrderKeyRows != y.OrderKeyRows {
 				ok = false
 			}
 		}
 		if !ok {
 			passed = false
 		}
-		pairResults = append(pairResults, map[string]any{"seed": r.inputs.Seed, "case_id": r.inputs.Cases[n].CaseID, "mode": r.inputs.Cases[n].Mode, "amount_minor": r.inputs.Cases[n].AmountMinor, "passed": ok})
+		pairResults = append(pairResults, PairResult{
+			Seed:        r.inputs.Seed,
+			CaseID:      r.inputs.Cases[n].CaseID,
+			Mode:        r.inputs.Cases[n].Mode,
+			AmountMinor: r.inputs.Cases[n].AmountMinor,
+			Passed:      ok,
+		})
 	}
+
 	var hits int64
-	for _, row := range r.evidence.Requests {
-		if row["configuration"] == "B1" {
-			n, _ := row["signature_cache_hits"].(int64)
-			hits += n
+	for i := range r.evidence.Requests {
+		row := &r.evidence.Requests[i]
+		if row.Configuration == "B1" && row.SignatureCacheHits.Valid {
+			hits += row.SignatureCacheHits.Value
 		}
 	}
 	if hits == 0 {
 		passed = false
 	}
-	r.evidence.Summary["b1_signature_cache_hits"] = hits
-	r.evidence.Summary["by_configuration_and_mode"] = by
-	r.evidence.Summary["case_results"] = caseResults
-	r.evidence.Summary["pair_results"] = pairResults
+
+	r.evidence.Summary.B1SignatureCacheHits = hits
+	r.evidence.Summary.ByConfigurationAndMode = by
+	r.evidence.Summary.CaseResults = caseResults
+	r.evidence.Summary.PairResults = pairResults
 	return passed
 }
 
-func validBaselineFabricEvidence(row Row) bool {
-	blockHash, _ := row["block_hash"].(string)
-	hash, err := hex.DecodeString(blockHash)
-	probeTxID, _ := row["probe_tx_id"].(string)
-	probeSent, _ := row["probe_sent_at"].(time.Time)
-	probeDeadline, _ := row["probe_deadline"].(time.Time)
-	if err != nil || len(hash) != sha256.Size || probeTxID == "" || probeSent.IsZero() || !probeSent.Before(probeDeadline) {
+func validBaselineFabricEvidence(row *RequestRow) bool {
+	if !row.BlockHash.Valid || !row.ProbeTxID.Valid || row.ProbeTxID.Value == "" {
 		return false
 	}
-	block, blockOK := baselineDecisionInt(row, "block_number")
-	probeBlock, probeBlockOK := baselineDecisionInt(row, "probe_block")
-	sent, sentOK := baselineDecisionInt(row, "probe_sent_mono_ns")
-	deadline, deadlineOK := baselineDecisionInt(row, "probe_deadline_mono_ns")
-	checked, checkedOK := baselineDecisionInt(row, "probe_checked_mono_ns")
-	return blockOK && probeBlockOK && sentOK && deadlineOK && checkedOK &&
-		probeBlock >= 0 && probeBlock <= block && sent >= 0 && sent <= checked && checked < deadline
-}
-
-// The decision JSON decoder retains integer precision for checkpoints and monotonic timestamps.
-func baselineDecisionInt(row Row, key string) (int64, bool) {
-	number, ok := row[key].(json.Number)
-	if !ok {
-		return 0, false
+	hash, err := hex.DecodeString(row.BlockHash.Value)
+	if err != nil || len(hash) != sha256.Size {
+		return false
 	}
-	value, err := number.Int64()
-	return value, err == nil
+	if !row.ProbeSentAt.Valid || !row.ProbeDeadline.Valid || !row.ProbeSentAt.Value.Before(row.ProbeDeadline.Value) {
+		return false
+	}
+	if !row.BlockNumber.Valid || !row.ProbeBlock.Valid ||
+		!row.ProbeSentMonoNs.Valid || !row.ProbeDeadlineMonoNs.Valid || !row.ProbeCheckedMonoNs.Valid {
+		return false
+	}
+	return row.ProbeBlock.Value >= 0 &&
+		row.ProbeBlock.Value <= row.BlockNumber.Value &&
+		row.ProbeSentMonoNs.Value >= 0 &&
+		row.ProbeSentMonoNs.Value <= row.ProbeCheckedMonoNs.Value &&
+		row.ProbeCheckedMonoNs.Value < row.ProbeDeadlineMonoNs.Value
 }
 
-func delta(row Row) any {
-	a, okA := row["order_rows_after"].(int64)
-	b, okB := row["order_rows_before"].(int64)
-	if !okA || !okB {
+func orderDelta(check *OrderCheckRow) *int64 {
+	if !check.OrderRowsAfter.Valid || !check.OrderRowsBefore.Valid {
 		return nil
 	}
-	return a - b
+	v := check.OrderRowsAfter.Value - check.OrderRowsBefore.Value
+	return &v
+}
+
+func equalInt64Ptr(a, b *int64) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a != nil && b != nil {
+		return *a == *b
+	}
+	return false
 }

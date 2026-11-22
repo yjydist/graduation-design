@@ -4,7 +4,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	api "graduation-design/internal/fabricapi"
+	api "grad/protocol/registry"
 
 	"github.com/hyperledger/fabric-chaincode-go/v2/pkg/cid"
 	"github.com/hyperledger/fabric-chaincode-go/v2/shim"
@@ -27,28 +26,6 @@ var (
 	probeTwo        string
 )
 
-const (
-	badInput                  = "INVALID_STRUCTURE"
-	denied                    = "UNAUTHORIZED"
-	stale                     = "STATE_CHANGED"
-	missing                   = "MISSING_DEPENDENCY"
-	invalid                   = "INVALID_STATE"
-	used                      = "ID_ALREADY_USED"
-	paInvalid                 = "PURCHASING_AUTHORITY_INVALID"
-	linkProofInvalid          = "LINK_PROOF_INVALID"
-	linkApprovalForbidden     = "LINK_APPROVAL_FORBIDDEN"
-	linkProposalMismatch      = "LINK_PROPOSAL_MISMATCH"
-	linkStateConflict         = "LINK_STATE_CONFLICT"
-	trustMgmtForbidden        = "TRUST_MANAGEMENT_FORBIDDEN"
-	identityMgmtForbidden     = "IDENTITY_MANAGEMENT_FORBIDDEN"
-	identityRecoveryForbidden = "IDENTITY_RECOVERY_FORBIDDEN"
-	identityStateConflict     = "IDENTITY_STATE_CONFLICT"
-	recoveryProofInvalid      = "RECOVERY_PROOF_INVALID"
-	taskStateConflict         = "TASK_STATE_CONFLICT"
-	grantStateConflict        = "GRANT_STATE_CONFLICT"
-	alreadyRevoked            = "ALREADY_REVOKED"
-)
-
 type registry struct{}
 
 type transaction struct {
@@ -58,14 +35,20 @@ type transaction struct {
 	boot   api.Bootstrap
 }
 
+type binding struct {
+	Domain  string `json:"domainId"`
+	Subject string `json:"subjectId"`
+	Role    string `json:"role"`
+}
+
 func (registry) Init(shim.ChaincodeStubInterface) *pb.Response {
-	return shim.Error(api.RegistryErrorPrefix + "UNAUTHORIZED")
+	return shim.Error(api.ErrCodeUnauthorized)
 }
 
 func (registry) Invoke(stub shim.ChaincodeStubInterface) *pb.Response {
 	method, args := stub.GetFunctionAndParameters()
 	if len(args) != 1 {
-		return shim.Error(api.RegistryErrorPrefix + badInput)
+		return shim.Error(api.ErrCodeInvalidStructure)
 	}
 	result, err := invoke(stub, method, []byte(args[0]))
 	if err != nil {
@@ -76,39 +59,43 @@ func (registry) Invoke(stub shim.ChaincodeStubInterface) *pb.Response {
 
 func invoke(stub shim.ChaincodeStubInterface, method string, arg []byte) ([]byte, error) {
 	if stub.GetChannelID() != api.Channel || len(arg) > 65536 {
-		return nil, reject(badInput)
+		return nil, api.Reject(api.ErrCodeInvalidStructure)
 	}
 	if method == "Read" {
 		value, err := stub.GetState(string(arg))
 		if err == nil && len(value) == 0 {
-			return nil, reject(missing)
+			return nil, api.Reject(api.ErrCodeMissingDependency)
 		}
 		return value, err
 	}
 	identity, err := cid.New(stub)
 	if err != nil {
-		return nil, reject(denied)
+		return nil, api.Reject(api.ErrCodeUnauthorized)
 	}
 	msp, err := identity.GetMSPID()
 	if err != nil {
-		return nil, reject(denied)
+		return nil, api.Reject(api.ErrCodeUnauthorized)
 	}
 	cert, err := identity.GetX509Certificate()
 	if err != nil || cert == nil {
-		return nil, reject(denied)
+		return nil, api.Reject(api.ErrCodeUnauthorized)
 	}
 	ts, err := stub.GetTxTimestamp()
 	if err != nil || ts.CheckValid() != nil {
-		return nil, reject(badInput)
+		return nil, api.Reject(api.ErrCodeInvalidStructure)
 	}
-	tx := transaction{stub: stub, caller: api.Management{MSPID: msp, Fingerprint: api.Digest(cert.Raw)}, at: ts.AsTime()}
+	tx := transaction{
+		stub:   stub,
+		caller: api.Management{MSPID: msp, CertificateSHA256: api.Digest(cert.Raw)},
+		at:     ts.AsTime(),
+	}
 	if method == "Probe" {
 		// A probe has no shared business-state reads or writes.
 		if tx.caller.String() != probeOne && tx.caller.String() != probeTwo {
-			return nil, reject(denied)
+			return nil, api.Reject(api.ErrCodeUnauthorized)
 		}
 		if len(arg) != 0 {
-			return nil, reject(badInput)
+			return nil, api.Reject(api.ErrCodeInvalidStructure)
 		}
 		return nil, tx.put(api.ProbeKey(tx.caller), api.Probe{TxID: stub.GetTxID(), Identity: tx.caller})
 	}
@@ -123,7 +110,7 @@ func invoke(stub shim.ChaincodeStubInterface, method string, arg []byte) ([]byte
 	case "BootstrapDomain":
 		err = dispatch(arg, tx.bootstrapDomain)
 	case "CertifyDomain":
-		err = dispatch(arg, tx.certify)
+		err = dispatch(arg, tx.certifyDomain)
 	case "RevokeCertification":
 		err = dispatch(arg, tx.revokeCertification)
 	case "SetDomainStatus":
@@ -161,23 +148,21 @@ func invoke(stub shim.ChaincodeStubInterface, method string, arg []byte) ([]byte
 	case "ResumeGrant":
 		err = dispatch(arg, tx.resumeGrant)
 	case "RevokeGrant":
-		err = dispatch(arg, tx.revoke)
+		err = dispatch(arg, tx.revokeGrant)
 	case "ReplaceGrant":
-		err = dispatch(arg, tx.replace)
+		err = dispatch(arg, tx.replaceGrant)
 	default:
-		err = reject(badInput)
+		err = api.Reject(api.ErrCodeInvalidStructure)
 	}
 	return nil, err
 }
-
-func reject(code string) error { return errors.New(api.RegistryErrorPrefix + code) }
 
 func dispatch[T any](arg []byte, f func(T) error) error {
 	var value T
 	d := json.NewDecoder(bytes.NewReader(arg))
 	d.DisallowUnknownFields()
 	if err := d.Decode(&value); err != nil || d.Decode(new(any)) != io.EOF {
-		return reject(badInput)
+		return api.Reject(api.ErrCodeInvalidStructure)
 	}
 	return f(value)
 }
@@ -189,7 +174,7 @@ func get[T any](stub shim.ChaincodeStubInterface, key string) (T, error) {
 		return value, err
 	}
 	if b == nil {
-		return value, reject(missing)
+		return value, api.Reject(api.ErrCodeMissingDependency)
 	}
 	return value, json.Unmarshal(b, &value)
 }
@@ -208,23 +193,48 @@ func (tx transaction) vacant(key string) error {
 		return err
 	}
 	if b != nil {
-		return reject(used)
+		return api.Reject(api.ErrCodeIDAlreadyUsed)
 	}
 	return nil
 }
 
-func (tx transaction) bound(b api.Bound) bool { return b.DeploymentID == tx.boot.ID() }
+func (tx transaction) bound(b api.Bound) bool { return b.DeploymentID == tx.boot.DeploymentID() }
 
 func (tx transaction) current(i api.Interval) bool {
 	return i.Current(tx.at, api.PeerTimeWindow+api.ClockError)
 }
 
+func (tx transaction) bind(m api.Management, b binding) error {
+	if m == tx.boot.Initializer || m == tx.boot.Root.Management || m.String() == probeOne || m.String() == probeTwo {
+		return api.Reject(api.ErrCodeUnauthorized)
+	}
+	key := api.Key("binding", m.String())
+	if err := tx.vacant(key); err != nil {
+		return err
+	}
+	return tx.put(key, b)
+}
+
+func (tx transaction) match(m api.Management, b binding) error {
+	if tx.caller != m {
+		return api.Reject(api.ErrCodeUnauthorized)
+	}
+	actual, err := get[binding](tx.stub, api.Key("binding", m.String()))
+	if err != nil {
+		return err
+	}
+	if actual != b {
+		return api.Reject(api.ErrCodeUnauthorized)
+	}
+	return nil
+}
+
 func (tx transaction) initialize(arg []byte) error {
 	if tx.caller.String() != initializer {
-		return reject(denied)
+		return api.Reject(api.ErrCodeUnauthorized)
 	}
 	if api.Digest(arg) != bootstrapDigest {
-		return reject(badInput)
+		return api.Reject(api.ErrCodeInvalidStructure)
 	}
 	if err := tx.vacant(api.BootstrapKey); err != nil {
 		return err
@@ -236,7 +246,7 @@ func (tx transaction) initialize(arg []byte) error {
 			b.TaskCreator.Domain != "A" || b.TaskCreator.Subject == "" || b.TaskCreator.Management.MSPID != "AMsp" ||
 			!b.TaskCreator.Management.Valid() || !api.IsDigest(b.ResourceID) || b.ResourceOwner == "" ||
 			b.ResourceManagement.MSPID != "CMsp" || !b.ResourceManagement.Valid() {
-			return reject(badInput)
+			return api.Reject(api.ErrCodeInvalidStructure)
 		}
 		return tx.put(api.BootstrapKey, b)
 	})

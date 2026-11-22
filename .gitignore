@@ -11,6 +11,8 @@ __pycache__/
 # Local ledger instances, secrets, node data and build outputs.
 /.local/
 /build/
+/ledgerctl
+/exp
 
 
 *.docx

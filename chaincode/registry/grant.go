@@ -3,17 +3,17 @@ package main
 import (
 	"slices"
 
-	api "graduation-design/internal/fabricapi"
+	api "grad/protocol/registry"
 )
 
 func (tx transaction) registerTask(t api.Task) error {
 	authority := tx.boot.TaskCreator
 	if t.Creator != authority.Subject || t.Domain != authority.Domain || tx.caller != authority.Management {
-		return reject(denied)
+		return api.Reject(api.ErrCodeUnauthorized)
 	}
 	if !tx.bound(t.Bound) || !api.IsDigest(t.ID) || !api.IsDigest(t.Digest) || t.Resource != tx.boot.ResourceID ||
 		(t.Mode != api.RP && t.Mode != api.BM) {
-		return reject(badInput)
+		return api.Reject(api.ErrCodeInvalidStructure)
 	}
 	key := api.Key("task", t.ID)
 	if err := tx.vacant(key); err != nil {
@@ -24,7 +24,7 @@ func (tx transaction) registerTask(t api.Task) error {
 		return err
 	}
 	if i.Domain != t.Domain || i.Kind != "USER" {
-		return reject(badInput)
+		return api.Reject(api.ErrCodeInvalidStructure)
 	}
 	if err := tx.match(i.Management, binding{Domain: i.Domain, Subject: i.ID, Role: i.Kind}); err != nil {
 		return err
@@ -34,7 +34,7 @@ func (tx transaction) registerTask(t api.Task) error {
 		return err
 	}
 	if !tx.current(t.Interval) || !t.Interval.Within(c.Interval) {
-		return reject(badInput)
+		return api.Reject(api.ErrCodeInvalidStructure)
 	}
 	t.Version = api.Version{Status: api.Active, Revision: 1}
 	return tx.put(key, t)
@@ -42,7 +42,7 @@ func (tx transaction) registerTask(t api.Task) error {
 
 func (tx transaction) cancelTask(m api.Mutation) error {
 	if !tx.bound(m.Bound) || !api.IsDigest(m.ID) || m.ExpectedRevision == 0 {
-		return reject(badInput)
+		return api.Reject(api.ErrCodeInvalidStructure)
 	}
 	key := api.Key("task", m.ID)
 	t, err := get[api.Task](tx.stub, key)
@@ -56,13 +56,13 @@ func (tx transaction) cancelTask(m api.Mutation) error {
 	isCreator := tx.match(creator.Management, binding{Domain: creator.Domain, Subject: creator.ID, Role: creator.Kind}) == nil
 	isResource := tx.caller == tx.boot.ResourceManagement
 	if !isCreator && !isResource {
-		return reject(denied)
+		return api.Reject(api.ErrCodeUnauthorized)
 	}
 	if t.Status != api.Active {
-		return reject(taskStateConflict)
+		return api.Reject(api.ErrCodeTaskStateConflict)
 	}
 	if t.Revision != m.ExpectedRevision || (m.ExpectedDigest != "" && t.Digest != m.ExpectedDigest) {
-		return reject(stale)
+		return api.Reject(api.ErrCodeStateChanged)
 	}
 	t.Status = api.Cancelled
 	t.Revision++
@@ -80,7 +80,7 @@ func (tx transaction) registerGrant(g api.Grant) error {
 func (tx transaction) checkGrant(g api.Grant) error {
 	if !tx.bound(g.Bound) || !api.IsDigest(g.ID) || !api.IsDigest(g.Digest) ||
 		g.Schema != api.Schema || g.Issuer == g.Grantee || g.Depth > 32 {
-		return reject(badInput)
+		return api.Reject(api.ErrCodeInvalidStructure)
 	}
 	if err := tx.vacant(api.Key("grant", g.ID)); err != nil {
 		return err
@@ -90,7 +90,7 @@ func (tx transaction) checkGrant(g api.Grant) error {
 		return err
 	}
 	if t.Status != api.Active || !tx.current(t.Interval) {
-		return reject(invalid)
+		return api.Reject(api.ErrCodeInvalidState)
 	}
 	if _, err := tx.validCredential(t.CreatorCredential, t.Creator, t.CreatorKeyVersion); err != nil {
 		return err
@@ -103,19 +103,19 @@ func (tx transaction) checkGrant(g api.Grant) error {
 		return err
 	}
 	if g.Mode != t.Mode || (g.Mode != api.RP && g.Mode != api.BM) || g.Resource != t.Resource || g.Domain != t.Domain || !tx.current(g.Interval) || !g.Interval.Within(t.Interval) {
-		return reject(badInput)
+		return api.Reject(api.ErrCodeInvalidStructure)
 	}
 	if err := tx.grantCredentials(g); err != nil {
 		return err
 	}
 	if g.Parent == "" {
 		if g.ParentDigest != "" || g.Root != g.ID || g.Grantee != t.Creator {
-			return reject(badInput)
+			return api.Reject(api.ErrCodeInvalidStructure)
 		}
 		if g.Mode == api.RP {
 			if g.Issuer != tx.boot.ResourceOwner ||
 				issuer.Management != tx.boot.ResourceManagement || issuer.Domain != "C" || issuer.Kind != "SERVICE" {
-				return reject(badInput)
+				return api.Reject(api.ErrCodeInvalidStructure)
 			}
 			return nil
 		}
@@ -124,7 +124,7 @@ func (tx transaction) checkGrant(g api.Grant) error {
 			return err
 		}
 		if dom.PurchasingAuthority == "" || g.Issuer != dom.PurchasingAuthority || issuer.Domain != t.Domain || issuer.Kind != "SERVICE" {
-			return reject(paInvalid)
+			return api.Reject(api.ErrCodePurchasingAuthorityInvalid)
 		}
 		return nil
 	}
@@ -134,28 +134,28 @@ func (tx transaction) checkGrant(g api.Grant) error {
 			return err
 		}
 		if p.Status != api.Active || !tx.current(p.Interval) {
-			return reject(invalid)
+			return api.Reject(api.ErrCodeInvalidState)
 		}
 		if p.Grantee != child.Issuer || p.GranteeKeyVersion != child.IssuerKeyVersion || p.GranteeCredential != child.IssuerCredential {
-			return reject(denied)
+			return api.Reject(api.ErrCodeUnauthorized)
 		}
 		if p.Digest != child.ParentDigest || p.Root != child.Root || p.Task != child.Task ||
 			p.Mode != child.Mode || p.Resource != child.Resource || p.Domain != child.Domain ||
 			!child.Interval.Within(p.Interval) || child.Depth >= p.Depth {
-			return reject(badInput)
+			return api.Reject(api.ErrCodeInvalidStructure)
 		}
 		if err := tx.grantCredentials(p); err != nil {
 			return err
 		}
 		if p.Parent == "" {
 			if p.ID != g.Root {
-				return reject(badInput)
+				return api.Reject(api.ErrCodeInvalidStructure)
 			}
 			return nil
 		}
 		child = p
 	}
-	return reject(badInput)
+	return api.Reject(api.ErrCodeInvalidStructure)
 }
 
 func (tx transaction) grantCredentials(g api.Grant) error {
@@ -168,32 +168,32 @@ func (tx transaction) grantCredentials(g api.Grant) error {
 		return err
 	}
 	if !g.Interval.Within(issuer.Interval) || !g.Interval.Within(grantee.Interval) {
-		return reject(badInput)
+		return api.Reject(api.ErrCodeInvalidStructure)
 	}
 	return nil
 }
 
 func (tx transaction) revocable(m api.Mutation, issuerOnly bool) (api.Grant, error) {
 	if !tx.bound(m.Bound) {
-		return api.Grant{}, reject(badInput)
+		return api.Grant{}, api.Reject(api.ErrCodeInvalidStructure)
 	}
 	g, err := get[api.Grant](tx.stub, api.Key("grant", m.ID))
 	if err != nil {
 		return g, err
 	}
 	if tx.caller == tx.boot.Root.Management {
-		return g, reject(denied)
+		return g, api.Reject(api.ErrCodeUnauthorized)
 	}
 	caller, err := get[binding](tx.stub, api.Key("binding", tx.caller.String()))
 	if err != nil {
-		return g, reject(denied)
+		return g, api.Reject(api.ErrCodeUnauthorized)
 	}
 	i, err := get[api.Identity](tx.stub, api.Key("identity", caller.Subject))
 	if err != nil {
-		return g, reject(denied)
+		return g, api.Reject(api.ErrCodeUnauthorized)
 	}
 	if i.Management != tx.caller || i.Domain != caller.Domain || i.Kind != caller.Role {
-		return g, reject(denied)
+		return g, api.Reject(api.ErrCodeUnauthorized)
 	}
 	allowed := i.ID == g.Issuer
 	if !issuerOnly && !allowed {
@@ -208,20 +208,20 @@ func (tx transaction) revocable(m api.Mutation, issuerOnly bool) (api.Grant, err
 		allowed = slices.Contains(candidates, i.ID)
 	}
 	if !allowed {
-		return g, reject(denied)
+		return g, api.Reject(api.ErrCodeUnauthorized)
 	}
 	if g.Revision != m.ExpectedRevision || g.Digest != m.ExpectedDigest {
-		return g, reject(stale)
+		return g, api.Reject(api.ErrCodeStateChanged)
 	}
 	if g.Status != api.Active {
-		return g, reject(invalid)
+		return g, api.Reject(api.ErrCodeInvalidState)
 	}
 	g.Status = api.Revoked
 	g.Revision++
 	return g, nil
 }
 
-func (tx transaction) revoke(m api.Mutation) error {
+func (tx transaction) revokeGrant(m api.Mutation) error {
 	g, err := tx.revocable(m, false)
 	if err != nil {
 		return err
@@ -231,7 +231,7 @@ func (tx transaction) revoke(m api.Mutation) error {
 
 func (tx transaction) grantByIssuer(m api.Mutation) (api.Grant, api.Identity, error) {
 	if !tx.bound(m.Bound) || !api.IsDigest(m.ID) || m.ExpectedRevision == 0 {
-		return api.Grant{}, api.Identity{}, reject(badInput)
+		return api.Grant{}, api.Identity{}, api.Reject(api.ErrCodeInvalidStructure)
 	}
 	g, err := get[api.Grant](tx.stub, api.Key("grant", m.ID))
 	if err != nil {
@@ -245,7 +245,7 @@ func (tx transaction) grantByIssuer(m api.Mutation) (api.Grant, api.Identity, er
 		return g, iss, err
 	}
 	if g.Revision != m.ExpectedRevision || (m.ExpectedDigest != "" && g.Digest != m.ExpectedDigest) {
-		return g, iss, reject(stale)
+		return g, iss, api.Reject(api.ErrCodeStateChanged)
 	}
 	return g, iss, nil
 }
@@ -256,10 +256,10 @@ func (tx transaction) suspendGrant(m api.Mutation) error {
 		return err
 	}
 	if g.Status == api.Revoked {
-		return reject(alreadyRevoked)
+		return api.Reject(api.ErrCodeAlreadyRevoked)
 	}
 	if g.Status != api.Active {
-		return reject(grantStateConflict)
+		return api.Reject(api.ErrCodeGrantStateConflict)
 	}
 	g.Status = api.Suspended
 	g.Revision++
@@ -272,23 +272,23 @@ func (tx transaction) resumeGrant(m api.Mutation) error {
 		return err
 	}
 	if g.Status == api.Revoked {
-		return reject(alreadyRevoked)
+		return api.Reject(api.ErrCodeAlreadyRevoked)
 	}
 	if g.Status != api.Suspended {
-		return reject(grantStateConflict)
+		return api.Reject(api.ErrCodeGrantStateConflict)
 	}
 	if _, _, err := tx.activeDomain(iss.Domain); err != nil {
 		return err
 	}
 	if iss.Status != api.Active || !tx.current(g.Interval) {
-		return reject(invalid)
+		return api.Reject(api.ErrCodeInvalidState)
 	}
 	g.Status = api.Active
 	g.Revision++
 	return tx.put(api.Key("grant", g.ID), g)
 }
 
-func (tx transaction) replace(r api.Replacement) error {
+func (tx transaction) replaceGrant(r api.Replacement) error {
 	old, err := tx.revocable(r.Old, true)
 	if err != nil {
 		return err
@@ -296,7 +296,7 @@ func (tx transaction) replace(r api.Replacement) error {
 	next := r.New
 	if next.ID == old.ID || next.Issuer != old.Issuer || next.Parent != old.Parent ||
 		next.Task != old.Task || next.Mode != old.Mode || (old.Parent != "" && next.Root != old.Root) {
-		return reject(badInput)
+		return api.Reject(api.ErrCodeInvalidStructure)
 	}
 	if err := tx.checkGrant(next); err != nil {
 		return err

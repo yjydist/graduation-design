@@ -12,12 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"graduation-design/internal/agent"
-	"graduation-design/internal/fabric"
-	api "graduation-design/internal/fabricapi"
-	"graduation-design/internal/gateway"
-	"graduation-design/internal/policy"
-	"graduation-design/internal/protocol"
+	"grad/platform/agent"
+	"grad/platform/gateway"
+	"grad/platform/policy"
+	"grad/platform/registrysvc"
+	"grad/platform/state/fabric"
+	"grad/protocol"
+	"grad/protocol/registry"
 )
 
 func (e *e1Trial) link() error {
@@ -26,8 +27,8 @@ func (e *e1Trial) link() error {
 	if propose == nil || approve == nil || propose.Commit == nil || approve.Commit == nil {
 		return fmt.Errorf("missing dual-domain link transactions")
 	}
-	states := make([]api.IdentityLink, 2)
-	for n, op := range []*operation{propose, approve} {
+	states := make([]registry.IdentityLink, 2)
+	for n, op := range []*fabric.Operation{propose, approve} {
 		raw, err := e.rawAt("link", e.f.IdentityLink.ID, op.Commit.Number)
 		if err != nil {
 			return err
@@ -36,16 +37,16 @@ func (e *e1Trial) link() error {
 			return err
 		}
 	}
-	if states[0].Status != api.Pending || states[0].EffectiveActive ||
-		states[1].Status != api.Active || !states[1].EffectiveActive {
+	if states[0].Status != registry.Pending || states[0].EffectiveActive ||
+		states[1].Status != registry.Active || !states[1].EffectiveActive {
 		return fmt.Errorf("link did not transition from PENDING to effective ACTIVE")
 	}
 	source, target := e.f.Identities["U"], e.f.Identities["U-in-B"]
-	srcKey, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "U.key.pem"))
+	srcKey, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "U.key.pem"))
 	if err != nil {
 		return err
 	}
-	dstKey, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "U-in-B.key.pem"))
+	dstKey, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "U-in-B.key.pem"))
 	if err != nil {
 		return err
 	}
@@ -73,9 +74,6 @@ func (e *e1Trial) link() error {
 func (e *e1Trial) credentials() error {
 	records := make(map[string]any)
 	roles := []string{"PA", "U", "A1", "B1", "C"}
-	if _, ok := e.f.Credentials["C-service"]; ok {
-		roles = append(roles, "C-service")
-	}
 	for _, role := range roles {
 		cred := e.f.Credentials[role]
 		op := e.seedOperation("credential-" + role)
@@ -86,11 +84,11 @@ func (e *e1Trial) credentials() error {
 		if err != nil {
 			return err
 		}
-		live, err := currentRecord[api.Credential](e, "credential", cred.ID)
+		live, err := currentRecord[registry.Credential](e, "credential", cred.ID)
 		if err != nil {
 			return err
 		}
-		if len(prior) != 0 || live.Status != api.Active || cred.Digest != live.Digest {
+		if len(prior) != 0 || live.Status != registry.Active || cred.Digest != live.Digest {
 			return fmt.Errorf("credential %s active before confirmation or missing/mismatched after it", role)
 		}
 		records[role] = map[string]any{"before": "not committed", "confirmed": live, "txID": op.TxID, "commit": op.Commit}
@@ -104,15 +102,15 @@ func (e *e1Trial) freshRequest(m *e1Mode, action, key string) (protocol.AccessRe
 	}
 	req := m.pkg.Request
 	req.IdempotencyKey = key
-	if action == "quote.read" {
+	if action == registry.ActionQuoteRead {
 		req.Action, req.AmountMinor, req.QuoteID = action, 0, nil
-		req.Resource = "urn:grad:resource:C:quotes"
+		req.Resource = registry.ResourceQuotes
 	}
 	return req, nil
 }
 
 func (e *e1Trial) signed(m *e1Mode, handler http.Handler, req protocol.AccessRequest, paths []protocol.TrustPathEntry, now func() time.Time) (protocol.AccessEvidencePackage, gateway.ChallengeResponse, error) {
-	key, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "B1.key.pem"))
+	key, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "B1.key.pem"))
 	if err != nil {
 		return protocol.AccessEvidencePackage{}, gateway.ChallengeResponse{}, err
 	}
@@ -150,7 +148,7 @@ func (e *e1Trial) retryOrder(m *e1Mode) error {
 	if err != nil {
 		return err
 	}
-	req, err := e.freshRequest(m, "order.create", "e1-"+m.tag+"-lost-response")
+	req, err := e.freshRequest(m, registry.ActionOrderCreate, "e1-"+m.tag+"-lost-response")
 	if err != nil {
 		return err
 	}
@@ -193,7 +191,7 @@ func (e *e1Trial) decisions() error {
 	for _, m := range e.modes {
 		var id string
 		for _, r := range e.requests {
-			if r.Case == "F06" && r.Mode == m.task.Mode && r.Action == "order.create" {
+			if r.Case == "F06" && r.Mode == m.task.Mode && r.Action == registry.ActionOrderCreate {
 				id = r.DecisionID
 			}
 		}
@@ -230,7 +228,7 @@ func (e *e1Trial) buyerRoot() error {
 		issuers = append(issuers, claims.Issuer)
 	}
 	if !slices.Equal(issuers, []string{e.f.Identities["PA"].ID, e.f.Identities["U"].ID, e.f.Identities["A1"].ID}) ||
-		m.pkg.Request.AuthorizationMode != api.BM || m.pkg.Request.TaskID != m.task.ID {
+		m.pkg.Request.AuthorizationMode != registry.BM || m.pkg.Request.TaskID != m.task.ID {
 		return fmt.Errorf("BM did not use an independent PA-issued root")
 	}
 	var rootCount int
@@ -249,18 +247,24 @@ func (e *e1Trial) supplierPolicy(m *e1Mode) error {
 	if m.pkg == nil {
 		return fmt.Errorf("F06 package unavailable for F11")
 	}
-	other := api.RP
-	if m.task.Mode == api.RP {
-		other = api.BM
+	other := registry.RP
+	if m.task.Mode == registry.RP {
+		other = registry.BM
 	}
 	service, root := e.f.Identities["C"].ID, e.d.Bootstrap.Root
 	deadline := time.Now().Add(time.Hour).Unix()
 	version := policy.DefaultPolicyVersion + "-e1-deny-" + m.tag
 	files, digest, err := policy.BuildCustomBundle(e.d.DeploymentID, service, version, root, policy.RolesConfig{
-		AcceptedAuthorizationModes: []string{other}, AcceptedAuthorityRoles: []string{"procurement-authority", "PURCHASING_AUTHORITY"},
-		AcceptedBuyerDomains: []string{"A"}, AcceptedServiceRoles: []string{"supplier-service", "RESOURCE_AUTHORITY", "SERVICE", "ResourceOwner"},
+		AcceptedAuthorizationModes: []string{other},
+		AcceptedAuthorityRoles:     []string{"procurement-authority", "PURCHASING_AUTHORITY"},
+		AcceptedBuyerDomains:       []string{"A"},
+		AcceptedServiceRoles:       []string{"supplier-service", "RESOURCE_AUTHORITY", "SERVICE", "ResourceOwner"},
 	}, policy.ResourcesConfig{
-		AllowedActions: []string{"quote.read", "order.create"}, AllowedProductIDs: []string{gateway.DefaultProductID}, MaxQuantity: 10, PolicyDeadline: &deadline,
+		AllowedResources:  []string{registry.ResourceQuotes, registry.ResourceOrders},
+		AllowedActions:    []string{registry.ActionQuoteRead, registry.ActionOrderCreate},
+		AllowedProductIDs: []string{gateway.DefaultProductID},
+		MaxQuantity:       10,
+		PolicyDeadline:    &deadline,
 	})
 	if err != nil {
 		return err
@@ -278,7 +282,7 @@ func (e *e1Trial) supplierPolicy(m *e1Mode) error {
 		return err
 	}
 	key := "e1-" + m.tag + "-supplier-policy"
-	status, code, _, err := e.exercise(m, handler, "order.create", key, m.pkg.TrustPaths, time.Now)
+	status, code, _, err := e.exercise(m, handler, registry.ActionOrderCreate, key, m.pkg.TrustPaths, time.Now)
 	if err != nil {
 		return err
 	}
@@ -286,7 +290,7 @@ func (e *e1Trial) supplierPolicy(m *e1Mode) error {
 	if err != nil {
 		return err
 	}
-	allowedStatus, _, allowed, err := e.exercise(m, e.server.Handler(), "order.create", key, m.pkg.TrustPaths, time.Now)
+	allowedStatus, _, allowed, err := e.exercise(m, e.server.Handler(), registry.ActionOrderCreate, key, m.pkg.TrustPaths, time.Now)
 	if err != nil {
 		return err
 	}
@@ -312,11 +316,15 @@ func (e *e1Trial) didBinding() error {
 			return fmt.Errorf("F06 package unavailable for F12")
 		}
 		b := e.f.Identities["B1"]
-		good, err := os.ReadFile(e.instance.registrySubPath(didRelPath(b.ID)))
+		good, err := os.ReadFile(e.inst.RegistryPath(fabric.DIDRelPath(b.ID)))
 		if err != nil {
 			return err
 		}
-		bad, err := protocol.NewDIDDocument(b.ID, b.KeyID, b.PublicKey, protocol.KeyPurposeAssertionMethod)
+		bPub, err := protocol.ParseAppPublicKey(b.PublicKey)
+		if err != nil {
+			return err
+		}
+		bad, err := protocol.NewDIDDocument(b.ID, b.KeyID, bPub, protocol.KeyPurposeAssertionMethod)
 		if err != nil {
 			return err
 		}
@@ -327,11 +335,11 @@ func (e *e1Trial) didBinding() error {
 		if err := e.did.SetDocument(b.ID, badRaw); err != nil {
 			return err
 		}
-		status, code, _, negErr := e.exercise(m, e.server.Handler(), "quote.read", "e1-"+m.tag+"-did-bad", m.pkg.TrustPaths, time.Now)
+		status, code, _, negErr := e.exercise(m, e.server.Handler(), registry.ActionQuoteRead, "e1-"+m.tag+"-did-bad", m.pkg.TrustPaths, time.Now)
 		if err := errors.Join(negErr, e.did.SetDocument(b.ID, good)); err != nil {
 			return err
 		}
-		ok, _, out, err := e.exercise(m, e.server.Handler(), "quote.read", "e1-"+m.tag+"-did-good", m.pkg.TrustPaths, time.Now)
+		ok, _, out, err := e.exercise(m, e.server.Handler(), registry.ActionQuoteRead, "e1-"+m.tag+"-did-good", m.pkg.TrustPaths, time.Now)
 		if err != nil {
 			return err
 		}
@@ -346,11 +354,11 @@ func (e *e1Trial) didBinding() error {
 }
 
 func (e *e1Trial) modeBinding(m *e1Mode) error {
-	other := api.RP
-	if m.task.Mode == api.RP {
-		other = api.BM
+	other := registry.RP
+	if m.task.Mode == registry.RP {
+		other = registry.BM
 	}
-	req, err := e.freshRequest(m, "quote.read", "e1-"+m.tag+"-mode-bad")
+	req, err := e.freshRequest(m, registry.ActionQuoteRead, "e1-"+m.tag+"-mode-bad")
 	if err != nil {
 		return err
 	}
@@ -369,18 +377,18 @@ func (e *e1Trial) modeBinding(m *e1Mode) error {
 	if denied.Code != protocol.ErrCodeAuthorizationModeMismatch {
 		return fmt.Errorf("request/chain mode mismatch returned %d %s", rec.Code, denied.Code)
 	}
-	if m.task.Mode == api.RP {
+	if m.task.Mode == registry.RP {
 		// The PA holds a genuine BM signing key but cannot issue a root for this RP task.
 		claims, err := decodeGrantPayload(m.pkg.Grants[0])
 		if err != nil {
 			return err
 		}
 		pa := e.f.Identities["PA"]
-		key, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "PA.key.pem"))
+		key, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "PA.key.pem"))
 		if err != nil {
 			return err
 		}
-		rootID := api.Digest([]byte(e.id + "/F13/PA-as-RP"))
+		rootID := registry.Digest([]byte(e.id + "/F13/PA-as-RP"))
 		claims.ID, claims.RootID, claims.Issuer = rootID, rootID, pa.ID
 		claims.IssuerKeyVersion, claims.IssuerCredentialID = pa.KeyVersion, e.f.Credentials["PA"].ID
 		jws, digest, err := protocol.SignGrant(key, pa.KeyID, &claims)
@@ -390,7 +398,7 @@ func (e *e1Trial) modeBinding(m *e1Mode) error {
 		candidate := m.g0
 		candidate.ID, candidate.Root, candidate.Issuer, candidate.Digest = rootID, rootID, pa.ID, digest
 		candidate.IssuerKeyVersion, candidate.IssuerCredential = pa.KeyVersion, claims.IssuerCredentialID
-		op, err := e.op("F13-PA-as-RP", "PA", "RegisterGrant", candidate, "INVALID_STRUCTURE")
+		op, err := e.op("F13-PA-as-RP", "PA", "RegisterGrant", candidate, registry.ErrCodeInvalidStructure)
 		if err != nil {
 			return err
 		}
@@ -404,7 +412,7 @@ func (e *e1Trial) modeBinding(m *e1Mode) error {
 
 func (e *e1Trial) offlineRoot() error {
 	e.stage = "F14"
-	ca, _, err := e.instance.loadTestCAAndHostCerts()
+	ca, _, err := e.inst.LoadTestCAAndHostCerts()
 	if err != nil {
 		return err
 	}
@@ -416,7 +424,7 @@ func (e *e1Trial) offlineRoot() error {
 		return err
 	}
 	root := e.d.Bootstrap.Root
-	raw, err := os.ReadFile(e.instance.registrySubPath(didRelPath(root.DID)))
+	raw, err := os.ReadFile(e.inst.RegistryPath(fabric.DIDRelPath(root.DID)))
 	if err != nil {
 		return err
 	}
@@ -434,7 +442,7 @@ func (e *e1Trial) offlineRoot() error {
 		if m.pkg == nil {
 			return fmt.Errorf("F06 package unavailable for F14")
 		}
-		status, code, result, err := e.exercise(m, handler, "order.create", "e1-"+m.tag+"-t-offline", m.pkg.TrustPaths, time.Now)
+		status, code, result, err := e.exercise(m, handler, registry.ActionOrderCreate, "e1-"+m.tag+"-t-offline", m.pkg.TrustPaths, time.Now)
 		if err != nil {
 			return err
 		}
@@ -455,14 +463,14 @@ func (e *e1Trial) offlineRoot() error {
 	}
 	m := e.modes[0]
 	paths := e.withBCert(m, cert)
-	status, code, _, err := e.exercise(m, handler, "quote.read", "e1-rp-t-short-valid", paths, time.Now)
+	status, code, _, err := e.exercise(m, handler, registry.ActionQuoteRead, "e1-rp-t-short-valid", paths, time.Now)
 	if err != nil {
 		return err
 	}
 	if status != http.StatusOK {
 		return fmt.Errorf("short certification positive control returned %d %s", status, code)
 	}
-	if err := poll(e.ctx, 22*time.Second, func() (bool, error) { return time.Now().Unix() >= expiry+1, nil }); err != nil {
+	if err := fabric.Poll(e.ctx, 22*time.Second, func() (bool, error) { return time.Now().Unix() >= expiry+1, nil }); err != nil {
 		return err
 	}
 	return e.forModes(func(m *e1Mode) error {
@@ -470,7 +478,7 @@ func (e *e1Trial) offlineRoot() error {
 		if err != nil {
 			return err
 		}
-		status, code, _, err := e.exercise(m, handler, "order.create", "e1-"+m.tag+"-t-expired", e.withBCert(m, cert), time.Now)
+		status, code, _, err := e.exercise(m, handler, registry.ActionOrderCreate, "e1-"+m.tag+"-t-expired", e.withBCert(m, cert), time.Now)
 		if err != nil {
 			return err
 		}
@@ -494,33 +502,40 @@ func isDomainExpiry(code string) bool {
 
 func (e *e1Trial) renewB(label string, keyVersion uint64, expiry int64) (string, error) {
 	ib, root := e.f.Domains["B"].Issuers[0], e.d.Bootstrap.Root
-	dom, err := currentRecord[api.Domain](e, "domain", "B")
+	dom, err := currentRecord[registry.Domain](e, "domain", "B")
 	if err != nil {
 		return "", err
 	}
-	tKey, err := loadECPrivateKeyPEM(e.instance.privatePath("app", "T.key.pem"))
+	tKey, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "T.key.pem"))
 	if err != nil {
 		return "", err
 	}
 	nbf := time.Now().Add(-time.Minute).Unix()
 	id := "urn:grad:cert:B:" + strings.ToLower(label) + ":" + e.id
-	auth := []api.Scope{{ID: ib.ID, KeyVersion: keyVersion, Types: []string{protocol.CredentialTypeEnterpriseIdentity}, Claims: []string{"domain", "role"}}}
+	auth := []registry.IssuerScope{{
+		ID:              ib.ID,
+		AppKeyVersion:   keyVersion,
+		CredentialTypes: []string{protocol.CredentialTypeEnterpriseIdentity},
+		ClaimNames:      []string{"domain", "role"},
+	}}
 	claims := protocol.DomainAuthorityCredential{
 		Type: []string{protocol.CredentialTypeVC, protocol.CredentialTypeDomainAuthority},
 		ID:   id, DeploymentID: e.d.DeploymentID, Issuer: root.DID, Iss: root.DID, Sub: dom.DID, IssuerKeyVersion: root.KeyVersion,
 		ValidFrom: time.Unix(nbf, 0).UTC().Format(time.RFC3339), ValidUntil: time.Unix(expiry, 0).UTC().Format(time.RFC3339), NBF: nbf, EXP: expiry,
-		CredentialStatus: protocol.CredentialStatus{ID: id, Type: protocol.StatusTypeDomainCertification},
-		CredentialSubject: protocol.DomainAuthoritySubject{ID: dom.DID, DomainID: "B", IdentityIssuers: []protocol.IssuerScope{{
-			ID: ib.ID, AppKeyVersion: keyVersion, CredentialTypes: auth[0].Types, ClaimNames: auth[0].Claims,
-		}}},
+		CredentialStatus:  protocol.CredentialStatus{ID: id, Type: protocol.StatusTypeDomainCertification},
+		CredentialSubject: protocol.DomainAuthoritySubject{ID: dom.DID, DomainID: "B", IdentityIssuers: auth},
 	}
 	jws, digest, err := protocol.SignDomainAuthorityCredential(tKey, root.KeyID, &claims)
 	if err != nil {
 		return "", err
 	}
-	input := api.Certify{ExpectedCertification: dom.Certification, ExpectedRevision: dom.Revision,
-		Certification: api.Certification{Bound: api.Bound{DeploymentID: e.d.DeploymentID}, ID: id, Domain: "B", RootKeyVersion: root.KeyVersion,
-			Digest: digest, Scopes: auth, Interval: api.Interval{NBF: nbf, EXP: expiry}}}
+	input := registry.Certify{
+		ExpectedCertification: dom.Certification, ExpectedRevision: dom.Revision,
+		Certification: registry.Certification{
+			Bound: registry.Bound{DeploymentID: e.d.DeploymentID}, ID: id, Domain: "B", RootKeyVersion: root.KeyVersion,
+			Digest: digest, Scopes: auth, Interval: registry.Interval{NBF: nbf, EXP: expiry},
+		},
+	}
 	op, err := e.op(label, "T", "CertifyDomain", input, "VALID")
 	if err != nil {
 		return "", err
@@ -534,11 +549,11 @@ func (e *e1Trial) renewB(label string, keyVersion uint64, expiry int64) (string,
 	if err != nil {
 		return "", err
 	}
-	rootPub, _, err := protocol.ParseAppPublicKey(root.PublicKey)
+	rootPub, err := protocol.ParseAppPublicKey(root.PublicKey)
 	if err != nil {
 		return "", err
 	}
-	ds := fabric.NewDeliveryService(e.db)
+	ds := registrysvc.NewDeliveryService(e.db, e.d.DeploymentID)
 	for _, actor := range []string{"C", "A1", "B1"} {
 		recipient := e.f.Identities[actor].ID
 		if err := ds.PublishDomainCertification(e.ctx, snap.Snapshot, recipient, "B", jws, rootPub, op.TxID, int64(op.Commit.Number), true, time.Now().Unix()); err != nil {
@@ -574,11 +589,11 @@ func (e *e1Trial) renewAuthority() error {
 	}
 	if err := e.forModes(func(m *e1Mode) error {
 		handler := e.server.Handler()
-		consumed, oldCode, _, err := e.exercise(m, handler, "quote.read", "e1-"+m.tag+"-old-cert", m.pkg.TrustPaths, time.Now)
+		consumed, oldCode, _, err := e.exercise(m, handler, registry.ActionQuoteRead, "e1-"+m.tag+"-old-cert", m.pkg.TrustPaths, time.Now)
 		if err != nil {
 			return err
 		}
-		allowed, newCode, out, err := e.exercise(m, handler, "quote.read", "e1-"+m.tag+"-new-cert", e.withBCert(m, cert), time.Now)
+		allowed, newCode, out, err := e.exercise(m, handler, registry.ActionQuoteRead, "e1-"+m.tag+"-new-cert", e.withBCert(m, cert), time.Now)
 		if err != nil {
 			return err
 		}
@@ -594,16 +609,20 @@ func (e *e1Trial) renewAuthority() error {
 		return err
 	}
 
-	ib, err := currentRecord[api.Identity](e, "identity", e.f.Domains["B"].Issuers[0].ID)
+	ib, err := currentRecord[registry.Identity](e, "identity", e.f.Domains["B"].Issuers[0].ID)
 	if err != nil {
 		return err
 	}
-	key, pub, err := protocol.GenerateP256KeyPair()
+	key, err := protocol.GenerateP256Key()
+	if err != nil {
+		return err
+	}
+	pub, err := protocol.FormatAppPublicKey(&key.PublicKey)
 	if err != nil {
 		return err
 	}
 	keyID := ib.ID + "#key-2"
-	doc, err := protocol.NewDIDDocument(ib.ID, keyID, pub, protocol.KeyPurposeAssertionMethod)
+	doc, err := protocol.NewDIDDocument(ib.ID, keyID, &key.PublicKey, protocol.KeyPurposeAssertionMethod)
 	if err != nil {
 		return err
 	}
@@ -611,8 +630,10 @@ func (e *e1Trial) renewAuthority() error {
 	if err != nil {
 		return err
 	}
-	rotation := api.AuthorityIdentityUpdateInput{Bound: api.Bound{DeploymentID: e.d.DeploymentID}, ID: ib.ID, ExpectedRevision: ib.Revision,
-		ExpectedKeyVersion: ib.KeyVersion, Management: ib.Management, DocumentDigest: api.Digest(docRaw), KeyID: keyID, PublicKey: pub}
+	rotation := registry.AuthorityIdentityUpdateInput{
+		Bound: registry.Bound{DeploymentID: e.d.DeploymentID}, ID: ib.ID, ExpectedRevision: ib.Revision,
+		ExpectedKeyVersion: ib.KeyVersion, Management: ib.Management, DocumentDigest: registry.Digest(docRaw), KeyID: keyID, PublicKey: pub,
+	}
 	rotate, err := e.op("F15-rotate-IB", "T", "UpdateAuthorityIdentity", rotation, "VALID")
 	if err != nil {
 		return err
@@ -628,7 +649,7 @@ func (e *e1Trial) renewAuthority() error {
 		return err
 	}
 	if err := e.forModes(func(m *e1Mode) error {
-		status, code, _, err := e.exercise(m, e.server.Handler(), "quote.read", "e1-"+m.tag+"-old-ib", e.withBCert(m, rotatedCert), time.Now)
+		status, code, _, err := e.exercise(m, e.server.Handler(), registry.ActionQuoteRead, "e1-"+m.tag+"-old-ib", e.withBCert(m, rotatedCert), time.Now)
 		if err != nil {
 			return err
 		}
@@ -647,17 +668,21 @@ func (e *e1Trial) renewAuthority() error {
 	credential := old
 	credential.ID += ":ib2"
 	credential.IssuerKeyVersion = ib.KeyVersion + 1
-	activeB, err := currentRecord[api.Domain](e, "domain", "B")
+	activeB, err := currentRecord[registry.Domain](e, "domain", "B")
 	if err != nil {
 		return err
 	}
-	anchor, err := currentRecord[api.Certification](e, "certification", activeB.Certification)
+	anchor, err := currentRecord[registry.Certification](e, "certification", activeB.Certification)
 	if err != nil {
 		return err
 	}
 	credential.NBF = max(credential.NBF, anchor.NBF)
 	credential.EXP = min(credential.EXP, anchor.EXP)
-	jwk, err := protocol.AppPublicKeyToJWK(b1.PublicKey)
+	b1Pub, err := protocol.ParseAppPublicKey(b1.PublicKey)
+	if err != nil {
+		return err
+	}
+	jwk, err := protocol.JWKFromPublicKey(b1Pub)
 	if err != nil {
 		return err
 	}
@@ -682,18 +707,18 @@ func (e *e1Trial) renewAuthority() error {
 		return err
 	}
 	e.f.Credentials["B1"] = credential
-	if err := writePublicFile(e.instance.registrySubPath("credentials", "B1.sdjwt"), []byte(signed.PresentationPrefix)); err != nil {
+	if err := writePublicFile(e.inst.RegistryPath("credentials", "B1.sdjwt"), []byte(signed.PresentationPrefix)); err != nil {
 		return err
 	}
-	if err := writePublicFile(e.instance.registrySubPath("certifications", "B.jws"), []byte(rotatedCert)); err != nil {
+	if err := writePublicFile(e.inst.RegistryPath("certifications", "B.jws"), []byte(rotatedCert)); err != nil {
 		return err
 	}
-	if err := e.save("F15-new-credential", map[string]any{"credential": credential, "presentationDigest": api.Digest([]byte(signed.PresentationPrefix)), "operation": registered}); err != nil {
+	if err := e.save("F15-new-credential", map[string]any{"credential": credential, "presentationDigest": registry.Digest([]byte(signed.PresentationPrefix)), "operation": registered}); err != nil {
 		return err
 	}
 	return e.forModes(func(m *e1Mode) error {
 		next := *m
-		next.leafID = api.Digest([]byte(e.id + "/E1/" + m.tag + "/G2/IB2"))
+		next.leafID = registry.Digest([]byte(e.id + "/E1/" + m.tag + "/G2/IB2"))
 		if err := e.delegate(&next); err != nil {
 			return err
 		}
@@ -729,7 +754,7 @@ func (e *e1Trial) evidenceBindings() error {
 			return err
 		}
 		// Use the original public documents, including IB v1, for the historical verifier.
-		didServer, resolver, err := e.newControlledDIDResolver()
+		didServer, resolver, err := e.inst.StartRegistryDIDResolver(e.dep)
 		if err != nil {
 			return err
 		}
@@ -740,7 +765,7 @@ func (e *e1Trial) evidenceBindings() error {
 		}
 		leaf := m.pkg.LeafPresentation[:strings.LastIndexByte(m.pkg.LeafPresentation, '~')+1]
 		kbJWT := m.pkg.LeafPresentation[len(leaf):]
-		parsedKB, err := protocol.ParseCompactJWS(kbJWT, protocol.TypKeyBindingJWT)
+		parsedKB, err := protocol.ParseCompactJWS(kbJWT, protocol.TypeKBJWT)
 		if err != nil {
 			return err
 		}
@@ -750,21 +775,21 @@ func (e *e1Trial) evidenceBindings() error {
 		}
 		ancestors := make([]map[string]string, 0, len(m.pkg.AncestorCredentials))
 		for _, a := range m.pkg.AncestorCredentials {
-			ancestors = append(ancestors, map[string]string{"credentialId": a.CredentialID, "digest": api.Digest([]byte(a.Presentation))})
+			ancestors = append(ancestors, map[string]string{"credentialId": a.CredentialID, "digest": registry.Digest([]byte(a.Presentation))})
 		}
 		trust := make([]map[string]string, 0, len(m.pkg.TrustPaths))
 		for _, tp := range m.pkg.TrustPaths {
-			trust = append(trust, map[string]string{"issuer": tp.Issuer, "domainCertification": api.Digest([]byte(tp.DomainCertification))})
+			trust = append(trust, map[string]string{"issuer": tp.Issuer, "domainCertification": registry.Digest([]byte(tp.DomainCertification))})
 		}
 		task, err := m.pkg.TaskSpec.Digest()
 		if err != nil {
 			return err
 		}
-		canonical, err := protocol.MarshalJCS(map[string]any{"ancestors": ancestors, "leaf": api.Digest([]byte(leaf)), "taskSpec": task, "trustPaths": trust})
+		canonical, err := protocol.MarshalJCS(map[string]any{"ancestors": ancestors, "leaf": registry.Digest([]byte(leaf)), "taskSpec": task, "trustPaths": trust})
 		if err != nil {
 			return err
 		}
-		evidenceHash := api.Digest(canonical)
+		evidenceHash := registry.Digest(canonical)
 		badBytes := *m.pkg
 		badBytes.TrustPaths = slices.Clone(m.pkg.TrustPaths)
 		jws := []byte(badBytes.TrustPaths[0].DomainCertification)
@@ -796,7 +821,7 @@ func (e *e1Trial) evidenceBindings() error {
 		}
 		if err := e.save("F16-"+m.tag, map[string]any{"height": height, "challenge": publicChallenge, "originalRecords": m.pkg.TrustPaths,
 			"grantJWS": m.pkg.Grants, "canonicalEvidence": string(canonical), "walletEvidenceHash": evidenceHash,
-			"verifiedEvidenceHash": result.Bindings.EvidenceHash, "kbJwtDigest": api.Digest([]byte(kbJWT)),
+			"verifiedEvidenceHash": result.Bindings.EvidenceHash, "kbJwtDigest": registry.Digest([]byte(kbJWT)),
 			"kbEvidenceHash": kb.GradBinding.EvidenceHash, "changedEvidenceHash": changed.EvidenceHash,
 			"absentCredentialControl": fmt.Sprint(pendingErr), "byteChangeError": fmt.Sprint(byteErr), "orderChangeError": fmt.Sprint(orderErr)}); err != nil {
 			return err

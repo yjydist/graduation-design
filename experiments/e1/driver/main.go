@@ -16,15 +16,26 @@ import (
 	"syscall"
 	"time"
 
-	"graduation-design/internal/agent"
-	"graduation-design/internal/fabric"
-	api "graduation-design/internal/fabricapi"
-	"graduation-design/internal/gateway"
-	"graduation-design/internal/policy"
-	"graduation-design/internal/protocol"
-
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"grad/experiments/harness"
+	"grad/platform/agent"
+	"grad/platform/gateway"
+	"grad/platform/policy"
+	"grad/platform/registrysvc"
+	platformrt "grad/platform/runtime"
+	"grad/platform/state"
+	"grad/platform/state/fabric"
+	"grad/protocol"
+	"grad/protocol/registry"
 )
+
+var e1ManifestInputFiles = []string{
+	"go.work",
+	"platform/go.mod",
+	"experiments/go.mod",
+	"infra/fabric/compose.yaml",
+}
 
 type verdict struct {
 	Name          string `json:"name"`
@@ -48,15 +59,17 @@ type report struct {
 type e1Trial struct {
 	ctx                          context.Context
 	id, dir, ledgerctl, revision string
-	instance                     instance
+	instanceDir                  string
+	inst                         *fabric.Instance
+	dep                          *fabric.Deployment
 	cfg                          agent.RunnerConfig
 	configuredURL                string
 	d                            deployment
 	db                           *pgxpool.Pool
-	f                            fixture
+	f                            platformrt.Fixtures
 	seed                         seedReport
 	sp                           *fabric.StateProvider
-	state                        gateway.StateSource
+	state                        state.StateSource
 	did                          *protocol.DIDWebServer
 	resolver                     *protocol.DIDWebResolver
 	server                       *gateway.Server
@@ -71,8 +84,8 @@ type e1Trial struct {
 
 type e1Mode struct {
 	tag       string
-	task      api.Task
-	g0, g1    api.Grant
+	task      registry.Task
+	g0, g1    registry.Grant
 	leafID    string
 	wallet    *agent.WalletContext
 	delegated bool
@@ -86,7 +99,7 @@ func main() {
 	flag.StringVar(&e.revision, "revision", "", "fixed project commit")
 	flag.StringVar(&e.dir, "out", "", "new experiment output directory")
 	flag.StringVar(&e.ledgerctl, "ledgerctl", "", "ledgerctl binary built from the fixed commit")
-	flag.StringVar(&e.instance.dir, "dir", "", "isolated Fabric instance")
+	flag.StringVar(&e.instanceDir, "dir", "", "isolated Fabric instance")
 	flag.Parse()
 	if err := e.run(); err != nil {
 		fmt.Fprintln(os.Stderr, e.redact(err.Error()))
@@ -94,9 +107,17 @@ func main() {
 	}
 }
 
-func (e *e1Trial) run() (err error) {
-	if e.dir == "" || e.ledgerctl == "" || e.revision == "" || e.instance.dir == "" {
+func (e *e1Trial) validateFlags() error {
+	if strings.TrimSpace(e.dir) == "" || strings.TrimSpace(e.ledgerctl) == "" ||
+		strings.TrimSpace(e.revision) == "" || strings.TrimSpace(e.instanceDir) == "" {
 		return fmt.Errorf("revision, out, ledgerctl and dir are required")
+	}
+	return nil
+}
+
+func (e *e1Trial) run() (err error) {
+	if err := e.validateFlags(); err != nil {
+		return err
 	}
 	e.id = filepath.Base(e.dir)
 	r := report{Run: e.id, Status: "FAIL", Stage: "preparation", Started: time.Now().UTC(), Cases: []verdict{}}
@@ -183,10 +204,20 @@ func (e *e1Trial) setup() error {
 	if err := e.command(e.ctx, &e.d, "deploy"); err != nil {
 		return err
 	}
+	inst, err := fabric.OpenInstance(e.instanceDir)
+	if err != nil {
+		return err
+	}
+	e.inst = inst
+	dep, err := inst.LoadDeployment()
+	if err != nil {
+		return err
+	}
+	e.dep = dep
 	if err := e.saveManifest(); err != nil {
 		return err
 	}
-	db, err := e.instance.database(e.ctx)
+	db, err := inst.Database(e.ctx)
 	if err != nil {
 		return err
 	}
@@ -197,15 +228,15 @@ func (e *e1Trial) setup() error {
 
 	provider := fabric.NewStateProviderFromBootstrap(db, e.d.DeploymentID, e.d.Bootstrap, nil)
 	e.sp = provider
-	e.state = &liveState{StateSource: provider.GatewayAdapter(), trial: e}
+	e.state = &liveState{StateSource: provider, trial: e}
 	if _, err := e.refresh(e.ctx, e.f.RPG2.ID); err != nil {
 		return err
 	}
-	e.did, e.resolver, err = e.newControlledDIDResolver()
+	e.did, e.resolver, err = inst.StartRegistryDIDResolver(dep)
 	if err != nil {
 		return err
 	}
-	if err := gateway.EnsureSchema(e.ctx, db, e.d.DeploymentID, "urn:grad:supplier:C"); err != nil {
+	if err := gateway.EnsureSchema(e.ctx, db, e.d.DeploymentID, gateway.DefaultSupplierID); err != nil {
 		return err
 	}
 	c := e.f.Identities["C"].ID
@@ -226,7 +257,7 @@ func (e *e1Trial) setup() error {
 		{tag: "bm", task: e.f.BMTask, g0: e.f.BMG0, g1: e.f.BMG1},
 	}
 	for _, mode := range e.modes {
-		mode.leafID = api.Digest([]byte(e.id + "/E1/" + mode.tag + "/G2"))
+		mode.leafID = registry.Digest([]byte(e.id + "/E1/" + mode.tag + "/G2"))
 	}
 	return e.saveManifest()
 }
@@ -238,15 +269,19 @@ func (e *e1Trial) saveManifest() error {
 	}
 	binaries := map[string]string{}
 	for name, path := range map[string]string{"ledgerctl": e.ledgerctl, "driver": driverPath} {
-		value, err := sha256File(path)
+		value, err := harness.SHA256File(path)
 		if err != nil {
 			return err
 		}
 		binaries[name] = value
 	}
+	repoRoot, err := harness.RepoRoot()
+	if err != nil {
+		repoRoot = "."
+	}
 	inputs := map[string]string{}
-	for _, name := range []string{"go.mod", "go.sum", "infra/fabric/compose.yaml"} {
-		hash, err := sha256File(name)
+	for _, name := range e1ManifestInputFiles {
+		hash, err := harness.SHA256File(filepath.Join(repoRoot, filepath.FromSlash(name)))
 		if err != nil {
 			return err
 		}
@@ -258,9 +293,9 @@ func (e *e1Trial) saveManifest() error {
 	}
 	updates := map[string]any{
 		"experiment": "E1", "runId": e.id, "sourceCommit": e.revision, "binarySHA256": binaries, "fileSHA256": inputs,
-		"instance": e.instance.dir, "deployment": e.d.Raw, "host": runtime.GOOS + "/" + runtime.GOARCH, "go": runtime.Version(),
+		"instance": e.instanceDir, "deployment": e.d.Raw, "host": runtime.GOOS + "/" + runtime.GOARCH, "go": runtime.Version(),
 		"configuration":      "Fabric fixed-height, static signature cache disabled; real lease acquired using ledgerctl check and handed to the existing StateProvider",
-		"authorizationModes": []string{api.RP, api.BM},
+		"authorizationModes": []string{registry.RP, registry.BM},
 		"llm":                map[string]any{"provider": e.cfg.Provider, "model": e.cfg.Model, "configuredBaseURL": e.configuredURL, "baseURL": e.cfg.BaseURL, "maxSteps": e.cfg.MaxSteps},
 	}
 	for k, v := range updates {
@@ -277,7 +312,11 @@ func (e *e1Trial) saveManifest() error {
 	if e.bundle != nil {
 		manifest["policyDigest"] = e.bundle.PolicyDigest
 	}
-	if fixtureSum, err := sha256File(e.instance.registrySubPath("fixtures.json")); err == nil {
+	fixturesPath := filepath.Join(e.instanceDir, "registry", "fixtures.json")
+	if e.inst != nil {
+		fixturesPath = e.inst.RegistryPath("fixtures.json")
+	}
+	if fixtureSum, err := harness.SHA256File(fixturesPath); err == nil {
 		manifest["fixtureDigest"] = fixtureSum
 	}
 	return e.save("manifest", manifest)
@@ -294,10 +333,7 @@ func (e *e1Trial) save(name string, value any) error {
 }
 
 func (e *e1Trial) redact(value string) string {
-	if e.cfg.APIKey != "" {
-		return strings.ReplaceAll(value, e.cfg.APIKey, "[REDACTED]")
-	}
-	return value
+	return harness.RedactSecrets(value, e.cfg.APIKey)
 }
 
 func (e *e1Trial) forModes(run func(*e1Mode) error) error {
@@ -313,10 +349,17 @@ func (e *e1Trial) forModes(run func(*e1Mode) error) error {
 }
 
 func (e *e1Trial) newGateway(resolver *protocol.DIDWebResolver, bundle *policy.VerifiedBundle, now func() time.Time) (*gateway.Server, error) {
-	return gateway.NewServer(gateway.Config{
-		DB: e.db, State: e.state, Delivery: fabric.NewDeliveryService(e.db), DIDs: resolver,
-		Policy: bundle, DeploymentID: e.d.DeploymentID, ServiceDID: e.f.Identities["C"].ID,
-		Audience: "https://c.local", SupplierID: "urn:grad:supplier:C", NowFn: now,
+	return gateway.NewServer(gateway.ServerConfig{
+		DB:           e.db,
+		State:        e.state,
+		CertChecker:  registrysvc.NewDeliveryService(e.db, e.d.DeploymentID),
+		DIDs:         resolver,
+		Policy:       bundle,
+		DeploymentID: e.d.DeploymentID,
+		ServiceDID:   e.f.Identities["C"].ID,
+		Audience:     "https://c.local",
+		SupplierID:   gateway.DefaultSupplierID,
+		NowFn:        now,
 	})
 }
 

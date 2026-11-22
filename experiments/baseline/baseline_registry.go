@@ -1,4 +1,4 @@
-package main
+package baseline
 
 import (
 	"context"
@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"graduation-design/internal/fabric"
-	api "graduation-design/internal/fabricapi"
-	"graduation-design/internal/protocol"
+	"grad/platform/state/fabric"
+	"grad/protocol"
+	"grad/protocol/registry"
 )
 
 type baselineAnchorEvidence struct {
@@ -55,7 +55,7 @@ func addBaselineRecords[T any](records map[string]any, kind string, values map[s
 }
 
 // baselineAnchorFingerprint excludes only source-specific record revisions from the comparison.
-func baselineAnchorFingerprint(root api.RootRecord, records map[string]any) (baselineAnchorEvidence, error) {
+func baselineAnchorFingerprint(root registry.RootRecord, records map[string]any) (baselineAnchorEvidence, error) {
 	var evidence baselineAnchorEvidence
 	raw, err := json.Marshal(records)
 	if err != nil {
@@ -75,33 +75,41 @@ func baselineAnchorFingerprint(root api.RootRecord, records map[string]any) (bas
 		delete(fields, "revision")
 	}
 	canonical, err := protocol.MarshalJCS(struct {
-		Root    api.RootRecord                        `json:"root"`
+		Root    registry.RootRecord                   `json:"root"`
 		Records map[string]map[string]json.RawMessage `json:"records"`
 	}{Root: root, Records: anchors})
 	if err != nil {
 		return evidence, err
 	}
-	return baselineAnchorEvidence{AnchorDigest: api.Digest(canonical), ObjectRevisions: revisions}, nil
+	return baselineAnchorEvidence{
+		AnchorDigest:    registry.Digest(canonical),
+		ObjectRevisions: revisions,
+	}, nil
 }
 
 func (r *baselineRun) checkRegistryReadback(ctx context.Context, expected *protocol.SnapshotView) error {
 	readback := &baselineRegistryReadback{}
 	r.evidence.Manifest["registry_readback"] = readback
-	central, err := r.c0.ReadRegistry(ctx)
+
+	centralSnap, err := r.c0.ReadRegistry(ctx)
 	if err != nil {
 		return fmt.Errorf("read C0 registry: %w", err)
 	}
-	anchors, err := baselineAnchorFingerprint(central.Snapshot.Root, baselineRegistryRecords(central.Snapshot))
+	anchors, err := baselineAnchorFingerprint(centralSnap.Snapshot.Root, baselineRegistryRecords(centralSnap.Snapshot))
 	if err != nil {
 		return fmt.Errorf("fingerprint C0 registry: %w", err)
 	}
-	readback.C0 = &baselineCentralReadback{baselineAnchorEvidence: anchors, Revision: central.Revision, StateReadAt: central.StateReadAt}
+	readback.C0 = &baselineCentralReadback{
+		baselineAnchorEvidence: anchors,
+		Revision:               centralSnap.Revision,
+		StateReadAt:            centralSnap.StateReadAt,
+	}
 
 	keys := slices.Sorted(maps.Keys(baselineRegistryRecords(expected)))
 	ledgerKeys := make([]string, len(keys))
 	for n, key := range keys {
 		kind, id, _ := strings.Cut(key, "/")
-		ledgerKeys[n] = api.Key(kind, id)
+		ledgerKeys[n] = registry.Key(kind, id)
 	}
 	applied, err := fabric.ReadAppliedRegistry(ctx, r.db, r.d, ledgerKeys)
 	if err != nil {
@@ -115,7 +123,11 @@ func (r *baselineRun) checkRegistryReadback(ctx context.Context, expected *proto
 	if err != nil {
 		return fmt.Errorf("fingerprint Fabric registry: %w", err)
 	}
-	readback.Fabric = &baselineFabricReadback{baselineAnchorEvidence: anchors, BlockNumber: applied.Number, BlockHash: applied.Hash}
+	readback.Fabric = &baselineFabricReadback{
+		baselineAnchorEvidence: anchors,
+		BlockNumber:            applied.Number,
+		BlockHash:              applied.Hash,
+	}
 	matched := readback.C0.AnchorDigest == readback.Fabric.AnchorDigest
 	readback.Matched = &matched
 	if !matched {

@@ -7,27 +7,37 @@
 | `README.md` | 仓库总入口, 指向毕设项目和论文实验. |
 | `毕设要求.md` | 毕设任务要求, 需求编号与项目边界. |
 | `TODO.md` | 项目进度, 交付与论文写作清单. |
-| `go.mod`, `go.sum` | Go 模块与依赖锁定. |
-| `mise.toml` | 工具链版本和项目运行命令. |
-| `cmd/` | 项目命令行入口. |
-| `internal/` | 项目服务, 状态源和协议实现. |
-| `chaincode/` | Fabric 链码. |
-| `infra/` | 基础设施与项目集成验收. |
-| `docs/` | 项目设计及实现契约. |
-| `experiments/` | 论文实验的方法, 驱动, 进度和证据. |
-| `openspec/` | 工作流配置, 能力规范和变更制品. |
+| `go.work`, `go.work.sum` | Go 1.27 四模块工作区与校验和锁定. |
+| `mise.toml` | 工具链版本和项目构建, 测试与部署命令. |
+| `protocol/` | 独立 Go 模块 `grad/protocol`: 协议编解码, 密码学原语, 凭证/委托/证据包校验与链上登记共享类型. |
+| `chaincode/` | 独立 Go 模块 `grad/chaincode`: Fabric 登记链码 `authregistry`. |
+| `platform/` | 独立 Go 模块 `grad/platform`: 状态源, OPA 策略, 管理服务, 网关, 智能体钱包, 运行时装配与 `ledgerctl` CLI. |
+| `experiments/` | 独立 Go 模块 `grad/experiments`: 论文实验方法, 统一 `exp` CLI, 底座, 驱动, 进度和证据. |
+| `infra/` | 基础设施配置与 Fabric 网络脚本及集成验收记录. |
+| `docs/` | 项目设计, 需求追踪及实现契约. |
+| `openspec/` | 工作流配置 (`config.yaml`), 已接受的能力规范 (`specs/`) 与变更制品及历史归档 (`changes/`). |
 | `paper/` | 原始论文 PDF 和阅读笔记. |
 
-目录结构只列直属文件和目录. 下一级细节由下一级的 `AGENTS.md` 维护. 有本地维护规则或需要承接下级索引时增设指引, 其余目录继承最近的父级指引.
+目录结构只列直属文件和目录. 下一级细节由顶层模块的 `AGENTS.md` 维护 (`protocol/`, `chaincode/`, `platform/`, `experiments/`, `docs/`, `infra/`), 其余子目录继承最近的父级指引.
 
 ## 项目与实验边界
 
-- 同仓同 Go 模块内采用单向依赖. 项目构建, 部署, 运行及回归仅依赖项目侧实现和配置. 实验通过 Go, CLI, HTTP 和 MCP 接口调用项目.
+- 同仓四模块工作区采用严格单向依赖: `grad/protocol` 为纯协议基础模块 (子包 `grad/protocol/registry` 零第三方依赖), `grad/chaincode` 仅依赖 `grad/protocol/registry` 与 Fabric 链码运行时, `grad/platform` 单向依赖 `grad/protocol`, `grad/experiments` 仅调用 `grad/protocol` 与 `grad/platform` 的公开 API, 严禁导入 `grad/platform/internal/...` 或让项目模块反向依赖 `grad/experiments`.
 - 项目维护协议与业务语义, 部署入口, 通用观测接口和行为回归. 实验侧维护实验场景, 比较配置, 编排, 采样, 分析, 实验配置及证据. 实验需要新增能力时, 先定义和独立验证可复用的项目接口, 再在实验侧接入.
-- 项目任务从[仓库入口](README.md)进入相关设计, 实现契约和模块手册. 验证使用 `mise run ledger:build`, `mise run test:unit` 和适用的项目集成回归. 依赖边界用 `mise exec -- go list -deps -test ./cmd/... ./internal/... ./chaincode/...` 核对.
-- 实验任务从[实验索引](experiments/README.md)定位方法, 用例和运行入口. 在仓库根目录用 `mise -C experiments run experiment:test` 验证实验包, 其他实验命令见对应运行说明.
+- 项目任务从[仓库入口](README.md)进入相关设计, 实现契约和模块手册. 常用验证命令:
+  - `mise run ledger:build`: 构建 `build/ledgerctl` 可执行文件.
+  - `mise run test:unit`: 运行 `protocol`, `chaincode`, `platform` 三模块离线单元测试.
+  - `mise run test:db`: 运行 `platform` PostgreSQL 集成测试 (`//go:build db`, 自动通过 `testcontainers-go` 启动 `postgres:17-alpine` 或读取 `TEST_POSTGRES_DSN`).
+  - `mise run ledger:verify`: 在已启动的隔离实例 (`FABRIC_INSTANCE`) 上运行 Fabric 实机集成验收 (`//go:build fabriclive`).
+  - 依赖边界用 `mise exec -- go list -deps -test grad/protocol/... grad/chaincode/... grad/platform/...` 核对无 `grad/experiments`, 并用 `mise exec -- go list -deps -test grad/experiments/...` 核对无 `grad/platform/internal/`.
+- 实验任务从[实验索引](experiments/README.md)定位方法, 用例和运行入口. 在仓库根目录用 `mise -C experiments run experiment:test` 验证实验模块, 其他实验命令见对应运行说明.
 
 ## 项目原则
+
+### 演进与重构
+
+- 在打上 `git tag v1.0.0` 之前, 允许破坏性重构, 不考虑任何历史兼容性, 一切选择最优设计.
+- 涉及目录组织, 模块边界, 公开 API, 协议字节格式, REST 接口, 链码接口, 数据库表结构与 CLI 时, 优先追求高内聚, 低耦合与深模块, 直接移除过时字段, 历史前缀与过渡适配层, 并同步更新契约与规范.
 
 ### 文档格式
 
@@ -52,10 +62,10 @@
 
 ### 内容维护
 
-- 机制由设计主题文档定义. 变更时同步核对实现规格, 项目回归和技术栈. 项目需求到实现的追踪集中在设计导航, 实验侧维护研究问题到用例和结果的追踪.
+- 机制由设计主题文档定义. 变更时同步核对实现规格, 项目回归和技术栈. 项目需求到实现的追踪集中在[项目文档导航](docs/AGENTS.md#从任务书到实现), 实验侧维护研究问题到用例和结果的追踪.
 - `docs/` 正文和导航只在设计或契约变化时更新, 不记录阶段状态, 排期, 单次运行结果或复跑记录. 可引用其他设计资料, 任务书, 论文和技术规范, 不得链接 TODO, 变更实施任务, 核验记录, 证据索引或含进度内容的模块 README. 任务和核验记录可以引用 `docs/`.
 - README 维护阅读和运行入口. 根 TODO 维护项目状态及交付, 实验 TODO 维护实验阶段, 下一步和退出条件. 任务应引用适用的契约, 核验结论和证据. 复用这些入口管理进度.
-- OpenSpec 主规范在能力要求变化时按工作流更新. 活动变更制品随规划, 实施和核验更新, 历史归档保留当时的任务与结论, 不随当前进度改写.
+- OpenSpec 主规范在能力要求变化时按工作流更新. 修改规范前查阅现有契约和活动变更; 活动变更制品随规划, 实施和核验更新, 历史归档保留当时的任务与结论, 不随当前进度改写.
 - 既有模块 README 维护运行命令及前置条件, 在运行方式变化时更新. 证据目录在运行时保存实例配置, 原始数据, 实际结果及失败样本, 由证据索引和变更核验记录定位; 保留历史原始材料和失败记录.
 - 文献编号保持稳定, 下载与阅读是不同状态. 原始论文 PDF 不因文档格式调整而删除或改写.
 

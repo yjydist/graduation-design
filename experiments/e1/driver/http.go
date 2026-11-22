@@ -2,16 +2,15 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"time"
 
-	"graduation-design/internal/gateway"
-	"graduation-design/internal/protocol"
+	"grad/platform/gateway"
+	"grad/platform/policy"
+	"grad/protocol"
 )
 
 func postJSON(handler http.Handler, path string, input any) (*httptest.ResponseRecorder, error) {
@@ -32,7 +31,11 @@ func (e *e1Trial) ensureTaskContextNormal(handler http.Handler, taskID string, n
 		return 0, err
 	}
 	resp, err := postJSON(handler, "/v1/contexts/"+taskID, gateway.ContextUpdateRequest{
-		ExpectedContextVersion: version, SourceID: "ctx-verifier-c", ObservedAt: now - 1, RiskLevel: "NORMAL", AccessDeadline: e.f.RPTask.EXP,
+		ExpectedContextVersion: version,
+		SourceID:               "ctx-verifier-c",
+		ObservedAt:             now - 1,
+		RiskLevel:              policy.RiskNormal,
+		AccessDeadline:         e.f.RPTask.EXP,
 	})
 	if err != nil {
 		return 0, err
@@ -77,22 +80,4 @@ func gatewayPostExecute(handler http.Handler, pkg protocol.AccessEvidencePackage
 		http.Error(resp, err.Error(), http.StatusBadRequest)
 	}
 	return resp
-}
-
-func poll(ctx context.Context, limit time.Duration, check func() (bool, error)) error {
-	wait, cancel := context.WithTimeout(ctx, limit)
-	defer cancel()
-	tick := time.NewTicker(150 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		ready, err := check()
-		if err != nil || ready {
-			return err
-		}
-		select {
-		case <-wait.Done():
-			return wait.Err()
-		case <-tick.C:
-		}
-	}
 }

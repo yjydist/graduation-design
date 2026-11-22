@@ -4,12 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/csv"
-	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -26,20 +21,24 @@ import (
 	"syscall"
 	"time"
 
-	"graduation-design/internal/agent"
-	"graduation-design/internal/fabric"
-	api "graduation-design/internal/fabricapi"
-	"graduation-design/internal/gateway"
-	"graduation-design/internal/policy"
-	"graduation-design/internal/protocol"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"grad/experiments/harness"
+	"grad/platform/agent"
+	"grad/platform/gateway"
+	"grad/platform/policy"
+	"grad/platform/registrysvc"
+	platformrt "grad/platform/runtime"
+	"grad/platform/state"
+	"grad/platform/state/fabric"
+	"grad/protocol"
+	"grad/protocol/registry"
 )
 
 const (
 	clockTimebaseHostUTC = "host-utc-unix-ns"
-	defaultSupplierID    = "urn:grad:supplier:C"
+	defaultSupplierID    = gateway.DefaultSupplierID
 	defaultAudience      = "https://c.local"
 )
 
@@ -56,6 +55,44 @@ type e6Config struct {
 	duration       time.Duration
 	instances      int
 	seed           int
+}
+
+func validateE6Config(cfg e6Config) (modeShort, authMode, configName string, err error) {
+	if strings.TrimSpace(cfg.dir) == "" || strings.TrimSpace(cfg.out) == "" {
+		return "", "", "", fmt.Errorf("dir and out are required")
+	}
+	modeShort = strings.ToUpper(strings.TrimSpace(cfg.mode))
+	switch modeShort {
+	case "RP":
+		authMode = registry.RP
+	case "BM":
+		authMode = registry.BM
+	default:
+		return "", "", "", fmt.Errorf("mode must be RP or BM, got %q", cfg.mode)
+	}
+	configName = strings.ToUpper(strings.TrimSpace(cfg.configuration))
+	if configName != "B0" && configName != "B1" {
+		return "", "", "", fmt.Errorf("configuration must be B0 or B1, got %q", cfg.configuration)
+	}
+	if cfg.instances < 1 || cfg.instances > 2 {
+		return "", "", "", fmt.Errorf("instances must be 1 or 2 (dedicated probe1/probe2 roles), got %d", cfg.instances)
+	}
+	if cfg.probeInterval <= 0 {
+		return "", "", "", fmt.Errorf("probe-interval must be positive, got %s", cfg.probeInterval)
+	}
+	if cfg.probeLifetime < cfg.probeInterval {
+		return "", "", "", fmt.Errorf("probe-lifetime (%s) must be >= probe-interval (%s)", cfg.probeLifetime, cfg.probeInterval)
+	}
+	if cfg.detectInterval <= 0 {
+		return "", "", "", fmt.Errorf("detect-interval must be positive, got %s", cfg.detectInterval)
+	}
+	if cfg.revokeAfter < 0 {
+		return "", "", "", fmt.Errorf("revoke-after must be non-negative, got %s", cfg.revokeAfter)
+	}
+	if cfg.duration <= 0 {
+		return "", "", "", fmt.Errorf("duration must be positive, got %s", cfg.duration)
+	}
+	return modeShort, authMode, configName, nil
 }
 
 type probeSlotRecord struct {
@@ -92,30 +129,96 @@ type probeSlotRecord struct {
 	UnobservedReason   string
 }
 
+type revocationCSVRow struct {
+	RunID               string `csv:"run_id"`
+	Mode                string `csv:"mode"`
+	Configuration       string `csv:"configuration"`
+	RevokedGrantID      string `csv:"revoked_grant_id"`
+	RevocationTxID      string `csv:"revocation_tx_id"`
+	RevocationBlockR    uint64 `csv:"revocation_block_r"`
+	RevocationBlockHash string `csv:"revocation_block_hash"`
+	TxIndex             int    `csv:"tx_index"`
+	ValidationCode      string `csv:"validation_code"`
+	TSubmitNs           int64  `csv:"t_submit_ns"`
+	TValidNs            int64  `csv:"t_valid_ns"`
+	TApplyNs            string `csv:"t_apply_ns"`
+	InstanceID          string `csv:"instance_id"`
+	ProbeRole           string `csv:"probe_role"`
+	TAdoptNs            string `csv:"t_adopt_ns"`
+	AdoptBlockH         string `csv:"adopt_block_h"`
+	ProbeIntervalMs     int64  `csv:"probe_interval_ms"`
+	ProbeLifetimeMs     int64  `csv:"probe_lifetime_ms"`
+	DetectIntervalMs    int64  `csv:"detect_interval_ms"`
+	ClockTimebase       string `csv:"clock_timebase"`
+	ClockResolutionNs   int64  `csv:"clock_resolution_ns"`
+	ClockErrorNs        int64  `csv:"clock_error_ns"`
+	Status              string `csv:"status"`
+	UnobservedReason    string `csv:"unobserved_reason"`
+}
+
+type requestCSVRow struct {
+	RunID              string `csv:"run_id"`
+	Mode               string `csv:"mode"`
+	Configuration      string `csv:"configuration"`
+	Phase              string `csv:"phase"`
+	InstanceID         string `csv:"instance_id"`
+	ProbeRole          string `csv:"probe_role"`
+	Seq                int64  `csv:"seq"`
+	PlannedAtNs        int64  `csv:"planned_at_ns"`
+	ActualIntervalNs   string `csv:"actual_interval_ns"`
+	SubmittedAtNs      string `csv:"submitted_at_ns"`
+	DecisionAtNs       string `csv:"decision_at_ns"`
+	CommittedAtNs      string `csv:"committed_at_ns"`
+	RespondedAtNs      string `csv:"responded_at_ns"`
+	DecisionAtSec      string `csv:"decision_at_sec"`
+	IdempotencyKey     string `csv:"idempotency_key"`
+	RequestID          string `csv:"request_id"`
+	ChallengeID        string `csv:"challenge_id"`
+	DecisionID         string `csv:"decision_id"`
+	OrderID            string `csv:"order_id"`
+	HTTPStatus         string `csv:"http_status"`
+	Code               string `csv:"code"`
+	Outcome            string `csv:"outcome"`
+	Disposition        string `csv:"disposition"`
+	BlockNumber        string `csv:"block_number"`
+	BlockHash          string `csv:"block_hash"`
+	G1StatusAtBlock    string `csv:"g1_status_at_block"`
+	ProbeTxID          string `csv:"probe_tx_id"`
+	ProbeBlock         string `csv:"probe_block"`
+	ProbeSentAtNs      string `csv:"probe_sent_at_ns"`
+	ProbeDeadlineNs    string `csv:"probe_deadline_ns"`
+	ProbeSentMonoNs    string `csv:"probe_sent_mono_ns"`
+	ProbeCheckedMonoNs string `csv:"probe_checked_mono_ns"`
+	ProbeDeadlineMono  string `csv:"probe_deadline_mono_ns"`
+	ClockTimebase      string `csv:"clock_timebase"`
+	ClockResolutionNs  int64  `csv:"clock_resolution_ns"`
+	UnobservedReason   string `csv:"unobserved_reason"`
+}
+
 type ctxKeySnapshotCapture struct{}
 
 type snapshotCapture struct {
 	mu   sync.Mutex
-	snap *gateway.ConsistentSnapshot
+	snap *state.StateSnapshot
 }
 
-func (c *snapshotCapture) set(s *gateway.ConsistentSnapshot) {
+func (c *snapshotCapture) set(s *state.StateSnapshot) {
 	c.mu.Lock()
 	c.snap = s
 	c.mu.Unlock()
 }
 
-func (c *snapshotCapture) get() *gateway.ConsistentSnapshot {
+func (c *snapshotCapture) get() *state.StateSnapshot {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.snap
 }
 
 type observingStateSource struct {
-	gateway.StateSource
+	state.StateSource
 }
 
-func (o *observingStateSource) AssembleSnapshot(ctx context.Context, leafGrantID string, now time.Time) (*gateway.ConsistentSnapshot, error) {
+func (o *observingStateSource) AssembleSnapshot(ctx context.Context, leafGrantID string, now time.Time) (*state.StateSnapshot, error) {
 	snap, err := o.StateSource.AssembleSnapshot(ctx, leafGrantID, now)
 	if err == nil && snap != nil {
 		if capObj, ok := ctx.Value(ctxKeySnapshotCapture{}).(*snapshotCapture); ok && capObj != nil {
@@ -197,20 +300,24 @@ type probeMaterial struct {
 	deploymentID   string
 }
 
+func registerE6Flags(fs *flag.FlagSet, cfg *e6Config) {
+	fs.StringVar(&cfg.revision, "revision", "", "source commit")
+	fs.StringVar(&cfg.dir, "dir", "", "isolated Fabric instance directory")
+	fs.StringVar(&cfg.out, "out", "", "run output directory")
+	fs.StringVar(&cfg.mode, "mode", "RP", "authorization mode (RP or BM)")
+	fs.StringVar(&cfg.configuration, "configuration", "B0", "verification configuration (B0 or B1)")
+	fs.DurationVar(&cfg.probeInterval, "probe-interval", registry.ProbeInterval, "state probe send interval")
+	fs.DurationVar(&cfg.probeLifetime, "probe-lifetime", registry.ProbeLifetime, "state probe lifetime (deltaState)")
+	fs.DurationVar(&cfg.detectInterval, "detect-interval", 20*time.Millisecond, "planned order probe interval")
+	fs.DurationVar(&cfg.revokeAfter, "revoke-after", time.Second, "pre-revocation probing baseline")
+	fs.DurationVar(&cfg.duration, "duration", 12*time.Second, "post-revocation probing duration")
+	fs.IntVar(&cfg.instances, "instances", 2, "number of gateway instances sharing C view (1 or 2)")
+	fs.IntVar(&cfg.seed, "seed", 1109, "seed identifier")
+}
+
 func main() {
 	var cfg e6Config
-	flag.StringVar(&cfg.revision, "revision", "", "source commit")
-	flag.StringVar(&cfg.dir, "dir", "", "isolated Fabric instance directory")
-	flag.StringVar(&cfg.out, "out", "", "run output directory")
-	flag.StringVar(&cfg.mode, "mode", "RP", "authorization mode (RP or BM)")
-	flag.StringVar(&cfg.configuration, "configuration", "B0", "verification configuration (B0 or B1)")
-	flag.DurationVar(&cfg.probeInterval, "probe-interval", api.ProbeInterval, "state probe send interval")
-	flag.DurationVar(&cfg.probeLifetime, "probe-lifetime", api.ProbeLifetime, "state probe lifetime (deltaState)")
-	flag.DurationVar(&cfg.detectInterval, "detect-interval", 20*time.Millisecond, "planned order probe interval")
-	flag.DurationVar(&cfg.revokeAfter, "revoke-after", time.Second, "pre-revocation probing baseline")
-	flag.DurationVar(&cfg.duration, "duration", 12*time.Second, "post-revocation probing duration")
-	flag.IntVar(&cfg.instances, "instances", 2, "number of gateway instances sharing C view (1 or 2)")
-	flag.IntVar(&cfg.seed, "seed", 1109, "seed identifier")
+	registerE6Flags(flag.CommandLine, &cfg)
 	flag.Parse()
 
 	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -222,22 +329,15 @@ func main() {
 }
 
 func runE6(ctx context.Context, cfg e6Config) (retErr error) {
-	if cfg.dir == "" || cfg.out == "" {
-		return fmt.Errorf("dir and out are required")
+	modeShort, authMode, configName, err := validateE6Config(cfg)
+	if err != nil {
+		return err
 	}
-	modeShort := strings.ToUpper(strings.TrimSpace(cfg.mode))
-	authMode := api.RP
-	if modeShort == "BM" {
-		authMode = api.BM
-	} else if modeShort != "RP" {
-		return fmt.Errorf("mode must be RP or BM, got %q", cfg.mode)
-	}
-	if cfg.instances < 1 || cfg.instances > 2 {
-		return fmt.Errorf("instances must be 1 or 2 (dedicated probe1/probe2 roles), got %d", cfg.instances)
-	}
+	cfg.configuration = configName
+
 	runID := filepath.Base(cfg.out)
 	startedAt := time.Now().UTC()
-	clockResNs := measureClockResolutionNs()
+	clockResNs := harness.MeasureClockResolutionNs(2000)
 
 	eventPath := filepath.Join(cfg.out, "events.jsonl")
 	eventFile, err := os.Create(eventPath)
@@ -265,7 +365,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	if err != nil {
 		return fmt.Errorf("open Fabric instance: %w", err)
 	}
-	d, err := inst.Deploy(ctx)
+	d, err := inst.Deploy(ctx, false)
 	if err != nil {
 		return fmt.Errorf("deploy registry chaincode: %w", err)
 	}
@@ -276,7 +376,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	defer db.Close()
 
 	setup := e6ProcurementSetup(d.DeploymentID, runID, cfg.seed)
-	seedReport, err := inst.SeedProcurement(ctx, db, d, setup)
+	seedReport, err := platformrt.SeedProcurement(ctx, inst, db, d, setup)
 	if err != nil {
 		return fmt.Errorf("seed procurement fixtures: %w", err)
 	}
@@ -287,7 +387,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	if err := gateway.EnsureSchema(ctx, db, d.DeploymentID, defaultSupplierID); err != nil {
 		return fmt.Errorf("ensure gateway schema: %w", err)
 	}
-	if err := inst.SyncSeedDeliveries(ctx, db, d, seedReport); err != nil {
+	if err := platformrt.SyncSeedDeliveries(ctx, inst, db, d, seedReport); err != nil {
 		return fmt.Errorf("sync seed deliveries: %w", err)
 	}
 	didServer, resolver, err := inst.StartRegistryDIDResolver(d)
@@ -296,9 +396,9 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	}
 	defer didServer.Close()
 
-	var task api.Task
-	var g0, g1, g2 api.Grant
-	if authMode == api.RP {
+	var task registry.Task
+	var g0, g1, g2 registry.Grant
+	if authMode == registry.RP {
 		task, g0, g1, g2 = fx.RPTask, fx.RPG0, fx.RPG1, fx.RPG2
 	} else {
 		task, g0, g1, g2 = fx.BMTask, fx.BMG0, fx.BMG1, fx.BMG2
@@ -323,11 +423,11 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 
 	// Merge deployment, effective probe settings, clock metadata, fixture/policy digests, and revocation targets into manifest.json.
 	var fixtureDigest any
-	if rawFixtures, readErr := os.ReadFile(filepath.Join(cfg.dir, "registry", "fixtures.json")); readErr == nil {
-		sum := sha256.Sum256(rawFixtures)
-		fixtureDigest = hex.EncodeToString(sum[:])
+	if sum, readErr := harness.SHA256File(inst.RegistryPath("fixtures.json")); readErr == nil {
+		fixtureDigest = sum
 	}
-	if err := mergeJSON(filepath.Join(cfg.out, "manifest.json"), map[string]any{
+	if err := harness.MergeJSON(filepath.Join(cfg.out, "manifest.json"), map[string]any{
+		"stateSource": state.SourceFabric,
 		"deployment": map[string]any{
 			"deploymentId":          d.DeploymentID,
 			"channelId":             d.ChannelID,
@@ -406,10 +506,10 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 		if strings.EqualFold(cfg.configuration, "B1") {
 			sigCache = protocol.NewSignatureCache()
 		}
-		srv, err := gateway.NewServer(gateway.Config{
+		srv, err := gateway.NewServer(gateway.ServerConfig{
 			DB:                  db,
-			State:               &observingStateSource{StateSource: provider.GatewayAdapter()},
-			Delivery:            fabric.NewDeliveryService(db),
+			State:               &observingStateSource{StateSource: provider},
+			CertChecker:         registrysvc.NewDeliveryService(db, d.DeploymentID),
 			DIDs:                resolver,
 			Policy:              bundle,
 			SignatureCache:      sigCache,
@@ -436,7 +536,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	}
 
 	// Use real deterministic wallet to request a real Q800 quote for B1.
-	wallet, err := inst.BuildWallet(ctx, d, fx, db, trackers[0].server.Handler())
+	wallet, err := platformrt.BuildWallet(ctx, inst, d, fx, db, trackers[0].server.Handler())
 	if err != nil {
 		return fmt.Errorf("build deterministic wallet: %w", err)
 	}
@@ -454,7 +554,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	}
 
 	// Load immutable signed material for lock-free concurrent probing per instance.
-	mat, err := loadProbeMaterial(cfg.dir, d.DeploymentID, fx, task, g0, g1, g2, quoteOut.QuoteID)
+	mat, err := loadProbeMaterial(inst, d.DeploymentID, fx, task, g0, g1, g2, quoteOut.QuoteID)
 	if err != nil {
 		return fmt.Errorf("load probe material: %w", err)
 	}
@@ -577,6 +677,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 		"experiment":        "E6",
 		"status":            "PASS",
 		"stage":             "execution",
+		"stateSource":       state.SourceFabric,
 		"deploymentId":      d.DeploymentID,
 		"mode":              authMode,
 		"modeShort":         modeShort,
@@ -586,15 +687,15 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 		"clockTimebase":     clockTimebaseHostUTC,
 		"clockResolutionNs": clockResNs,
 		"revocation": map[string]any{
-			"grantId":          g1.ID,
-			"txId":             revEvent.TxID,
-			"blockNumberR":     revEvent.BlockNumber,
-			"blockHash":        revEvent.BlockHash,
-			"txIndex":          revEvent.TxIndex,
-			"validationCode":   revEvent.ValidationCode,
-			"tSubmitNs":        revEvent.SubmittedAt.UnixNano(),
-			"tValidNs":         revEvent.ValidObservedAt.UnixNano(),
-			"tApplyNs":         tApplyNs,
+			"grantId":        g1.ID,
+			"txId":           revEvent.TxID,
+			"blockNumberR":   revEvent.BlockNumber,
+			"blockHash":      revEvent.BlockHash,
+			"txIndex":        revEvent.TxIndex,
+			"validationCode": revEvent.ValidationCode,
+			"tSubmitNs":      revEvent.SubmittedAt.UnixNano(),
+			"tValidNs":       revEvent.ValidObservedAt.UnixNano(),
+			"tApplyNs":       tApplyNs,
 		},
 		"instances":         instSummary,
 		"requestAccounting": acct,
@@ -603,7 +704,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 		summary["status"] = "ABORTED"
 		summary["error"] = ctx.Err().Error()
 	}
-	if err := writeJSONAtomic(filepath.Join(cfg.out, "summary.json"), summary); err != nil {
+	if err := harness.WriteJSON(filepath.Join(cfg.out, "summary.json"), summary); err != nil {
 		return err
 	}
 	return ctx.Err()
@@ -661,6 +762,53 @@ func runInstanceProber(ctx context.Context, tr *instanceTracker, mat *probeMater
 	}
 }
 
+func applyProbeLease(rec *probeSlotRecord, lease state.ProbeLease) {
+	pb := int64(lease.ProbeBlock)
+	rec.ProbeTxID = lease.TxID
+	rec.ProbeBlock = &pb
+	if !lease.SentAt.IsZero() {
+		v := lease.SentAt.UTC().UnixNano()
+		rec.ProbeSentAtNs = &v
+	}
+	if !lease.Deadline.IsZero() {
+		v := lease.Deadline.UTC().UnixNano()
+		rec.ProbeDeadlineNs = &v
+	}
+	sm := lease.SentMonoNs
+	dm := lease.DeadlineMonoNs
+	rec.ProbeSentMonoNs = &sm
+	rec.ProbeDeadlineMono = &dm
+	if lease.CheckedMonoNs != 0 {
+		cm := lease.CheckedMonoNs
+		rec.ProbeCheckedMonoNs = &cm
+	}
+}
+
+func applyDecisionTiming(rec *probeSlotRecord, dt gateway.DecisionTiming) {
+	dNs := dt.DecisionAt.UTC().UnixNano()
+	cNs := dt.CommittedAt.UTC().UnixNano()
+	dSec := dt.DecisionAtSec
+	bn := dt.BlockNumber
+	pb := dt.ProbeBlock
+	psNs := dt.ProbeSentAt.UTC().UnixNano()
+	pdNs := dt.ProbeDeadline.UTC().UnixNano()
+	sm := dt.ProbeSentMonoNs
+	cm := dt.ProbeCheckedMonoNs
+	dm := dt.ProbeDeadlineMonoNs
+	rec.DecisionAtNs = &dNs
+	rec.CommittedAtNs = &cNs
+	rec.DecisionAtSec = &dSec
+	rec.BlockNumber = &bn
+	rec.BlockHash = dt.BlockHash
+	rec.ProbeTxID = dt.ProbeTxID
+	rec.ProbeBlock = &pb
+	rec.ProbeSentAtNs = &psNs
+	rec.ProbeDeadlineNs = &pdNs
+	rec.ProbeSentMonoNs = &sm
+	rec.ProbeCheckedMonoNs = &cm
+	rec.ProbeDeadlineMono = &dm
+}
+
 func executeOrderProbe(parentCtx context.Context, tr *instanceTracker, mat *probeMaterial, phase string, seq int64, plannedNs int64, actualInterval *int64, idempKey string) probeSlotRecord {
 	rec := probeSlotRecord{
 		Phase:            phase,
@@ -677,15 +825,15 @@ func executeOrderProbe(parentCtx context.Context, tr *instanceTracker, mat *prob
 	defer cancel()
 
 	orderReq := protocol.AccessRequest{
-		SchemaVersion:     api.Schema,
+		SchemaVersion:     registry.Schema,
 		DeploymentID:      mat.deploymentID,
 		Actor:             mat.actorDID,
 		PrincipalDomain:   "A",
 		AuthorizationMode: mat.authMode,
 		TaskID:            mat.taskID,
 		Audience:          defaultAudience,
-		Resource:          "urn:grad:resource:C:orders",
-		Action:            "order.create",
+		Resource:          registry.ResourceOrders,
+		Action:            registry.ActionOrderCreate,
 		SupplierID:        defaultSupplierID,
 		QuoteID:           &mat.quoteID,
 		ProductID:         gateway.DefaultProductID,
@@ -765,30 +913,16 @@ func executeOrderProbe(parentCtx context.Context, tr *instanceTracker, mat *prob
 
 	if snap := snapCap.get(); snap != nil {
 		bn := snap.BlockNumber
-		pb := int64(snap.Probe.ProbeBlock)
 		rec.BlockNumber = &bn
 		rec.BlockHash = snap.BlockHash
-		rec.ProbeTxID = snap.Probe.TxID
-		rec.ProbeBlock = &pb
-		if !snap.Probe.SentAt.IsZero() {
-			v := snap.Probe.SentAt.UTC().UnixNano()
-			rec.ProbeSentAtNs = &v
-		}
-		if !snap.Probe.Deadline.IsZero() {
-			v := snap.Probe.Deadline.UTC().UnixNano()
-			rec.ProbeDeadlineNs = &v
-		}
-		sm := snap.Probe.SentMonoNs
-		dm := snap.Probe.DeadlineMonoNs
-		rec.ProbeSentMonoNs = &sm
-		rec.ProbeDeadlineMono = &dm
+		applyProbeLease(&rec, snap.Probe)
 	}
 
 	var parsed struct {
-		RequestID  string            `json:"requestId"`
-		DecisionID *string           `json:"decisionId"`
-		Code       string            `json:"code"`
-		Order      *gateway.OrderDTO `json:"order"`
+		RequestID  string                `json:"requestId"`
+		DecisionID *string               `json:"decisionId"`
+		Code       string                `json:"code"`
+		Order      *gateway.OrderPayload `json:"order"`
 	}
 	if json.Unmarshal(execResp.Body.Bytes(), &parsed) == nil {
 		if parsed.RequestID != "" {
@@ -822,28 +956,7 @@ func executeOrderProbe(parentCtx context.Context, tr *instanceTracker, mat *prob
 
 	if rec.DecisionID != "" {
 		if dt, ok := tr.lookupTiming(rec.DecisionID); ok {
-			dNs := dt.DecisionAt.UTC().UnixNano()
-			cNs := dt.CommittedAt.UTC().UnixNano()
-			dSec := dt.DecisionAtSec
-			bn := dt.BlockNumber
-			pb := dt.ProbeBlock
-			psNs := dt.ProbeSentAt.UTC().UnixNano()
-			pdNs := dt.ProbeDeadline.UTC().UnixNano()
-			sm := dt.ProbeSentMonoNs
-			cm := dt.ProbeCheckedMonoNs
-			dm := dt.ProbeDeadlineMonoNs
-			rec.DecisionAtNs = &dNs
-			rec.CommittedAtNs = &cNs
-			rec.DecisionAtSec = &dSec
-			rec.BlockNumber = &bn
-			rec.BlockHash = dt.BlockHash
-			rec.ProbeTxID = dt.ProbeTxID
-			rec.ProbeBlock = &pb
-			rec.ProbeSentAtNs = &psNs
-			rec.ProbeDeadlineNs = &pdNs
-			rec.ProbeSentMonoNs = &sm
-			rec.ProbeCheckedMonoNs = &cm
-			rec.ProbeDeadlineMono = &dm
+			applyDecisionTiming(&rec, dt)
 		}
 	} else if rec.Disposition == "denied" && rec.UnobservedReason == "" {
 		rec.UnobservedReason = "precheck_deny_no_decision_row"
@@ -860,7 +973,7 @@ func enrichProbeRecords(ctx context.Context, db *pgxpool.Pool, deploymentID, g1I
 		}
 		var raw []byte
 		err := db.QueryRow(ctx, `SELECT value FROM fabric_version WHERE deployment=$1 AND key=$2 AND block_no <= $3 ORDER BY block_no DESC, tx_index DESC LIMIT 1`,
-			deploymentID, api.Key("grant", g1ID), blockNo).Scan(&raw)
+			deploymentID, registry.Key("grant", g1ID), blockNo).Scan(&raw)
 		if errors.Is(err, pgx.ErrNoRows) {
 			g1Cache[blockNo] = "ABSENT"
 			return "ABSENT", nil
@@ -926,22 +1039,14 @@ func enrichProbeRecords(ctx context.Context, db *pgxpool.Pool, deploymentID, g1I
 	return nil
 }
 
-func loadProbeMaterial(instanceDir, deploymentID string, fx *fabric.Fixtures, task api.Task, g0, g1, g2 api.Grant, quoteID string) (*probeMaterial, error) {
+func loadProbeMaterial(inst *fabric.Instance, deploymentID string, fx *platformrt.Fixtures, task registry.Task, g0, g1, g2 registry.Grant, quoteID string) (*probeMaterial, error) {
 	b1 := fx.Identities["B1"]
-	privRaw, err := os.ReadFile(filepath.Join(instanceDir, "private", "app", "B1.key.pem"))
-	if err != nil {
-		return nil, err
-	}
-	block, _ := pem.Decode(privRaw)
-	if block == nil {
-		return nil, fmt.Errorf("invalid B1 EC private key PEM")
-	}
-	b1Priv, err := x509.ParseECPrivateKey(block.Bytes)
+	b1Priv, err := fabric.LoadECPrivateKeyPEM(inst.PrivatePath("app", "B1.key.pem"))
 	if err != nil {
 		return nil, err
 	}
 	readReg := func(parts ...string) (string, error) {
-		raw, err := os.ReadFile(filepath.Join(append([]string{instanceDir, "registry"}, parts...)...))
+		raw, err := os.ReadFile(inst.RegistryPath(parts...))
 		return string(raw), err
 	}
 	b1SD, err := readReg("credentials", "B1.sdjwt")
@@ -958,7 +1063,7 @@ func loadProbeMaterial(instanceDir, deploymentID string, fx *fabric.Fixtures, ta
 	}
 	rootCredFile := "PA.sdjwt"
 	rootCredID := fx.Credentials["PA"].ID
-	if task.Mode == api.RP {
+	if task.Mode == registry.RP {
 		rootCredFile = "C.sdjwt"
 		rootCredID = fx.Credentials["C"].ID
 	}
@@ -967,7 +1072,7 @@ func loadProbeMaterial(instanceDir, deploymentID string, fx *fabric.Fixtures, ta
 		return nil, err
 	}
 	prefix := "bm"
-	if task.Mode == api.RP {
+	if task.Mode == registry.RP {
 		prefix = "rp"
 	}
 	g0JWS, err := readReg("grants", prefix+"_g0.jws")
@@ -984,7 +1089,7 @@ func loadProbeMaterial(instanceDir, deploymentID string, fx *fabric.Fixtures, ta
 	}
 	var trustPaths []protocol.TrustPathEntry
 	doms := []string{"A", "B"}
-	if task.Mode == api.RP {
+	if task.Mode == registry.RP {
 		doms = []string{"A", "B", "C"}
 	}
 	for _, dom := range doms {
@@ -1022,28 +1127,28 @@ func loadProbeMaterial(instanceDir, deploymentID string, fx *fabric.Fixtures, ta
 	}, nil
 }
 
-func e6ProcurementSetup(deploymentID, runID string, seed int) fabric.ProcurementSetup {
-	ids := func(mode string) fabric.ProcurementPathIDs {
+func e6ProcurementSetup(deploymentID, runID string, seed int) platformrt.ProcurementSetup {
+	ids := func(mode string) platformrt.ProcurementPathIDs {
 		ns := fmt.Sprintf("%s/e6/%s/%d/%s/", deploymentID, runID, seed, mode)
-		return fabric.ProcurementPathIDs{
-			Task: api.Digest([]byte(ns + "task")),
-			G0:   api.Digest([]byte(ns + "G0")),
-			G1:   api.Digest([]byte(ns + "G1")),
-			G2:   api.Digest([]byte(ns + "G2")),
+		return platformrt.ProcurementPathIDs{
+			Task: registry.Digest([]byte(ns + "task")),
+			G0:   registry.Digest([]byte(ns + "G0")),
+			G1:   registry.Digest([]byte(ns + "G1")),
+			G2:   registry.Digest([]byte(ns + "G2")),
 		}
 	}
-	return fabric.ProcurementSetup{
+	return platformrt.ProcurementSetup{
 		Spec: protocol.TaskSpec{
 			SupplierID:  defaultSupplierID,
 			ProductID:   gateway.DefaultProductID,
 			MaxQuantity: 1,
 			Currency:    gateway.DefaultCurrency,
-			Resources:   []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
-			Actions:     []string{"order.create", "quote.read"},
+			Resources:   []string{registry.ResourceOrders, registry.ResourceQuotes},
+			Actions:     []string{registry.ActionOrderCreate, registry.ActionQuoteRead},
 			Description: "E6 revocation window procurement task",
 		},
-		RP: ids(api.RP),
-		BM: ids(api.BM),
+		RP: ids(registry.RP),
+		BM: ids(registry.BM),
 	}
 }
 
@@ -1052,7 +1157,7 @@ func ensureNormalContext(handler http.Handler, taskID string, deadline int64) er
 		ExpectedContextVersion: 0,
 		SourceID:               "ctx-e6-c",
 		ObservedAt:             time.Now().UTC().Unix() - 1,
-		RiskLevel:              "NORMAL",
+		RiskLevel:              policy.RiskNormal,
 		AccessDeadline:         deadline,
 	})
 	rec := httptest.NewRecorder()
@@ -1065,40 +1170,8 @@ func ensureNormalContext(handler http.Handler, taskID string, deadline int64) er
 	return nil
 }
 
-func measureClockResolutionNs() int64 {
-	var minDelta int64
-	prev := time.Now().UTC().UnixNano()
-	for i := 0; i < 2000; i++ {
-		cur := time.Now().UTC().UnixNano()
-		if cur > prev {
-			delta := cur - prev
-			if minDelta == 0 || delta < minDelta {
-				minDelta = delta
-			}
-			prev = cur
-		}
-	}
-	if minDelta <= 0 {
-		return 1000
-	}
-	return minDelta
-}
-
-func writeRevocationsCSV(path, runID, authMode string, cfg e6Config, rev *fabric.RevocationEvent, tApplyNs *int64, trackers []*instanceTracker, clockResNs int64) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	w := csv.NewWriter(f)
-	header := []string{
-		"run_id", "mode", "configuration", "revoked_grant_id", "revocation_tx_id",
-		"revocation_block_r", "revocation_block_hash", "tx_index", "validation_code",
-		"t_submit_ns", "t_valid_ns", "t_apply_ns",
-		"instance_id", "probe_role", "t_adopt_ns", "adopt_block_h",
-		"probe_interval_ms", "probe_lifetime_ms", "detect_interval_ms",
-		"clock_timebase", "clock_resolution_ns", "clock_error_ns", "status", "unobserved_reason",
-	}
-	_ = w.Write(header)
+func buildRevocationCSVRows(runID, authMode string, cfg e6Config, rev *fabric.RevocationEvent, tApplyNs *int64, trackers []*instanceTracker, clockResNs int64) []revocationCSVRow {
+	rows := make([]revocationCSVRow, 0, len(trackers))
 	for _, tr := range trackers {
 		adoptAt, adoptH := tr.resolveFirstAdopt(int64(rev.BlockNumber))
 		var adoptAtNs *int64
@@ -1109,50 +1182,89 @@ func writeRevocationsCSV(path, runID, authMode string, cfg e6Config, rev *fabric
 		} else {
 			unobs = "instance_did_not_adopt_r_during_window"
 		}
-		_ = w.Write([]string{
-			runID, authMode, cfg.configuration, rev.GrantID, rev.TxID,
-			strconv.FormatUint(rev.BlockNumber, 10), rev.BlockHash, strconv.Itoa(rev.TxIndex), rev.ValidationCode,
-			strconv.FormatInt(rev.SubmittedAt.UTC().UnixNano(), 10), strconv.FormatInt(rev.ValidObservedAt.UTC().UnixNano(), 10), fmtIntPtr(tApplyNs),
-			tr.id, tr.probeRole, fmtIntPtr(adoptAtNs), fmtIntPtr(adoptH),
-			strconv.FormatInt(cfg.probeInterval.Milliseconds(), 10), strconv.FormatInt(cfg.probeLifetime.Milliseconds(), 10), strconv.FormatInt(cfg.detectInterval.Milliseconds(), 10),
-			clockTimebaseHostUTC, strconv.FormatInt(clockResNs, 10), "0", rev.Status, unobs,
+		rows = append(rows, revocationCSVRow{
+			RunID:               runID,
+			Mode:                authMode,
+			Configuration:       cfg.configuration,
+			RevokedGrantID:      rev.GrantID,
+			RevocationTxID:      rev.TxID,
+			RevocationBlockR:    rev.BlockNumber,
+			RevocationBlockHash: rev.BlockHash,
+			TxIndex:             rev.TxIndex,
+			ValidationCode:      rev.ValidationCode,
+			TSubmitNs:           rev.SubmittedAt.UTC().UnixNano(),
+			TValidNs:            rev.ValidObservedAt.UTC().UnixNano(),
+			TApplyNs:            fmtIntPtr(tApplyNs),
+			InstanceID:          tr.id,
+			ProbeRole:           tr.probeRole,
+			TAdoptNs:            fmtIntPtr(adoptAtNs),
+			AdoptBlockH:         fmtIntPtr(adoptH),
+			ProbeIntervalMs:     cfg.probeInterval.Milliseconds(),
+			ProbeLifetimeMs:     cfg.probeLifetime.Milliseconds(),
+			DetectIntervalMs:    cfg.detectInterval.Milliseconds(),
+			ClockTimebase:       clockTimebaseHostUTC,
+			ClockResolutionNs:   clockResNs,
+			ClockErrorNs:        0,
+			Status:              rev.Status,
+			UnobservedReason:    unobs,
 		})
 	}
-	w.Flush()
-	return errors.Join(w.Error(), f.Close())
+	return rows
+}
+
+func writeRevocationsCSV(path, runID, authMode string, cfg e6Config, rev *fabric.RevocationEvent, tApplyNs *int64, trackers []*instanceTracker, clockResNs int64) error {
+	rows := buildRevocationCSVRows(runID, authMode, cfg, rev, tApplyNs, trackers, clockResNs)
+	return harness.WriteCSV(path, rows)
+}
+
+func buildRequestCSVRows(runID, authMode, configuration string, clockResNs int64, records []probeSlotRecord) []requestCSVRow {
+	rows := make([]requestCSVRow, 0, len(records))
+	for _, r := range records {
+		rows = append(rows, requestCSVRow{
+			RunID:              runID,
+			Mode:               authMode,
+			Configuration:      configuration,
+			Phase:              r.Phase,
+			InstanceID:         r.InstanceID,
+			ProbeRole:          r.ProbeRole,
+			Seq:                r.Seq,
+			PlannedAtNs:        r.PlannedAtNs,
+			ActualIntervalNs:   fmtIntPtr(r.ActualIntervalNs),
+			SubmittedAtNs:      fmtIntPtr(r.SubmittedAtNs),
+			DecisionAtNs:       fmtIntPtr(r.DecisionAtNs),
+			CommittedAtNs:      fmtIntPtr(r.CommittedAtNs),
+			RespondedAtNs:      fmtIntPtr(r.RespondedAtNs),
+			DecisionAtSec:      fmtIntPtr(r.DecisionAtSec),
+			IdempotencyKey:     r.IdempotencyKey,
+			RequestID:          r.RequestID,
+			ChallengeID:        r.ChallengeID,
+			DecisionID:         r.DecisionID,
+			OrderID:            r.OrderID,
+			HTTPStatus:         fmtIntValPtr(r.HTTPStatus),
+			Code:               r.Code,
+			Outcome:            r.Outcome,
+			Disposition:        r.Disposition,
+			BlockNumber:        fmtIntPtr(r.BlockNumber),
+			BlockHash:          r.BlockHash,
+			G1StatusAtBlock:    r.G1StatusAtBlock,
+			ProbeTxID:          r.ProbeTxID,
+			ProbeBlock:         fmtIntPtr(r.ProbeBlock),
+			ProbeSentAtNs:      fmtIntPtr(r.ProbeSentAtNs),
+			ProbeDeadlineNs:    fmtIntPtr(r.ProbeDeadlineNs),
+			ProbeSentMonoNs:    fmtIntPtr(r.ProbeSentMonoNs),
+			ProbeCheckedMonoNs: fmtIntPtr(r.ProbeCheckedMonoNs),
+			ProbeDeadlineMono:  fmtIntPtr(r.ProbeDeadlineMono),
+			ClockTimebase:      clockTimebaseHostUTC,
+			ClockResolutionNs:  clockResNs,
+			UnobservedReason:   r.UnobservedReason,
+		})
+	}
+	return rows
 }
 
 func writeRequestsCSV(path, runID, authMode, configuration string, clockResNs int64, records []probeSlotRecord) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	w := csv.NewWriter(f)
-	header := []string{
-		"run_id", "mode", "configuration", "phase", "instance_id", "probe_role", "seq",
-		"planned_at_ns", "actual_interval_ns", "submitted_at_ns", "decision_at_ns", "committed_at_ns", "responded_at_ns", "decision_at_sec",
-		"idempotency_key", "request_id", "challenge_id", "decision_id", "order_id",
-		"http_status", "code", "outcome", "disposition",
-		"block_number", "block_hash", "g1_status_at_block",
-		"probe_tx_id", "probe_block", "probe_sent_at_ns", "probe_deadline_ns",
-		"probe_sent_mono_ns", "probe_checked_mono_ns", "probe_deadline_mono_ns",
-		"clock_timebase", "clock_resolution_ns", "unobserved_reason",
-	}
-	_ = w.Write(header)
-	for _, r := range records {
-		_ = w.Write([]string{
-			runID, authMode, configuration, r.Phase, r.InstanceID, r.ProbeRole, strconv.FormatInt(r.Seq, 10),
-			strconv.FormatInt(r.PlannedAtNs, 10), fmtIntPtr(r.ActualIntervalNs), fmtIntPtr(r.SubmittedAtNs), fmtIntPtr(r.DecisionAtNs), fmtIntPtr(r.CommittedAtNs), fmtIntPtr(r.RespondedAtNs), fmtIntPtr(r.DecisionAtSec),
-			r.IdempotencyKey, r.RequestID, r.ChallengeID, r.DecisionID, r.OrderID,
-			fmtIntValPtr(r.HTTPStatus), r.Code, r.Outcome, r.Disposition,
-			fmtIntPtr(r.BlockNumber), r.BlockHash, r.G1StatusAtBlock,
-			r.ProbeTxID, fmtIntPtr(r.ProbeBlock), fmtIntPtr(r.ProbeSentAtNs), fmtIntPtr(r.ProbeDeadlineNs),
-			fmtIntPtr(r.ProbeSentMonoNs), fmtIntPtr(r.ProbeCheckedMonoNs), fmtIntPtr(r.ProbeDeadlineMono),
-			clockTimebaseHostUTC, strconv.FormatInt(clockResNs, 10), r.UnobservedReason,
-		})
-	}
-	w.Flush()
-	return errors.Join(w.Error(), f.Close())
+	rows := buildRequestCSVRows(runID, authMode, configuration, clockResNs, records)
+	return harness.WriteCSV(path, rows)
 }
 
 func accountProbeRecords(records []probeSlotRecord) map[string]int {
@@ -1189,28 +1301,4 @@ func fmtIntValPtr(v *int) string {
 		return "null"
 	}
 	return strconv.Itoa(*v)
-}
-
-func mergeJSON(path string, updates map[string]any) error {
-	m := map[string]any{}
-	if raw, err := os.ReadFile(path); err == nil {
-		_ = json.Unmarshal(raw, &m)
-	}
-	for k, v := range updates {
-		m[k] = v
-	}
-	return writeJSONAtomic(path, m)
-}
-
-func writeJSONAtomic(path string, v any) error {
-	raw, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return err
-	}
-	raw = append(raw, '\n')
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
 }

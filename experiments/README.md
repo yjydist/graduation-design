@@ -6,18 +6,18 @@
 
 | 实验问题与方法 | 设计依据和用例 | 运行入口与结果 |
 | --- | --- | --- |
-| E1 共同身份根下两种采购根能否完成同一采购? [E1 采购功能闭环](e1/method.md) | [根权源和 C 的准入权](../docs/design/委托授权与策略.md). [D0 与 M1/M2 边界](验证用例.md#0-fabric-d0-与业务验收范围)及 [F01-F16](验证用例.md#1-采购闭环), R1/R2/R4/R5 | [独立驱动](e1/README.md), [结果](e1/result.md) |
+| E1 共同身份根下两种采购根能否完成同一采购? [E1 采购功能闭环](e1/method.md) | [根权源和 C 的准入权](../docs/design/委托授权与策略.md). [D0 与 M1/M2 边界](验证用例.md#0-fabric-d0-与业务验收范围)及 [F01-F16](验证用例.md#1-采购闭环), R1/R2/R4/R5 | [独立驱动](e1/README.md), [结果与模板](e1/result.md) |
 | E2 伪造, 重放, 越权在哪里被拒? [E2 安全与状态机检查](e2/method.md) | [SG1-SG6 及其信任假设](../docs/design/威胁模型与安全目标.md). [S01-S103](验证用例.md#2-身份-请求与父子约束), 含 [S76-S90 共同根与域资格](验证用例.md#5-共同根与域资格), [S91-S99 锁后求值/身份生命周期/编码](验证用例.md#6-锁后求值-身份生命周期与固定编码)及 [S100-S103 异步结果/nonce](验证用例.md#7-异步管理结果与-nonce-编码), 另按计划运行随机约束和状态机检查, R2/R3/R4/R5 | 驱动与结果待建 |
 | E3 改派或换钥后谁还能用原报价? [E3 动态调整与恢复](e3/method.md) | [授权状态变化与恢复](../docs/design/委托授权与策略.md). S20-S22 和 S78/S81-S84/S89 检查祖先, 域资格与密钥失效及恢复, S27/S41 检查替换, S55/S65 检查报价归属, S93-S97 检查资格收缩及管理账户恢复, R2/R4/R5 | 驱动与结果待建 |
 | E4 验签和视图装配各花多少? [E4 微基准](e4/method.md) | [请求绑定与静态验签复用条件](../docs/design/请求认证与状态一致性.md). F06 给出有效访问, S22 检查缓存边界. 测冷热耗时, 分配与查询字节, R3/R5 | 驱动与结果待建 |
 | E5 路径和到达率如何影响尾延迟? [E5 开放到达负载](e5/method.md) | [逐跳委托检查](../docs/design/委托授权与策略.md)与[逐次请求验证](../docs/design/请求认证与状态一致性.md). 以 F06 的询价与下单流程构造有效负载, 按到达样本统计完成率与延迟, R3/R5 | 驱动与结果待建 |
-| E6 祖先撤销后还能下单多久? [E6 撤销窗口](e6/method.md) | [撤销窗口及其时钟假设](../docs/design/请求认证与状态一致性.md#3-撤销后的决策窗口). S20, S26, S29/S30, S50 检查祖先失效, 原探针期限和整次重验, R4/R5 | [独立驱动](e6/README.md), [短跑结果与模板](e6/result.md) |
+| E6 祖先撤销后还能下单多久? [E6 撤销窗口](e6/method.md) | [撤销窗口及其时钟假设](../docs/design/请求认证与状态一致性.md#3-撤销后的决策窗口). S20, S26, S29/S30, S50 检查祖先失效, 原探针期限和整次重验, R4/R5 | [独立驱动](e6/README.md), [结果与模板](e6/result.md) |
 | E7 并发, 停链或响应丢失时会不会重复下单? [E7 故障与并发](e7/method.md) | [状态新鲜度与定案时点](../docs/design/请求认证与状态一致性.md), [SG6 可追溯性](../docs/design/威胁模型与安全目标.md). F08, S50/S51, S57, S63, S66/S67 配合[订单核账](../docs/implementation/订单核账.md)核对视图, 订单行与审计权限; S91/S92 检查锁后风险与实际时钟, S100/S101 检查异步管理竞争及未知提交, R4/R5 | 驱动与结果待建 |
 | E8 链下验证把多少工作移到了节点? [E8 账本与通信开销](e8/method.md) | [链上登记与链下执行的分工](../docs/design/采购场景与总体设计.md). 参照 F01-F06 区分准备和访问, 由独立测量采集背书/排序, 探针, 视图应用和出示开销, R3/R5 | 驱动与结果待建 |
 
 ## 任务书需求与实验用例
 
-R1-R5 对应[项目需求与实现](../docs/design/AGENTS.md#从任务书到实现).
+R1-R5 对应[项目需求与实现](../docs/AGENTS.md#从任务书到实现).
 
 | 需求 | 实验用例与待取得的证据 |
 | --- | --- |
@@ -30,19 +30,29 @@ R1-R5 对应[项目需求与实现](../docs/design/AGENTS.md#从任务书到实�
 
 ## 运行与复算
 
-从仓库根目录执行. 按各实验运行入口提供对应的参数.
+`experiments/` 作为独立 Go 模块 (`grad/experiments`) 接入 4 模块工作区, 通过统一 Cobra CLI (`cmd/exp`) 提供基线, 正式运行与离线复算入口. 从仓库根目录使用 `mise` 执行:
 
 ```bash
 mise -C experiments run experiment:test
+mise -C experiments run experiment:baseline -- --help
 mise -C experiments run experiment:run -- --help
 mise -C experiments run experiment:analyze -- --help
 ```
 
-每个编号目录的 `method.md` 定义方法, `result.md` 记录结果, `runs/<run-id>/` 保存原始记录. [实验制品约定](AGENTS.md#正式实验制品).
+也可进入 `experiments/` 目录直接调用 `exp` CLI:
+
+```bash
+cd experiments
+go run ./cmd/exp baseline --help
+go run ./cmd/exp run --help
+go run ./cmd/exp analyze --help
+```
+
+每个编号目录的 `method.md` 定义方法, `result.md` 记录结果, `runs/<run-id>/` 保存原始记录, `analysis/<run-id>/` 保存离线复算输出. [实验制品约定](AGENTS.md#正式实验制品).
 
 ## 历史预跑
 
-E3 的模型轨迹, E6 的撤销窗口采样和 E7 的故障专题导出来自 [M3 联合验收](../infra/fabric/evidence/README.md#既有网络与协议验收). 如需重放旧采样逻辑, 可在迁移前提交 `d22889501880859d7cda2ce4b7255475a40a1e59` 上用独立实例运行当时的 `ledgerctl verify`; 原始运行的构建标识和数据仍从各自的证据清单查阅. 正式采样由各实验驱动按上表方法执行.
+E3 的模型轨迹, E6 的撤销窗口采样和 E7 的故障专题导出来自 [M3 联合验收](../infra/fabric/evidence/README.md#既有网络与协议验收). 重构前的旧批次 E1/E6 运行产物已在 `rebuild-monorepo-architecture` 期间清理, 正式采样由统一 `exp` CLI 在 4 模块工作区架构下按上表方法重新执行.
 
 ## 实验用 LLM 配置
 
@@ -53,5 +63,3 @@ source experiments/llm.env
 ```
 
 真实 LLM 实验在每轮清单记录实际模型名, 接口协议和服务地址.
-
-迁移前的文档路径和命令可在提交 `97737a1e557a75b3d3e0fad17e8b523434ff3a53` 中查阅.

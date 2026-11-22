@@ -1,4 +1,4 @@
-package main
+package baseline
 
 import (
 	_ "embed"
@@ -7,19 +7,21 @@ import (
 	"slices"
 	"strings"
 
-	api "graduation-design/internal/fabricapi"
-	"graduation-design/internal/policy"
-	"graduation-design/internal/protocol"
+	"grad/platform/policy"
+	"grad/protocol"
+	"grad/protocol/registry"
 )
 
 //go:embed baseline.json
 var baselineJSON []byte
 
+// Root binds an authorization mode to its root issuer role.
 type Root struct {
 	Mode   string `json:"mode"`
 	Issuer string `json:"issuer"`
 }
 
+// Hop describes one delegation hop in the fixed procurement chain.
 type Hop struct {
 	Grant          string `json:"grant"`
 	Grantee        string `json:"grantee"`
@@ -27,6 +29,7 @@ type Hop struct {
 	RemainingDepth int64  `json:"remaining_depth"`
 }
 
+// TimeRules pins the relative validity windows and liveness parameters for a baseline round.
 type TimeRules struct {
 	NBFOffset      int64  `json:"credential_nbf_offset_seconds"`
 	EXPOffset      int64  `json:"credential_exp_offset_seconds"`
@@ -38,6 +41,7 @@ type TimeRules struct {
 	Clock          string `json:"clock"`
 }
 
+// Fixture captures the frozen paired baseline experiment specification.
 type Fixture struct {
 	Seeds               []int                  `json:"seeds"`
 	Root                string                 `json:"root"`
@@ -62,6 +66,7 @@ type Fixture struct {
 	Randomness          string                 `json:"randomness"`
 }
 
+// Case describes a single planned quote+order baseline case.
 type Case struct {
 	Configuration  string `json:"configuration"`
 	CaseID         string `json:"case_id"`
@@ -71,6 +76,7 @@ type Case struct {
 	ExpectedCode   string `json:"expected_code"`
 }
 
+// Inputs holds the seed-bound logical fixture and 12 planned paired cases.
 type Inputs struct {
 	Seed               int     `json:"seed"`
 	Fixture            Fixture `json:"fixture"`
@@ -78,7 +84,7 @@ type Inputs struct {
 	Cases              []Case  `json:"planned_cases"`
 }
 
-// Baseline returns a fresh copy of the frozen description and a seed-specific plan.
+// Baseline returns a fresh copy of the frozen specification and a seed-specific plan.
 func Baseline(seed int) (*Inputs, error) {
 	var f Fixture
 	if err := json.Unmarshal(baselineJSON, &f); err != nil {
@@ -90,36 +96,48 @@ func Baseline(seed int) (*Inputs, error) {
 	if f.PolicyVersion != policy.DefaultPolicyVersion {
 		return nil, fmt.Errorf("baseline policy version differs from pinned source")
 	}
-	in := &Inputs{Seed: seed, Fixture: f, PolicySourceDigest: api.Digest([]byte(policy.DefaultProcurementRego))}
+	in := &Inputs{
+		Seed:               seed,
+		Fixture:            f,
+		PolicySourceDigest: registry.Digest([]byte(policy.DefaultProcurementRego)),
+	}
 	for _, config := range f.Configurations {
 		for _, root := range f.Roots {
 			short := "rp"
-			if root.Mode == api.BM {
+			if root.Mode == registry.BM {
 				short = "bm"
 			}
 			for n, amount := range f.PricesMinor {
-				in.Cases = append(in.Cases, Case{config, fmt.Sprintf("%d-%s-%d", seed, short, amount), root.Mode, amount, f.ExpectedOrderStatus[n], f.ExpectedOrderCode[n]})
+				in.Cases = append(in.Cases, Case{
+					Configuration:  config,
+					CaseID:         fmt.Sprintf("%d-%s-%d", seed, short, amount),
+					Mode:           root.Mode,
+					AmountMinor:    amount,
+					ExpectedStatus: f.ExpectedOrderStatus[n],
+					ExpectedCode:   f.ExpectedOrderCode[n],
+				})
 			}
 		}
 	}
 	return in, nil
 }
 
+// Digest returns the RFC 8785 JCS SHA-256 digest of the seed-bound logical inputs.
 func (in *Inputs) Digest() (string, error) {
 	raw, err := protocol.MarshalJCS(in)
 	if err != nil {
 		return "", err
 	}
-	return api.Digest(raw), nil
+	return registry.Digest(raw), nil
 }
 
-// LogicalID pairs a task or grant across clean deployments without seeding keys.
+// LogicalID pairs a task or grant across clean deployments without seeding cryptographic keys.
 func (in *Inputs) LogicalID(mode, label string) string {
 	return fmt.Sprintf("%d/%s/%s", in.Seed, strings.ToLower(mode), label)
 }
 
-// Policy binds the pinned policy source/configuration to this round's real root and deadlines.
-func (in *Inputs) Policy(deploymentID, serviceDID string, root api.RootRecord, rpExpiry, bmExpiry int64) (*policy.VerifiedBundle, error) {
+// Policy binds the pinned policy source and configuration to this round's root and deadlines.
+func (in *Inputs) Policy(deploymentID, serviceDID string, root registry.RootRecord, rpExpiry, bmExpiry int64) (*policy.VerifiedBundle, error) {
 	deadline := min(rpExpiry, bmExpiry)
 	resources := in.Fixture.Resources
 	resources.PolicyDeadline = &deadline

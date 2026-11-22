@@ -16,14 +16,14 @@
 
 ## E1 采购功能闭环
 
-[E1 方法](e1/method.md), [E1 报告](e1/result.md).
+[E1 方法](e1/method.md), [E1 驱动](e1/README.md), [E1 报告模板](e1/result.md). 重构前的旧批次运行产物与归档已在 `rebuild-monorepo-architecture` 期间清理, 正式批次待在新 4 模块架构下通过统一 `exp` CLI 重新执行.
 
-- [x] 用迁移前驱动在两个独立实例验证 F01-F16. 两轮均为 16/16, 各轮有清单, 请求和模型轨迹. [E1 运行批次](e1/result.md#2-运行批次).
-- [x] 用独立驱动完成固定构建复跑. `run-3f8a7a6db26d582c` 的 F01-F16 为 16/16. [正式轮次汇总](e1/runs/run-3f8a7a6db26d582c/summary.json).
-- [x] 核对固定构建轮次的模型工具轨迹和网关请求. `run-3f8a7a6db26d582c` 记录 8 个真实模型会话, 19 次工具调用和 78 次网关请求. [模型轨迹](e1/runs/run-3f8a7a6db26d582c/llm-traces.json), [请求](e1/runs/run-3f8a7a6db26d582c/requests.csv), [对账](e1/runs/run-3f8a7a6db26d582c/audit.json).
-- [x] 对账固定构建轮次的 RP/BM 采购效果. `run-3f8a7a6db26d582c` 中两种根各创建一笔 800 元订单, 1200 元原价和改报的四个负例均无订单或订单业务键. [结果与主库核对](e1/result.md#5-固定构建复跑), [对账文件](e1/runs/run-3f8a7a6db26d582c/audit.json).
-- [x] 整理迁移前和固定构建中的失败轮次. 已记录失败运行 ID, 首个受阻阶段和处理结果. [迁移前异常](e1/result.md#4-失败轮次与结论边界), [固定构建异常](e1/result.md#5-固定构建复跑).
-- [x] 从固定构建轮次的原始请求, 模型及主库记录离线重算 RP/BM 结果. `run-3f8a7a6db26d582c` 在 `e1-analyzer/v1` 下只读复算通过并与已发布计数一致, 另核对失败样本 `run-f6b3cc4a627e1a49` 的缺测识别. [复算表](e1/analysis/run-3f8a7a6db26d582c/recomputed-table.md), [复算 JSON](e1/analysis/run-3f8a7a6db26d582c/recomputed.json), [报告说明](e1/result.md#6-离线复算与来源引用).
+- [ ] 在两个独立隔离实例上用新 4 模块架构验证 F01-F16. 两轮均为 16/16, 各轮保存清单, 请求, 主库导出和模型轨迹.
+- [ ] 使用固定提交通过 `mise -C experiments run experiment:run -- --experiment E1` 完成固定构建复跑, 记录构建摘要与源码快照.
+- [ ] 核对固定构建轮次的真实模型工具轨迹和网关请求. 核对模型会话, 工具调用与网关 HTTP 请求关联关系.
+- [ ] 对账固定构建轮次的 RP/BM 采购效果. 两种根各创建一笔 800 元唯一订单, 1200 元原价与改报 800 元的四个负例均无新增订单或订单业务键.
+- [ ] 记录并归档任何失败轮次的首个受阻阶段, 原因和处理结论, 保持原始证据只读留存.
+- [ ] 脱离在线服务后使用 `mise -C experiments run experiment:analyze -- --experiment E1` (`e1-analyzer/v1`) 对原始记录进行离线只读复算, 核对 `recomputed.json` 与 `recomputed-table.md` 一致且原始文件 SHA-256 不变.
 
 ## E2 安全与状态机检查
 
@@ -81,12 +81,12 @@
 
 ## E6 撤销窗口
 
-[E6 方法](e6/method.md), [结果模板](e6/result.md). M3 [预跑时间线](../infra/fabric/evidence/m3-recovery/original/run-f71a13453be0384e/m3-e6-revocation-window.json)用于核对观测点.
+[E6 方法](e6/method.md), [E6 驱动](e6/README.md), [结果模板](e6/result.md). M3 [预跑时间线](../infra/fabric/evidence/m3-recovery/original/run-f71a13453be0384e/m3-e6-revocation-window.json)用于核对观测点. 重构前的旧批次 E6 短跑产物已在 `rebuild-monorepo-architecture` 期间清理, 短跑与正式批次待在新 4 模块架构下通过统一 `exp` CLI 重新执行.
 
-- [x] 校验网关锁后定案采集点和实际时钟精度. 已持久化 `decision_at_ns` 与亚秒探针时点并增加 `OnDecisionCommitted` 钩子, 延迟响应回归测试核对定案, 业务提交与响应分离且原秒级期限判据通过. [定案时点回归](../internal/gateway/decision_timing_test.go).
-- [x] 完成 RP 隔离短跑. `run-c3a21eb94efa9dcc` 导出撤销原 txID, `t_valid`, `t_apply`, 双实例 `t_adopt`, 定案及响应关联记录 (`0` 违规放行, 分辨率 `1000 ns`). [RP 撤销时间线](e6/runs/run-c3a21eb94efa9dcc/revocations.csv), [RP 汇总](e6/runs/run-c3a21eb94efa9dcc/summary.json).
-- [x] 完成 BM 隔离短跑. `run-86facf71a9d07b81` 在独立隔离实例完成双实例持续探针采样, 计划与完成数 `1106/1106`, `0` 漏探测与 `0` 违规放行. [BM 撤销时间线](e6/runs/run-86facf71a9d07b81/revocations.csv), [BM 汇总](e6/runs/run-86facf71a9d07b81/summary.json).
-- [x] 离线复算一轮窗口. 停止服务后用 `e6-analyzer/v1` 对 `run-c3a21eb94efa9dcc` 与 `run-86facf71a9d07b81` 重算阶段耗时, 窗口, 删失归类与样本对账, 原始目录摘要不变. [RP 复算表](e6/analysis/run-c3a21eb94efa9dcc/recomputed-table.md), [BM 复算表](e6/analysis/run-86facf71a9d07b81/recomputed-table.md), [E6 短跑报告](e6/result.md).
+- [x] 校验网关锁后定案采集点和实际时钟精度. 已持久化 `decision_at_ns` 与亚秒探针时点并保留 `OnDecisionCommitted` 钩子, 延迟响应与定案时点回归测试核对定案, 业务提交与响应分离且原秒级期限判据通过. [网关数据库与定案回归](../platform/gateway/gateway_db_test.go).
+- [ ] 完成 RP 隔离短跑. 导出撤销原 txID, `t_valid`, `t_apply`, 双实例 `t_adopt`, 定案及响应关联记录, 核对 `0` 违规放行与实际时钟分辨率.
+- [ ] 完成 BM 隔离短跑. 在独立隔离实例完成双实例持续探针采样, 核对计划与完成样本对账, 漏探测计数及 `0` 违规放行.
+- [ ] 离线复算一轮短跑窗口. 停止服务后用 `mise -C experiments run experiment:analyze -- --experiment E6` (`e6-analyzer/v1`) 重算阶段耗时, 窗口, 删失归类与样本对账, 核对原始目录文件摘要不变.
 - [ ] 完成主要场景正式重复. 交付至少 30 次独立运行的清单与汇总, 核对每轮时长, 业务前置条件及违规放行.
 - [ ] 核验并扫描 `deltaState` 为 1/5/15 秒. 交付各档实际生效配置, 原探针时点, 撤销窗口和可用率对照.
 - [ ] 完成撤销对象专项. 交付不同撤销对象及合法兄弟支的对照表.

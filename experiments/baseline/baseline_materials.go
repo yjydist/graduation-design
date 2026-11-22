@@ -1,4 +1,4 @@
-package main
+package baseline
 
 import (
 	"fmt"
@@ -7,33 +7,34 @@ import (
 	"slices"
 	"strings"
 
-	"graduation-design/internal/fabric"
-	api "graduation-design/internal/fabricapi"
-	"graduation-design/internal/protocol"
+	"grad/platform/runtime"
+	"grad/platform/state/fabric"
+	"grad/protocol"
+	"grad/protocol/registry"
 )
 
-func baselineProcurement(deploymentID string, in *Inputs) fabric.ProcurementSetup {
-	ids := func(mode string) fabric.ProcurementPathIDs {
+func baselineProcurement(deploymentID string, in *Inputs) runtime.ProcurementSetup {
+	ids := func(mode string) runtime.ProcurementPathIDs {
 		namespace := deploymentID + "/baseline/" + in.LogicalID(mode, "")
-		return fabric.ProcurementPathIDs{
-			Task: api.Digest([]byte(namespace + "task")),
-			G0:   api.Digest([]byte(namespace + "G0")),
-			G1:   api.Digest([]byte(namespace + "G1")),
-			G2:   api.Digest([]byte(namespace + "G2")),
+		return runtime.ProcurementPathIDs{
+			Task: registry.Digest([]byte(namespace + "task")),
+			G0:   registry.Digest([]byte(namespace + "G0")),
+			G1:   registry.Digest([]byte(namespace + "G1")),
+			G2:   registry.Digest([]byte(namespace + "G2")),
 		}
 	}
-	return fabric.ProcurementSetup{
+	return runtime.ProcurementSetup{
 		Spec: protocol.TaskSpec{
 			SupplierID:  in.Fixture.Supplier,
 			ProductID:   in.Fixture.Product,
 			MaxQuantity: in.Fixture.Quantity,
 			Currency:    in.Fixture.Currency,
-			Resources:   []string{"urn:grad:resource:C:orders", "urn:grad:resource:C:quotes"},
+			Resources:   []string{protocol.ResourceOrders, protocol.ResourceQuotes},
 			Actions:     slices.Sorted(slices.Values(in.Fixture.Actions)),
 			Description: "Paired baseline procurement",
 		},
-		RP: ids(api.RP),
-		BM: ids(api.BM),
+		RP: ids(registry.RP),
+		BM: ids(registry.BM),
 	}
 }
 
@@ -44,16 +45,16 @@ type baselineRegistration struct {
 	InputDigest    string
 }
 
-// prepareRegistration prepares the C0 input from the same fixtures submitted by seed.
-func prepareRegistration(dir string, d *fabric.Deployment, report *fabric.SeedReport, setup fabric.ProcurementSetup) (*baselineRegistration, error) {
+// prepareRegistration prepares the C0 preload snapshot from the exact fixtures submitted to Fabric.
+func prepareRegistration(dir string, d *fabric.Deployment, report *runtime.SeedReport, setup runtime.ProcurementSetup) (*baselineRegistration, error) {
 	f := report.Fixtures()
 	if f.RPTask.ID != setup.RP.Task || f.BMTask.ID != setup.BM.Task {
 		return nil, fmt.Errorf("baseline requires fixtures prepared for this seed in a clean instance")
 	}
 	digests := map[string]string{}
-	registry := filepath.Join(dir, "registry")
+	regDir := filepath.Join(dir, "registry")
 	for _, sub := range []string{"did", "certifications", "credentials", "grants"} {
-		err := filepath.WalkDir(filepath.Join(registry, sub), func(path string, entry os.DirEntry, err error) error {
+		err := filepath.WalkDir(filepath.Join(regDir, sub), func(path string, entry os.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -67,11 +68,11 @@ func prepareRegistration(dir string, d *fabric.Deployment, report *fabric.SeedRe
 			if strings.Contains(string(raw), "PRIVATE KEY") {
 				return fmt.Errorf("private material in public registry")
 			}
-			rel, err := filepath.Rel(registry, path)
+			rel, err := filepath.Rel(regDir, path)
 			if err != nil {
 				return err
 			}
-			digests[filepath.ToSlash(rel)] = api.Digest(raw)
+			digests[filepath.ToSlash(rel)] = registry.Digest(raw)
 			return nil
 		})
 		if err != nil {
@@ -84,10 +85,14 @@ func prepareRegistration(dir string, d *fabric.Deployment, report *fabric.SeedRe
 	}
 	snap := report.RegistrationSnapshot(d)
 	snap.ExactIntervalBounds = true
-	snap.ClockError = api.ClockError
+	snap.ClockError = registry.ClockError
 	input, err := protocol.MarshalJCS(snap)
 	if err != nil {
 		return nil, err
 	}
-	return &baselineRegistration{Snapshot: snap, MaterialDigest: api.Digest(public), InputDigest: api.Digest(input)}, nil
+	return &baselineRegistration{
+		Snapshot:       snap,
+		MaterialDigest: registry.Digest(public),
+		InputDigest:    registry.Digest(input),
+	}, nil
 }

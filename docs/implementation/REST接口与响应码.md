@@ -2,16 +2,16 @@
 
 ## 1 客户端调用顺序
 
-request 的全部字段必填, idempotencyKey 为 1-64 个 ASCII 字母, 数字, 下划线或连字符. 询价时切换到 quotes 资源和 quote.read, quoteId 为 null, amountMinor 为 0, 使用新的询价键. 下单时只使用询价响应中的 quoteId, 商品, 数量, 币种和总价, 改为订单资源, 动作和订单键. 当 `B₁`/`B₂` 作为 LLM 智能体运行时, 下表定义其底层确定性协议工具 (`request_quote`, `create_order` 等) 的执行契约: LLM 只向工具提交业务意图参数 (如动作, 任务/报价引用, 数量等), 挑战申请, `nonce` 原样绑定, `KB-JWT` 签名, `intentId` 持久化锁及响应校验均由工具层严格执行. 每个动作依次调用以下接口.
+request 的全部字段必填, idempotencyKey 为 1-64 个 ASCII 字母, 数字, 下划线或连字符. 询价时必须使用规范资源 URI `urn:grad:resource:C:quotes` 和动作 `quote.read`, quoteId 为 null, amountMinor 为 0, 使用新的询价键. 下单时只使用询价响应中的 quoteId, 商品, 数量, 币种和总价, 切换为规范资源 URI `urn:grad:resource:C:orders`, 动作 `order.create` 和独立订单键. 任何历史短别名 (`quotes`, `urn:grad:resource:quotes`, `orders`, `urn:grad:resource:orders`) 均在挑战与数据库读取前直接返回 `400 INVALID_SCHEMA` (`decisionId: null`), 不消费挑战. 当 `B₁`/`B₂` 作为 LLM 智能体运行时, 下表定义其底层确定性协议工具 (`request_quote`, `create_order` 等) 的执行契约: LLM 只向工具提交业务意图参数 (如动作, 任务/报价引用, 数量等), 挑战申请, `nonce` 原样绑定, `KB-JWT` 签名, `intentId` 持久化锁及响应校验均由工具层严格执行. 每个动作依次调用以下接口.
 
 | 调用 | 成功响应 JSON | 客户端如何使用 |
 | --- | --- | --- |
 | POST /v1/auth/challenges | 201, {challengeId,nonce,audience,issuedAt,expiresAt} | C 根据服务配置填 audience, 绑定提交的 actor, taskId 和 requestHash. actor 的自报值仅标识待证明者 |
 | POST /v1/access/execute, 询价 | 200, {decisionId,code:"ALLOW",quote} | quote 含 quoteId, taskId, actor, supplierId, productId, quantity, currency, unitPriceMinor, totalAmountMinor, issuedAt, validUntil |
-| POST /v1/access/execute, 下单 | 200, {decisionId,code:"ALLOW",order} | order 含 orderId, taskId, actor, principalDomain, authorizationMode, quoteId, currency, amountMinor, status. CREATED 后订单记录不可改 |
-| execute 拒绝 | 对应 HTTP 状态, {requestId,code,decisionId} | 未形成审计决策时 decisionId 为 null. 客户端用 requestId 查故障, 用 decisionId 查该次决策. 成功重试返回新的 decisionId 和原业务 ID |
+| POST /v1/access/execute, 下单 | 200, {decisionId,code:"ALLOW",order} | order 含 orderId, quoteId, taskId, actor, supplierId, productId, quantity, currency, totalAmountMinor, idempotencyKey, status, createdAt. CREATED 后订单记录不可改 |
+| execute 拒绝 | 对应 HTTP 状态, {requestId,code,decisionId,message} | 所有网关错误统一返回 `{requestId,code,decisionId,message}` 信封. 未形成审计决策时 decisionId 为 null. 客户端用 requestId 查故障, 用 decisionId 查该次决策. 成功重试返回新的 decisionId 和原业务 ID |
 
-C 数据库按部署隔离. C 目录基准单价为 80000 分. 报价 ID 由 C 分配, validUntil=min(issuedAt+300, task.validUntil). 测试驱动在独立用例的 C 目录中预置 90000 或 120000 分, 再调用同一询价接口, 将返回的 ID 记作 Q900 或 Q1200. 更新目录不改变已签发报价. 订单按如下顺序比较: 找到同部署/任务/主体的报价, 校验商品/数量/币种/供应商, 检查 now < validUntil, 检查真实总额与请求相同, 再判总额不超过整条路径最小上限. 授权和报价期限在事务最终检查时仍须满足.
+C 数据库按部署隔离. `gateway.EnsureSchema` 执行嵌入式迁移并幂等初始化默认目录价格: `urn:grad:product:P1` 为 80000 分 (CNY), `urn:grad:product:P2` 为 120000 分 (CNY). 报价 ID 由 C 分配, validUntil=min(issuedAt+300, task.validUntil). 独立用例可在 C 目录中按需调整或预置价格, 再调用同一询价接口, 将返回的 ID 记作 Q800, Q900 或 Q1200. 更新目录不改变已签发报价. 订单按如下顺序比较: 找到同部署/任务/主体的报价, 校验商品/数量/币种/供应商, 检查 now < validUntil, 检查真实总额与请求相同, 再判总额不超过整条路径最小上限. 授权和报价期限在事务最终检查时仍须满足.
 
 | 时点 | B₁读取什么 | 写入或核对什么 |
 | --- | --- | --- |
@@ -67,9 +67,9 @@ C 数据库按部署隔离. C 目录基准单价为 80000 分. 报价 ID 由 C �
 | POST /access/execute | 规范请求, 证据包, 挑战及叶子 KB | 200/4xx/503; 直接执行, 不签发宽权限 token |
 | GET /operations/{id} | operationId | 查询成功为 HTTP 200, 返回 PENDING/CONFIRMED/FAILED, txId, stage, validationCode, blockNumber, blockHash, transactionIndex, observedPeer, failureCode; FAILED 不把该 GET 改成 HTTP 409 |
 | GET /grants/{id}/path | 叶子 ID | 授权路径和当前验证结果; 需审计权限 |
-| POST /internal/order-outcome-cases | caseId, sendRevision, deploymentId, request, requestHash, challengeIds | B 恢复服务经 mTLS 向 C 登记已停发的核账单; 202 只确认登记 |
-| POST /audit/order-outcomes | 原订单 request 及可能已发送的 challengeIds; 已登记核账单另带 caseId | 仅 C 审计员按核账规程查主库, 读取历史结果 |
-| POST /internal/order-outcome-receipts | 绑定原意图的最小核账回执 | 仅 C 核账服务向 B 恢复服务交付, 200 表示 B 已持久化 |
+| POST /internal/order-outcome-cases | caseId, sendRevision, deploymentId, request, requestHash, challengeIds | C 网关接口 (`platform/gateway`): B 恢复服务经 mTLS 向 C 登记已停发 (`sendRevision >= 2`) 的核账单; 202 只确认登记 |
+| POST /audit/order-outcomes | 原订单 request 及可能已发送的 challengeIds; 已登记核账单另带 caseId | C 网关接口 (`platform/gateway`): 仅 C 审计员按核账规程查主库, 读取历史结果并原子写 outbox |
+| POST /internal/order-outcome-receipts | 绑定原意图的最小核账回执 | B 侧恢复服务接口 (`platform/agent`): 仅 C 核账服务向 B 恢复服务交付, 200 表示 B 已持久化 |
 | GET /decisions/{id} | decisionId | 决策解释; 限请求主体及审计者 |
 | GET /health/ready | 无 | 状态完整且新鲜才 ready; 不暴露密钥 |
 

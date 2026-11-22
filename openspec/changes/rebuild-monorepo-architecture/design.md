@@ -12,9 +12,9 @@
 ## Goals / Non-Goals
 
 **Goals:**
-- 以 4-Module Go Workspace (`go.work`) 在编译期强制单向依赖与模块边界 (`protocol` <- `chaincode`, `protocol` <- `platform`, `protocol` + `platform` <- `experiments`).
+- 以 4-Module Go Workspace (`go.work`) 组织模块, 通过编译器的私有包约束和项目依赖图检查维护单向依赖 (`protocol` <- `chaincode`, `protocol` <- `platform`, `protocol` + `platform` <- `experiments`).
 - 构造高内聚, 低耦合的深模块 (Deep Modules): 消灭上帝包与依赖倒挂, 合并无意义的微包和浅包装, 保持单目录逻辑清晰且文件数量精简.
-- 引入成熟包与 Go 1.27 标准库大幅缩减手写样板代码 (目标净减 30%~40%), 统一数据库迁移与三层隔离测试体系.
+- 引入成熟包与 Go 1.27 标准库减少重复实现, 统一数据库迁移与三层隔离测试体系. 分别记录生产代码和含测试代码的文件数与行数, 验收以行为回归及模块边界为准.
 - 清理历史遗留协议前缀, 冗余字段与旧实验试跑产物, 使 `v1.0.0` 之前的代码库达到简洁, 可审计, 可直接开展全套正式实验的状态.
 
 **Non-Goals:**
@@ -76,9 +76,11 @@ flowchart TB
 
 - **理由**:
   - `protocol/registry` 保持零第三方依赖, 放在 `protocol` 模块中供 `chaincode` 与 `platform` 共享; `chaincode/go.mod` 仅依赖 `fabric-chaincode-go/v2` 与 `grad/protocol`, 彻底隔离 `pgx`, `opa`, `mcp`, `openai`, `anthropic`, `cobra` 等重依赖.
-  - `experiments` 作为独立 Go module 后, Go 编译器原生禁止其导入 `platform/internal/*`, 也禁止 `platform` 反向导入 `experiments`.
+  - `experiments` 作为独立 Go module 后, Go 编译器原生禁止其导入 `platform/internal/*`, 项目模块到 `experiments` 的反向依赖由项目侧依赖图检查.
   - `state.StateSource` / `state.HistoricalStateSource` 抽入 `platform/state`, 使 `state/fabric` 与 `state/central` 不再依赖 `gateway`.
   - `client_actions` 归位 `platform/agent`, 消除 `gateway/client_actions.go` 与 `agent/client_actions.go` 的双层包装, `agent` 仅通过 HTTP/`http.Handler` 与 `gateway` 通信.
+- 采购目录价格由 `gateway.SetCatalogPrice` 按部署和商品更新. 基线及 E1/E6 驱动通过该 Go 接口调价, 由网关维护业务表写入语义.
+- E1 的公开模型配置由运行清单记录提供方, 模型名和服务端点. 本地 `llm.env` 只供配置读取, 源码快照按文件清单导出.
 - **替代方案**:
   - *单 Go 模块重构*: 无法通过编译器阻止 `experiments` 侵入 `internal/*`, 也无法隔离链码构建依赖. 否决.
   - *按每个领域包建独立 `go.mod` (8+ 模块)*: 依赖版本对齐与 `go.sum` 维护成本过高. 否决.

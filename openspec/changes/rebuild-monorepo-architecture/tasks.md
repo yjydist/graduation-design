@@ -31,13 +31,13 @@
 
 ## 6. 重构 `experiments` 独立模块 (`grad/experiments`)
 
-- [x] 6.1 建立 `experiments/harness/` 共用底座 (环境装配, 指标采集, 敏感信息扫描, 源码快照, 基于 `renameio/v2` 的原子写入与基于 `csvutil` 的表格导出) 与统一 Cobra CLI `experiments/cmd/exp/` (`baseline`, `run`, `analyze`). 验证: `cd experiments && go build ./cmd/exp` 成功且 `go list -deps ./...` 确认未导入 `platform/internal/*`.
+- [x] 6.1 建立 `experiments/harness/` 共用底座 (环境装配, 指标采集, 敏感信息扫描, 源码快照, 基于 `renameio/v2` 的原子写入与基于 `csvutil` 的表格导出) 与统一 Cobra CLI `experiments/cmd/exp/` (`baseline`, `run`, `analyze`). 验证: `cd experiments && go build ./cmd/exp` 成功且 `go list -f '{{.Imports}} {{.TestImports}} {{.XTestImports}}' ./...` 确认实验代码及其测试无 `grad/platform/internal/` 直接导入.
 - [x] 6.2 重构 `experiments/baseline/`, `experiments/e1/driver/` 与 `experiments/e6/driver/` 适配新 `grad/protocol` 与 `grad/platform` 公开 API 及规范资源 URI, 清除对重构前旧运行目录格式的兼容分支; 同步更新 `experiments/AGENTS.md`, `experiments/README.md`, `experiments/TODO.md` 及 E1/E6 运行说明与 `result.md` 占位状态. 验证: `cd experiments && go test -v ./...` 全部通过.
 
 ## 7. 删除旧代码结构, 收敛工具链入口与全栈集成验收
 
 - [x] 7.1 删除根目录旧 `go.mod`, `go.sum`, `cmd/`, `internal/` 以及过碎的叶子目录 `AGENTS.md`, 更新根 `mise.toml`, `experiments/mise.toml`, `AGENTS.md`, `README.md` 与 `docs/implementation/技术栈.md` 指向新的 4-Module 工作区和三层测试命令 (`test:unit`, `test:db`, `ledger:verify`, `experiment:test`). 验证: 仓库内无失效文档相对链接, `mise run ledger:build` 与 `mise run test:unit` 在干净环境下全部通过.
-- [x] 7.2 执行跨模块编译期边界校验, 数据库回归与隔离 Fabric 实机集成验收 (`//go:build fabriclive`): 在干净隔离实例上验证 `ledgerctl deploy`, `seed`, `check`, `inspect`, `mcp` 与 E1/E6 驱动 smoke 检查, 并统计重构前后手写 Go 行数与文件数对比. 验证: `go list -deps -test` 确认 `protocol`/`chaincode`/`platform` 零实验依赖且 `experiments` 零 `internal/` 依赖, `mise run test:unit`, `mise run test:db`, `mise run ledger:verify` 与 `mise -C experiments run experiment:test` 全部通过.
+- [x] 7.2 执行跨模块编译期边界校验, 数据库回归与隔离 Fabric 实机集成验收 (`//go:build fabriclive`): 在干净隔离实例上验证 `ledgerctl deploy`, `seed`, `check`, `inspect`, `mcp` 与 E1/E6 驱动 smoke 检查, 并统计重构前后手写 Go 行数与文件数对比. 验证: `go list -deps -test` 确认 `protocol`/`chaincode`/`platform` 零实验依赖, 按 6.1 检查实验包及其测试的直接导入, `mise run test:unit`, `mise run test:db`, `mise run ledger:verify` 与 `mise -C experiments run experiment:test` 全部通过.
 
 ## Workflow follow-up
 

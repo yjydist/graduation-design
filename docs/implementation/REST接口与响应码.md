@@ -11,7 +11,7 @@ request 的全部字段必填, idempotencyKey 为 1-64 个 ASCII 字母, 数字,
 | POST /v1/access/execute, 下单 | 200, {decisionId,code:"ALLOW",order} | order 含 orderId, quoteId, taskId, actor, supplierId, productId, quantity, currency, totalAmountMinor, idempotencyKey, status, createdAt. CREATED 后订单记录不可改 |
 | execute 拒绝 | 对应 HTTP 状态, {requestId,code,decisionId,message} | 所有网关错误统一返回 `{requestId,code,decisionId,message}` 信封. 未形成审计决策时 decisionId 为 null. 客户端用 requestId 查故障, 用 decisionId 查该次决策. 成功重试返回新的 decisionId 和原业务 ID |
 
-C 数据库按部署隔离. `gateway.EnsureSchema` 执行嵌入式迁移并幂等初始化默认目录价格: `urn:grad:product:P1` 为 80000 分 (CNY), `urn:grad:product:P2` 为 120000 分 (CNY). 报价 ID 由 C 分配, validUntil=min(issuedAt+300, task.validUntil). 独立用例可在 C 目录中按需调整或预置价格, 再调用同一询价接口, 将返回的 ID 记作 Q800, Q900 或 Q1200. 更新目录不改变已签发报价. 订单按如下顺序比较: 找到同部署/任务/主体的报价, 校验商品/数量/币种/供应商, 检查 now < validUntil, 检查真实总额与请求相同, 再判总额不超过整条路径最小上限. 授权和报价期限在事务最终检查时仍须满足.
+C 数据库按部署隔离. `gateway.EnsureSchema` 执行嵌入式迁移并幂等初始化默认目录价格: `urn:grad:product:P1` 为 80000 分 (CNY), `urn:grad:product:P2` 为 120000 分 (CNY). 报价 ID 由 C 分配, validUntil=min(issuedAt+300, task.validUntil). 独立用例可调用 Go 接口 `gateway.SetCatalogPrice` 调整指定部署中已有商品的单价 (正整数, 单位为分), 部署或商品未匹配时返回错误, 再调用同一询价接口, 将返回的 ID 记作 Q800, Q900 或 Q1200. 更新目录不改变已签发报价. 订单按如下顺序比较: 找到同部署/任务/主体的报价, 校验商品/数量/币种/供应商, 检查 now < validUntil, 检查真实总额与请求相同, 再判总额不超过整条路径最小上限. 授权和报价期限在事务最终检查时仍须满足.
 
 | 时点 | B₁读取什么 | 写入或核对什么 |
 | --- | --- | --- |

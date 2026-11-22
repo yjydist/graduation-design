@@ -29,7 +29,7 @@
   - `mise run test:unit`: 运行 `protocol`, `chaincode`, `platform` 三模块离线单元测试.
   - `mise run test:db`: 运行 `platform` PostgreSQL 集成测试 (`//go:build db`, 自动通过 `testcontainers-go` 启动 `postgres:17-alpine` 或读取 `TEST_POSTGRES_DSN`).
   - `mise run ledger:verify`: 在已启动的隔离实例 (`FABRIC_INSTANCE`) 上运行 Fabric 实机集成验收 (`//go:build fabriclive`).
-  - 依赖边界用 `mise exec -- go list -deps -test grad/protocol/... grad/chaincode/... grad/platform/...` 核对无 `grad/experiments`, 并用 `mise exec -- go list -deps -test grad/experiments/...` 核对无 `grad/platform/internal/`.
+  - 依赖边界用 `mise exec -- go list -deps -test grad/protocol/... grad/chaincode/... grad/platform/...` 核对无 `grad/experiments`, 并用 `mise exec -- go list -f '{{.Imports}} {{.TestImports}} {{.XTestImports}}' grad/experiments/...` 核对实验包及其测试的直接导入中无 `grad/platform/internal/`.
 - 实验任务从[实验索引](experiments/README.md)定位方法, 用例和运行入口. 在仓库根目录用 `mise -C experiments run experiment:test` 验证实验模块, 其他实验命令见对应运行说明.
 
 ## 项目原则

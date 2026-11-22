@@ -359,7 +359,7 @@ func (e *e1Trial) delegate(m *e1Mode) error {
 }
 
 func (e *e1Trial) updatePriceAndContext(m *e1Mode, price int64) error {
-	if _, err := e.db.Exec(e.ctx, `UPDATE catalog_prices SET unit_price_minor=$2 WHERE deployment_id=$1 AND product_id=$3`, e.d.DeploymentID, price, gateway.DefaultProductID); err != nil {
+	if err := gateway.SetCatalogPrice(e.ctx, e.db, e.d.DeploymentID, gateway.DefaultProductID, price); err != nil {
 		return err
 	}
 	_, err := e.ensureTaskContextNormal(e.server.Handler(), m.task.ID, time.Now().Unix())

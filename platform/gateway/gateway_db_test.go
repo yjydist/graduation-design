@@ -864,12 +864,10 @@ func TestProcurementRPAndBMOrderLifecycleAndRejections(t *testing.T) {
 	require.NotNil(t, oBMResp.Order)
 	assert.Equal(t, "CREATED", oBMResp.Order.Status)
 
-	// 3. 1200-yuan (P1 qty=2 -> 160000 > G2 100000 cap; or seed P1 unit price / use qty=2 on P1)
-	// Also test P2 = 120000 by updating catalog P1 or querying P1 qty=2? Wait: spec allows P1 maxQuantity=2 -> 160000 > 100000;
-	// let's also test explicit 120000 quote by updating P1 price in a separate task or testing P2 after extending spec.
-	// Here let's seed a 120000 quote via catalog update to 120000 on P1 (existing quote Q800 stays immutable at 80000!).
-	_, err := f.pool.Exec(t.Context(), `UPDATE catalog_prices SET unit_price_minor=120000 WHERE deployment_id=$1 AND product_id=$2`, f.depID, gateway.DefaultProductID)
-	require.NoError(t, err)
+	// Change the catalog price for future quotes. The earlier Q800 remains immutable.
+	require.Error(t, gateway.SetCatalogPrice(t.Context(), f.pool, f.depID, "missing-product", 120000))
+	require.Error(t, gateway.SetCatalogPrice(t.Context(), f.pool, f.depID, gateway.DefaultProductID, 0))
+	require.NoError(t, gateway.SetCatalogPrice(t.Context(), f.pool, f.depID, gateway.DefaultProductID, 120000))
 	q1200Req := f.buildRequest(f.didB1, f.rp, protocol.ActionQuoteRead, protocol.ResourceQuotes, gateway.DefaultProductID, 1, nil, 0, "rp-q-1200")
 	q1200Rec := exec(q1200Req, f.rp)
 	require.Equal(t, http.StatusOK, q1200Rec.Code, q1200Rec.Body.String())

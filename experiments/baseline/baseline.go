@@ -504,18 +504,18 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 		if time.Now().Unix() >= min(task.EXP, r.f.Certifications["B"].Certification.EXP) {
 			return fmt.Errorf("baseline materials expired")
 		}
-		if _, err = db.Exec(ctx,
-			`UPDATE catalog_prices SET unit_price_minor=$3 WHERE deployment_id=$1 AND product_id=$2`,
-			r.d.DeploymentID, r.inputs.Fixture.Product, c.AmountMinor,
-		); err != nil {
+		if err := gateway.SetCatalogPrice(ctx, db, r.d.DeploymentID, r.inputs.Fixture.Product, c.AmountMinor); err != nil {
 			return err
 		}
 		var price int64
-		if err = db.QueryRow(ctx,
+		if err := db.QueryRow(ctx,
 			`SELECT unit_price_minor FROM catalog_prices WHERE deployment_id=$1 AND product_id=$2`,
 			r.d.DeploymentID, r.inputs.Fixture.Product,
-		).Scan(&price); err != nil || price != c.AmountMinor {
-			return fmt.Errorf("catalog price readback failed: %w", err)
+		).Scan(&price); err != nil {
+			return fmt.Errorf("read back catalog price: %w", err)
+		}
+		if price != c.AmountMinor {
+			return fmt.Errorf("catalog price readback: got %d, want %d", price, c.AmountMinor)
 		}
 		var contextVersion int64
 		err = db.QueryRow(ctx,

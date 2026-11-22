@@ -284,6 +284,26 @@ func EnsureCatalogPrices(ctx context.Context, db *pgxpool.Pool, deploymentID, su
 	return nil
 }
 
+// SetCatalogPrice sets the unit price in minor currency units for an existing
+// deployment and product. Previously issued quotes keep their recorded price.
+func SetCatalogPrice(ctx context.Context, db *pgxpool.Pool, deploymentID, productID string, unitPriceMinor int64) error {
+	if db == nil {
+		return fmt.Errorf("gateway database pool is required")
+	}
+	if unitPriceMinor <= 0 {
+		return fmt.Errorf("catalog unit price must be positive")
+	}
+	result, err := db.Exec(ctx, `UPDATE catalog_prices SET unit_price_minor=$3
+		WHERE deployment_id=$1 AND product_id=$2`, deploymentID, productID, unitPriceMinor)
+	if err != nil {
+		return fmt.Errorf("set catalog price for %s: %w", productID, err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("catalog product %s not found in deployment %s", productID, deploymentID)
+	}
+	return nil
+}
+
 // NewServer constructs a configured gateway Server with its Go 1.22+ ServeMux routes.
 func NewServer(cfg ServerConfig) (*Server, error) {
 	if cfg.DB == nil {

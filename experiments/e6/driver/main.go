@@ -528,7 +528,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	}
 
 	// Set Q800 catalog price and NORMAL trusted context.
-	if _, err := db.Exec(ctx, `UPDATE catalog_prices SET unit_price_minor=80000 WHERE deployment_id=$1 AND product_id=$2`, d.DeploymentID, gateway.DefaultProductID); err != nil {
+	if err := gateway.SetCatalogPrice(ctx, db, d.DeploymentID, gateway.DefaultProductID, gateway.DefaultProductPriceMinor); err != nil {
 		return fmt.Errorf("set Q800 catalog price: %w", err)
 	}
 	if err := ensureNormalContext(trackers[0].server.Handler(), task.ID, minExp); err != nil {

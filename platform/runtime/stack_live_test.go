@@ -194,12 +194,55 @@ func TestFabricLiveFullStackAcceptance(t *testing.T) {
 	require.Equal(t, "ALLOW", b2Order.Decision, "code=%s msg=%s", b2Order.ErrorCode, b2Order.ErrorMessage)
 
 	// Revoke childID on Fabric and await view replay past block r.
-	revEv, err := inst.RevokeGrant(ctx, db, dep, "live-revoke-"+runSuffix, "A1", childID, "post-order revocation audit test")
+	_, a1Mgmt, _, err := inst.Role("A1")
 	require.NoError(t, err)
+	mgmtClient := NewLocalMTLSClientWithFingerprint(stack.Management.Handler(), f.Identities["A1"].ID, "MANAGEMENT", a1Mgmt.MSPID, a1Mgmt.CertificateSHA256)
+	child, err := stack.FabricSP.AssembleSnapshot(ctx, childID, time.Now().UTC())
+	require.NoError(t, err)
+	mutation, err := json.Marshal(registry.Mutation{
+		Bound: registry.Bound{DeploymentID: dep.DeploymentID}, ID: childID,
+		ExpectedRevision: 1, ExpectedDigest: child.Snapshot.Grants[childID].Digest, Reason: "post-order revocation audit test",
+	})
+	require.NoError(t, err)
+	key := "live-revoke-" + runSuffix
+	requestRevoke, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://a.local/v1/management/RevokeGrant", bytes.NewReader(mutation))
+	require.NoError(t, err)
+	requestRevoke.Header.Set("Idempotency-Key", key)
+	requestRevoke.Header.Set("Content-Type", "application/json")
+	accepted, err := mgmtClient.Do(requestRevoke)
+	require.NoError(t, err)
+	defer accepted.Body.Close()
+	require.Equal(t, http.StatusAccepted, accepted.StatusCode)
+	var queued registrysvc.OperationView
+	require.NoError(t, json.NewDecoder(accepted.Body).Decode(&queued))
+
+	var committed registrysvc.OperationView
+	require.NoError(t, fabric.Poll(ctx, 15*time.Second, func() (bool, error) {
+		response, err := mgmtClient.Get("https://a.local/v1/operations/" + queued.OperationID)
+		if err != nil {
+			return false, err
+		}
+		defer response.Body.Close()
+		if err := json.NewDecoder(response.Body).Decode(&committed); err != nil {
+			return false, err
+		}
+		return committed.Status != "PENDING", nil
+	}))
+	require.Equal(t, "CONFIRMED", committed.Status)
+	require.Nil(t, committed.FailureCode)
+	journal := fabric.NewJournal(inst, db, dep.DeploymentID)
+	original, err := journal.Load(ctx, queued.OperationID, db)
+	require.NoError(t, err)
+	require.NotNil(t, original)
+	require.NotNil(t, original.Commit)
+	require.Equal(t, original.TxID, committed.TxID)
+	require.Equal(t, &original.Commit.Index, committed.TransactionIndex)
+	require.Equal(t, "peer-c", original.Commit.ObservedPeer)
+	require.Equal(t, &original.Commit.ObservedPeer, committed.ObservedPeer)
 	v := fabric.View{DB: db, Deployment: dep}
 	require.NoError(t, fabric.Poll(ctx, 15*time.Second, func() (bool, error) {
 		head, hErr := v.Head(ctx, db, false)
-		return head != nil && head.Number >= revEv.BlockNumber, hErr
+		return head != nil && head.Number >= original.Commit.Number, hErr
 	}))
 
 	// Post-revocation request by B2 must be rejected.
@@ -241,9 +284,6 @@ func TestFabricLiveFullStackAcceptance(t *testing.T) {
 	assert.Less(t, *auditBody.DecisionBlock, *auditBody.RevocationBlock)
 
 	// 5. Verify registrysvc.Service HTTP management operation endpoint with mTLS fingerprint.
-	_, a1Mgmt, _, err := inst.Role("A1")
-	require.NoError(t, err)
-	mgmtClient := NewLocalMTLSClientWithFingerprint(stack.Management.Handler(), f.Identities["A1"].ID, "MANAGEMENT", a1Mgmt.MSPID, a1Mgmt.CertificateSHA256)
 	mgmtReq, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://a.local/v1/management/RevokeGrant", bytes.NewReader([]byte(fmt.Sprintf(`{"deploymentId":%q,"id":%q,"expectedRevision":1,"expectedDigest":%q}`, dep.DeploymentID, childID, delOut.Grant.GrantID))))
 	require.NoError(t, err)
 	mgmtReq.Header.Set("Content-Type", "application/json")
@@ -261,7 +301,7 @@ func TestFabricLiveFullStackAcceptance(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, getOpResp.StatusCode)
 	var opErr map[string]any
 	require.NoError(t, json.NewDecoder(getOpResp.Body).Decode(&opErr))
-	assert.Equal(t, registrysvc.ErrCodeOperationUnknown, opErr["code"])
+	assert.Equal(t, registry.ErrCodeOperationUnknown, opErr["code"])
 
 	// 6. Build and invoke ledgerctl binary for check, inspect, and mcp stdio handshake on live instance.
 	binPath := filepath.Join(t.TempDir(), "ledgerctl")

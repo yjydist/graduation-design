@@ -9,7 +9,7 @@ import (
 // Error is the canonical grad-auth-v1 structured error shared with registry.
 type Error = registry.Error
 
-// Canonical error codes re-exported from grad/protocol/registry (64 total).
+// Canonical error codes re-exported from grad/protocol/registry.
 const (
 	// Protocol and gateway error codes (58).
 	ErrCodeInvalidSchema               = registry.ErrCodeInvalidSchema
@@ -70,6 +70,11 @@ const (
 	ErrCodeGrantInactive               = registry.ErrCodeGrantInactive
 	ErrCodeGrantStateConflict          = registry.ErrCodeGrantStateConflict
 	ErrCodeAuditForbidden              = registry.ErrCodeAuditForbidden
+
+	// Management operation outcomes.
+	ErrCodeOperationUnknown    = registry.ErrCodeOperationUnknown
+	ErrCodeEndorsementRejected = registry.ErrCodeEndorsementRejected
+	ErrCodeCommitInvalid       = registry.ErrCodeCommitInvalid
 
 	// Registry chaincode-specific error codes (6).
 	ErrCodeInvalidStructure  = registry.ErrCodeInvalidStructure

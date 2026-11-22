@@ -227,7 +227,7 @@ func TestHandlerUnifiedErrorEnvelopeWithoutDB(t *testing.T) {
 
 type noopBackend struct{}
 
-func (*noopBackend) CurrentRevision(context.Context, string, json.RawMessage) (uint64, bool, error) {
+func (*noopBackend) CurrentRevision(context.Context, string, string) (uint64, bool, error) {
 	return 0, false, nil
 }
 
@@ -237,6 +237,6 @@ func (*noopBackend) SubmitAsync(
 	registry.Management,
 	string,
 	json.RawMessage,
-	func(string, string, string, int64, string, *string, *string, bool) error,
+	OutcomeHandler,
 ) {
 }

@@ -24,6 +24,7 @@ import (
 
 	"grad/platform/internal/mtls"
 	"grad/platform/internal/testutil"
+	"grad/platform/state/fabric"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -108,7 +109,7 @@ func TestRegistrationChallengeDualProofFlow(t *testing.T) {
 	// Negative 1: wrong user cert from same MSP.
 	wrongBundle, err := protocol.SignManagementDualProofBundle(dep, *chal, wrongCertDER, wrongPriv, appPriv)
 	require.NoError(t, err)
-	err = rc.AcceptRegistrationBundle(ctx, "reg-wrong-cert", depID+":reg-wrong-cert", caller, wrongBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
+	err = rc.AcceptRegistrationBundle(ctx, "reg-wrong-cert", caller, wrongBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
 	assert.Error(t, err)
 	checkNotConsumed()
 
@@ -119,31 +120,31 @@ func TestRegistrationChallengeDualProofFlow(t *testing.T) {
 	otherChal.Nonce = otherNonce
 	replacedBundle, err := protocol.SignManagementDualProofBundle(dep, otherChal, mgmtCertDER, mgmtPriv, appPriv)
 	require.NoError(t, err)
-	err = rc.AcceptRegistrationBundle(ctx, "reg-replaced-nonce", depID+":reg-replaced-nonce", caller, replacedBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
+	err = rc.AcceptRegistrationBundle(ctx, "reg-replaced-nonce", caller, replacedBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
 	assert.True(t, protocol.HasCode(err, registry.ErrCodeChallengeMismatch))
 	checkNotConsumed()
 
 	// Negative 3: missing management signature.
 	missingMgmtSig := *validBundle
 	missingMgmtSig.ManagementSignatureDER = ""
-	err = rc.AcceptRegistrationBundle(ctx, "reg-no-mgmt-sig", depID+":reg-no-mgmt-sig", caller, &missingMgmtSig, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
+	err = rc.AcceptRegistrationBundle(ctx, "reg-no-mgmt-sig", caller, &missingMgmtSig, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
 	assert.True(t, protocol.HasCode(err, registry.ErrCodeRegistrationProofInvalid))
 	checkNotConsumed()
 
 	// Negative 4: missing DID application proof.
 	missingAppSig := *validBundle
 	missingAppSig.AppJWSSignature = ""
-	err = rc.AcceptRegistrationBundle(ctx, "reg-no-app-sig", depID+":reg-no-app-sig", caller, &missingAppSig, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
+	err = rc.AcceptRegistrationBundle(ctx, "reg-no-app-sig", caller, &missingAppSig, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
 	assert.True(t, protocol.HasCode(err, registry.ErrCodeRegistrationProofInvalid))
 	checkNotConsumed()
 
 	// Negative 5: expired challenge.
-	err = rc.AcceptRegistrationBundle(ctx, "reg-expired", depID+":reg-expired", caller, validBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix()+61, nil)
+	err = rc.AcceptRegistrationBundle(ctx, "reg-expired", caller, validBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix()+61, nil)
 	assert.True(t, protocol.HasCode(err, registry.ErrCodeChallengeExpired))
 	checkNotConsumed()
 
 	// Negative 6: wrong MSPID.
-	err = rc.AcceptRegistrationBundle(ctx, "reg-wrong-msp", depID+":reg-wrong-msp", caller, validBundle, "BMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
+	err = rc.AcceptRegistrationBundle(ctx, "reg-wrong-msp", caller, validBundle, "BMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
 	assert.True(t, protocol.HasCode(err, registry.ErrCodeRegistrationProofInvalid))
 	checkNotConsumed()
 
@@ -154,19 +155,18 @@ func TestRegistrationChallengeDualProofFlow(t *testing.T) {
 	require.NoError(t, err)
 	wrongDocBytes, err := protocol.MarshalJCS(wrongDoc)
 	require.NoError(t, err)
-	err = rc.AcceptRegistrationBundle(ctx, "reg-bad-did", depID+":reg-bad-did", caller, validBundle, "AMsp", []*x509.Certificate{mgmtCert}, wrongDocBytes, now.Unix(), nil)
+	err = rc.AcceptRegistrationBundle(ctx, "reg-bad-did", caller, validBundle, "AMsp", []*x509.Certificate{mgmtCert}, wrongDocBytes, now.Unix(), nil)
 	assert.True(t, protocol.HasCode(err, registry.ErrCodeDIDDocumentMismatch))
 	checkNotConsumed()
 
 	// Positive: valid dual proof consumes challenge and records CONFIRMED operations row.
 	opKey := "reg-valid-pa"
-	opID := depID + ":" + opKey
-	err = rc.AcceptRegistrationBundle(ctx, opKey, opID, caller, validBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), func(context.Context) (*SubmitResult, error) {
-		return &SubmitResult{
-			Method:    "RegisterIdentity",
-			TxID:      registry.Digest([]byte("tx-" + opID)),
-			BlockNo:   42,
-			BlockHash: registry.Digest([]byte("block-42")),
+	opID := ManagementOperationID(depID, caller, "RegisterIdentity", opKey)
+	err = rc.AcceptRegistrationBundle(ctx, opKey, caller, validBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), func(_ context.Context, key string) (*fabric.Operation, error) {
+		require.Equal(t, opID, key)
+		return &fabric.Operation{Key: key, Status: "CONFIRMED",
+			TxID:   registry.Digest([]byte("tx-" + opID)),
+			Commit: testCommit(42, registry.Digest([]byte("block-42")), "VALID"),
 		}, nil
 	})
 	require.NoError(t, err)
@@ -183,8 +183,11 @@ func TestRegistrationChallengeDualProofFlow(t *testing.T) {
 	assert.Equal(t, "CONFIRMED", opStatus)
 	assert.Equal(t, int64(42), opBlock)
 
+	// A retry in the original scope resolves the recorded operation without submitting again.
+	require.NoError(t, rc.AcceptRegistrationBundle(ctx, opKey, caller, validBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil))
+
 	// Replay of consumed challenge must fail with CHALLENGE_REPLAY.
-	err = rc.AcceptRegistrationBundle(ctx, "reg-replay", depID+":reg-replay", caller, validBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
+	err = rc.AcceptRegistrationBundle(ctx, "reg-replay", caller, validBundle, "AMsp", []*x509.Certificate{mgmtCert}, docBytes, now.Unix(), nil)
 	assert.True(t, protocol.HasCode(err, registry.ErrCodeChallengeReplay))
 }
 
@@ -194,7 +197,7 @@ type recoveryTestBackend struct {
 	calls       chan json.RawMessage
 }
 
-func (b *recoveryTestBackend) CurrentRevision(context.Context, string, json.RawMessage) (uint64, bool, error) {
+func (b *recoveryTestBackend) CurrentRevision(context.Context, string, string) (uint64, bool, error) {
 	return 1, true, nil
 }
 
@@ -219,10 +222,10 @@ func (b *recoveryTestBackend) SubmitAsync(
 	_ registry.Management,
 	_ string,
 	input json.RawMessage,
-	update func(string, string, string, int64, string, *string, *string, bool) error,
+	update OutcomeHandler,
 ) {
 	code := "VALID"
-	if err := update("COMMIT", "CONFIRMED", "test-original-recovery", 2, strings.Repeat("e", 64), &code, nil, false); err == nil {
+	if err := update("COMMIT", "CONFIRMED", "test-original-recovery", testCommit(2, strings.Repeat("e", 64), code), nil, false); err == nil {
 		b.calls <- append(json.RawMessage(nil), input...)
 	}
 }
@@ -466,8 +469,8 @@ func TestRecoveryCrashResumeConcurrencyRollbackAndTamperFailClosed(t *testing.T)
 		legacy, err := restarted.GetOperation(t.Context(), view.OperationID+"-legacy")
 		require.NoError(t, err)
 		assert.Equal(t, "FAILED", legacy.Status)
-		require.NotNil(t, legacy.ErrorCode)
-		assert.Equal(t, registry.ErrCodeRecoveryProofInvalid, *legacy.ErrorCode)
+		require.NotNil(t, legacy.FailureCode)
+		assert.Equal(t, registry.ErrCodeRecoveryProofInvalid, *legacy.FailureCode)
 		select {
 		case <-f.backend.calls:
 			t.Fatal("legacy raw recovery reached backend")
@@ -495,8 +498,8 @@ func TestRecoveryCrashResumeConcurrencyRollbackAndTamperFailClosed(t *testing.T)
 		result, err := restarted.GetOperation(t.Context(), view.OperationID)
 		require.NoError(t, err)
 		assert.Equal(t, "FAILED", result.Status)
-		require.NotNil(t, result.ErrorCode)
-		assert.Equal(t, registry.ErrCodeRecoveryProofInvalid, *result.ErrorCode)
+		require.NotNil(t, result.FailureCode)
+		assert.Equal(t, registry.ErrCodeRecoveryProofInvalid, *result.FailureCode)
 		select {
 		case <-f.backend.calls:
 			t.Fatal("modified request reached backend")
@@ -533,7 +536,7 @@ func TestRecoveryCrashResumeConcurrencyRollbackAndTamperFailClosed(t *testing.T)
 		f := newRecoveryServiceFixture(t)
 		_, existing, err := f.svc.Accept(t.Context(), "other", f.caller, "RotateIdentity", json.RawMessage(`{"expectedRevision":1}`), false)
 		require.NoError(t, err)
-		_, err = f.svc.db.Exec(t.Context(), `UPDATE operations SET operation_id=$2 WHERE operation_id=$1`, existing.OperationID, f.svc.deploymentID+":blocked")
+		_, err = f.svc.db.Exec(t.Context(), `UPDATE operations SET operation_id=$2 WHERE operation_id=$1`, existing.OperationID, ManagementOperationID(f.svc.deploymentID, f.caller, "RecoverIdentity", "blocked"))
 		require.NoError(t, err)
 
 		raw, err := json.Marshal(f.bundle)

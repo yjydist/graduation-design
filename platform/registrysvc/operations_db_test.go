@@ -19,21 +19,28 @@ import (
 	"grad/platform/internal/httpx"
 	"grad/platform/internal/mtls"
 	"grad/platform/internal/testutil"
+	"grad/platform/state/fabric"
 	"grad/protocol/registry"
 )
+
+func testCommit(number uint64, hash, code string) *fabric.Outcome {
+	return &fabric.Outcome{Point: fabric.Point{Number: number, Hash: hash}, Index: 0, Code: code, ObservedPeer: "peer-c"}
+}
 
 func TestMain(m *testing.M) {
 	os.Exit(testutil.RunWithPostgres(m))
 }
 
 type stubOpBackend struct {
+	kind, id    string
 	revision    uint64
 	exists      bool
 	revErr      error
 	submitCalls int
 }
 
-func (b *stubOpBackend) CurrentRevision(context.Context, string, json.RawMessage) (uint64, bool, error) {
+func (b *stubOpBackend) CurrentRevision(_ context.Context, kind, id string) (uint64, bool, error) {
+	b.kind, b.id = kind, id
 	return b.revision, b.exists, b.revErr
 }
 
@@ -43,7 +50,7 @@ func (b *stubOpBackend) SubmitAsync(
 	registry.Management,
 	string,
 	json.RawMessage,
-	func(stage, status string, txID string, blockNo int64, blockHash string, valCode, failCode *string, delivered bool) error,
+	OutcomeHandler,
 ) {
 	b.submitCalls++
 }
@@ -55,7 +62,7 @@ type observedManagementBackend struct {
 	release  chan struct{}
 }
 
-func (b *observedManagementBackend) CurrentRevision(context.Context, string, json.RawMessage) (uint64, bool, error) {
+func (b *observedManagementBackend) CurrentRevision(context.Context, string, string) (uint64, bool, error) {
 	return 2, true, nil
 }
 
@@ -65,7 +72,7 @@ func (b *observedManagementBackend) SubmitAsync(
 	_ registry.Management,
 	_ string,
 	_ json.RawMessage,
-	update func(string, string, string, int64, string, *string, *string, bool) error,
+	update OutcomeHandler,
 ) {
 	if key == b.blockKey {
 		close(b.entered)
@@ -76,7 +83,7 @@ func (b *observedManagementBackend) SubmitAsync(
 		}
 	}
 	code := "VALID"
-	if err := update("COMMIT", "CONFIRMED", "unit-original-tx", 1, strings.Repeat("f", 64), &code, nil, false); err == nil {
+	if err := update("COMMIT", "CONFIRMED", "unit-original-tx", testCommit(1, strings.Repeat("f", 64), code), nil, false); err == nil {
 		b.calls <- key
 	}
 }
@@ -154,29 +161,35 @@ func TestOperationsAsyncStateMachineAndUnifiedErrors(t *testing.T) {
 	assertUnifiedErrorEnvelope(t, rec, http.StatusConflict, registry.ErrCodeIdempotencyConflict)
 
 	// 5. Visibility suppression -> GET /v1/operations/{id} returns PENDING/null until restored.
-	// Also tests slash-containing operationId routing via {operationId...}.
 	svc.SetVisibilitySuppressed(v1.OperationID, true)
 	valCode := "VALID"
 	blkHash := strings.Repeat("9", 64)
-	require.NoError(t, svc.RecordOutcome(ctx, v1.OperationID, "COMMIT", "CONFIRMED", "tx-win-1", 10, blkHash, &valCode, nil, true))
+	require.NoError(t, svc.RecordOutcome(ctx, v1.OperationID, "COMMIT", "CONFIRMED", "tx-win-1", testCommit(10, blkHash, valCode), nil, true))
 
 	// MVCC_READ_CONFLICT with nil failCode normalizes to STATE_CHANGED and never opens delivery.
 	mvccCode := "MVCC_READ_CONFLICT"
-	require.NoError(t, svc.RecordOutcome(ctx, v2.OperationID, "COMMIT", "FAILED", "tx-lose-2", 11, blkHash, &mvccCode, nil, true))
+	require.NoError(t, svc.RecordOutcome(ctx, v2.OperationID, "COMMIT", "FAILED", "tx-lose-2", testCommit(11, blkHash, mvccCode), nil, true))
 
 	// Generic non-VALID commit normalizes to COMMIT_INVALID and never opens delivery.
 	phantomCode := "PHANTOM_READ_CONFLICT"
-	require.NoError(t, svc.RecordOutcome(ctx, v3.OperationID, "COMMIT", "FAILED", "tx-lose-3", 12, blkHash, &phantomCode, nil, true))
+	require.NoError(t, svc.RecordOutcome(ctx, v3.OperationID, "COMMIT", "FAILED", "tx-lose-3", testCommit(12, blkHash, phantomCode), nil, true))
 
 	req = httptest.NewRequest(http.MethodGet, "/v1/operations/"+v1.OperationID, nil)
 	req = req.WithContext(mtls.WithIdentity(req.Context(), mtls.Identity{Role: "MANAGEMENT", MSPID: caller.MSPID, Fingerprint: caller.CertificateSHA256}))
 	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var pending map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &pending))
+	for _, key := range []string{"failureCode", "transactionIndex", "observedPeer"} {
+		require.Contains(t, pending, key)
+		assert.Nil(t, pending[key])
+	}
+	assert.NotContains(t, pending, "errorCode")
 	var suppressedView OperationView
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &suppressedView))
 	assert.Equal(t, "PENDING", suppressedView.Status)
-	assert.Nil(t, suppressedView.ErrorCode)
+	assert.Nil(t, suppressedView.FailureCode)
 	assert.Nil(t, suppressedView.ValidationCode)
 	assert.Equal(t, int64(0), suppressedView.BlockNumber)
 	assert.False(t, suppressedView.Delivered)
@@ -184,15 +197,15 @@ func TestOperationsAsyncStateMachineAndUnifiedErrors(t *testing.T) {
 	// 6. Restore visibility and verify DUPLICATE_TXID never overwrites CONFIRMED or FAILED outcomes.
 	svc.SetVisibilitySuppressed(v1.OperationID, false)
 	dupVal := "DUPLICATE_TXID"
-	dupFail := ErrCodeCommitInvalid
-	require.NoError(t, svc.RecordOutcome(ctx, v1.OperationID, "COMMIT", "FAILED", "tx-win-dup", 99, blkHash, &dupVal, &dupFail, false))
-	require.NoError(t, svc.RecordOutcome(ctx, v2.OperationID, "COMMIT", "FAILED", "tx-lose-dup", 99, blkHash, &dupVal, &dupFail, false))
-	require.NoError(t, svc.RecordOutcome(ctx, v2.OperationID, "COMMIT", "CONFIRMED", "tx-lose-override", 99, blkHash, &valCode, nil, true))
+	dupFail := registry.ErrCodeCommitInvalid
+	require.NoError(t, svc.RecordOutcome(ctx, v1.OperationID, "COMMIT", "FAILED", "tx-win-dup", testCommit(99, blkHash, dupVal), &dupFail, false))
+	require.NoError(t, svc.RecordOutcome(ctx, v2.OperationID, "COMMIT", "FAILED", "tx-lose-dup", testCommit(99, blkHash, dupVal), &dupFail, false))
+	require.NoError(t, svc.RecordOutcome(ctx, v2.OperationID, "COMMIT", "CONFIRMED", "tx-lose-override", testCommit(99, blkHash, valCode), nil, true))
 
 	got1, err := svc.GetOperation(ctx, v1.OperationID)
 	require.NoError(t, err)
 	assert.Equal(t, "CONFIRMED", got1.Status)
-	assert.Nil(t, got1.ErrorCode)
+	assert.Nil(t, got1.FailureCode)
 	require.NotNil(t, got1.ValidationCode)
 	assert.Equal(t, "VALID", *got1.ValidationCode)
 	assert.Equal(t, "tx-win-1", got1.TxID)
@@ -202,8 +215,8 @@ func TestOperationsAsyncStateMachineAndUnifiedErrors(t *testing.T) {
 	got2, err := svc.GetOperation(ctx, v2.OperationID)
 	require.NoError(t, err)
 	assert.Equal(t, "FAILED", got2.Status)
-	require.NotNil(t, got2.ErrorCode)
-	assert.Equal(t, registry.ErrCodeStateChanged, *got2.ErrorCode)
+	require.NotNil(t, got2.FailureCode)
+	assert.Equal(t, registry.ErrCodeStateChanged, *got2.FailureCode)
 	require.NotNil(t, got2.ValidationCode)
 	assert.Equal(t, "MVCC_READ_CONFLICT", *got2.ValidationCode)
 	assert.False(t, got2.Delivered)
@@ -211,16 +224,76 @@ func TestOperationsAsyncStateMachineAndUnifiedErrors(t *testing.T) {
 	got3, err := svc.GetOperation(ctx, v3.OperationID)
 	require.NoError(t, err)
 	assert.Equal(t, "FAILED", got3.Status)
-	require.NotNil(t, got3.ErrorCode)
-	assert.Equal(t, ErrCodeCommitInvalid, *got3.ErrorCode)
+	require.NotNil(t, got3.FailureCode)
+	assert.Equal(t, registry.ErrCodeCommitInvalid, *got3.FailureCode)
 	assert.False(t, got3.Delivered)
+
+	for _, view := range []*OperationView{got1, got2} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/operations/"+view.OperationID, nil)
+		req = req.WithContext(mtls.WithIdentity(req.Context(), mtls.Identity{Role: "MANAGEMENT", MSPID: caller.MSPID, Fingerprint: caller.CertificateSHA256}))
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		var body map[string]any
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+		require.Contains(t, body, "failureCode")
+		if view.Status == "FAILED" {
+			assert.Equal(t, registry.ErrCodeStateChanged, body["failureCode"])
+		} else {
+			assert.Nil(t, body["failureCode"])
+		}
+		assert.Equal(t, float64(0), body["transactionIndex"])
+		assert.Equal(t, "peer-c", body["observedPeer"])
+		assert.NotContains(t, body, "errorCode")
+	}
 
 	// 7. Unknown operationId -> 404 OPERATION_UNKNOWN with unified error envelope.
 	req = httptest.NewRequest(http.MethodGet, "/v1/operations/"+depID+":does-not-exist", nil)
 	req = req.WithContext(mtls.WithIdentity(req.Context(), mtls.Identity{Role: "MANAGEMENT", MSPID: caller.MSPID, Fingerprint: caller.CertificateSHA256}))
 	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
-	assertUnifiedErrorEnvelope(t, rec, http.StatusNotFound, ErrCodeOperationUnknown)
+	assertUnifiedErrorEnvelope(t, rec, http.StatusNotFound, registry.ErrCodeOperationUnknown)
+}
+
+func TestManagementOperationScopeCanonicalRetryAndReplacement(t *testing.T) {
+	ctx := t.Context()
+	db := testutil.OpenMigratedPool(t)
+	backend := &stubOpBackend{revision: 2, exists: true}
+	svc := NewService(db, strings.Repeat("d", 64), registry.Management{}, backend)
+	a := registry.Management{MSPID: "AMsp", CertificateSHA256: strings.Repeat("a", 64)}
+	b := registry.Management{MSPID: "AMsp", CertificateSHA256: strings.Repeat("b", 64)}
+	const key = "procurement/1"
+	input := json.RawMessage(`{"id":"g","expectedRevision":2}`)
+	accept := func(caller registry.Management, method string, input json.RawMessage) string {
+		t.Helper()
+		status, view, err := svc.Accept(ctx, key, caller, method, input, false)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusAccepted, status)
+		return view.OperationID
+	}
+	id := accept(a, "SuspendGrant", input)
+	require.Equal(t, id, accept(a, "SuspendGrant", json.RawMessage(`{"expectedRevision":2, "id":"g"}`)))
+	otherMethod := accept(a, "ResumeGrant", input)
+	otherCaller := accept(b, "SuspendGrant", input)
+	require.NotEqual(t, id, otherMethod)
+	require.NotEqual(t, id, otherCaller)
+	require.NotEqual(t, otherMethod, otherCaller)
+
+	target := func(revision uint64) json.RawMessage {
+		input, err := json.Marshal(registry.Replacement{Old: registry.Mutation{ID: "original-grant", ExpectedRevision: revision}})
+		require.NoError(t, err)
+		return input
+	}
+	status, _, err := svc.Accept(ctx, key, a, "ReplaceGrant", target(1), true)
+	require.True(t, registry.HasCode(err, registry.ErrCodeStateChanged))
+	require.Equal(t, http.StatusConflict, status)
+	assert.Zero(t, backend.submitCalls)
+	assert.Equal(t, "grant", backend.kind)
+	assert.Equal(t, "original-grant", backend.id)
+	var count int
+	require.NoError(t, db.QueryRow(ctx, "SELECT count(*) FROM operations WHERE method='ReplaceGrant'").Scan(&count))
+	require.Zero(t, count)
+	accept(a, "ReplaceGrant", target(2))
 }
 
 func TestOperationsMTLSAndAuditorScoping(t *testing.T) {

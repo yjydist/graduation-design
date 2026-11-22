@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS operations (
     tx_id TEXT NOT NULL,
     block_no BIGINT NOT NULL DEFAULT 0,
     block_hash TEXT NOT NULL DEFAULT '',
+    transaction_index INTEGER,
+    observed_peer TEXT,
     stage TEXT NOT NULL,
     status TEXT NOT NULL,
     validation_code TEXT,
@@ -17,7 +19,7 @@ CREATE TABLE IF NOT EXISTS operations (
     request_json BYTEA,
     delivered BOOLEAN NOT NULL DEFAULT FALSE,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (deployment_id, operation_key)
+    PRIMARY KEY (deployment_id, caller_msp_id, caller_fingerprint, method, operation_key)
 );
 
 CREATE TABLE IF NOT EXISTS registration_challenges (

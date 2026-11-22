@@ -29,15 +29,6 @@ import (
 	"grad/protocol/registry"
 )
 
-const (
-	// ErrCodeOperationUnknown indicates that GET /v1/operations/{operationId} referenced an unknown ID.
-	ErrCodeOperationUnknown = "OPERATION_UNKNOWN"
-	// ErrCodeEndorsementRejected indicates deterministic endorsement rejection without a specific registry code.
-	ErrCodeEndorsementRejected = "ENDORSEMENT_REJECTED"
-	// ErrCodeCommitInvalid indicates a non-VALID Fabric commit validation code other than MVCC_READ_CONFLICT.
-	ErrCodeCommitInvalid = "COMMIT_INVALID"
-)
-
 var errOperationQueryForbidden = errors.New("operation query forbidden")
 
 // EnsureSchema applies embedded PostgreSQL migrations required by registrysvc tables.
@@ -48,30 +39,35 @@ func EnsureSchema(ctx context.Context, db *pgxpool.Pool) error {
 // OperationView represents the HTTP JSON view returned by POST /v1/management/{method}
 // and GET /v1/operations/{operationId}.
 type OperationView struct {
-	OperationID    string  `json:"operationId" db:"operation_id"`
-	OperationKey   string  `json:"operationKey" db:"operation_key"`
-	Method         string  `json:"method" db:"method"`
-	TxID           string  `json:"txId" db:"tx_id"`
-	Stage          string  `json:"stage" db:"stage"`
-	Status         string  `json:"status" db:"status"`
-	ErrorCode      *string `json:"errorCode" db:"failure_code"`
-	ValidationCode *string `json:"validationCode" db:"validation_code"`
-	BlockNumber    int64   `json:"blockNumber" db:"block_no"`
-	BlockHash      string  `json:"blockHash,omitempty" db:"block_hash"`
-	Delivered      bool    `json:"delivered" db:"delivered"`
+	OperationID      string  `json:"operationId" db:"operation_id"`
+	OperationKey     string  `json:"operationKey" db:"operation_key"`
+	Method           string  `json:"method" db:"method"`
+	TxID             string  `json:"txId" db:"tx_id"`
+	Stage            string  `json:"stage" db:"stage"`
+	Status           string  `json:"status" db:"status"`
+	FailureCode      *string `json:"failureCode" db:"failure_code"`
+	ValidationCode   *string `json:"validationCode" db:"validation_code"`
+	BlockNumber      int64   `json:"blockNumber" db:"block_no"`
+	BlockHash        string  `json:"blockHash,omitempty" db:"block_hash"`
+	TransactionIndex *int    `json:"transactionIndex" db:"transaction_index"`
+	ObservedPeer     *string `json:"observedPeer" db:"observed_peer"`
+	Delivered        bool    `json:"delivered" db:"delivered"`
 }
+
+// OutcomeHandler persists the latest journal observation for an accepted operation.
+type OutcomeHandler func(stage, status, txID string, commit *fabric.Outcome, failure *string, delivered bool) error
 
 // OperationSubmitBackend executes pre-acceptance revision lookup and asynchronous
 // endorse/broadcast/commit recovery steps on behalf of Service.
 type OperationSubmitBackend interface {
-	CurrentRevision(ctx context.Context, method string, input json.RawMessage) (uint64, bool, error)
+	CurrentRevision(ctx context.Context, kind, id string) (uint64, bool, error)
 	SubmitAsync(
 		ctx context.Context,
 		opKey, opID string,
 		caller registry.Management,
 		method string,
 		input json.RawMessage,
-		onUpdate func(stage, status string, txID string, blockNo int64, blockHash string, valCode, failCode *string, delivered bool) error,
+		onUpdate OutcomeHandler,
 	)
 }
 
@@ -184,16 +180,17 @@ func (b *FabricBackend) AuthorizeRecovery(ctx context.Context, caller registry.M
 	return verifyAuthorizedMgmtCert(leaf, authorized)
 }
 
-// CurrentRevision queries the pinned Fabric peer for the current revision of the target ledger record.
-func (b *FabricBackend) CurrentRevision(ctx context.Context, method string, input json.RawMessage) (uint64, bool, error) {
+func revisionTarget(method string, input json.RawMessage) (string, string, *uint64, error) {
 	var v struct {
-		ID            string                 `json:"id"`
-		SubjectID     string                 `json:"subjectId"`
-		DomainID      string                 `json:"domainId"`
-		Certification registry.Certification `json:"certification"`
+		ID               string                 `json:"id"`
+		SubjectID        string                 `json:"subjectId"`
+		DomainID         string                 `json:"domainId"`
+		ExpectedRevision *uint64                `json:"expectedRevision"`
+		Old              registry.Mutation      `json:"old"`
+		Certification    registry.Certification `json:"certification"`
 	}
 	if err := json.Unmarshal(input, &v); err != nil {
-		return 0, false, err
+		return "", "", nil, err
 	}
 	kind, id := "", v.ID
 	switch method {
@@ -216,27 +213,30 @@ func (b *FabricBackend) CurrentRevision(ctx context.Context, method string, inpu
 		kind = "credential"
 	case "CancelTask":
 		kind = "task"
+	case "ReplaceGrant":
+		return "grant", v.Old.ID, &v.Old.ExpectedRevision, nil
 	case "RevokeGrant", "SuspendGrant", "ResumeGrant":
 		kind = "grant"
 	case "ApproveIdentityLink", "RevokeIdentityLink":
 		kind = "link"
 	default:
-		return 0, false, nil
+		return "", "", nil, nil
 	}
+	return kind, id, v.ExpectedRevision, nil
+}
+
+// CurrentRevision queries the pinned peer for the current record revision.
+func (b *FabricBackend) CurrentRevision(ctx context.Context, kind, id string) (uint64, bool, error) {
 	p, err := b.journal.Instance.Peer("c", "read")
 	if err != nil {
 		return 0, false, err
 	}
 	defer p.Close()
-	raw, err := p.Direct(ctx, registry.Registry, "Read", registry.Key(kind, id))
+	version, err := fabric.ReadLedgerRecord[registry.Version](ctx, p, kind, id)
 	if err != nil {
 		if fabric.IsMissingRecord(err) {
 			return 0, false, nil
 		}
-		return 0, false, err
-	}
-	var version registry.Version
-	if err := json.Unmarshal(raw, &version); err != nil {
 		return 0, false, err
 	}
 	return version.Revision, true, nil
@@ -245,33 +245,24 @@ func (b *FabricBackend) CurrentRevision(ctx context.Context, method string, inpu
 // SubmitAsync prepares, endorses, broadcasts, and observes the original Fabric transaction via fabric.Journal.
 func (b *FabricBackend) SubmitAsync(
 	ctx context.Context,
-	key, _ string,
+	key, opID string,
 	caller registry.Management,
 	method string,
 	input json.RawMessage,
-	onUpdate func(string, string, string, int64, string, *string, *string, bool) error,
+	onUpdate OutcomeHandler,
 ) {
 	role, ok := b.roles[caller]
 	if !ok {
 		code := registry.ErrCodeIdentityManagementForbidden
-		_ = onUpdate("ENDORSE", "FAILED", "", 0, "", nil, &code, false)
+		_ = onUpdate("ENDORSE", "FAILED", "", nil, &code, false)
 		return
 	}
-	op, err := b.journal.Prepare(ctx, key, role, method, input)
+	op, err := b.journal.Prepare(ctx, opID, role, method, input)
 	if err == nil && op != nil && op.Status == "PENDING" && b.BeforeBroadcast != nil {
 		b.BeforeBroadcast(ctx, key)
 	}
 	for err == nil && op != nil {
-		var val *string
-		var blockNo int64
-		var blockHash string
-		if op.Commit != nil {
-			c := op.Commit.Code
-			val = &c
-			blockNo = int64(op.Commit.Number)
-			blockHash = op.Commit.Hash
-		}
-		if err = onUpdate(op.Stage, op.Status, op.TxID, blockNo, blockHash, val, op.FailureCode, false); err != nil {
+		if err = onUpdate(op.Stage, op.Status, op.TxID, op.Commit, op.FailureCode, false); err != nil {
 			return
 		}
 		if op.Status != "PENDING" {
@@ -282,7 +273,7 @@ func (b *FabricBackend) SubmitAsync(
 			return
 		case <-time.After(100 * time.Millisecond):
 		}
-		op, err = b.journal.Recover(ctx, key, nil)
+		op, err = b.journal.Recover(ctx, opID, nil)
 	}
 	// Transport failures leave the persisted request and original journal PENDING.
 }
@@ -397,17 +388,8 @@ func (s *Service) IsDelivered(opID string) bool {
 }
 
 type operationAcceptRow struct {
-	OperationID    string  `db:"operation_id"`
-	Method         string  `db:"method"`
-	TxID           string  `db:"tx_id"`
-	Stage          string  `db:"stage"`
-	Status         string  `db:"status"`
-	ValidationCode *string `db:"validation_code"`
-	FailureCode    *string `db:"failure_code"`
-	BlockNumber    int64   `db:"block_no"`
-	BlockHash      string  `db:"block_hash"`
-	PayloadHash    string  `db:"payload_hash"`
-	Delivered      bool    `db:"delivered"`
+	OperationView
+	PayloadHash string `db:"payload_hash"`
 }
 
 type operationOutcomeRow struct {
@@ -427,6 +409,13 @@ type pendingOperationRow struct {
 	CallerFingerprint string `db:"caller_fingerprint"`
 	Method            string `db:"method"`
 	RequestJSON       []byte `db:"request_json"`
+}
+
+// ManagementOperationID identifies a management POST and its Fabric journal entry.
+// Each method has one route within the deployment and authenticated caller scope.
+func ManagementOperationID(deployment string, caller registry.Management, method, key string) string {
+	scope, _ := json.Marshal([]string{deployment, caller.MSPID, caller.CertificateSHA256, method, key})
+	return "management:" + registry.Digest(scope)
 }
 
 // Accept submits a management operation with pre-acceptance expectedRevision validation
@@ -468,19 +457,15 @@ func (s *Service) Accept(
 		return http.StatusForbidden, nil, protocol.NewError(registry.ErrCodeTrustManagementForbidden, fmt.Sprintf("caller %s not permitted for %s", caller, method))
 	}
 
-	var compactBuf bytes.Buffer
-	if err := json.Compact(&compactBuf, input); err != nil {
-		return http.StatusBadRequest, nil, protocol.WrapError(registry.ErrCodeInvalidSchema, "invalid JSON payload", err)
-	}
-	canonInput := compactBuf.Bytes()
-	if recovery == nil {
-		hashInput = canonInput
-	}
-	mat, err := json.Marshal([]string{s.deploymentID, caller.String(), registry.Channel, registry.Registry, method, string(hashInput)})
+	canonInput, err := protocol.CanonicalizeJSON(input)
 	if err != nil {
 		return http.StatusBadRequest, nil, err
 	}
-	payloadHash := registry.Digest(mat)
+	if recovery == nil {
+		hashInput = canonInput
+	}
+	payloadHash := registry.Digest(hashInput)
+	opID := ManagementOperationID(s.deploymentID, caller, method, opKey)
 
 	// 1. Check idempotency record first so exact retries return 202 with original operationId even after completion/failure.
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
@@ -489,12 +474,12 @@ func (s *Service) Accept(
 	}
 	defer tx.Rollback(context.Background())
 
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, s.deploymentID+":"+opKey); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, opID); err != nil {
 		return http.StatusServiceUnavailable, nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT operation_id, method, tx_id, stage, status, validation_code, failure_code, block_no, block_hash, payload_hash, delivered
-		FROM operations WHERE deployment_id=$1 AND operation_key=$2 FOR UPDATE`,
-		s.deploymentID, opKey)
+	rows, err := tx.Query(ctx, `SELECT operation_id, operation_key, method, tx_id, stage, status, validation_code, failure_code, block_no, block_hash, transaction_index, observed_peer, payload_hash, delivered
+		FROM operations WHERE deployment_id=$1 AND caller_msp_id=$2 AND caller_fingerprint=$3 AND method=$4 AND operation_key=$5 FOR UPDATE`,
+		s.deploymentID, caller.MSPID, caller.CertificateSHA256, method, opKey)
 	if err != nil {
 		return http.StatusServiceUnavailable, nil, err
 	}
@@ -506,21 +491,10 @@ func (s *Service) Accept(
 		if err := tx.Commit(ctx); err != nil {
 			return http.StatusServiceUnavailable, nil, err
 		}
-		view := OperationView{
-			OperationID:    existing.OperationID,
-			OperationKey:   opKey,
-			Method:         existing.Method,
-			TxID:           existing.TxID,
-			Stage:          existing.Stage,
-			Status:         existing.Status,
-			ErrorCode:      existing.FailureCode,
-			ValidationCode: existing.ValidationCode,
-			BlockNumber:    existing.BlockNumber,
-			BlockHash:      existing.BlockHash,
-			Delivered:      existing.Delivered || s.IsDelivered(existing.OperationID),
-		}
+		view := existing.OperationView
+		view.Delivered = view.Delivered || s.IsDelivered(view.OperationID)
 		if view.Status != "FAILED" {
-			view.ErrorCode = nil
+			view.FailureCode = nil
 		}
 		if triggerBackend && view.Status == "PENDING" && s.backend != nil {
 			s.dispatch(opKey, view.OperationID, caller, method, canonInput)
@@ -533,23 +507,22 @@ func (s *Service) Accept(
 
 	// 2. Pre-acceptance expectedRevision check BEFORE inserting operations row or creating proposal.
 	if s.backend != nil {
-		var revCheck struct {
-			ExpectedRevision *uint64 `json:"expectedRevision"`
+		kind, id, expected, err := revisionTarget(method, canonInput)
+		if err != nil {
+			return http.StatusBadRequest, nil, protocol.WrapError(registry.ErrCodeInvalidSchema, "invalid revision target", err)
 		}
-		_ = json.Unmarshal(canonInput, &revCheck)
-		if revCheck.ExpectedRevision != nil && *revCheck.ExpectedRevision > 0 {
-			curRev, found, rErr := s.backend.CurrentRevision(ctx, method, canonInput)
+		if expected != nil {
+			curRev, found, rErr := s.backend.CurrentRevision(ctx, kind, id)
 			if rErr != nil {
 				return http.StatusServiceUnavailable, nil, rErr
 			}
-			if found && curRev != *revCheck.ExpectedRevision {
+			if found && curRev != *expected {
 				return http.StatusConflict, nil, protocol.NewError(registry.ErrCodeStateChanged,
-					fmt.Sprintf("pre-acceptance revision conflict: expected %d, current %d", *revCheck.ExpectedRevision, curRev))
+					fmt.Sprintf("pre-acceptance revision conflict: expected %d, current %d", *expected, curRev))
 			}
 		}
 	}
 
-	opID := s.deploymentID + ":" + opKey
 	if recovery != nil {
 		validator, ok := s.backend.(recoveryAuthorizer)
 		if !ok {
@@ -589,14 +562,17 @@ func (s *Service) Accept(
 	}, nil
 }
 
+func hasValidCommit(txID string, commit *fabric.Outcome) bool {
+	return txID != "" && commit != nil && commit.Code == "VALID" && commit.Hash != "" && commit.ObservedPeer != ""
+}
+
 // RecordOutcome updates an operation row monotonically while protecting terminal CONFIRMED
 // and FAILED outcomes against late DUPLICATE_TXID overwrites. Only CONFIRMED opens delivery.
 func (s *Service) RecordOutcome(
 	ctx context.Context,
 	opID, stage, statusStr, txID string,
-	blockNo int64,
-	blockHash string,
-	valCode, failCode *string,
+	commit *fabric.Outcome,
+	failCode *string,
 	delivered bool,
 ) error {
 	if s == nil || s.db == nil {
@@ -616,6 +592,15 @@ func (s *Service) RecordOutcome(
 	cur, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[operationOutcomeRow])
 	if err != nil {
 		return err
+	}
+
+	var blockNo uint64
+	var blockHash string
+	var valCode, observedPeer *string
+	var index *int
+	if commit != nil {
+		blockNo, blockHash = commit.Number, commit.Hash
+		valCode, observedPeer, index = &commit.Code, &commit.ObservedPeer, &commit.Index
 	}
 
 	// DUPLICATE_TXID must never overwrite an existing terminal outcome.
@@ -642,13 +627,17 @@ func (s *Service) RecordOutcome(
 		return tx.Commit(ctx)
 	}
 
+	if statusStr == "CONFIRMED" && !hasValidCommit(txID, commit) {
+		return protocol.NewError(registry.ErrCodeInvalidState, "confirmed operation requires original VALID commit evidence")
+	}
+
 	// Normalize failureCode when not explicitly set.
 	if statusStr == "FAILED" && failCode == nil {
-		mapped := ErrCodeCommitInvalid
+		mapped := registry.ErrCodeCommitInvalid
 		if valCode != nil && *valCode == "MVCC_READ_CONFLICT" {
 			mapped = registry.ErrCodeStateChanged
 		} else if stage == "ENDORSE" {
-			mapped = ErrCodeEndorsementRejected
+			mapped = registry.ErrCodeEndorsementRejected
 		}
 		failCode = &mapped
 	}
@@ -656,9 +645,9 @@ func (s *Service) RecordOutcome(
 	openDelivery := statusStr == "CONFIRMED" && delivered
 	if _, err := tx.Exec(ctx, `UPDATE operations SET
 		stage=$3, status=$4, tx_id=CASE WHEN $5<>'' THEN $5 ELSE tx_id END,
-		block_no=$6, block_hash=$7, validation_code=$8, failure_code=$9, delivered=delivered OR $10, updated_at=NOW()
+		block_no=$6, block_hash=$7, validation_code=$8, failure_code=$9, delivered=delivered OR $10, transaction_index=$11, observed_peer=$12, updated_at=NOW()
 		WHERE deployment_id=$1 AND operation_id=$2`,
-		s.deploymentID, opID, stage, statusStr, txID, blockNo, blockHash, valCode, failCode, openDelivery); err != nil {
+		s.deploymentID, opID, stage, statusStr, txID, blockNo, blockHash, valCode, failCode, openDelivery, index, observedPeer); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -676,7 +665,7 @@ func (s *Service) GetOperation(ctx context.Context, opID string) (*OperationView
 	if s == nil || s.db == nil {
 		return nil, protocol.NewError(registry.ErrCodeStateUnavailable, "operation store unavailable")
 	}
-	rows, err := s.db.Query(ctx, `SELECT operation_id, operation_key, method, tx_id, stage, status, validation_code, failure_code, block_no, block_hash, delivered
+	rows, err := s.db.Query(ctx, `SELECT operation_id, operation_key, method, tx_id, stage, status, validation_code, failure_code, block_no, block_hash, transaction_index, observed_peer, delivered
 		FROM operations WHERE deployment_id=$1 AND operation_id=$2`,
 		s.deploymentID, opID)
 	if err != nil {
@@ -684,7 +673,7 @@ func (s *Service) GetOperation(ctx context.Context, opID string) (*OperationView
 	}
 	out, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[OperationView])
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, protocol.NewError(ErrCodeOperationUnknown, fmt.Sprintf("unknown operationId %q", opID))
+		return nil, protocol.NewError(registry.ErrCodeOperationUnknown, fmt.Sprintf("unknown operationId %q", opID))
 	}
 	if err != nil {
 		return nil, err
@@ -695,15 +684,17 @@ func (s *Service) GetOperation(ctx context.Context, opID string) (*OperationView
 	if hidden {
 		out.Status = "PENDING"
 		out.Stage = "SUBMIT"
-		out.ErrorCode = nil
+		out.FailureCode = nil
 		out.ValidationCode = nil
 		out.BlockNumber = 0
 		out.BlockHash = ""
+		out.TransactionIndex = nil
+		out.ObservedPeer = nil
 		out.Delivered = false
 		return &out, nil
 	}
 	if out.Status != "FAILED" {
-		out.ErrorCode = nil
+		out.FailureCode = nil
 	}
 	out.Delivered = out.Delivered || s.IsDelivered(opID)
 	return &out, nil
@@ -735,13 +726,13 @@ func (s *Service) submitPending(ctx context.Context, key, id string, caller regi
 		if err := s.verifyRecoveryAdmission(ctx, key, id, caller, input); err != nil {
 			if protocol.HasCode(err, registry.ErrCodeRecoveryProofInvalid) {
 				code := registry.ErrCodeRecoveryProofInvalid
-				_ = s.RecordOutcome(ctx, id, "ACCEPT", "FAILED", "", 0, "", nil, &code, false)
+				_ = s.RecordOutcome(ctx, id, "ACCEPT", "FAILED", "", nil, &code, false)
 			}
 			return
 		}
 	}
-	s.backend.SubmitAsync(ctx, key, id, caller, method, input, func(stage, status, txID string, n int64, hash string, val, fail *string, delivered bool) error {
-		return s.RecordOutcome(ctx, id, stage, status, txID, n, hash, val, fail, delivered)
+	s.backend.SubmitAsync(ctx, key, id, caller, method, input, func(stage, status, txID string, commit *fabric.Outcome, fail *string, delivered bool) error {
+		return s.RecordOutcome(ctx, id, stage, status, txID, commit, fail, delivered)
 	})
 }
 
@@ -880,8 +871,8 @@ func (s *Service) handleGetOperation(w http.ResponseWriter, r *http.Request) {
 	}
 	view, err := s.GetOperation(r.Context(), opID)
 	if err != nil {
-		if protocol.HasCode(err, ErrCodeOperationUnknown) {
-			httpx.WriteError(w, http.StatusNotFound, reqID, ErrCodeOperationUnknown, nil, err.Error())
+		if protocol.HasCode(err, registry.ErrCodeOperationUnknown) {
+			httpx.WriteError(w, http.StatusNotFound, reqID, registry.ErrCodeOperationUnknown, nil, err.Error())
 			return
 		}
 		code := protocol.CodeOf(err)

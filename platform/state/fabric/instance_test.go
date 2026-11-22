@@ -160,6 +160,11 @@ func TestParseEndorsementFailureCanonicalCodes(t *testing.T) {
 	// Legacy D0: prefix is NOT recognized; chaincode emits bare canonical codes only.
 	assert.Equal(t, "", extractChaincodeErrorCode("chaincode response 500, D0:UNAUTHORIZED"))
 
+	for _, code := range []string{registry.ErrCodeCommitInvalid, registry.ErrCodeOperationUnknown, registry.ErrCodeEndorsementRejected} {
+		assert.True(t, registry.IsKnownCode(code))
+		assert.Empty(t, extractChaincodeErrorCode("chaincode response 500, "+code))
+	}
+
 	// Transient transport errors remain PENDING (empty code).
 	assert.Equal(t, "", ParseEndorsementFailure(status.Error(codes.Unavailable, "peer unreachable")))
 	assert.Equal(t, "", ParseEndorsementFailure(status.Error(codes.Aborted, "insufficient peers available")))

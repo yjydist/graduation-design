@@ -122,8 +122,8 @@ func TestPublishedFabricBindings(t *testing.T) {
 }
 
 func TestErrorCodesAndHelpers(t *testing.T) {
-	if len(knownErrorCodes) != 64 {
-		t.Fatalf("expected 64 canonical error codes (58 protocol + 6 registry), got %d", len(knownErrorCodes))
+	if len(knownErrorCodes) != 67 {
+		t.Fatalf("expected 67 canonical error codes (58 protocol + 6 registry + 3 management), got %d", len(knownErrorCodes))
 	}
 	for code := range knownErrorCodes {
 		if strings.HasPrefix(code, "D0:") {

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"grad/platform/state/fabric"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -31,15 +32,6 @@ type IssueChallengeRequest struct {
 	CertificateSHA256 string
 	IssuedAt          int64
 	TTLSeconds        int64
-}
-
-// SubmitResult captures confirmed Fabric transaction coordinates returned by submitFn.
-type SubmitResult struct {
-	Method      string
-	TxID        string
-	BlockNo     int64
-	BlockHash   string
-	PayloadHash string
 }
 
 // RegistrationCoordinator manages identity registration and recovery challenges
@@ -146,14 +138,13 @@ func (rc *RegistrationCoordinator) IssueRegistrationChallenge(
 func (rc *RegistrationCoordinator) AcceptRegistrationBundle(
 	ctx context.Context,
 	operationKey string,
-	operationID string,
 	caller registry.Management,
 	bundle *protocol.ManagementDualProofBundle,
 	expectedMSPID string,
 	authorizedCerts []*x509.Certificate,
 	didDocBytes []byte,
 	now int64,
-	submitFn func(context.Context) (*SubmitResult, error),
+	submitFn func(context.Context, string) (*fabric.Operation, error),
 ) error {
 	if rc == nil || rc.db == nil {
 		return protocol.NewError(registry.ErrCodeStateUnavailable, "registration store not configured")
@@ -171,6 +162,34 @@ func (rc *RegistrationCoordinator) AcceptRegistrationBundle(
 		return err
 	}
 	defer tx.Rollback(context.Background())
+
+	const method = "RegisterIdentity"
+	operationID := ManagementOperationID(bundle.DeploymentID, caller, method, operationKey)
+	payloadHash, err := protocol.DigestValueJCS(bundle)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, operationID); err != nil {
+		return err
+	}
+	var existingHash string
+	var registered bool
+	err = tx.QueryRow(ctx, `SELECT o.payload_hash, o.status='CONFIRMED' AND EXISTS (
+		SELECT 1 FROM registration_challenges c WHERE c.challenge_id=$2
+		AND c.consumed AND c.consumed_by_operation_id=o.operation_id
+	) FROM operations o WHERE o.operation_id=$1`, operationID, bundle.Challenge.ChallengeID).Scan(&existingHash, &registered)
+	if err == nil {
+		if payloadHash != existingHash {
+			return protocol.NewError(registry.ErrCodeIdempotencyConflict, "registration key already used for another request")
+		}
+		if !registered {
+			return protocol.NewError(registry.ErrCodeStateUnavailable, "confirmed registration evidence unavailable")
+		}
+		return tx.Commit(ctx)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
 
 	rows, err := tx.Query(ctx, `SELECT deployment_id, challenge_sha256, msp_id, certificate_sha256,
 		domain_id, subject_id, app_key_id, nonce, issued_at, expires_at, consumed
@@ -243,21 +262,16 @@ func (rc *RegistrationCoordinator) AcceptRegistrationBundle(
 		}
 	}
 
-	var res SubmitResult
-	if submitFn != nil {
-		out, err := submitFn(ctx)
-		if err != nil {
-			return err
-		}
-		if out != nil {
-			res = *out
-		}
+	if submitFn == nil {
+		return protocol.NewError(registry.ErrCodeStateUnavailable, "registration submission unavailable")
 	}
-	if res.PayloadHash == "" {
-		res.PayloadHash = bundle.ChallengeSha256
+	res, err := submitFn(ctx, operationID)
+	if err != nil {
+		return err
 	}
-	if res.Method == "" {
-		res.Method = "RegisterIdentity"
+	if res == nil || res.Key != operationID || res.Status != "CONFIRMED" ||
+		!hasValidCommit(res.TxID, res.Commit) {
+		return protocol.NewError(registry.ErrCodeStateUnavailable, "confirmed registration transaction evidence required")
 	}
 
 	if _, err := tx.Exec(ctx, `UPDATE registration_challenges
@@ -267,13 +281,10 @@ func (rc *RegistrationCoordinator) AcceptRegistrationBundle(
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO operations(
 		deployment_id, operation_key, operation_id, caller_msp_id, caller_fingerprint,
-		method, tx_id, block_no, block_hash, stage, status, validation_code, failure_code, payload_hash, updated_at
-	) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'COMMIT','CONFIRMED','VALID',NULL,$10,NOW())
-	ON CONFLICT(deployment_id, operation_key) DO UPDATE SET
-		tx_id=EXCLUDED.tx_id, block_no=EXCLUDED.block_no, block_hash=EXCLUDED.block_hash,
-		stage='COMMIT', status='CONFIRMED', validation_code='VALID', failure_code=NULL, updated_at=NOW()`,
+		method, tx_id, block_no, block_hash, transaction_index, observed_peer, stage, status, validation_code, failure_code, payload_hash, updated_at
+	) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'COMMIT','CONFIRMED','VALID',NULL,$12,NOW())`,
 		bundle.DeploymentID, operationKey, operationID, caller.MSPID, caller.CertificateSHA256,
-		res.Method, res.TxID, res.BlockNo, res.BlockHash, res.PayloadHash); err != nil {
+		method, res.TxID, res.Commit.Number, res.Commit.Hash, res.Commit.Index, res.Commit.ObservedPeer, payloadHash); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)

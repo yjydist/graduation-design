@@ -7,7 +7,7 @@
 | 路径 | 说明 |
 | --- | --- |
 | `go.mod`, `go.sum` | `grad/protocol` 模块定义与依赖锁定. |
-| `registry/` | 链上登记共享数据结构, 规范错误码 (`64` 项) 与基础校验原语. |
+| `registry/` | 链上登记共享数据结构, 规范错误码 (`67` 项) 与基础校验原语. |
 | `errors.go` | 重导出 `registry` 规范错误码, 协议常量及规范资源 URI 校验. |
 | `codec.go` | 严格 I-JSON 校验, RFC 8785 JCS 规范化, 安全整数与结构体严格解码. |
 | `crypto.go` | P-256 密钥与公钥编码, RFC 7638 JWK 指纹, DID 文档, 43 字符 nonce 与 ES256 JWS 签验. |

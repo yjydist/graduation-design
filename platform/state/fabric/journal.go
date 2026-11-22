@@ -25,6 +25,7 @@ import (
 // Outcome records the block coordinate, transaction index, and peer validation code
 // of an original committed Fabric transaction.
 type Outcome struct {
+	ObservedPeer string `json:"observedPeer"`
 	Point
 	Index int    `json:"transactionIndex"`
 	Code  string `json:"validationCode"`
@@ -104,7 +105,7 @@ func (op *Operation) confirmAt(commit *Outcome, observedAt time.Time) {
 		code := registry.ErrCodeStateChanged
 		op.Status, op.FailureCode = "FAILED", &code
 	default:
-		code := "COMMIT_INVALID"
+		code := registry.ErrCodeCommitInvalid
 		op.Status, op.FailureCode = "FAILED", &code
 	}
 }
@@ -285,7 +286,7 @@ func ParseEndorsementFailure(err error) string {
 		for _, d := range e.Details() {
 			if code := extractChaincodeErrorCode(d.Message); code != "" {
 				if reason != "" && reason != code {
-					return "ENDORSEMENT_REJECTED"
+					return registry.ErrCodeEndorsementRejected
 				}
 				reason = code
 			}
@@ -299,7 +300,7 @@ func ParseEndorsementFailure(err error) string {
 		!strings.Contains(err.Error(), "proposal time") && !strings.Contains(err.Error(), "incorrect timestamp") && !strings.Contains(err.Error(), "access denied") {
 		return ""
 	}
-	return "ENDORSEMENT_REJECTED"
+	return registry.ErrCodeEndorsementRejected
 }
 
 func extractChaincodeErrorCode(msg string) string {
@@ -315,12 +316,12 @@ func extractChaincodeErrorCode(msg string) string {
 		return ""
 	}
 	payload = strings.TrimSpace(payload)
-	if registry.IsKnownCode(payload) {
+	if registry.IsProposalCode(payload) {
 		return payload
 	}
 	if prefix, _, ok := strings.Cut(payload, ":"); ok {
 		prefix = strings.TrimSpace(prefix)
-		if registry.IsKnownCode(prefix) {
+		if registry.IsProposalCode(prefix) {
 			return prefix
 		}
 	}
@@ -543,7 +544,7 @@ func (p *PeerClient) OriginalObserved(ctx context.Context, op *Operation, prepar
 	match := func(b *Block) *Outcome {
 		for _, t := range b.Transactions {
 			if t.ID == op.TxID && t.Code != pb.TxValidationCode_DUPLICATE_TXID && proto.Equal(t.Envelope, prepared.Envelope) {
-				return &Outcome{Point: b.Point, Index: t.Index, Code: t.Code.String()}
+				return &Outcome{ObservedPeer: p.name, Point: b.Point, Index: t.Index, Code: t.Code.String()}
 			}
 		}
 		return nil

@@ -68,6 +68,11 @@ const (
 	ErrCodeGrantStateConflict          = "GRANT_STATE_CONFLICT"
 	ErrCodeAuditForbidden              = "AUDIT_FORBIDDEN"
 
+	// Management operation outcomes.
+	ErrCodeOperationUnknown    = "OPERATION_UNKNOWN"
+	ErrCodeEndorsementRejected = "ENDORSEMENT_REJECTED"
+	ErrCodeCommitInvalid       = "COMMIT_INVALID"
+
 	// Registry chaincode-specific error codes (6).
 	ErrCodeInvalidStructure  = "INVALID_STRUCTURE"
 	ErrCodeUnauthorized      = "UNAUTHORIZED"
@@ -78,6 +83,9 @@ const (
 )
 
 var knownErrorCodes = map[string]struct{}{
+	ErrCodeCommitInvalid:               {},
+	ErrCodeEndorsementRejected:         {},
+	ErrCodeOperationUnknown:            {},
 	ErrCodeInvalidSchema:               {},
 	ErrCodeInvalidDisclosure:           {},
 	ErrCodeSignatureInvalid:            {},
@@ -183,6 +191,16 @@ func WrapError(code, msg string, cause error) *Error {
 // Reject returns an error whose Error() string is the exact canonical code.
 func Reject(code string) error {
 	return &Error{Code: code}
+}
+
+// IsProposalCode excludes service-level outcomes from chaincode rejection reasons.
+func IsProposalCode(code string) bool {
+	switch code {
+	case ErrCodeOperationUnknown, ErrCodeCommitInvalid, ErrCodeEndorsementRejected:
+		return false
+	default:
+		return IsKnownCode(code)
+	}
 }
 
 // IsKnownCode reports whether code is one of the canonical grad-auth-v1 error codes.

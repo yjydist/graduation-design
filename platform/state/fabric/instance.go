@@ -93,6 +93,7 @@ type registryApproval struct {
 
 // PeerClient wraps an authenticated gRPC connection and Fabric Gateway client pinned to one peer.
 type PeerClient struct {
+	name    string
 	conn    *grpc.ClientConn
 	gateway *client.Gateway
 	signer  identity.Sign
@@ -343,7 +344,8 @@ func (i *Instance) Peer(org, role string) (*PeerClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn, err := DialTLS(address, "peer-"+org, i.PeerTLS(org))
+	peerName := "peer-" + org
+	conn, err := DialTLS(address, peerName, i.PeerTLS(org))
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +362,7 @@ func (i *Instance) Peer(org, role string) (*PeerClient, error) {
 		conn.Close()
 		return nil, err
 	}
-	return &PeerClient{conn: conn, gateway: g, signer: sign, role: binding}, nil
+	return &PeerClient{name: peerName, conn: conn, gateway: g, signer: sign, role: binding}, nil
 }
 
 // DialTLS creates a TLS 1.2+ gRPC client connection pinned to rootPath and serverName.

@@ -21,6 +21,19 @@ import (
 	"grad/protocol/registry"
 )
 
+func TestModelMetadataFromRecordedResponses(t *testing.T) {
+	trial := e1Trial{cfg: agent.RunnerConfig{Provider: "openai", Model: "alias"}}
+	assert.Empty(t, trial.modelMetadata()["responseModels"])
+	trial.traces = []e1Trace{
+		{Result: &agent.RunResult{ResponseModels: []string{"version-b", "version-a"}}},
+		{Result: &agent.RunResult{ResponseModels: []string{"version-a"}}},
+		{Error: "no response"},
+	}
+	metadata := trial.modelMetadata()
+	assert.Equal(t, "alias", metadata["requestedModel"])
+	assert.Equal(t, []string{"version-a", "version-b"}, metadata["responseModels"])
+}
+
 func TestValidateFlags(t *testing.T) {
 	t.Parallel()
 

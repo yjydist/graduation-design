@@ -77,6 +77,6 @@ mise -C experiments run experiment:analyze -- --experiment E1 \
 
 | 源运行 ID | 分析版本 | 离线复算结论 | 关键计数 | 原始与派生路径 |
 | --- | --- | --- | --- | --- |
-| `<run-id>` (待补跑) | `e1-analyzer/v1` | 待填 (`PASS` / `FAIL`) | 待填 | 原始: `runs/<run-id>/`; 派生: `analysis/<run-id>/{recomputed.json,recomputed-table.md}` |
+| `<run-id>` (待补跑) | `e1-analyzer/v2` | 待填 (`PASS` / `FAIL`) | 待填 | 原始: `runs/<run-id>/`; 派生: `analysis/<run-id>/{recomputed.json,recomputed-table.md}` |
 
 复算须核对同一输入重复运行产出逐字节一致的 `recomputed.json`, 且复算前后 `runs/<run-id>/` 内全部原始文件的 SHA-256 摘要保持不变.

@@ -329,6 +329,9 @@ func (e *e1Trial) live(m *e1Mode, prompt string) (*agent.RunResult, error) {
 	if err := e.save("llm-traces", e.traces); err != nil {
 		return nil, err
 	}
+	if err := harness.MergeJSON(filepath.Join(e.dir, "manifest.json"), map[string]any{"llm": e.modelMetadata()}); err != nil {
+		return nil, err
+	}
 	if tr.Error != "" {
 		return tr.Result, fmt.Errorf("%s", tr.Error)
 	}

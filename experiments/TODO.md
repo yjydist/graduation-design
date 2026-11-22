@@ -23,7 +23,7 @@
 - [ ] 核对固定构建轮次的真实模型工具轨迹和网关请求. 核对模型会话, 工具调用与网关 HTTP 请求关联关系.
 - [ ] 对账固定构建轮次的 RP/BM 采购效果. 两种根各创建一笔 800 元唯一订单, 1200 元原价与改报 800 元的四个负例均无新增订单或订单业务键.
 - [ ] 记录并归档任何失败轮次的首个受阻阶段, 原因和处理结论, 保持原始证据只读留存.
-- [ ] 脱离在线服务后使用 `mise -C experiments run experiment:analyze -- --experiment E1` (`e1-analyzer/v1`) 对原始记录进行离线只读复算, 核对 `recomputed.json` 与 `recomputed-table.md` 一致且原始文件 SHA-256 不变.
+- [ ] 脱离在线服务后使用 `mise -C experiments run experiment:analyze -- --experiment E1` (`e1-analyzer/v2`) 对原始记录进行离线只读复算, 核对 `recomputed.json` 与 `recomputed-table.md` 一致且原始文件 SHA-256 不变.
 
 ## E2 安全与状态机检查
 

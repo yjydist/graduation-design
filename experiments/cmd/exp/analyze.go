@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	E1AnalysisVersion = "e1-analyzer/v1"
+	E1AnalysisVersion = "e1-analyzer/v2"
 	E6AnalysisVersion = "e6-analyzer/v1"
 )
 
@@ -95,7 +95,8 @@ type E1RecomputedReport struct {
 	SourceCommit                string                           `json:"sourceCommit,omitempty"`
 	DeploymentID                string                           `json:"deploymentId,omitempty"`
 	ModelProvider               string                           `json:"modelProvider,omitempty"`
-	ModelName                   string                           `json:"modelName,omitempty"`
+	RequestedModel              string                           `json:"requestedModel,omitempty"`
+	ResponseModels              []string                         `json:"responseModels,omitempty"`
 	InputFilesSHA256            map[string]string                `json:"inputFilesSha256"`
 	MissingInputFiles           []string                         `json:"missingInputFiles,omitempty"`
 	SummaryVerdicts             int                              `json:"summaryVerdicts"`
@@ -196,26 +197,29 @@ func AnalyzeE1Run(runDir, outDir string) (*E1RecomputedReport, error) {
 	}
 
 	// 1. manifest.json
+	var manifest struct {
+		RunID        string `json:"runId"`
+		SourceCommit string `json:"sourceCommit"`
+		Deployment   struct {
+			ID string `json:"deploymentId"`
+		} `json:"deployment"`
+		LLM struct {
+			Provider       string   `json:"provider"`
+			RequestedModel string   `json:"requestedModel"`
+			ResponseModels []string `json:"responseModels"`
+		} `json:"llm"`
+	}
 	if raw, ok := readTracked("manifest.json"); ok {
-		var manifest map[string]any
 		if err := json.Unmarshal(raw, &manifest); err != nil {
 			rep.Anomalies = append(rep.Anomalies, fmt.Sprintf("manifest.json parse error: %v", err))
 		} else {
-			if v, ok := manifest["runId"].(string); ok && v != "" {
-				rep.SourceRunID = v
+			if manifest.RunID != "" {
+				rep.SourceRunID = manifest.RunID
 			}
-			if v, ok := manifest["sourceCommit"].(string); ok {
-				rep.SourceCommit = v
-			}
-			if dep, ok := manifest["deployment"].(map[string]any); ok {
-				if id, ok := dep["deploymentId"].(string); ok {
-					rep.DeploymentID = id
-				}
-			}
-			if llm, ok := manifest["llm"].(map[string]any); ok {
-				rep.ModelProvider, _ = llm["provider"].(string)
-				rep.ModelName, _ = llm["model"].(string)
-			}
+			rep.SourceCommit = manifest.SourceCommit
+			rep.DeploymentID = manifest.Deployment.ID
+			rep.ModelProvider = manifest.LLM.Provider
+			rep.RequestedModel = manifest.LLM.RequestedModel
 		}
 	}
 
@@ -324,7 +328,8 @@ func AnalyzeE1Run(runDir, outDir string) (*E1RecomputedReport, error) {
 		Error  string `json:"Error"`
 		Result *struct {
 			Provider       string      `json:"provider"`
-			Model          string      `json:"model"`
+			RequestedModel string      `json:"requestedModel"`
+			ResponseModels []string    `json:"responseModels"`
 			LLMLatencyMs   int64       `json:"llmLatencyMs"`
 			ToolCallsCount int         `json:"toolCallsCount"`
 			ToolTraces     []traceTool `json:"toolTraces"`
@@ -343,7 +348,15 @@ func AnalyzeE1Run(runDir, outDir string) (*E1RecomputedReport, error) {
 		}
 		if tr.Result != nil {
 			rep.LLMToolCalls += tr.Result.ToolCallsCount
+			rep.ResponseModels = append(rep.ResponseModels, tr.Result.ResponseModels...)
 		}
+	}
+
+	slices.Sort(rep.ResponseModels)
+	rep.ResponseModels = slices.Compact(rep.ResponseModels)
+	slices.Sort(manifest.LLM.ResponseModels)
+	if !slices.Equal(rep.ResponseModels, manifest.LLM.ResponseModels) {
+		rep.Anomalies = append(rep.Anomalies, "manifest responseModels differ from recorded SDK responses")
 	}
 
 	// 5. Primary DB JSON exports
@@ -487,12 +500,17 @@ func AnalyzeE1Run(runDir, outDir string) (*E1RecomputedReport, error) {
 				continue
 			}
 			seenTraceCases[tr.Case] = true
-			if tr.Result == nil {
+			if tr.Result == nil || tr.Error != "" {
 				modelMatch = false
 				continue
 			}
-			if rep.ModelName != "" && tr.Result.Model != rep.ModelName {
+			if rep.RequestedModel == "" || tr.Result.RequestedModel != rep.RequestedModel || len(tr.Result.ResponseModels) == 0 {
 				modelMatch = false
+			}
+			for _, model := range tr.Result.ResponseModels {
+				if model == "" || !slices.Contains(manifest.LLM.ResponseModels, model) {
+					modelMatch = false
+				}
 			}
 			if rep.ModelProvider != "" && tr.Result.Provider != rep.ModelProvider {
 				modelMatch = false
@@ -844,8 +862,11 @@ func renderE1RecomputedMarkdown(rep *E1RecomputedReport) string {
 	fmt.Fprintf(&b, "- 源运行 ID: `%s`\n", rep.SourceRunID)
 	fmt.Fprintf(&b, "- 原始运行目录: `%s`\n", rep.SourceRunDir)
 	fmt.Fprintf(&b, "- 运行状态: `%s` (对账通过: `%v`)\n", rep.RunStatus, rep.ReconciliationPassed)
-	if rep.ModelProvider != "" || rep.ModelName != "" {
-		fmt.Fprintf(&b, "- 实际模型: `%s / %s`\n", rep.ModelProvider, rep.ModelName)
+	if rep.ModelProvider != "" || rep.RequestedModel != "" {
+		fmt.Fprintf(&b, "- 模型提供方与请求名: `%s / %s`\n", rep.ModelProvider, rep.RequestedModel)
+		if len(rep.ResponseModels) > 0 {
+			fmt.Fprintf(&b, "- 响应模型: `%s`\n", strings.Join(rep.ResponseModels, ", "))
+		}
 	}
 	b.WriteString("\n## 关键计数\n\n")
 	b.WriteString("| 指标 | 离线复算值 |\n| --- | --- |\n")

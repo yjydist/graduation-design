@@ -29,7 +29,7 @@ cd experiments && go run ./cmd/exp run --experiment E1 \
 
 在包含未提交改动的开发工作区验收时可附加 `--workspace-sut`, 清单会同时记录工作区提交, 脏状态和实际二进制摘要.
 
-运行前从 `experiments/llm.env` 读取模型选择. OpenAI 兼容地址只有主机名时, 驱动使用 `/v1` 作为 API 路径, 并在清单同时记录原地址和生效地址. 公开清单记录模型选择, 源码快照排除本地 `llm.env`. 服务地址只接受无凭据, 查询参数和片段的 HTTP(S) 端点. 每次启动在 `runs/<run-id>/` 创建独立目录 (拒绝覆盖已有目录). 结束后无论成功, 失败或中止均停止当轮容器并保留已写证据, 标记失败阶段与缺测原因, 并对公开导出执行敏感字段检查.
+运行前从 `experiments/llm.env` 读取模型选择. OpenAI 兼容地址只有主机名时, 驱动使用 `/v1` 作为 API 路径, 并在清单同时记录原地址和生效地址. 公开清单的 `requestedModel` 记录请求名, `responseModels` 汇总服务实际返回的模型标识. 每份会话轨迹按 SDK 响应顺序保存模型标识, 离线复算逐次核对. 源码快照排除本地 `llm.env`. 服务地址只接受无凭据, 查询参数和片段的 HTTP(S) 端点. 每次启动在 `runs/<run-id>/` 创建独立目录 (拒绝覆盖已有目录). 结束后无论成功, 失败或中止均停止当轮容器并保留已写证据, 标记失败阶段与缺测原因, 并对公开导出执行敏感字段检查.
 
 ## 离线复算
 
@@ -41,7 +41,7 @@ mise -C experiments run experiment:analyze -- --experiment E1 \
   --out experiments/e1/analysis/<run-id>
 ```
 
-输出包含 `recomputed.json` 与 `recomputed-table.md`, 记录分析版本 (`e1-analyzer/v1`), 源运行 ID 以及所有参与复算原始文件的 SHA-256 摘要. 原始运行目录在复算前后保持只读且摘要不变.
+输出包含 `recomputed.json` 与 `recomputed-table.md`, 记录分析版本 (`e1-analyzer/v2`), 源运行 ID 以及所有参与复算原始文件的 SHA-256 摘要. 原始运行目录在复算前后保持只读且摘要不变.
 
 ## 项目接口
 

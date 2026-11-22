@@ -480,7 +480,7 @@ func prepareE1Plan(rc *runContext) (RunPlan, map[string]any, string, []string, e
 	}
 	llmMeta := map[string]any{
 		"provider":          provider,
-		"model":             model,
+		"requestedModel":    model,
 		"configuredBaseURL": baseURL,
 		"baseURL":           effectiveURL,
 		"apiKeySource":      "env:LLM_API_KEY",
@@ -561,7 +561,7 @@ func executeE1Run(ctx context.Context, rc *runContext) error {
 	env := append(os.Environ(),
 		"LLM_PROVIDER="+fmt.Sprint(rc.llmConfig["provider"]),
 		"LLM_BASE_URL="+fmt.Sprint(rc.llmConfig["configuredBaseURL"]),
-		"LLM_MODEL="+fmt.Sprint(rc.llmConfig["model"]),
+		"LLM_MODEL="+fmt.Sprint(rc.llmConfig["requestedModel"]),
 	)
 	if err := rc.deps.RunCmd(ctx, buildDir, env, filepath.Join(rc.runDir, "driver.log"), driverBin,
 		"-revision", rc.sourceCommit,

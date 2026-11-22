@@ -892,7 +892,7 @@ func TestLLMRunnerOpenAIAndAnthropicPlumbingAndRedaction(t *testing.T) {
 			}
 			if step >= len(script) {
 				_ = json.NewEncoder(w).Encode(map[string]any{
-					"id": "chatcmpl-done", "object": "chat.completion", "model": "mock-openai",
+					"id": "chatcmpl-done", "object": "chat.completion", "model": "mock-openai-final",
 					"choices": []any{map[string]any{
 						"index": 0, "finish_reason": "stop",
 						"message": map[string]any{
@@ -926,11 +926,13 @@ func TestLLMRunnerOpenAIAndAnthropicPlumbingAndRedaction(t *testing.T) {
 			Provider: agent.ProviderOpenAI,
 			BaseURL:  oaiSrv.URL + "/v1",
 			APIKey:   apiKey,
-			Model:    "mock-openai",
+			Model:    "requested-alias",
 			MaxSteps: 8,
 		}, "Delegate grant to B1 and purchase 1 unit of P1.")
 		require.NoError(t, err)
 		assert.Equal(t, agent.ProviderOpenAI, res.Provider)
+		assert.Equal(t, "requested-alias", res.RequestedModel)
+		assert.Equal(t, []string{"mock-openai", "mock-openai", "mock-openai", "mock-openai", "mock-openai-final"}, res.ResponseModels)
 		assert.Equal(t, 4, res.ToolCallsCount)
 		assert.Contains(t, res.FinalText, "[REDACTED_API_KEY]")
 		resJSON, err := json.Marshal(res)
@@ -1000,7 +1002,7 @@ func TestLLMRunnerOpenAIAndAnthropicPlumbingAndRedaction(t *testing.T) {
 			}
 			if step >= len(script) {
 				_ = json.NewEncoder(w).Encode(map[string]any{
-					"id": "msg_done", "type": "message", "role": "assistant", "model": "mock-anthropic",
+					"id": "msg_done", "type": "message", "role": "assistant", "model": "mock-anthropic-final",
 					"stop_reason": "end_turn",
 					"content":     []any{map[string]any{"type": "text", "text": "Anthropic order placed " + apiKey}},
 					"usage":       map[string]any{"input_tokens": 50, "output_tokens": 20},
@@ -1025,11 +1027,13 @@ func TestLLMRunnerOpenAIAndAnthropicPlumbingAndRedaction(t *testing.T) {
 			Provider: agent.ProviderAnthropic,
 			BaseURL:  antSrv.URL,
 			APIKey:   apiKey,
-			Model:    "mock-anthropic",
+			Model:    "requested-alias",
 			MaxSteps: 8,
 		}, "Delegate grant to B1 and purchase 1 unit of P1.")
 		require.NoError(t, err)
 		assert.Equal(t, agent.ProviderAnthropic, res.Provider)
+		assert.Equal(t, "requested-alias", res.RequestedModel)
+		assert.Equal(t, []string{"mock-anthropic", "mock-anthropic", "mock-anthropic", "mock-anthropic", "mock-anthropic-final"}, res.ResponseModels)
 		assert.Equal(t, 4, res.ToolCallsCount)
 		assert.Contains(t, res.FinalText, "[REDACTED_API_KEY]")
 		resJSON, err := json.Marshal(res)

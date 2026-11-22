@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -262,6 +263,20 @@ func (e *e1Trial) setup() error {
 	return e.saveManifest()
 }
 
+func (e *e1Trial) modelMetadata() map[string]any {
+	var models []string
+	for _, trace := range e.traces {
+		if trace.Result != nil {
+			models = append(models, trace.Result.ResponseModels...)
+		}
+	}
+	slices.Sort(models)
+	return map[string]any{
+		"provider": e.cfg.Provider, "requestedModel": e.cfg.Model, "responseModels": slices.Compact(models),
+		"configuredBaseURL": e.configuredURL, "baseURL": e.cfg.BaseURL, "maxSteps": e.cfg.MaxSteps,
+	}
+}
+
 func (e *e1Trial) saveManifest() error {
 	driverPath, err := os.Executable()
 	if err != nil {
@@ -296,7 +311,7 @@ func (e *e1Trial) saveManifest() error {
 		"instance": e.instanceDir, "deployment": e.d.Raw, "host": runtime.GOOS + "/" + runtime.GOARCH, "go": runtime.Version(),
 		"configuration":      "Fabric fixed-height, static signature cache disabled; real lease acquired using ledgerctl check and handed to the existing StateProvider",
 		"authorizationModes": []string{registry.RP, registry.BM},
-		"llm":                map[string]any{"provider": e.cfg.Provider, "model": e.cfg.Model, "configuredBaseURL": e.configuredURL, "baseURL": e.cfg.BaseURL, "maxSteps": e.cfg.MaxSteps},
+		"llm":                e.modelMetadata(),
 	}
 	for k, v := range updates {
 		if k == "fileSHA256" {

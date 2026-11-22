@@ -228,7 +228,7 @@ func TestE1PlanExportsOnlyPublicModelConfiguration(t *testing.T) {
 	assert.NotContains(t, string(raw), secret)
 	var manifest struct{ LLM map[string]string }
 	require.NoError(t, json.Unmarshal(raw, &manifest))
-	assert.Equal(t, "test-model", manifest.LLM["model"])
+	assert.Equal(t, "test-model", manifest.LLM["requestedModel"])
 	assert.Equal(t, "openai", manifest.LLM["provider"])
 	assert.Equal(t, "https://example.test/v1", manifest.LLM["baseURL"])
 
@@ -630,7 +630,7 @@ func buildE1PassFixture(t *testing.T) string {
 		"runId":        "run-e1-pass-fixture",
 		"sourceCommit": "abc1234",
 		"deployment":   map[string]any{"deploymentId": "dep-e1"},
-		"llm":          map[string]any{"provider": "openai", "model": "gpt-test"},
+		"llm":          map[string]any{"provider": "openai", "requestedModel": "alias", "responseModels": []string{"gpt-test"}},
 	}))
 
 	cases := make([]map[string]any, 0, 16)
@@ -669,7 +669,8 @@ func buildE1PassFixture(t *testing.T) string {
 				"Mode": spec.mode,
 				"Result": map[string]any{
 					"provider":       "openai",
-					"model":          "gpt-test",
+					"requestedModel": "alias",
+					"responseModels": []string{"gpt-test"},
 					"llmLatencyMs":   120,
 					"toolCallsCount": 2,
 					"toolTraces": []map[string]any{
@@ -840,6 +841,8 @@ func TestAnalyzeE1OfflinePassFixtureDeterministicAndImmutable(t *testing.T) {
 	assert.True(t, rep1.PublishedAuditMatches)
 	assert.Equal(t, 16, rep1.PassedCases)
 	assert.Equal(t, 20, rep1.CapturedGatewayRequests)
+	assert.Equal(t, "alias", rep1.RequestedModel)
+	assert.Equal(t, []string{"gpt-test"}, rep1.ResponseModels)
 	assert.Equal(t, 4, rep1.LLMSessions)
 	assert.Equal(t, 8, rep1.LLMToolCalls)
 	assert.True(t, rep1.BlocksContinuous)
@@ -865,6 +868,18 @@ func TestAnalyzeE1OfflinePassFixtureDeterministicAndImmutable(t *testing.T) {
 	// Reject writing derived output inside raw run directory.
 	_, err = AnalyzeE1Run(runDir, filepath.Join(runDir, "derived"))
 	require.Error(t, err)
+}
+
+func TestAnalyzeE1RejectsUnobservedModel(t *testing.T) {
+	dir := buildE1PassFixture(t)
+	require.NoError(t, harness.MergeJSON(filepath.Join(dir, "manifest.json"), map[string]any{
+		"llm": map[string]any{"provider": "openai", "requestedModel": "alias", "responseModels": []string{"alias"}},
+	}))
+	report, err := AnalyzeE1Run(dir, t.TempDir())
+	require.NoError(t, err)
+	assert.False(t, report.ReconciliationPassed)
+	assert.Equal(t, []string{"gpt-test"}, report.ResponseModels)
+	assert.Contains(t, report.Anomalies, "manifest responseModels differ from recorded SDK responses")
 }
 
 func TestAnalyzeE1OfflineFailedRunDetectsCascadeAndMissing(t *testing.T) {

@@ -81,7 +81,8 @@ type ToolTrace struct {
 // RunResult summarizes a bounded dual-SDK + MCP agent run without exposing credentials.
 type RunResult struct {
 	Provider        string      `json:"provider"`
-	Model           string      `json:"model"`
+	RequestedModel  string      `json:"requestedModel"`
+	ResponseModels  []string    `json:"responseModels"`
 	FinalText       string      `json:"finalText"`
 	LLMLatencyMs    int64       `json:"llmLatencyMs"`
 	TotalDurationMs int64       `json:"totalDurationMs"`
@@ -171,7 +172,7 @@ func RunWithMCPSession(ctx context.Context, session *mcp.ClientSession, cfg Runn
 		return nil, fmt.Errorf("unsupported LLM provider %q", norm.Provider)
 	}
 	if err != nil {
-		return nil, errors.New(sanitizeLLMText(err.Error(), norm.APIKey))
+		return res, errors.New(sanitizeLLMText(err.Error(), norm.APIKey))
 	}
 	res.TotalDurationMs = time.Since(started).Milliseconds()
 	res.FinalText = sanitizeLLMText(res.FinalText, norm.APIKey)
@@ -214,8 +215,8 @@ func runOpenAILoop(
 	}
 
 	res := &RunResult{
-		Provider: ProviderOpenAI,
-		Model:    cfg.Model,
+		Provider:       ProviderOpenAI,
+		RequestedModel: cfg.Model,
 	}
 
 	for step := 1; step <= cfg.MaxSteps; step++ {
@@ -228,10 +229,15 @@ func runOpenAILoop(
 		})
 		res.LLMLatencyMs += time.Since(t0).Milliseconds()
 		if err != nil {
-			return nil, fmt.Errorf("openai chat completions step %d: %w", step, err)
+			return res, fmt.Errorf("openai chat completions step %d: %w", step, err)
 		}
+		model := sanitizeLLMText(string(resp.Model), cfg.APIKey)
+		if strings.TrimSpace(model) == "" {
+			return res, fmt.Errorf("openai step %d returned no model identifier", step)
+		}
+		res.ResponseModels = append(res.ResponseModels, model)
 		if len(resp.Choices) == 0 {
-			return nil, fmt.Errorf("openai chat completions step %d returned zero choices", step)
+			return res, fmt.Errorf("openai chat completions step %d returned zero choices", step)
 		}
 
 		msg := resp.Choices[0].Message
@@ -248,7 +254,7 @@ func runOpenAILoop(
 			messages = append(messages, openai.ToolMessage(contentStr, tc.ID))
 		}
 	}
-	return nil, fmt.Errorf("openai agent loop exceeded maxSteps (%d)", cfg.MaxSteps)
+	return res, fmt.Errorf("openai agent loop exceeded maxSteps (%d)", cfg.MaxSteps)
 }
 
 func runAnthropicLoop(
@@ -291,8 +297,8 @@ func runAnthropicLoop(
 	}
 
 	res := &RunResult{
-		Provider: ProviderAnthropic,
-		Model:    cfg.Model,
+		Provider:       ProviderAnthropic,
+		RequestedModel: cfg.Model,
 	}
 
 	for step := 1; step <= cfg.MaxSteps; step++ {
@@ -309,9 +315,14 @@ func runAnthropicLoop(
 		})
 		res.LLMLatencyMs += time.Since(t0).Milliseconds()
 		if err != nil {
-			return nil, fmt.Errorf("anthropic messages step %d: %w", step, err)
+			return res, fmt.Errorf("anthropic messages step %d: %w", step, err)
 		}
 
+		model := sanitizeLLMText(string(resp.Model), cfg.APIKey)
+		if strings.TrimSpace(model) == "" {
+			return res, fmt.Errorf("anthropic step %d returned no model identifier", step)
+		}
+		res.ResponseModels = append(res.ResponseModels, model)
 		var toolUses []anthropic.ContentBlockUnion
 		var textParts []string
 		for _, block := range resp.Content {
@@ -349,7 +360,7 @@ func runAnthropicLoop(
 		}
 		messages = append(messages, anthropic.NewUserMessage(toolResults...))
 	}
-	return nil, fmt.Errorf("anthropic agent loop exceeded maxSteps (%d)", cfg.MaxSteps)
+	return res, fmt.Errorf("anthropic agent loop exceeded maxSteps (%d)", cfg.MaxSteps)
 }
 
 func executeMCPTool(ctx context.Context, session *mcp.ClientSession, step int, name, rawArgsJSON, apiKey string) (ToolTrace, string) {

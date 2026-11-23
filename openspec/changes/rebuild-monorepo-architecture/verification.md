@@ -1,5 +1,31 @@
 # rebuild-monorepo-architecture 核验报告
 
+## 协议模块校验和修复复核
+
+已补齐 `go.yaml.in/yaml/v3 v3.0.6/go.mod` 的校验和. 在 `protocol/` 设置 `GOWORK=off` 后, 只读模块图解析和两包无缓存测试均通过, `go mod tidy -diff` 确认依赖文件无需进一步调整. 工作区项目单测和实验模块测试均通过. [新增校验和](../../../protocol/go.sum#L6).
+
+## 提交 `b7230ba` 的核验
+
+已执行的检查发现 0 项严重问题, 1 项警告. 场景覆盖部分未核实, 本轮环境缺少 `LLM_API_KEY`, 无法验证 E1 真实模型会话的端到端记录. 本轮无法确认归档就绪.
+
+| 维度 | 结果 |
+| --- | --- |
+| 完整性 | 18/18 项任务已勾选. 5 份增量规范通过严格校验, 7 项修改要求均有实现. 新增, 删除和重命名要求均为 0. |
+| 正确性 | 7/7 项要求已映射. 23 个场景中, 22 个有回归或实跑证据. 真实智能体驱动与确定性驱动的记录场景部分未核实. E6 已实跑, E1 已验证计划与测试端点, 真实模型轨迹仍缺少端到端证据. |
+| 一致性 | 已核对 5 项设计决策和代码组织. 四模块依赖方向, 平台分层, 共享错误码与链码构建范围符合设计. `protocol` 脱离工作区时的依赖校验存在 1 项偏差. |
+
+### 警告
+
+- `protocol/go.sum` 缺少 `go.yaml.in/yaml/v3 v3.0.6/go.mod` 的校验和. 在 `protocol/` 执行 `GOWORK=off mise exec -- go list -mod=readonly -m all` 和 `GOWORK=off mise exec -- go test -mod=readonly -count=1 ./...` 均失败. 临时副本执行 `GOWORK=off mise exec -- go mod tidy` 后仅新增该项, 两条命令均通过. 建议在 `protocol/` 执行同一整理命令, 提交校验和并复跑独立模块测试. [校验和](../../../protocol/go.sum#L5), [独立模块设计](design.md#决策-1-4-module-go-workspace-拓扑与单向分层).
+
+### 本轮证据
+
+- OpenSpec 严格校验, `ledgerctl` 构建, 工作区四模块无缓存单测, PostgreSQL 集成测试和依赖边界检查通过. 关闭工作区后, `chaincode`, `platform`, `experiments` 的只读单测通过. 恢复双证明负向测试定向复跑 1024 次通过. [回归测试](../../../protocol/request_test.go#L196).
+- 新建隔离 Fabric 实例, 完成部署, 播种和在线检查. 6 个顶层实机用例全部通过, 包含历史查询和 MCP stdio 验证. [实机日志](../../../.local/openspec-verify-b7230ba.8soBUY/verify.log).
+- E6 的 RP 和 BM 短跑分别使用两个网关实例, 独立运行及复算. 两组各完成 1108/1108 个采样, 均为 0 次违规. RP 有 1 个延迟响应, BM 有 0 个. 三个新建 Fabric 实例的容器均已停止. [RP 复算](../../../.local/openspec-verify-b7230ba.8soBUY/e6-RP-analysis/recomputed.json), [BM 复算](../../../.local/openspec-verify-b7230ba.8soBUY/e6-BM-analysis/recomputed.json).
+- E1 CLI 生成了包含 16 个用例的计划, 清单含公开模型配置, 源码快照排除了 `llm.env`. 完整核验仍需使用真实模型执行 E1, 再离线复算并核对响应模型标识, 用例轨迹和公开导出. [E1 计划](../../../.local/openspec-verify-b7230ba.8soBUY/runs/e1-plan/manifest.json), [待核实场景](specs/reproducible-procurement-experiments/spec.md#scenario-记录真实智能体驱动与确定性驱动).
+- 以 Git 跟踪文件的物理行计, 相对 `ccfbb10`, 生产 Go 文件从 74 个降至 65 个, 行数从 30774 增至 33803. 含测试的 Go 文件从 124 个降至 104 个, 行数从 52706 降至 50949.
+
 ## 2 项警告的修复复核
 
 下列两项警告均已修复. 现有核验中的 E1 真实模型端到端场景仍待核实.

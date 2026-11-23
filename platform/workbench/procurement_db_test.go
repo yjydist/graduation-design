@@ -32,10 +32,17 @@ func TestProcurementConfirmAndRestartPreserveRunAndOriginalOperation(t *testing.
 	}
 	var lastStage string
 	var dispatch StageResult
+	var liveTraces []agent.ToolTrace
 	rootDelivered := false
 	executor := func(service *registrysvc.Service) procurementTestExecutor {
 		return procurementTestExecutor{
 			draft: initDraft,
+			dispatchTraces: func(_ context.Context, _ Run) ([]agent.ToolTrace, error) {
+				if liveTraces == nil {
+					return nil, errors.New("dispatcher unavailable")
+				}
+				return liveTraces, nil
+			},
 			advance: func(ctx context.Context, owner string, run Run) (StageResult, error) {
 				if owner != buyer.SubjectID {
 					return StageResult{}, errors.New("unexpected run owner")
@@ -191,6 +198,16 @@ func TestProcurementConfirmAndRestartPreserveRunAndOriginalOperation(t *testing.
 	decided := readProcurementRun(t, browserRequest(h, http.MethodGet, runPath, "", token, ""), http.StatusOK)
 	require.Equal(t, RunDecided, decided.Status)
 	require.Equal(t, dispatch.Traces, decided.Traces)
+
+	_, err = db.Exec(ctx, `INSERT INTO workbench_tool_trace(deployment_id,domain_id,run_id,body)
+		VALUES($1,$2,$3,$4)`, deploy, domain, run.RunID, agent.ToolTrace{ToolName: "delegate_grant"})
+	require.NoError(t, err)
+	liveTraces = append(dispatch.Traces, agent.ToolTrace{
+		ToolName: "request_quote", Output: map[string]any{"decision": "DENY", "errorCode": registry.ErrCodeAncestorInactive},
+	})
+	refreshed := readProcurementRun(t, browserRequest(h, http.MethodGet, runPath, "", token, ""), http.StatusOK)
+	require.Equal(t, RunDecided, refreshed.Status)
+	require.Equal(t, append([]agent.ToolTrace{{ToolName: "delegate_grant"}}, liveTraces...), refreshed.Traces)
 }
 
 func readProcurementRun(t *testing.T, response *httptest.ResponseRecorder, status int) Run {
@@ -202,8 +219,9 @@ func readProcurementRun(t *testing.T, response *httptest.ResponseRecorder, statu
 }
 
 type procurementTestExecutor struct {
-	draft   Draft
-	advance func(context.Context, string, Run) (StageResult, error)
+	draft          Draft
+	advance        func(context.Context, string, Run) (StageResult, error)
+	dispatchTraces func(context.Context, Run) ([]agent.ToolTrace, error)
 }
 
 func (e procurementTestExecutor) Suggest(context.Context, string, *Draft) (Draft, string, error) {
@@ -212,6 +230,10 @@ func (e procurementTestExecutor) Suggest(context.Context, string, *Draft) (Draft
 
 func (e procurementTestExecutor) Advance(ctx context.Context, owner string, run Run) (StageResult, error) {
 	return e.advance(ctx, owner, run)
+}
+
+func (e procurementTestExecutor) DispatchTraces(ctx context.Context, run Run) ([]agent.ToolTrace, error) {
+	return e.dispatchTraces(ctx, run)
 }
 
 func (procurementTestExecutor) GrantMutation(context.Context, Run) (registry.Mutation, error) {

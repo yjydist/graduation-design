@@ -81,11 +81,15 @@ func (d *domainWorkbench) Advance(ctx context.Context, owner string, run workben
 	if owner != d.dep.Bootstrap.TaskCreator.Subject || run.Task.DelegateDID != d.cfg.Actors["A1"].DID {
 		return workbench.StageResult{Status: workbench.RunFailed, Code: registry.ErrCodeBindingMismatch}, nil
 	}
-	if run.Status != workbench.RunUnknown && time.Now().Unix() >= run.Task.ExpiresAt {
-		return workbench.StageResult{Status: workbench.RunFailed, Code: registry.ErrCodeTaskInactive}, nil
-	}
 	ctx, cancel := context.WithTimeout(ctx, 4*time.Minute)
 	defer cancel()
+	now := d.grants.cfg.Now()
+	if now.Unix() >= run.Task.ExpiresAt {
+		if run.Stage == workbench.StageDispatch {
+			return d.resumeExpiredDispatch(ctx, run, now)
+		}
+		return workbench.StageResult{Status: workbench.RunFailed, Code: registry.ErrCodeTaskInactive}, nil
+	}
 	switch run.Stage {
 	case workbench.StageTask:
 		return d.registerTask(ctx, run)
@@ -378,15 +382,52 @@ func (d *domainWorkbench) delegateDispatch(ctx context.Context, run workbench.Ru
 			return step, nil
 		}
 	}
-	step.Operation = &delivery.Operation
 	var result dispatchResult
-	wire := dispatchInput{Run: dispatchRun{RunID: run.RunID, TaskID: run.TaskID, Task: run.Task}, Delivery: *delivery}
-	err = d.callPeer(ctx, "B", http.MethodPost, "/internal/workbench/dispatch", wire, &result)
+	if delivery.Operation.Delivered {
+		result, err = d.readDispatch(ctx, run.RunID)
+	} else {
+		wire := dispatchInput{Run: dispatchRun{RunID: run.RunID, TaskID: run.TaskID, Task: run.Task}, Delivery: *delivery}
+		err = d.callPeer(ctx, "B", http.MethodPost, workbenchDispatchPath, wire, &result)
+	}
 	if err != nil {
+		step.Operation = &delivery.Operation
+		if protocol.HasCode(err, registry.ErrCodeTaskInactive) {
+			// Let the expiry path check for an existing acceptance after an overlapping POST.
+			return step, err
+		}
 		return stageError(step, err)
 	}
-	if err := d.grants.MarkReceived(ctx, *delivery, result.Receipt); err != nil {
-		return stageError(step, err)
+	return d.applyDispatchReceipt(ctx, step, *delivery, result)
+}
+
+func (d *domainWorkbench) resumeExpiredDispatch(ctx context.Context, run workbench.Run, now time.Time) (workbench.StageResult, error) {
+	step := workbench.StageResult{GrantID: run.GrantID("G2"), Status: run.Status}
+	result, err := d.readDispatch(ctx, run.RunID)
+	if err != nil {
+		// Allow both domains' clock error before treating absence as final.
+		if run.Status != workbench.RunUnknown && protocol.HasCode(err, "NOT_FOUND") &&
+			!now.Before(time.Unix(run.Task.ExpiresAt, 0).Add(2*registry.ClockError)) {
+			step.Status, step.Code = workbench.RunFailed, registry.ErrCodeTaskInactive
+			return step, nil
+		}
+		return step, err
+	}
+	delivery, err := d.grants.Published(ctx, d.recipient("B1"), step.GrantID)
+	if err != nil {
+		return step, err
+	}
+	return d.applyDispatchReceipt(ctx, step, *delivery, result)
+}
+
+func (d *domainWorkbench) applyDispatchReceipt(ctx context.Context, step workbench.StageResult, delivery GrantDelivery, result dispatchResult) (workbench.StageResult, error) {
+	step.Operation = &delivery.Operation
+	if result.Receipt != delivery.Digest {
+		return stageError(step, protocol.NewError(registry.ErrCodeBindingMismatch, "dispatch receipt differs from delivery"))
+	}
+	if !delivery.Operation.Delivered {
+		if err := d.grants.MarkReceived(ctx, delivery, result.Receipt); err != nil {
+			return stageError(step, err)
+		}
 	}
 	step.Status, step.Code = result.Status, result.Code
 	step.Traces = result.Traces
@@ -488,27 +529,7 @@ func (d *domainWorkbench) acceptDispatch(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	ctx := r.Context()
-	var existing workbench.Run
-	var result *dispatchResult
-	err := d.db.QueryRow(ctx, `SELECT body,result FROM workbench_dispatch WHERE deployment_id=$1 AND run_id=$2`,
-		d.dep.DeploymentID, run.RunID).Scan(&existing, &result)
-	if err == nil {
-		if existing.TaskID != run.TaskID || existing.Task != run.Task {
-			workbench.WriteError(w, r, http.StatusConflict, registry.ErrCodeBindingMismatch, "dispatch differs from original binding")
-			return
-		}
-		if result == nil {
-			result = &dispatchResult{Receipt: in.Delivery.Digest, Status: workbench.RunPending}
-		}
-		if result.Receipt != in.Delivery.Digest {
-			workbench.WriteError(w, r, http.StatusConflict, registry.ErrCodeBindingMismatch, "dispatch receipt differs from original binding")
-			return
-		}
-		httpx.WriteJSON(w, http.StatusOK, result)
-		return
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		workbench.WriteError(w, r, http.StatusServiceUnavailable, registry.ErrCodeStateUnavailable, "dispatch store unavailable")
+	if d.replyToDispatchReplay(w, r, run, in.Delivery.Digest) {
 		return
 	}
 	bundle, receipt, err := d.grants.Receive(ctx, d.recipient("B1"), in.Delivery)
@@ -528,14 +549,37 @@ func (d *domainWorkbench) acceptDispatch(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	pending := dispatchResult{Receipt: receipt, Status: workbench.RunPending}
-	_, err = d.db.Exec(ctx, `INSERT INTO workbench_dispatch(deployment_id,run_id,task_id,status,body,result)
-		VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
-		d.dep.DeploymentID, run.RunID, run.TaskID, workbench.RunPending, run, pending)
+	tag, err := d.db.Exec(ctx, `INSERT INTO workbench_dispatch(deployment_id,run_id,task_id,status,body,result)
+		SELECT $1,$2,$3,$4,$5,$6 WHERE clock_timestamp() < to_timestamp($7)
+		ON CONFLICT DO NOTHING`, d.dep.DeploymentID, run.RunID, run.TaskID, workbench.RunPending, run, pending, run.Task.ExpiresAt)
 	if err != nil {
 		writeInternalError(w, r, err)
 		return
 	}
+	if tag.RowsAffected() == 0 {
+		if !d.replyToDispatchReplay(w, r, run, in.Delivery.Digest) {
+			writeInternalError(w, r, protocol.NewError(registry.ErrCodeTaskInactive, "dispatch deadline passed"))
+		}
+		return
+	}
 	httpx.WriteJSON(w, http.StatusAccepted, pending)
+}
+
+func (d *domainWorkbench) replyToDispatchReplay(w http.ResponseWriter, r *http.Request, run workbench.Run, receipt string) bool {
+	existing, result, err := d.storedDispatch(r.Context(), run.RunID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false
+	}
+	if err != nil {
+		workbench.WriteError(w, r, http.StatusServiceUnavailable, registry.ErrCodeStateUnavailable, "dispatch store unavailable")
+		return true
+	}
+	if existing.TaskID != run.TaskID || existing.Task != run.Task || result.Receipt != receipt {
+		workbench.WriteError(w, r, http.StatusConflict, registry.ErrCodeBindingMismatch, "dispatch differs from original binding")
+		return true
+	}
+	d.writeDispatchResult(w, r, run.RunID, result)
+	return true
 }
 
 func writeInternalError(w http.ResponseWriter, r *http.Request, err error) {

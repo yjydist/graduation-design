@@ -123,7 +123,8 @@ func (d *domainWorkbench) internalHandler() (http.Handler, error) {
 	}
 	switch d.cfg.DomainID {
 	case "B":
-		mux.HandleFunc("POST /internal/workbench/dispatch", d.fromDomain("A", d.acceptDispatch))
+		mux.HandleFunc("POST "+workbenchDispatchPath, d.fromDomain("A", d.acceptDispatch))
+		mux.HandleFunc("GET "+workbenchDispatchPath+"/{runId}", d.fromDomain("A", d.dispatchStatus))
 		mux.HandleFunc("POST /internal/workbench/probe", d.fromDomain("A", d.runProbe))
 		mux.HandleFunc("POST /v1/internal/order-outcome-receipts", d.fromDomain("C", d.wallet.ReceiptHandler().ServeHTTP))
 	case "C":

@@ -115,6 +115,7 @@ type StageResult struct {
 type ProcurementExecutor interface {
 	Suggest(context.Context, string, *Draft) (Draft, string, error)
 	Advance(context.Context, string, Run) (StageResult, error)
+	DispatchTraces(context.Context, Run) ([]agent.ToolTrace, error)
 	GrantMutation(context.Context, Run) (registry.Mutation, error)
 	Control(context.Context, string, string, string, registry.Mutation) (*registrysvc.OperationView, error)
 }
@@ -375,8 +376,19 @@ func (p *Procurement) addToolTraces(ctx context.Context, run Run) (Run, error) {
 		return run, err
 	}
 	local, err := pgx.CollectRows(rows, pgx.RowTo[agent.ToolTrace])
+	if err != nil {
+		return run, err
+	}
+	if run.Stage == StageDispatch {
+		readCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+		// Keep the last observed B1 traces available during a peer outage.
+		if traces, err := p.executor.DispatchTraces(readCtx, run); err == nil {
+			run.Traces = traces
+		}
+	}
 	run.Traces = append(local, run.Traces...)
-	return run, err
+	return run, nil
 }
 
 func (p *Procurement) suspend(w http.ResponseWriter, r *http.Request, pr Principal) {

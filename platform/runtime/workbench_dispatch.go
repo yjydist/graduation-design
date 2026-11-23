@@ -16,6 +16,56 @@ import (
 	"grad/protocol/registry"
 )
 
+const workbenchDispatchPath = "/internal/workbench/dispatch"
+
+func (d *domainWorkbench) readDispatch(ctx context.Context, id string) (dispatchResult, error) {
+	var result dispatchResult
+	err := d.callPeer(ctx, "B", http.MethodGet, workbenchDispatchPath+"/"+id, nil, &result)
+	return result, err
+}
+
+// DispatchTraces retrieves B1's current projection without advancing the run.
+func (d *domainWorkbench) DispatchTraces(ctx context.Context, run workbench.Run) ([]agent.ToolTrace, error) {
+	result, err := d.readDispatch(ctx, run.RunID)
+	return result.Traces, err
+}
+
+func (d *domainWorkbench) storedDispatch(ctx context.Context, id string) (workbench.Run, dispatchResult, error) {
+	var run workbench.Run
+	var result dispatchResult
+	err := d.db.QueryRow(ctx, `SELECT body,result FROM workbench_dispatch WHERE deployment_id=$1 AND run_id=$2`,
+		d.dep.DeploymentID, id).Scan(&run, &result)
+	return run, result, err
+}
+
+func (d *domainWorkbench) dispatchStatus(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("runId")
+	if !registry.IsDigest(id) {
+		workbench.WriteError(w, r, http.StatusBadRequest, registry.ErrCodeInvalidSchema, "invalid workbench run ID")
+		return
+	}
+	_, result, err := d.storedDispatch(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		workbench.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "dispatch not found")
+		return
+	}
+	if err != nil {
+		workbench.WriteError(w, r, http.StatusServiceUnavailable, registry.ErrCodeStateUnavailable, "dispatch store unavailable")
+		return
+	}
+	d.writeDispatchResult(w, r, id, result)
+}
+
+func (d *domainWorkbench) writeDispatchResult(w http.ResponseWriter, r *http.Request, id string, result dispatchResult) {
+	traces, err := d.executionTraces(r.Context(), id)
+	if err != nil {
+		workbench.WriteError(w, r, http.StatusServiceUnavailable, registry.ErrCodeStateUnavailable, "dispatch traces unavailable")
+		return
+	}
+	result.Traces = traces
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
 func (d *domainWorkbench) processDispatch(ctx context.Context) error {
 	rows, err := d.db.Query(ctx, `SELECT run_id FROM workbench_dispatch
 		WHERE deployment_id=$1 AND status IN ('PENDING','OUTCOME_UNKNOWN') ORDER BY run_id LIMIT 50`, d.dep.DeploymentID)
@@ -65,10 +115,7 @@ func (d *domainWorkbench) executeDispatch(ctx context.Context, id string) error 
 	defer cancel()
 	status, code := d.executeB1(attempt, run)
 	result.Status, result.Code = status, code
-	result.Traces, err = d.executionTraces(ctx, run.RunID)
-	if err != nil {
-		return err
-	}
+	result.Traces = nil
 	_, err = conn.Exec(ctx, `UPDATE workbench_dispatch SET status=$3,result=$4 WHERE deployment_id=$1 AND run_id=$2`,
 		d.dep.DeploymentID, id, status, result)
 	return err
@@ -110,6 +157,9 @@ func (d *domainWorkbench) executeB1(ctx context.Context, run workbench.Run) (str
 	}
 	if status, code, found := d.orderIntent(ctx, run, retained); found {
 		return status, code
+	}
+	if d.grants.cfg.Now().Unix() >= run.Task.ExpiresAt {
+		return workbench.RunFailed, registry.ErrCodeTaskInactive
 	}
 	ops, err := d.loadB1(ctx, run, false)
 	if err != nil {

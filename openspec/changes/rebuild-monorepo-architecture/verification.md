@@ -1,5 +1,47 @@
 # rebuild-monorepo-architecture 核验报告
 
+## 2 项警告的修复复核
+
+下列两项警告均已修复. 现有核验中的 E1 真实模型端到端场景仍待核实.
+
+1. 恢复双证明负向测试解码 ES256 签名, 翻转一个字节中的一位, 再按规范 base64url 重编码并断言 `RECOVERY_PROOF_INVALID`. 定向复跑 1024 次通过, 四模块无缓存测试通过. [测试位置](../../../protocol/request_test.go#L267), [定向复跑日志](../../../.local/openspec-warning-fixes.NhQRrf/recovery-proof.log), [四模块测试日志](../../../.local/openspec-warning-fixes.NhQRrf/unit.log).
+2. Testcontainers 核心锁定到包含 Reaper 就绪修复的上游提交 `f31e98d4ee9b`. 该修复在复用处于 `created` 状态的 Reaper 时等待启动, 并处理无法就绪的容器. PostgreSQL 模块继续使用 `v0.45.0`. 使用默认并行度和自动启动的 PostgreSQL 连续执行 `mise run test:db` 8 次, 全部通过. [依赖锁定](../../../platform/go.mod#L89), [上游修复](https://github.com/testcontainers/testcontainers-go/pull/3868), [第 8 次数据库回归日志](../../../.local/openspec-warning-fixes.NhQRrf/db-parallel-8.log).
+
+## 提交 `4d45f88` 的归档判断
+
+已执行的检查发现 0 项严重问题, 2 项警告. 场景覆盖部分未核实, 当前环境未设置 `LLM_API_KEY`, E1 缺少本提交的真实模型端到端轨迹. 本轮无法确认归档就绪.
+
+| 维度 | 结果 |
+| --- | --- |
+| 完整性 | OpenSpec 聚合任务 18/18 已勾选. 5 份增量规范的 7 项修改要求均有实现. 新增, 删除和重命名要求均为 0. |
+| 正确性 | 7/7 项要求已映射, 已检查 23 个场景. 22 个场景有运行或回归证据. 真实模型与确定性驱动记录场景部分未核实, E6 实跑和 E1 测试端点已有证据, E1 真实模型会话缺少本提交证据. |
+| 一致性 | 已核对 5 项设计决策和代码组织. 四模块及其测试的依赖边界, 共享错误码, 网关与钱包的 HTTP 边界, 领域迁移和链码构建摘要均有实现及回归证据. |
+
+### 警告
+
+1. 恢复双证明回归偶发失败. `TestRecoveryDualProofAndDIDCanonicalVectors` 将随机 ES256 签名首字符写成固定的 `B`. 原字符为 `B` 时签名保持原值, 导致预期错误的断言失败. 无缓存全量测试命中一次, 定向复跑 256 次命中 2 次. 建议解码后翻转签名的实际字节, 再按规范 base64url 重编码并验证拒绝. [测试位置](../../../protocol/request_test.go#L267), [复跑日志](../../../.local/openspec-verify-current.jbZdBj/protocol-repeat-256.log).
+2. PostgreSQL 集成测试的默认并行启动不稳定. 两次 `mise run test:db` 分别在 `agent` 和 `internal/testutil` 等待 Testcontainers Reaper 就绪时失败, 状态为 `created`. `GOFLAGS=-p=1 mise run test:db` 全量通过. 建议在当前 Docker Desktop 环境使用串行方式复跑, 并排查并行 Reaper 启动. [测试数据库入口](../../../platform/internal/testutil/postgres.go#L39), [串行日志](../../../.local/openspec-verify-current.jbZdBj/db-serial.log).
+
+### 规范与证据
+
+| 修改要求 | 场景 | 实现与验证位置 |
+| --- | --- | --- |
+| 规范编码与静态向量 | 3 | `protocol/codec.go:105`, `protocol/crypto.go:364`, `protocol/request.go:143`. 向量, 非规范 JSON, nonce 和历史 URI 的回归见 `protocol/request_test.go:97`, `protocol/request_test.go:157`, `protocol/crypto_test.go:192` 和 `protocol/codec_test.go:270`. |
+| 管理交易确认与失败证据 | 4 | `platform/registrysvc/operations.go:424`, `platform/registrysvc/operations.go:571`, `platform/state/fabric/journal.go:342`. 异步状态, 操作键和重复提交见 `platform/registrysvc/operations_db_test.go:98`, `platform/registrysvc/operations_db_test.go:258`, `platform/state/fabric/fabric_live_test.go:652` 和 `platform/runtime/stack_live_test.go:33`. |
+| 六个 MCP 钱包工具 | 3 | `platform/agent/tools.go:168`, `platform/runtime/stack.go:585`. 私钥隔离, 换派和核账见 `platform/agent/agent_test.go:616`, `platform/agent/agent_test.go:647`, `platform/runtime/runtime_test.go:293` 和 `platform/agent/agent_db_test.go:28`. |
+| 直接询价与业务键幂等 | 3 | `platform/gateway/execute.go:142`, `platform/gateway/execute.go:361`. 询价, 签名拒绝和历史 URI 拒绝见 `platform/gateway/gateway_db_test.go:686`. |
+| 建单与跨实例唯一性 | 3 | `platform/gateway/execute.go:361`. 金额, 锁后复核和并发唯一性见 `platform/gateway/gateway_db_test.go:810`, `platform/gateway/gateway_db_test.go:928` 和 `platform/gateway/gateway_db_test.go:1037`. |
+| 两实例核账与审计隔离 | 4 | `platform/gateway/audit.go:347`, `platform/gateway/audit.go:740`, `platform/agent/tools.go:827`. 并发过期, 历史复核和回执重放见 `platform/gateway/gateway_db_test.go:1037`, `platform/gateway/gateway_db_test.go:1203` 和 `platform/agent/agent_db_test.go:134`. |
+| 可重建的正式实验输入 | 3 | `experiments/cmd/exp/run.go:169`, `experiments/e1/driver/live.go:313`. 本轮完成 E1 计划和 E6 双模式短跑. `platform/agent/agent_test.go:839` 和 `experiments/cmd/exp/exp_test.go:873` 验证模型响应采集及离线核对, 真实模型会话尚待核实. |
+
+### 本轮运行证据
+
+- OpenSpec 严格校验, CLI 构建, 项目单测和实验测试通过. 单测全量无缓存复跑通过. 所有模块依赖可解析, 6 项导入边界检查通过, 核对的 21 份项目入口与契约文档的本地相对文件链接均有效.
+- 新建隔离 Fabric 实例执行部署, 播种, 状态检查和实机验收, 6 个顶层实机用例全部通过. 本轮实例及 E6 短跑容器均已停止. [实机验收日志](../../../.local/openspec-verify-current.jbZdBj/verify.log).
+- E6 固定本提交, 分别在独立的 RP 和 BM 双网关实例上短跑并离线复算. RP 完成 1121/1122, 有 1 个缺测和 1 个延迟响应. BM 完成 1104/1104. 两组均通过短跑判据, 违规数均为 0. [RP 复算](../../../.local/openspec-verify-current.jbZdBj/analysis-e6-rp/recomputed.json), [BM 复算](../../../.local/openspec-verify-current.jbZdBj/analysis-e6-bm/recomputed.json).
+- 真实 CLI 已生成本提交的 E1 计划, 记录 16 个用例及公开模型配置. 解压检查确认驱动快照未包含 `llm.env`. [E1 计划](../../../.local/openspec-verify-current.jbZdBj/runs/e1-plan/manifest.json).
+- 按 Git 跟踪的 Go 文件和物理行统计, 相对 `ccfbb10`, 生产文件由 74 个减少到 65 个, 生产行数由 30774 增至 33803. 含测试文件由 124 个减少到 104 个, 行数由 52706 减至 50946.
+
 ## 6 项警告的修复复核
 
 基于 `ec86062` 的工作区已修复该次核验的全部 6 项警告. 已执行的检查发现 0 项严重问题, 0 项剩余警告. E1 真实模型会话的端到端场景仍待核实, 本次未确认归档就绪.

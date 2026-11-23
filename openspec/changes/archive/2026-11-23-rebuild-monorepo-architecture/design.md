@@ -2,7 +2,7 @@
 
 ## Context
 
-详见 [proposal.md](proposal.md). 仓库已回滚至 `ccfbb10` 干净基线, 且 [AGENTS.md](../../../AGENTS.md) 已确立 `v1.0.0` 之前允许彻底破坏性重构, 优先选择最优架构的原则.
+详见 [proposal.md](proposal.md). 仓库已回滚至 `ccfbb10` 干净基线, 且 [AGENTS.md](../../../../AGENTS.md) 已确立 `v1.0.0` 之前允许彻底破坏性重构, 优先选择最优架构的原则.
 
 当前系统存在三个根源性架构缺陷:
 1. 单 Go 模块将链码, 协议, 平台服务与实验驱动捆绑在同一个 `go.mod`, 导致 `experiments/` 直接侵入 7 个 `internal/*` 包, 且任何 CLI/LLM/实验依赖变更都会污染链码构建指纹.

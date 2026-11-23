@@ -60,11 +60,11 @@ C 网关执行 `POST /v1/access/execute` 时 SHALL 在 `READ COMMITTED` 事务�
 
 ### Requirement: 直接访问询价生成与业务键幂等
 
-当 `U` 持 `C` 签发的 `RESOURCE_PREAUTHORIZED` 根授权 `G0` 与真实身份凭证通过锁后复核与 OPA 求值时, C 网关 SHALL 按目录基准单价 (`80000` 分) 生成不可变报价行 (`quotes`), 设置 `validUntil = min(decision_at + 300, task.validUntil)`, 并将挑战消费, 审计决策和 `(actor, taskId, action, idempotencyKey)` 业务键在同一事务提交.
+当 `U` 或受托主体持有效授权链与真实身份凭证, 以规范资源 URI `urn:grad:resource:C:quotes` 发起 `quote.read` 并通过锁后复核与 OPA 求值时, C 网关 SHALL 按目录基准单价 (`80000` 分) 生成不可变报价行 (`quotes`), 设置 `validUntil = min(decision_at + 300, task.validUntil)`, 并将挑战消费, 审计决策和 `(actor, taskId, action, idempotencyKey)` 业务键在同一事务提交. 网关 SHALL 拒绝非规范资源短别名, 并使用平台统一的结构化 REST 错误信封返回错误.
 
 #### Scenario: U 持 RP G0 直接询价成功及同键幂等重试
 
-- **WHEN** `U` 出示绑定制备部署的 `C -> U` `G0`, `U`/`C` 凭证, T 域认证与 `KB-JWT` 发起 `quote.read` 询价并提交成功
+- **WHEN** `U` 出示绑定当前部署的 `C -> U` `G0`, `U`/`C` 凭证, T 域认证与 `KB-JWT`, 以 `resource="urn:grad:resource:C:quotes"` 发起 `quote.read` 询价并提交成功
 - **THEN** 网关返回 `200` 及 `{decisionId, code:"ALLOW", quote}` (`unitPriceMinor=80000`), 数据库同时可见已消费挑战, 一条 `ALLOW` 决策与一份报价
 - **AND** 在报价有效期内使用新挑战与同一 `(actor, taskId, "quote.read", idempotencyKey)` 和相同请求摘要重试返回同一 `quoteId` 与新的 `decisionId`, 同键异摘要返回 `409 IDEMPOTENCY_CONFLICT`
 
@@ -73,13 +73,18 @@ C 网关执行 `POST /v1/access/execute` 时 SHALL 在 `READ COMMITTED` 事务�
 - **WHEN** 请求使用与 `U` 登记 `appKeyId` 不匹配的错误 P-256 私钥签发 `KB-JWT`
 - **THEN** 网关在验证持有者阶段返回 `401 SIGNATURE_INVALID` 且 `decisionId` 为 `null`, 原挑战未消费且无报价或业务键写入
 
+#### Scenario: 拒绝历史资源短别名
+
+- **WHEN** 请求使用旧资源别名 (如 `"quotes"` 或 `"urn:grad:resource:quotes"`) 发起 `quote.read`
+- **THEN** 网关以统一结构化错误信封返回 `400 INVALID_SCHEMA` 且 `decisionId` 为 `null`, 原挑战未消费且无报价或业务键写入
+
 ### Requirement: 模拟订单创建与双实例唯一订单约束
 
-C 网关 SHALL 扩展 `POST /v1/access/execute` 支持 `order.create`, 在锁后复核中核验 `quoteId` 归属, 有效期与真实总额, 检查整条委托链状态与 `path.maxAmountMinor` 上限, 并在共享业务主库上保证跨多个网关实例对同一 `(deployment_id, actor, task_id, idempotency_key)` 至多创建一笔不可变订单.
+C 网关 SHALL 扩展 `POST /v1/access/execute` 支持以规范资源 URI `urn:grad:resource:C:orders` 发起 `order.create`, 在锁后复核中核验 `quoteId` 归属, 有效期与真实总额, 检查整条委托链状态与 `path.maxAmountMinor` 上限, 并在共享业务主库上保证跨多个网关实例对同一 `(deployment_id, actor, task_id, idempotency_key)` 至多创建一笔不可变订单.
 
 #### Scenario: RP 与 BM 模式下 800 元下单成功及 1200 元超额拒绝
 
-- **WHEN** `B1` 持有效 `G0 -> G1 -> G2` (`G2` 单笔上限 `100000` 分) 分别在 RP 与 BM 模式下先取得有效报价 (`Q800` 为 `80000` 分, `Q1200` 为 `120000` 分), 再提交真实总额匹配的 `order.create` 请求
+- **WHEN** `B1` 持有效 `G0 -> G1 -> G2` (`G2` 单笔上限 `100000` 分) 分别在 RP 与 BM 模式下先取得有效报价 (`Q800` 为 `80000` 分, `Q1200` 为 `120000` 分), 再以 `resource="urn:grad:resource:C:orders"` 提交真实总额匹配的 `order.create` 请求
 - **THEN** 800 元订单提交成功返回 `200 {decisionId, code:"ALLOW", order}` (`status="CREATED"`), 数据库可见消费挑战, `ALLOW` 决策与唯一订单行
 - **AND** 1200 元真实订单触发 `403 AMOUNT_LIMIT_EXCEEDED` 且无新订单行; 篡改 `Q1200` 金额为 `80000` 分先触发 `409 AMOUNT_MISMATCH`; 引用其他主体或任务报价返回 `403 QUOTE_SCOPE_MISMATCH`; 报价到期当秒返回 `409 QUOTE_EXPIRED`
 
@@ -95,11 +100,11 @@ C 网关 SHALL 扩展 `POST /v1/access/execute` 支持 `order.create`, 在锁后
 
 ### Requirement: 两实例未知订单核账与审计权限隔离
 
-B 恢复服务在发送 `order.create` 前 SHALL 持久化意图锁 (`OUTCOME_UNKNOWN`), 当响应丢失且原路径被撤销或超时无法确认时 SHALL 递增 `sendRevision` 停发延迟工作进程, 并经角色绑定通道向 `POST /v1/internal/order-outcome-cases` 登记 `{caseId, sendRevision, deploymentId, request, requestHash, challengeIds}` (同一 `caseId` 内容不可变). `POST /v1/audit/order-outcomes` SHALL 仅允许 `C` 审计员角色执行, 非审计员 (如 `B1` 或 `A` 域管理员) 调用 SHALL 返回 `403 AUDIT_FORBIDDEN` 且不得泄露订单是否存在.
+智能体侧恢复服务在发送 `order.create` 前 SHALL 在其独立维护的本地意图存储 (`client_actions`) 持久化意图锁 (`OUTCOME_UNKNOWN`), 当响应丢失且原路径被撤销或超时无法确认时 SHALL 递增 `sendRevision` 停发延迟工作进程, 并经角色绑定通道向网关 `POST /v1/internal/order-outcome-cases` 登记 `{caseId, sendRevision, deploymentId, request, requestHash, challengeIds}` (同一 `caseId` 内容不可变). C 网关数据边界 SHALL 仅维护服务端核账案例, 决策证据, 回执发件箱及业务主库表, 不承担智能体本地意图持久化. `POST /v1/audit/order-outcomes` SHALL 仅允许 `C` 审计员角色执行, 非审计员 (如 `B1` 或 `A` 域管理员) 调用 SHALL 返回 `403 AUDIT_FORBIDDEN` 且不得泄露订单是否存在.
 
 #### Scenario: 订单响应丢失且 G1 撤销后经核账找回原订单并复核历史 h 小于 r
 
-- **WHEN** `B1` 提交合法 `order.create` 后网关已成功提交但响应在返回前截断, 随后 `G1` 在块 `r` 被撤销, `B1` 重试触发 `403 ANCESTOR_INACTIVE` 并锁定意图停发后发起核账单与审计请求
+- **WHEN** `B1` 提交合法 `order.create` 后网关已成功提交但响应在返回前截断, 随后 `G1` 在块 `r` 被撤销, `B1` 重试触发 `403 ANCESTOR_INACTIVE` 并锁定本地意图停发后发起核账单与审计请求
 - **THEN** `C` 审计员锁定挑战并集与业务键后确认订单与 `business_keys` 双向匹配, 返回 `CREATED` 与原 `orderId`, 并对创建决策 `d1` 复核 `h < r` 与原探针期限得出 `MATCHED`
 - **AND** `C` 原子持久化审计记录与回执并投递至 `B` 端完结意图, 不新建第二笔订单且不改动原订单或原挑战行
 

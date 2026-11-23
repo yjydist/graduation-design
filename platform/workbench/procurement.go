@@ -523,9 +523,17 @@ func appendStep(run *Run, stage string, result StageResult, now time.Time) {
 }
 
 func (p *Procurement) advance(ctx context.Context, owner, id string) error {
-	_, err := p.withRun(ctx, owner, id, false, func(ctx context.Context, _ *pgxpool.Conn, run *Run) error {
+	_, err := p.withRun(ctx, owner, id, false, func(ctx context.Context, conn *pgxpool.Conn, run *Run) error {
 		if run.Status != RunPending && run.Status != RunUnknown {
 			return nil
+		}
+		// Move attempted runs behind those already waiting, even if this attempt
+		// cannot progress or the process restarts before saving the result.
+		tag, err := conn.Exec(ctx, `UPDATE workbench_runs SET next_attempt_at=clock_timestamp()
+			WHERE deployment_id=$1 AND domain_id=$2 AND owner_id=$3 AND run_id=$4
+			AND next_attempt_at <= statement_timestamp()`, p.deployment, p.domain, owner, id)
+		if err != nil || tag.RowsAffected() == 0 {
+			return err
 		}
 		stage := run.Stage
 		result, err := p.executor.Advance(ctx, owner, *run)
@@ -566,7 +574,8 @@ func (p *Procurement) advance(ctx context.Context, owner, id string) error {
 // ProcessPending advances persisted runs and polls accepted grant controls.
 func (p *Procurement) ProcessPending(ctx context.Context) error {
 	rows, err := p.db.Query(ctx, `SELECT owner_id,run_id FROM workbench_runs
-		WHERE deployment_id=$1 AND domain_id=$2 AND status IN ('PENDING','OUTCOME_UNKNOWN') ORDER BY created_at LIMIT 50`, p.deployment, p.domain)
+		WHERE deployment_id=$1 AND domain_id=$2 AND status IN ('PENDING','OUTCOME_UNKNOWN')
+		AND next_attempt_at <= statement_timestamp() ORDER BY next_attempt_at,run_id LIMIT 50`, p.deployment, p.domain)
 	if err != nil {
 		return err
 	}
@@ -583,12 +592,16 @@ func (p *Procurement) ProcessPending(ctx context.Context) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
+	var advanceErr error
 	for _, k := range keys {
 		if err := p.advance(ctx, k.Owner, k.ID); err != nil {
-			return fmt.Errorf("advance procurement run: %w", err)
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			advanceErr = errors.Join(advanceErr, fmt.Errorf("advance procurement run %s: %w", k.ID, err))
 		}
 	}
-	return p.refreshControls(ctx)
+	return errors.Join(advanceErr, p.refreshControls(ctx))
 }
 
 func (p *Procurement) refreshControls(ctx context.Context) error {

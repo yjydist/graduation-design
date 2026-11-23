@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -208,6 +209,44 @@ func TestProcurementConfirmAndRestartPreserveRunAndOriginalOperation(t *testing.
 	refreshed := readProcurementRun(t, browserRequest(h, http.MethodGet, runPath, "", token, ""), http.StatusOK)
 	require.Equal(t, RunDecided, refreshed.Status)
 	require.Equal(t, append([]agent.ToolTrace{{ToolName: "delegate_grant"}}, liveTraces...), refreshed.Traces)
+}
+
+func TestProcurementPendingRunsRotateAcrossRestart(t *testing.T) {
+	ctx := t.Context()
+	db := testutil.OpenMigratedPool(t)
+	const deployment, domain, owner = "pending-test", "A", "buyer"
+	const batch = 50
+	scheduled := time.Now().Truncate(time.Second).Add(-time.Minute)
+	backlog := make([]string, 0, batch+1)
+	for i := 0; i <= batch; i++ {
+		run := Run{RunID: fmt.Sprintf("%064x", i), TaskID: fmt.Sprintf("task-%d", i), Stage: StageDispatch, Status: RunUnknown}
+		if i == batch {
+			run.Status = RunPending
+		}
+		_, err := db.Exec(ctx, `INSERT INTO workbench_runs(deployment_id,domain_id,owner_id,run_id,task_id,status,body,created_at,next_attempt_at)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8)`, deployment, domain, owner, run.RunID, run.TaskID, run.Status, run, scheduled)
+		require.NoError(t, err)
+		backlog = append(backlog, run.RunID)
+	}
+	var attempted []string
+	executor := procurementTestExecutor{advance: func(_ context.Context, _ string, run Run) (StageResult, error) {
+		attempted = append(attempted, run.RunID)
+		if run.RunID == backlog[batch] {
+			return StageResult{Status: RunDecided}, nil
+		}
+		return StageResult{Status: RunUnknown}, nil
+	}}
+	require.NoError(t, NewProcurement(db, deployment, domain, "", executor).ProcessPending(ctx))
+	require.Equal(t, backlog[:batch], attempted)
+
+	attempted = nil
+	restarted := NewProcurement(db, deployment, domain, "", executor)
+	require.NoError(t, restarted.ProcessPending(ctx))
+	require.Len(t, attempted, batch)
+	require.Equal(t, backlog[batch], attempted[0])
+	run, err := restarted.readRun(ctx, db, owner, backlog[batch])
+	require.NoError(t, err)
+	require.Equal(t, RunDecided, run.Status)
 }
 
 func readProcurementRun(t *testing.T, response *httptest.ResponseRecorder, status int) Run {

@@ -3,8 +3,10 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"slices"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"grad/protocol"
@@ -197,20 +199,51 @@ func (o *BoundOperations) CreateOrder(ctx context.Context, in CreateOrderInput) 
 	if err := o.verify(ctx); err != nil {
 		return CreateOrderOutput{}, err
 	}
-	o.wallet.mu.Lock()
-	quote, found := o.wallet.quotes[in.QuoteID]
-	o.wallet.mu.Unlock()
-	if !found || quote.Actor != b.Actor || quote.TaskID != b.TaskID || quote.IdempotencyKey != o.QuoteKey() ||
-		!matchesBinding(in.Currency, quote.Currency) || in.AmountMinor != quote.TotalAmountMinor {
+	currency, amount, err := o.orderQuoteTerms(ctx, in.QuoteID)
+	if err != nil {
+		return CreateOrderOutput{}, err
+	}
+	if !matchesBinding(in.Currency, currency) || in.AmountMinor != amount {
 		return CreateOrderOutput{}, executionMismatch("order must use the confirmed run quote and its terms")
 	}
 	in.Actor, in.GrantID, in.TaskID, in.AuthorizationMode = b.Actor, b.GrantID, b.TaskID, b.Mode
-	in.ProductID, in.Quantity, in.IdempotencyKey, in.Currency = b.ProductID, b.Quantity, o.OrderKey(), quote.Currency
+	in.ProductID, in.Quantity, in.IdempotencyKey, in.Currency = b.ProductID, b.Quantity, o.OrderKey(), currency
 	out, err := o.wallet.CreateOrder(ctx, in)
 	if out.Decision == "ALLOW" {
-		out.TotalAmountMinor = quote.TotalAmountMinor
+		out.TotalAmountMinor = amount
 	}
 	return out, executionFailure(err)
+}
+
+func (o *BoundOperations) orderQuoteTerms(ctx context.Context, id string) (string, int64, error) {
+	b := o.scope
+	o.wallet.mu.Lock()
+	quote, found := o.wallet.quotes[id]
+	o.wallet.mu.Unlock()
+	if found {
+		if quote.Actor != b.Actor || quote.TaskID != b.TaskID || quote.IdempotencyKey != o.QuoteKey() {
+			return "", 0, executionMismatch("quote differs from the run binding")
+		}
+		return quote.Currency, quote.TotalAmountMinor, nil
+	}
+
+	// The quote cache is transient. An existing order intent binds its original
+	// quote and terms to the same run key across wallet restarts.
+	action, err := o.wallet.GetClientActionByKey(ctx, b.DID, b.TaskID, protocol.ActionOrderCreate, o.OrderKey())
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", 0, executionMismatch("order must use the confirmed run quote")
+	}
+	if err != nil {
+		return "", 0, executionFailure(err)
+	}
+	var request protocol.AccessRequest
+	if err := protocol.DecodeStrictJSON([]byte(action.RequestJSON), &request); err != nil {
+		return "", 0, executionFailure(err)
+	}
+	if request.QuoteID == nil || *request.QuoteID != id {
+		return "", 0, executionMismatch("quote differs from the original order intent")
+	}
+	return request.Currency, request.AmountMinor, nil
 }
 
 func (o *BoundOperations) ReconcileOrder(ctx context.Context, in ReconcileOrderInput) (ReconcileOrderOutput, error) {

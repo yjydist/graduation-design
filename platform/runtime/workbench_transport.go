@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"grad/platform/agent"
 	"grad/platform/gateway"
 	"grad/platform/internal/httpx"
 	"grad/platform/internal/mtls"
@@ -125,10 +126,13 @@ func (d *domainWorkbench) internalHandler() (http.Handler, error) {
 	case "B":
 		mux.HandleFunc("POST "+workbenchDispatchPath, d.fromDomain("A", d.acceptDispatch))
 		mux.HandleFunc("GET "+workbenchDispatchPath+"/{runId}", d.fromDomain("A", d.dispatchStatus))
+		mux.HandleFunc("POST "+workbenchDispatchPath+"/{runId}/quote", d.fromDomain("A", dispatchOperation(d, "request_quote", (*agent.BoundOperations).RequestQuote)))
+		mux.HandleFunc("POST "+workbenchDispatchPath+"/{runId}/order", d.fromDomain("A", dispatchOperation(d, "create_order", (*agent.BoundOperations).CreateOrder)))
 		mux.HandleFunc("POST /internal/workbench/probe", d.fromDomain("A", d.runProbe))
 		mux.HandleFunc("POST /v1/internal/order-outcome-receipts", d.fromDomain("C", d.wallet.ReceiptHandler().ServeHTTP))
 	case "C":
 		mux.HandleFunc("POST /internal/workbench/root", d.fromDomain("A", d.remoteRoot))
+		mux.HandleFunc("GET "+rootAmountPath+"{taskId}", d.fromDomain("A", d.remoteRootAmount))
 		mux.HandleFunc("POST /internal/workbench/root-receipt", d.fromDomain("A", d.remoteRootReceipt))
 		mux.HandleFunc("POST /internal/workbench/context", d.fromDomain("B", d.remoteContext))
 		mux.HandleFunc("GET /internal/workbench/evidence/{taskId}", d.fromDomain("A", d.remoteEvidence))

@@ -150,3 +150,9 @@ T 和各域采用相同操作键和提交规则. 域认证更新走 T 接口, �
 | `/runs/{runId}/evidence`, `/decisions/{decisionId}` | 按任务归属读取可分享证据. 完整决策限实际请求主体或授权审计者. |
 
 浏览器错误使用同一 `{requestId,code,decisionId,message}` 信封. 会话缺失或撤销返回 401 `SESSION_REQUIRED`, 用户名或密码无效返回 401 `LOGIN_FAILED`, CSRF 验证失败返回 403 `CSRF_INVALID`. 无权读取的原交易与未知操作统一返回 404 `OPERATION_UNKNOWN`. PA 同键同输入由管理服务复用原 `operationId`. 同键不同输入返回 409 `IDEMPOTENCY_CONFLICT`, 新操作版本过期返回 409 `STATE_CHANGED`.
+
+### 4.1 域间工作台接口
+
+B 域在 mTLS 服务监听器上接受已绑定的 A 域工作台服务调用. `POST /internal/workbench/dispatch/{runId}/quote` 和 `POST /internal/workbench/dispatch/{runId}/order` 分别使用与 B1 MCP 的 `request_quote` 和 `create_order` 相同的输入和结果. B 从原派单选定 B1, 复核任务和 G2, 复用运行固定的报价和订单业务键. 待执行或已定案的运行可调用相应操作, 网关定案和业务键约束仍然适用. 订单结果未知时由原运行的核账流程推进. 同一运行的 HTTP 操作和后台执行串行, 执行已占用时返回 409 `STATE_CHANGED`.
+
+`GET /internal/workbench/root-amount/{taskId}` 供 A 域工作台服务向 C 域读取 RP 根授权额度. C 核对本任务的已登记锚点及签发记录, 仅返回授权摘要和签发金额. A 对照自己的锚点核对该摘要.

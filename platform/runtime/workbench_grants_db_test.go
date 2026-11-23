@@ -5,6 +5,7 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	cb "github.com/hyperledger/fabric-protos-go-apiv2/common"
 	"github.com/hyperledger/fabric-protos-go-apiv2/ledger/rwset/kvrwset"
 	pb "github.com/hyperledger/fabric-protos-go-apiv2/peer"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/require"
 
 	"grad/platform/agent"
@@ -34,6 +36,7 @@ func TestWorkbenchGrantIssueAndDeliveryUseOriginalCommitAndActualTask(t *testing
 	clock := func() time.Time { return now }
 	snap := BuildFixtureSnapshot(dep, f, now)
 	spec := f.ProcurementTaskSpec
+	spec.MaxQuantity = 1
 	spec.Description = "verifiable dynamically confirmed task"
 	run := workbench.Run{RunID: registry.Digest([]byte("original run")), Stage: workbench.StageDispatch, Status: workbench.RunPending}
 	run.TaskID = registry.Digest([]byte(dep.DeploymentID + "/workbench/" + run.RunID))
@@ -154,6 +157,34 @@ func TestWorkbenchGrantIssueAndDeliveryUseOriginalCommitAndActualTask(t *testing
 	require.True(t, protocol.HasCode(err, registry.ErrCodeBindingMismatch), "%v", err)
 	_, err = gA.Load(ctx, rec("U"), req.GrantID)
 	require.True(t, protocol.HasCode(err, registry.ErrCodeMaterialNotSynced), "%v", err)
+	fingerprint := registry.Digest([]byte("A domain mTLS"))
+	role, did := workbenchTransportRole("A")
+	c := &domainWorkbench{dep: dep, db: dbC, grants: gC, cfg: workbenchConfig{
+		DomainID: "C", Peers: map[string]workbenchPeer{"A": {Fingerprint: fingerprint}},
+	}}
+	rootAPI := http.NewServeMux()
+	rootAPI.HandleFunc("GET "+rootAmountPath+"{taskId}", c.fromDomain("A", c.remoteRootAmount))
+	a := &domainWorkbench{dep: dep, grants: gA, cfg: workbenchConfig{
+		DomainID: "A", Peers: map[string]workbenchPeer{"C": {URL: "https://workbench-c:8081"}},
+	}, clients: map[string]*http.Client{"C": NewLocalMTLSClientWithFingerprint(rootAPI, did, role, "AMsp", fingerprint)}}
+	readAppliedGrant := func(registered ...string) func(string) (registry.Grant, error) {
+		return func(id string) (registry.Grant, error) {
+			for _, candidate := range registered {
+				if candidate == id {
+					read, err := fabric.ReadAppliedRegistry(ctx, dbA, dep, []string{registry.Key("grant", id)})
+					if err != nil {
+						return registry.Grant{}, err
+					}
+					return grantRecord[registry.Grant](read, "grant", id)
+				}
+			}
+			return registry.Grant{}, &fabric.PeerResponseError{Status: 500, Message: registry.ErrCodeMissingDependency}
+		}
+	}
+	delegations, err := a.delegations(ctx, run, nil, readAppliedGrant(req.GrantID))
+	require.NoError(t, err)
+	require.Len(t, delegations, 1)
+	require.Equal(t, req.MaxAmountMinor, delegations[0].MaxAmountMinor, "confirmed remote root before recipient delivery")
 	childID := run.GrantID("G1")
 	signChild := func(parent agent.GrantBundle, issuer, recipient, id string, depth int) agent.AnchorChildGrantRequest {
 		t.Helper()
@@ -169,9 +200,13 @@ func TestWorkbenchGrantIssueAndDeliveryUseOriginalCommitAndActualTask(t *testing
 		require.NoError(t, wallet.RegisterActor(loadActor(issuer).Signer))
 		require.NoError(t, wallet.RegisterActor(loadActor(recipient).Signer))
 		require.NoError(t, wallet.AddGrantBundle(parent))
+		capMinor := int64(95000)
+		if depth == 0 {
+			capMinor = 90000
+		}
 		_, err = wallet.DelegateGrant(ctx, agent.DelegateGrantInput{
 			IssuerActor: issuer, SubjectActor: recipient, ParentGrantID: parent.Claims.ID, GrantID: id,
-			MaxAmountMinor: 95000, RemainingDepth: depth,
+			MaxAmountMinor: capMinor, RemainingDepth: depth,
 		})
 		require.NoError(t, err)
 		return signed
@@ -243,6 +278,15 @@ func TestWorkbenchGrantIssueAndDeliveryUseOriginalCommitAndActualTask(t *testing
 	block = testRegistryBlock(t, g2Point, childPoint.Hash, g2Tx, map[string]any{registry.Key("grant", g2Anchor.ID): g2Anchor})
 	require.NoError(t, viewA.Apply(ctx, block, nil))
 	require.NoError(t, viewB.Apply(ctx, block, nil))
+	delegations, err = a.delegations(ctx, run, nil, readAppliedGrant(req.GrantID, childID, g2Anchor.ID))
+	require.NoError(t, err)
+	require.Len(t, delegations, 3)
+	require.Equal(t, []int64{100000, 95000, 90000}, []int64{delegations[0].MaxAmountMinor, delegations[1].MaxAmountMinor, delegations[2].MaxAmountMinor})
+	require.Empty(t, delegations[2].DecisionID, "the supplier has not seen the grant")
+	mismatched := g2Anchor
+	mismatched.Digest = registry.Digest([]byte("different signed bytes"))
+	_, err = gA.anchoredAmount(ctx, mismatched)
+	require.True(t, protocol.HasCode(err, registry.ErrCodeBindingMismatch), "%v", err)
 	_, g2Delivery, err := gA.ResumeChild(ctx, "A1", g2Anchor.ID)
 	require.NoError(t, err)
 	require.NotNil(t, g2Delivery)
@@ -256,19 +300,47 @@ func TestWorkbenchGrantIssueAndDeliveryUseOriginalCommitAndActualTask(t *testing
 		"A1": {DID: rec("A1").DID, CredentialID: rec("A1").CredentialID},
 		"B1": {DID: rec("B1").DID, CredentialID: rec("B1").CredentialID},
 	}
-	fingerprint := registry.Digest([]byte("A domain mTLS"))
-	b := &domainWorkbench{dep: dep, db: dbB, grants: gB, cfg: workbenchConfig{
+	b := &domainWorkbench{inst: inst, dep: dep, db: dbB, grants: gB, cfg: workbenchConfig{
 		DomainID: "B", Actors: actors, Peers: map[string]workbenchPeer{"A": {Fingerprint: fingerprint}},
 	}}
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST "+workbenchDispatchPath, b.fromDomain("A", b.acceptDispatch))
-	mux.HandleFunc("GET "+workbenchDispatchPath+"/{runId}", b.fromDomain("A", b.dispatchStatus))
-	a := &domainWorkbench{dep: dep, grants: gA, cfg: workbenchConfig{
-		DomainID: "A", Actors: actors, Peers: map[string]workbenchPeer{"B": {URL: "https://workbench-b:8081"}},
-	}}
-	role, did := workbenchTransportRole("A")
+	require.NoError(t, SyncSeedDeliveries(ctx, inst, dbC, dep, &SeedReport{fixtureBody: f, Scope: "db-test"}))
+	stack, err := StartCentralGatewayStack(ctx, inst, dbC, dep, f, func(opts *stackOptions) {
+		opts.nowFn = clock
+		opts.skipWallet = true
+	})
+	require.NoError(t, err)
+	t.Cleanup(stack.Close)
+	require.NoError(t, stack.Central.Update(ctx, 1, func(s *protocol.SnapshotView) error {
+		s.Tasks[task.ID] = task
+		for _, g := range []registry.Grant{anchor, childAnchor, g2Anchor} {
+			s.Grants[g.ID] = g
+		}
+		return nil
+	}))
+	postTrustedContext(t, stack.Gateway.Handler(), task.ID, now)
+	b.cfg.Peers["C"] = workbenchPeer{URL: "https://workbench-c:8081"}
+	b.clients = map[string]*http.Client{"C": NewLocalMTLSClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+		require.Equal(t, "/internal/workbench/context", r.URL.Path)
+		w.WriteHeader(http.StatusNoContent)
+	}), rec("B1").DID, "B_AGENT", "BMsp")}
+	newB1Wallet := func() *agent.WalletContext {
+		wallet, err := agent.NewWalletContext(agent.WalletConfig{
+			DeploymentID: dep.DeploymentID, DB: dbB, Now: clock, Audience: defaultAudience,
+			SupplierID: defaultSupplierID, SupplierDID: dep.Bootstrap.ResourceOwner, Currency: defaultCurrency,
+			GatewayURL: "https://c.local", HTTPClient: NewLocalMTLSClient(stack.Gateway.Handler(), rec("B1").DID, "B_AGENT", "BMsp"),
+		})
+		require.NoError(t, err)
+		require.NoError(t, wallet.RegisterActor(loadActor("B1").Signer))
+		return wallet
+	}
+	b.wallet = newB1Wallet()
+	mux, err := b.internalHandler()
+	require.NoError(t, err)
+	a.cfg.Actors = actors
+	a.cfg.Peers["B"] = workbenchPeer{URL: "https://workbench-b:8081"}
 	client := NewLocalMTLSClientWithFingerprint(mux, did, role, "AMsp", fingerprint)
-	a.clients = map[string]*http.Client{"B": client}
+	a.clients["B"] = client
 
 	// A has no receipt because the first accepted POST response did not reach it.
 	require.NoError(t, a.callPeer(ctx, "B", http.MethodPost, workbenchDispatchPath,
@@ -276,11 +348,53 @@ func TestWorkbenchGrantIssueAndDeliveryUseOriginalCommitAndActualTask(t *testing
 	publication, err := gA.Published(ctx, rec("B1"), g2Anchor.ID)
 	require.NoError(t, err)
 	require.False(t, publication.Operation.Delivered)
+	ops, err := b.loadB1(ctx, run, false)
+	require.NoError(t, err)
+	toolSession := workbenchMCPSession(t, ops)
+	path := workbenchDispatchPath + "/" + run.RunID
+	var httpQuote agent.RequestQuoteOutput
+	quoteInput := agent.RequestQuoteInput{Actor: "B1", TaskID: run.TaskID, AuthorizationMode: run.Task.Mode,
+		GrantID: g2Anchor.ID, ProductID: run.Task.ProductID, Quantity: run.Task.Quantity}
+	require.NoError(t, a.callPeer(ctx, "B", http.MethodPost, path+"/quote", quoteInput, &httpQuote))
+	require.Equal(t, "ALLOW", httpQuote.Decision, "%s", httpQuote.ErrorCode)
+	mcpQuote := callWorkbenchMCP[agent.RequestQuoteOutput](t, toolSession, "request_quote", quoteInput)
+	require.Equal(t, httpQuote.QuoteID, mcpQuote.QuoteID)
+	require.Equal(t, httpQuote.TotalAmountMinor, mcpQuote.TotalAmountMinor)
+
+	orderInput := agent.CreateOrderInput{Actor: "B1", TaskID: run.TaskID, AuthorizationMode: run.Task.Mode,
+		GrantID: g2Anchor.ID, QuoteID: httpQuote.QuoteID, AmountMinor: httpQuote.TotalAmountMinor}
+	var httpOrder agent.CreateOrderOutput
+	require.NoError(t, a.callPeer(ctx, "B", http.MethodPost, path+"/order", orderInput, &httpOrder))
+	require.Equal(t, "ALLOW", httpOrder.Decision, "%s", httpOrder.ErrorCode)
+	mcpOrder := callWorkbenchMCP[agent.CreateOrderOutput](t, toolSession, "create_order", orderInput)
+	require.Equal(t, httpOrder, mcpOrder)
+	b.wallet = newB1Wallet()
+	require.NoError(t, a.callPeer(ctx, "B", http.MethodPost, path+"/order", orderInput, &httpOrder))
+	require.Equal(t, mcpOrder, httpOrder)
+	restartedOps, err := b.loadB1(ctx, run, false)
+	require.NoError(t, err)
+	toolSession = workbenchMCPSession(t, restartedOps)
+	require.Equal(t, httpOrder, callWorkbenchMCP[agent.CreateOrderOutput](t, toolSession, "create_order", orderInput))
+	var orderCount int
+	var storedOrderKey string
+	require.NoError(t, dbC.QueryRow(ctx, `SELECT count(*), min(idempotency_key) FROM orders
+		WHERE deployment_id=$1 AND task_id=$2 AND actor=$3`, dep.DeploymentID, run.TaskID, rec("B1").DID).Scan(&orderCount, &storedOrderKey))
+	require.Equal(t, 1, orderCount)
+	require.Equal(t, ops.OrderKey(), storedOrderKey)
+	badQuote := quoteInput
+	badQuote.Actor = "A1"
+	assertWorkbenchOperationError(t, a, toolSession, path+"/quote", "request_quote", badQuote, registry.ErrCodeBindingMismatch)
+	a.clients["B"] = NewLocalMTLSClientWithFingerprint(mux, did, role, "AMsp", registry.Digest([]byte("different mTLS certificate")))
+	err = a.callPeer(ctx, "B", http.MethodPost, path+"/order", orderInput, nil)
+	require.True(t, protocol.HasCode(err, registry.ErrCodeBindingMismatch), "%v", err)
+	a.clients["B"] = client
 
 	childAnchor.Version = registry.Version{Status: registry.Suspended, Revision: 2}
 	pausedPoint := fabric.Point{Number: 6, Hash: registry.Digest([]byte("paused child block"))}
 	block = testRegistryBlock(t, pausedPoint, g2Point.Hash, registry.Digest([]byte("pause child")), map[string]any{registry.Key("grant", childID): childAnchor})
 	require.NoError(t, viewA.Apply(ctx, block, nil))
+	require.NoError(t, viewB.Apply(ctx, block, nil))
+	assertWorkbenchOperationError(t, a, toolSession, path+"/quote", "request_quote", quoteInput, registry.ErrCodeAncestorInactive)
 	_, err = gA.Load(ctx, rec("A1"), childID)
 	require.True(t, protocol.HasCode(err, registry.ErrCodeAncestorInactive), "%v", err)
 	retained, err := gA.LoadRetained(ctx, rec("A1"), childID)
@@ -327,7 +441,7 @@ func TestWorkbenchGrantIssueAndDeliveryUseOriginalCommitAndActualTask(t *testing
 	require.NoError(t, b.storeTrace(ctx, run.RunID, trace))
 	traces, err := a.DispatchTraces(ctx, run)
 	require.NoError(t, err)
-	require.Equal(t, []agent.ToolTrace{trace}, traces)
+	require.Equal(t, trace, traces[len(traces)-1])
 
 	missing := run
 	missing.RunID = registry.Digest([]byte("run never accepted"))
@@ -337,6 +451,80 @@ func TestWorkbenchGrantIssueAndDeliveryUseOriginalCommitAndActualTask(t *testing
 	require.NoError(t, err)
 	require.Equal(t, workbench.RunFailed, step.Status)
 	require.Equal(t, registry.ErrCodeTaskInactive, step.Code)
+}
+
+func workbenchMCPSession(t *testing.T, ops *agent.BoundOperations) *mcp.ClientSession {
+	t.Helper()
+	server, client := mcp.NewInMemoryTransports()
+	session, err := ops.MCPServer().Connect(t.Context(), server, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = session.Close() })
+	mcpClient := mcp.NewClient(&mcp.Implementation{Name: "workbench-http-pair-test"}, nil)
+	toolSession, err := mcpClient.Connect(t.Context(), client, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = toolSession.Close() })
+	return toolSession
+}
+
+func TestWorkbenchDispatchPendingRunsRotateAcrossRestart(t *testing.T) {
+	ctx := t.Context()
+	db := testutil.OpenMigratedPool(t)
+	const deployment = "pending-test"
+	const batch = 50
+	scheduled := time.Now().Truncate(time.Second).Add(-time.Minute)
+	for i := 0; i <= batch; i++ {
+		run := workbench.Run{RunID: fmt.Sprintf("%064x", i), TaskID: fmt.Sprintf("task-%d", i)}
+		_, err := db.Exec(ctx, `INSERT INTO workbench_dispatch(deployment_id,run_id,task_id,status,body,result,next_attempt_at)
+			VALUES($1,$2,$3,$4,$5,$6,$7)`, deployment, run.RunID, run.TaskID, workbench.RunPending, run,
+			dispatchResult{Status: workbench.RunPending}, scheduled)
+		require.NoError(t, err)
+	}
+	newWorker := func() *domainWorkbench {
+		return &domainWorkbench{db: db, dep: &fabric.Deployment{DeploymentID: deployment},
+			grants: &GrantOperations{delivery: registrysvc.NewDeliveryService(db, deployment)}}
+	}
+	require.NoError(t, newWorker().processDispatch(ctx))
+	var attempted int
+	require.NoError(t, db.QueryRow(ctx, `SELECT count(*) FROM workbench_dispatch WHERE next_attempt_at>$1`, scheduled).Scan(&attempted))
+	require.Equal(t, batch, attempted)
+	id := fmt.Sprintf("%064x", batch)
+	_, pending, err := newWorker().storedDispatch(ctx, id)
+	require.NoError(t, err)
+	require.Empty(t, pending.Code)
+
+	restarted := newWorker()
+	require.NoError(t, restarted.processDispatch(ctx))
+	_, pending, err = restarted.storedDispatch(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, workbench.RunPending, pending.Status)
+	require.Equal(t, registry.ErrCodeMaterialNotSynced, pending.Code, "the later dispatch received its first attempt")
+}
+
+func callWorkbenchMCP[T any](t *testing.T, session *mcp.ClientSession, tool string, input any) T {
+	t.Helper()
+	result, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: tool, Arguments: input})
+	require.NoError(t, err)
+	require.False(t, result.IsError, "%+v", result.Content)
+	raw, err := json.Marshal(result.StructuredContent)
+	require.NoError(t, err)
+	var out T
+	require.NoError(t, json.Unmarshal(raw, &out))
+	return out
+}
+
+func assertWorkbenchOperationError(t *testing.T, d *domainWorkbench, session *mcp.ClientSession, path, tool string, input any, code string) {
+	t.Helper()
+	err := d.callPeer(t.Context(), "B", http.MethodPost, path, input, nil)
+	require.True(t, protocol.HasCode(err, code), "%v", err)
+	result, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: tool, Arguments: input})
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	require.Len(t, result.Content, 1)
+	var body struct {
+		Code string `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &body))
+	require.Equal(t, code, body.Code)
 }
 
 func testRegistryBlock(t *testing.T, point fabric.Point, parent, txID string, records map[string]any) *fabric.Block {

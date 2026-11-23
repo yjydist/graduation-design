@@ -2,12 +2,14 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"grad/platform/agent"
 	"grad/platform/internal/httpx"
@@ -68,7 +70,8 @@ func (d *domainWorkbench) writeDispatchResult(w http.ResponseWriter, r *http.Req
 
 func (d *domainWorkbench) processDispatch(ctx context.Context) error {
 	rows, err := d.db.Query(ctx, `SELECT run_id FROM workbench_dispatch
-		WHERE deployment_id=$1 AND status IN ('PENDING','OUTCOME_UNKNOWN') ORDER BY run_id LIMIT 50`, d.dep.DeploymentID)
+		WHERE deployment_id=$1 AND status IN ('PENDING','OUTCOME_UNKNOWN')
+		AND next_attempt_at <= statement_timestamp() ORDER BY next_attempt_at,run_id LIMIT 50`, d.dep.DeploymentID)
 	if err != nil {
 		return err
 	}
@@ -85,15 +88,37 @@ func (d *domainWorkbench) processDispatch(ctx context.Context) error {
 }
 
 func (d *domainWorkbench) executeDispatch(ctx context.Context, id string) error {
+	_, err := d.withDispatchLock(ctx, id, func(conn *pgxpool.Conn) error {
+		var run workbench.Run
+		var result dispatchResult
+		err := conn.QueryRow(ctx, `UPDATE workbench_dispatch SET next_attempt_at=clock_timestamp()
+			WHERE deployment_id=$1 AND run_id=$2 AND status IN ('PENDING','OUTCOME_UNKNOWN')
+			AND next_attempt_at <= statement_timestamp() RETURNING body,result`,
+			d.dep.DeploymentID, id).Scan(&run, &result)
+		if err != nil {
+			return err
+		}
+		attempt, cancel := context.WithTimeout(ctx, 3*time.Minute)
+		defer cancel()
+		result.Status, result.Code = d.executeB1(attempt, run)
+		result.Traces = nil
+		_, err = conn.Exec(ctx, `UPDATE workbench_dispatch SET status=$3,result=$4 WHERE deployment_id=$1 AND run_id=$2`,
+			d.dep.DeploymentID, id, result.Status, result)
+		return err
+	})
+	return err
+}
+
+func (d *domainWorkbench) withDispatchLock(ctx context.Context, id string, fn func(*pgxpool.Conn) error) (bool, error) {
 	conn, err := d.db.Acquire(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer conn.Release()
 	lock := d.dep.DeploymentID + "/workbench/dispatch/" + id
 	var acquired bool
 	if err := conn.QueryRow(ctx, "SELECT pg_try_advisory_lock(hashtextextended($1,0))", lock).Scan(&acquired); err != nil || !acquired {
-		return err
+		return acquired, err
 	}
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -102,23 +127,7 @@ func (d *domainWorkbench) executeDispatch(ctx context.Context, id string) error 
 			_ = conn.Hijack().Close(ctx)
 		}
 	}()
-	var run workbench.Run
-	var result dispatchResult
-	err = conn.QueryRow(ctx, `SELECT body,result FROM workbench_dispatch
-		WHERE deployment_id=$1 AND run_id=$2 AND status IN ('PENDING','OUTCOME_UNKNOWN')`,
-		d.dep.DeploymentID, id).Scan(&run, &result)
-	if err != nil {
-		return err
-	}
-
-	attempt, cancel := context.WithTimeout(ctx, 3*time.Minute)
-	defer cancel()
-	status, code := d.executeB1(attempt, run)
-	result.Status, result.Code = status, code
-	result.Traces = nil
-	_, err = conn.Exec(ctx, `UPDATE workbench_dispatch SET status=$3,result=$4 WHERE deployment_id=$1 AND run_id=$2`,
-		d.dep.DeploymentID, id, status, result)
-	return err
+	return true, fn(conn)
 }
 
 func (d *domainWorkbench) b1Binding(run workbench.Run, scope string, verify func(context.Context, agent.ExecutionBinding) error) agent.ExecutionBinding {
@@ -129,46 +138,48 @@ func (d *domainWorkbench) b1Binding(run workbench.Run, scope string, verify func
 	}
 }
 
-func (d *domainWorkbench) loadB1(ctx context.Context, run workbench.Run, retained bool) (*agent.BoundOperations, error) {
-	load := d.grants.Load
-	var verify func(context.Context, agent.ExecutionBinding) error
-	if retained {
-		load = d.grants.LoadRetained
-	} else {
-		verify = func(ctx context.Context, _ agent.ExecutionBinding) error {
-			return d.localGrant(ctx, "B1", run.GrantID("G2"))
-		}
-	}
-	bundle, err := load(ctx, d.recipient("B1"), run.GrantID("G2"))
+func (d *domainWorkbench) loadB1(ctx context.Context, run workbench.Run, ensureContext bool) (*agent.BoundOperations, error) {
+	bundle, err := d.grants.LoadRetained(ctx, d.recipient("B1"), run.GrantID("G2"))
 	if err != nil {
 		return nil, err
 	}
 	if err := d.wallet.AddGrantBundle(bundle); err != nil {
 		return nil, err
 	}
-	return agent.NewBoundOperations(d.wallet, d.b1Binding(run, run.RunID, verify))
+	return agent.NewBoundOperations(d.wallet, d.b1Binding(run, run.RunID, func(ctx context.Context, _ agent.ExecutionBinding) error {
+		if err := d.localGrant(ctx, "B1", run.GrantID("G2")); err != nil {
+			return err
+		}
+		if ensureContext {
+			return d.ensureSupplierContext(ctx, run.TaskID)
+		}
+		return nil
+	}))
+}
+
+func (d *domainWorkbench) ensureSupplierContext(ctx context.Context, taskID string) error {
+	return d.callPeer(ctx, "C", http.MethodPost, "/internal/workbench/context", map[string]string{"taskId": taskID}, nil)
 }
 
 func (d *domainWorkbench) executeB1(ctx context.Context, run workbench.Run) (string, string) {
 	// Recover an existing intent before considering a new model invocation.
-	retained, err := d.loadB1(ctx, run, true)
+	ops, err := d.loadB1(ctx, run, false)
 	if err != nil {
 		return workbench.RunPending, statusCode(err)
 	}
-	if status, code, found := d.orderIntent(ctx, run, retained); found {
+	if status, code, found := d.orderIntent(ctx, run, ops); found {
 		return status, code
 	}
 	if d.grants.cfg.Now().Unix() >= run.Task.ExpiresAt {
 		return workbench.RunFailed, registry.ErrCodeTaskInactive
 	}
-	ops, err := d.loadB1(ctx, run, false)
-	if err != nil {
+	if err := d.localGrant(ctx, "B1", run.GrantID("G2")); err != nil {
 		if code := protocol.CodeOf(err); code == registry.ErrCodeGrantInactive || code == registry.ErrCodeAncestorInactive {
 			return workbench.RunFailed, code
 		}
 		return workbench.RunPending, statusCode(err)
 	}
-	if err := d.callPeer(ctx, "C", http.MethodPost, "/internal/workbench/context", map[string]string{"taskId": run.TaskID}, nil); err != nil {
+	if err := d.ensureSupplierContext(ctx, run.TaskID); err != nil {
 		return workbench.RunPending, statusCode(err)
 	}
 	cfg := d.runner
@@ -203,6 +214,68 @@ func (d *domainWorkbench) executeB1(ctx context.Context, run workbench.Run) (str
 		return workbench.RunPending, "MODEL_REQUEST_FAILED"
 	}
 	return workbench.RunStopped, ""
+}
+
+func dispatchOperation[In, Out any](d *domainWorkbench, tool string, invoke func(*agent.BoundOperations, context.Context, In) (Out, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("runId")
+		if !registry.IsDigest(id) {
+			workbench.WriteError(w, r, http.StatusBadRequest, registry.ErrCodeInvalidSchema, "invalid workbench run ID")
+			return
+		}
+		var input In
+		if !readServiceJSON(w, r, &input) {
+			return
+		}
+		ctx := r.Context()
+		var out Out
+		acquired, err := d.withDispatchLock(ctx, id, func(conn *pgxpool.Conn) error {
+			var run workbench.Run
+			var status string
+			err := conn.QueryRow(ctx, `SELECT body,status FROM workbench_dispatch WHERE deployment_id=$1 AND run_id=$2`,
+				d.dep.DeploymentID, id).Scan(&run, &status)
+			if err != nil {
+				return err
+			}
+			if status != workbench.RunPending && status != workbench.RunDecided {
+				return protocol.NewError(registry.ErrCodeInvalidState, "dispatch is outside its execution stage")
+			}
+			ops, err := d.loadB1(ctx, run, true)
+			if err != nil {
+				return err
+			}
+			out, err = invoke(ops, ctx, input)
+			trace := agent.ToolTrace{ToolName: tool, IsError: err != nil}
+			if err != nil {
+				trace.Output = map[string]any{"code": statusCode(err)}
+			} else {
+				raw, marshalErr := json.Marshal(out)
+				if marshalErr != nil {
+					return marshalErr
+				}
+				if decodeErr := json.Unmarshal(raw, &trace.Output); decodeErr != nil {
+					return decodeErr
+				}
+			}
+			if traceErr := d.storeTrace(ctx, id, trace); traceErr != nil {
+				return traceErr
+			}
+			return err
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			workbench.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "dispatch not found")
+			return
+		}
+		if err != nil {
+			writeInternalError(w, r, err)
+			return
+		}
+		if !acquired {
+			workbench.WriteError(w, r, http.StatusConflict, registry.ErrCodeStateChanged, "dispatch is executing")
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, out)
+	}
 }
 
 func (d *domainWorkbench) orderIntent(ctx context.Context, run workbench.Run, ops *agent.BoundOperations) (status, code string, found bool) {

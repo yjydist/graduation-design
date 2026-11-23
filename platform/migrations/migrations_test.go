@@ -6,7 +6,11 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
+	"github.com/pressly/goose/v3/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -129,4 +133,36 @@ func TestMigrationsUpIdempotentAndAllTablesPresent(t *testing.T) {
 		`, col).Scan(&nullable))
 		assert.Equal(t, "YES", nullable, "decisions.%s must be nullable", col)
 	}
+}
+
+func TestWorkbenchScheduleMigrationPreservesPendingRows(t *testing.T) {
+	ctx := t.Context()
+	pool := testutil.OpenTestPool(t)
+	db := stdlib.OpenDBFromPool(pool)
+	defer db.Close()
+	provider, err := goose.NewProvider(database.DialectPostgres, db, migrations.FS, goose.WithLogger(goose.NopLogger()))
+	require.NoError(t, err)
+	_, err = provider.UpTo(ctx, 10)
+	require.NoError(t, err)
+	created := time.Now().UTC().Truncate(time.Second).Add(-time.Hour)
+	_, err = pool.Exec(ctx, `INSERT INTO workbench_runs
+		(deployment_id,domain_id,owner_id,run_id,task_id,status,body,created_at)
+		VALUES ('dep','A','buyer','run','task','OUTCOME_UNKNOWN','{}',$1)`, created)
+	require.NoError(t, err)
+	_, err = pool.Exec(ctx, `INSERT INTO workbench_dispatch
+		(deployment_id,run_id,task_id,status,body,result)
+		VALUES ('dep','run','task','PENDING','{}','{"receipt":"accepted"}')`)
+	require.NoError(t, err)
+
+	require.NoError(t, migrations.Up(ctx, pool))
+	var nextAttempt time.Time
+	var status, receipt string
+	require.NoError(t, pool.QueryRow(ctx, `SELECT status,next_attempt_at FROM workbench_runs WHERE run_id='run'`).Scan(&status, &nextAttempt))
+	require.Equal(t, "OUTCOME_UNKNOWN", status)
+	require.True(t, nextAttempt.Equal(created))
+	require.NoError(t, pool.QueryRow(ctx, `SELECT status,result->>'receipt',next_attempt_at
+		FROM workbench_dispatch WHERE run_id='run'`).Scan(&status, &receipt, &nextAttempt))
+	require.Equal(t, "PENDING", status)
+	require.Equal(t, "accepted", receipt)
+	require.False(t, nextAttempt.Before(created))
 }

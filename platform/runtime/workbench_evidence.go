@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -11,6 +12,7 @@ import (
 	"grad/platform/internal/httpx"
 	"grad/platform/state/fabric"
 	"grad/platform/workbench"
+	"grad/protocol"
 	"grad/protocol/registry"
 )
 
@@ -26,6 +28,13 @@ type workbenchEvidence struct {
 	gateway.DecisionProof
 	Purchase  purchaseEvidence          `json:"purchase"`
 	Decisions []gateway.DecisionSummary `json:"decisions"`
+}
+
+const rootAmountPath = "/internal/workbench/root-amount/"
+
+type rootGrantAmount struct {
+	Digest         string `json:"digest"`
+	MaxAmountMinor int64  `json:"maxAmountMinor"`
 }
 
 func (d *domainWorkbench) evidence(ctx context.Context, run workbench.Run) (any, error) {
@@ -51,32 +60,16 @@ func (d *domainWorkbench) evidence(ctx context.Context, run workbench.Run) (any,
 	if source.Orders == nil {
 		source.Orders = []gateway.OrderPayload{}
 	}
-	// Current registry state can move after the decision. Keep the originally
-	// verified terms, and display the current grant version alongside them.
-	last := make(map[string]gateway.DelegationEvidence)
-	for _, item := range source.Delegations {
-		last[item.GrantID] = item
-	}
-	delegations := []gateway.DelegationEvidence{}
 	peer, err := d.inst.ReadPeer()
 	if err != nil {
 		return nil, err
 	}
 	defer peer.Close()
-	for _, hop := range []string{"G0", "G1", "G2"} {
-		id := run.GrantID(hop)
-		anchor, err := fabric.ReadLedgerRecord[registry.Grant](ctx, peer, "grant", id)
-		if fabric.IsMissingRecord(err) {
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-		item := gateway.DelegationFromAnchor(anchor)
-		if verified, ok := last[id]; ok {
-			item.DecisionID, item.MaxAmountMinor = verified.DecisionID, verified.MaxAmountMinor
-		}
-		delegations = append(delegations, item)
+	delegations, err := d.delegations(ctx, run, source.Delegations, func(id string) (registry.Grant, error) {
+		return fabric.ReadLedgerRecord[registry.Grant](ctx, peer, "grant", id)
+	})
+	if err != nil {
+		return nil, err
 	}
 	return workbenchEvidence{
 		DecisionProof: gateway.DecisionProof{Identity: source.Identity, Disclosures: source.Disclosures, Delegations: delegations},
@@ -84,6 +77,124 @@ func (d *domainWorkbench) evidence(ctx context.Context, run workbench.Run) (any,
 			Quotes: source.Quotes, Orders: source.Orders},
 		Decisions: source.Decisions,
 	}, nil
+}
+
+func (d *domainWorkbench) delegations(ctx context.Context, run workbench.Run, proofs []gateway.DelegationEvidence, read func(string) (registry.Grant, error)) ([]gateway.DelegationEvidence, error) {
+	// Keep decision references alongside the current version of each grant.
+	last := make(map[string]gateway.DelegationEvidence, len(proofs))
+	for _, item := range proofs {
+		last[item.GrantID] = item
+	}
+	delegations := []gateway.DelegationEvidence{}
+	for _, hop := range []string{"G0", "G1", "G2"} {
+		anchor, err := read(run.GrantID(hop))
+		if fabric.IsMissingRecord(err) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		item := gateway.DelegationFromAnchor(anchor)
+		verified := last[anchor.ID]
+		item.DecisionID, item.MaxAmountMinor = verified.DecisionID, verified.MaxAmountMinor
+		if item.MaxAmountMinor == 0 {
+			item.MaxAmountMinor, err = d.grants.anchoredAmount(ctx, anchor)
+			if err != nil {
+				return nil, err
+			}
+			if item.MaxAmountMinor == 0 && hop == "G0" && anchor.Mode == registry.RP {
+				var root rootGrantAmount
+				rootCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+				err := d.callPeer(rootCtx, "C", http.MethodGet, rootAmountPath+run.TaskID, nil, &root)
+				cancel()
+				if err == nil {
+					if root.Digest != anchor.Digest || root.MaxAmountMinor <= 0 || root.MaxAmountMinor > protocol.MaxSafeInt {
+						return nil, protocol.NewError(registry.ErrCodeBindingMismatch, "root amount differs from the grant anchor")
+					}
+					item.MaxAmountMinor = root.MaxAmountMinor
+				}
+			}
+		}
+		delegations = append(delegations, item)
+	}
+	return delegations, nil
+}
+
+// anchoredAmount reads only local issuance or verified wallet receipts. The
+// committed digest authenticates the exact signed bytes, including after expiry.
+func (g *GrantOperations) anchoredAmount(ctx context.Context, anchor registry.Grant) (int64, error) {
+	var raw string
+	err := g.cfg.DB.QueryRow(ctx, `SELECT grant_jws FROM workbench_grant_issue
+		WHERE deployment_id=$1 AND domain_id=$2 AND grant_id=$3`, g.cfg.Deployment.DeploymentID, g.cfg.DomainID, anchor.ID).Scan(&raw)
+	if errors.Is(err, pgx.ErrNoRows) {
+		pkg, _, err := g.delivery.ReceivedGrant(ctx, anchor.Grantee, anchor.ID)
+		if protocol.HasCode(err, registry.ErrCodeMaterialNotSynced) {
+			return 0, nil
+		}
+		if err != nil {
+			return 0, err
+		}
+		raw = pkg.GrantJWS
+	} else if err != nil {
+		return 0, err
+	}
+	if registry.Digest([]byte(raw)) != anchor.Digest {
+		return 0, protocol.NewError(registry.ErrCodeBindingMismatch, "stored grant differs from the grant anchor")
+	}
+	signed, err := protocol.ParseCompactJWS(raw, protocol.TypeGrantJWS)
+	if err != nil {
+		return 0, err
+	}
+	var claims protocol.GrantClaims
+	if err := protocol.DecodeStrictJSON(signed.PayloadBytes, &claims); err != nil {
+		return 0, err
+	}
+	if err := claims.ValidateStructure(); err != nil {
+		return 0, err
+	}
+	anchor.Version = registry.Version{}
+	if ledgerGrant(&protocol.ParsedGrant{Claims: claims, Digest: signed.Digest}) != anchor {
+		return 0, protocol.NewError(registry.ErrCodeBindingMismatch, "stored grant claims differ from the grant anchor")
+	}
+	return claims.MaxAmountMinor, nil
+}
+
+func (d *domainWorkbench) remoteRootAmount(w http.ResponseWriter, r *http.Request) {
+	ctx, taskID := r.Context(), r.PathValue("taskId")
+	if !registry.IsDigest(taskID) {
+		workbench.WriteError(w, r, http.StatusBadRequest, registry.ErrCodeInvalidSchema, "invalid workbench task ID")
+		return
+	}
+	run := workbench.Run{TaskID: taskID}
+	rootID := run.GrantID("G0")
+	if err := d.grants.sync(ctx); err != nil {
+		writeInternalError(w, r, err)
+		return
+	}
+	view, err := fabric.ReadAppliedRegistry(ctx, d.db, d.dep, []string{registry.Key("task", taskID), registry.Key("grant", rootID)})
+	if err != nil {
+		writeInternalError(w, r, err)
+		return
+	}
+	task, err := grantRecord[registry.Task](view, "task", taskID)
+	root, rootErr := grantRecord[registry.Grant](view, "grant", rootID)
+	if err != nil || rootErr != nil || task.Creator != d.dep.Bootstrap.TaskCreator.Subject || task.Domain != "A" ||
+		task.DeploymentID != d.dep.DeploymentID || task.Mode != registry.RP || root.Mode != registry.RP ||
+		root.Task != taskID || root.ID != rootID || root.Root != rootID || root.Parent != "" ||
+		root.Issuer != d.dep.Bootstrap.ResourceOwner || root.Grantee != task.Creator {
+		workbench.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "workbench RP root not found")
+		return
+	}
+	amount, err := d.grants.anchoredAmount(ctx, root)
+	if err != nil {
+		writeInternalError(w, r, err)
+		return
+	}
+	if amount == 0 {
+		workbench.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "root issuance not found")
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, rootGrantAmount{Digest: root.Digest, MaxAmountMinor: amount})
 }
 
 func (d *domainWorkbench) remoteEvidence(w http.ResponseWriter, r *http.Request) {

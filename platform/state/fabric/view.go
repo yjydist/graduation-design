@@ -246,8 +246,10 @@ func (v View) RawSnapshot(ctx context.Context, grant string, historical *uint64,
 	if boot != v.Deployment.Bootstrap || registry.Digest(s.Records[registry.BootstrapKey]) != v.Deployment.BootstrapDigest {
 		return nil, fmt.Errorf("%w: view bootstrap", ErrDeploymentMismatch)
 	}
-	if err := r.assemble(grant, afterRoot); err != nil {
-		return nil, err
+	if grant != "" {
+		if err := r.assemble(grant, afterRoot); err != nil {
+			return nil, err
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
@@ -709,7 +711,13 @@ func (i *Instance) ApplyCommittedRegistry(ctx context.Context, db *pgxpool.Pool,
 	if err := EnsureSchema(ctx, db); err != nil {
 		return err
 	}
-	peer, err := i.Peer("c", "read")
+	return i.SyncCommittedRegistry(ctx, db, d)
+}
+
+// SyncCommittedRegistry advances an initialized database to the local peer's
+// committed prefix after verifying both the deployment and the stored checkpoint.
+func (i *Instance) SyncCommittedRegistry(ctx context.Context, db *pgxpool.Pool, d *Deployment) error {
+	peer, err := i.ReadPeer()
 	if err != nil {
 		return err
 	}
@@ -717,12 +725,30 @@ func (i *Instance) ApplyCommittedRegistry(ctx context.Context, db *pgxpool.Pool,
 	if err := d.ValidatePeer(ctx, peer); err != nil {
 		return err
 	}
+	v := View{DB: db, Deployment: d}
+	head, err := v.Head(ctx, db, false)
+	if err != nil {
+		return err
+	}
 	height, err := peer.Height(ctx)
 	if err != nil {
 		return err
 	}
-	v := View{DB: db, Deployment: d}
-	for n := uint64(0); n < height; n++ {
+	var start uint64
+	if head != nil {
+		if head.Number >= height {
+			return fmt.Errorf("%w: local peer is behind applied registry", ErrUnavailable)
+		}
+		block, err := peer.GetBlock(ctx, head.Number)
+		if err != nil {
+			return err
+		}
+		if block.Point != *head {
+			return fmt.Errorf("%w: committed checkpoint changed", ErrDeploymentMismatch)
+		}
+		start = head.Number + 1
+	}
+	for n := start; n < height; n++ {
 		b, err := peer.GetBlock(ctx, n)
 		if err != nil {
 			return err

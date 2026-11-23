@@ -80,6 +80,10 @@ type FabricBackend struct {
 
 // NewFabricBackend constructs a FabricBackend indexed by all configured local Fabric role certificates.
 func NewFabricBackend(j fabric.Journal) (*FabricBackend, error) {
+	return newFabricBackend(j, fabric.AllRoles())
+}
+
+func newFabricBackend(j fabric.Journal, roles []string) (*FabricBackend, error) {
 	if j.Instance == nil {
 		return nil, fmt.Errorf("registrysvc: fabric instance is required")
 	}
@@ -87,7 +91,7 @@ func NewFabricBackend(j fabric.Journal) (*FabricBackend, error) {
 		journal: j,
 		roles:   make(map[registry.Management]string),
 	}
-	for _, role := range fabric.AllRoles() {
+	for _, role := range roles {
 		_, caller, _, err := j.Instance.Role(role)
 		if err != nil {
 			return nil, err
@@ -111,7 +115,7 @@ func (b *FabricBackend) ManagementForFingerprint(fp string) (registry.Management
 // against trusted Fabric ledger state and the target domain's MSP CA certificates.
 func (b *FabricBackend) AuthorizeRecovery(ctx context.Context, caller registry.Management, bundle *protocol.RecoveryDualProofBundle) error {
 	c := bundle.Challenge
-	p, err := b.journal.Instance.Peer("c", "read")
+	p, err := b.journal.Instance.ReadPeer()
 	if err != nil {
 		return err
 	}
@@ -227,7 +231,7 @@ func revisionTarget(method string, input json.RawMessage) (string, string, *uint
 
 // CurrentRevision queries the pinned peer for the current record revision.
 func (b *FabricBackend) CurrentRevision(ctx context.Context, kind, id string) (uint64, bool, error) {
-	p, err := b.journal.Instance.Peer("c", "read")
+	p, err := b.journal.Instance.ReadPeer()
 	if err != nil {
 		return 0, false, err
 	}
@@ -337,10 +341,15 @@ func NewFabricService(ctx context.Context, dir string) (*Service, func(), error)
 
 // NewFabricServiceWithDB constructs a Service and its FabricBackend using an already open pool and deployment.
 func NewFabricServiceWithDB(db *pgxpool.Pool, inst *fabric.Instance, dep *fabric.Deployment) (*Service, *FabricBackend, error) {
+	return NewFabricServiceForRoles(db, inst, dep, fabric.AllRoles())
+}
+
+// NewFabricServiceForRoles binds the management service to the configured local signers.
+func NewFabricServiceForRoles(db *pgxpool.Pool, inst *fabric.Instance, dep *fabric.Deployment, roles []string) (*Service, *FabricBackend, error) {
 	if db == nil || inst == nil || dep == nil {
 		return nil, nil, fmt.Errorf("registrysvc: db, instance, and deployment are required")
 	}
-	backend, err := NewFabricBackend(fabric.NewJournal(inst, db, dep.DeploymentID))
+	backend, err := newFabricBackend(fabric.NewJournal(inst, db, dep.DeploymentID), roles)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -416,6 +425,36 @@ type pendingOperationRow struct {
 func ManagementOperationID(deployment string, caller registry.Management, method, key string) string {
 	scope, _ := json.Marshal([]string{deployment, caller.MSPID, caller.CertificateSHA256, method, key})
 	return "management:" + registry.Digest(scope)
+}
+
+// Submit accepts a typed management request using the same journal as the HTTP service.
+func (s *Service) Submit(ctx context.Context, caller registry.Management, method, key string, input any) (*OperationView, error) {
+	if !caller.Valid() {
+		return nil, protocol.NewError(registry.ErrCodeIdentityManagementForbidden, "verified management caller required")
+	}
+	raw, err := json.Marshal(input)
+	if err != nil {
+		return nil, protocol.WrapError(registry.ErrCodeInvalidSchema, "encode management request", err)
+	}
+	_, op, err := s.Accept(ctx, key, caller, method, raw, true)
+	return op, err
+}
+
+// Operation reads the original transaction for its owner or an authorized local auditor.
+func (s *Service) Operation(ctx context.Context, caller registry.Management, opID string) (*OperationView, error) {
+	if s == nil || s.db == nil {
+		return nil, protocol.NewError(registry.ErrCodeStateUnavailable, "operation store unavailable")
+	}
+	if !caller.Valid() {
+		return nil, protocol.NewError(registry.ErrCodeIdentityManagementForbidden, "verified management caller required")
+	}
+	if err := s.authorizeOperationQuery(ctx, opID, caller); err != nil {
+		if errors.Is(err, errOperationQueryForbidden) {
+			return nil, protocol.NewError(registry.ErrCodeIdentityManagementForbidden, "operation query forbidden")
+		}
+		return nil, protocol.WrapError(registry.ErrCodeStateUnavailable, "operation authorization store unavailable", err)
+	}
+	return s.GetOperation(ctx, opID)
 }
 
 // Accept submits a management operation with pre-acceptance expectedRevision validation
@@ -861,16 +900,12 @@ func (s *Service) handleGetOperation(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, reqID, registry.ErrCodeInvalidSchema, nil, "missing operationId")
 		return
 	}
-	if err := s.authorizeOperationQuery(r.Context(), opID, caller); err != nil {
-		if errors.Is(err, errOperationQueryForbidden) {
-			httpx.WriteError(w, http.StatusForbidden, reqID, registry.ErrCodeIdentityManagementForbidden, nil, "operation query forbidden")
-		} else {
-			httpx.WriteError(w, http.StatusServiceUnavailable, reqID, registry.ErrCodeStateUnavailable, nil, "operation authorization store unavailable")
-		}
-		return
-	}
-	view, err := s.GetOperation(r.Context(), opID)
+	view, err := s.Operation(r.Context(), caller, opID)
 	if err != nil {
+		if protocol.HasCode(err, registry.ErrCodeIdentityManagementForbidden) {
+			httpx.WriteError(w, http.StatusForbidden, reqID, registry.ErrCodeIdentityManagementForbidden, nil, "operation query forbidden")
+			return
+		}
 		if protocol.HasCode(err, registry.ErrCodeOperationUnknown) {
 			httpx.WriteError(w, http.StatusNotFound, reqID, registry.ErrCodeOperationUnknown, nil, err.Error())
 			return

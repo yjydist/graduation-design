@@ -164,61 +164,61 @@ type ReconcileOrderOutput struct {
 	ErrorMessage       string   `json:"errorMessage,omitempty"`
 }
 
-// NewMCPServer registers the six grad-auth-v1 agent wallet tools over the official MCP Go SDK.
-func NewMCPServer(wallet *WalletContext) *mcp.Server {
-	srv := mcp.NewServer(&mcp.Implementation{
-		Name:    "grad-auth-wallet",
-		Version: "v1.0.0",
-	}, nil)
-
-	mcp.AddTool(srv, &mcp.Tool{
+var (
+	inspectWalletTool = mcp.Tool{
 		Name:        "inspect_wallet",
 		Description: "Inspect actor DID, authorized grants, remaining delegation depth, amount ceilings, cached quotes, orders, and client_actions intent locks without exposing private keys or SD-JWT disclosures.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in InspectWalletInput) (*mcp.CallToolResult, InspectWalletOutput, error) {
-		out, err := wallet.InspectWallet(ctx, in)
-		return nil, out, err
-	})
-
-	mcp.AddTool(srv, &mcp.Tool{
+	}
+	delegateGrantTool = mcp.Tool{
 		Name:        "delegate_grant",
 		Description: "Sign and optionally anchor a narrowed child delegation grant (such as A1 issuing G2 to B1) using isolated wallet key material.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in DelegateGrantInput) (*mcp.CallToolResult, DelegateGrantOutput, error) {
-		out, err := wallet.DelegateGrant(ctx, in)
-		return nil, out, err
-	})
-
-	mcp.AddTool(srv, &mcp.Tool{
+	}
+	replaceGrantTool = mcp.Tool{
 		Name:        "replace_grant",
 		Description: "Atomically revoke an existing child grant and issue/deliver a narrowed replacement grant to another delegate (such as B2) using isolated wallet key material.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in ReplaceGrantInput) (*mcp.CallToolResult, ReplaceGrantOutput, error) {
-		out, err := wallet.ReplaceGrant(ctx, in)
-		return nil, out, err
-	})
-
-	mcp.AddTool(srv, &mcp.Tool{
+	}
+	requestQuoteTool = mcp.Tool{
 		Name:        "request_quote",
 		Description: "Obtain a binding supplier quote via gateway quote.read with fresh challenge authentication and KB-JWT proof.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in RequestQuoteInput) (*mcp.CallToolResult, RequestQuoteOutput, error) {
-		out, err := wallet.RequestQuote(ctx, in)
-		return nil, out, err
-	})
-
-	mcp.AddTool(srv, &mcp.Tool{
+	}
+	createOrderTool = mcp.Tool{
 		Name:        "create_order",
 		Description: "Persist a client_actions intent lock (OUTCOME_UNKNOWN + sendRevision) first, then submit an authenticated order.create request bound to a quoteId and idempotencyKey.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in CreateOrderInput) (*mcp.CallToolResult, CreateOrderOutput, error) {
-		out, err := wallet.CreateOrder(ctx, in)
-		return nil, out, err
-	})
-
-	mcp.AddTool(srv, &mcp.Tool{
+	}
+	reconcileOrderTool = mcp.Tool{
 		Name:        "reconcile_order",
 		Description: "Increment sendRevision to stop delayed retries on an unknown order, register the reconciliation case with C, trigger C audit and historical h/r review, and persist the receipt.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in ReconcileOrderInput) (*mcp.CallToolResult, ReconcileOrderOutput, error) {
-		out, err := wallet.ReconcileOrder(ctx, in)
-		return nil, out, err
-	})
+	}
+)
 
+func newWalletMCPServer() *mcp.Server {
+	return mcp.NewServer(&mcp.Implementation{Name: "grad-auth-wallet", Version: "v1.0.0"}, nil)
+}
+
+func addWalletTool[In, Out any](srv *mcp.Server, tool mcp.Tool, run func(context.Context, In) (Out, error), bound bool) {
+	mcp.AddTool(srv, &tool, func(ctx context.Context, _ *mcp.CallToolRequest, in In) (*mcp.CallToolResult, Out, error) {
+		out, err := run(ctx, in)
+		if !bound || err == nil {
+			return nil, out, err
+		}
+		code := protocol.CodeOf(err)
+		if code == "" {
+			code = protocol.ErrCodeInvalidSchema
+		}
+		body, _ := json.Marshal(map[string]string{"code": code, "message": "workbench operation declined"})
+		return nil, out, errors.New(string(body))
+	})
+}
+
+// NewMCPServer registers the six grad-auth-v1 agent wallet tools over the official MCP Go SDK.
+func NewMCPServer(wallet *WalletContext) *mcp.Server {
+	srv := newWalletMCPServer()
+	addWalletTool(srv, inspectWalletTool, wallet.InspectWallet, false)
+	addWalletTool(srv, delegateGrantTool, wallet.DelegateGrant, false)
+	addWalletTool(srv, replaceGrantTool, wallet.ReplaceGrant, false)
+	addWalletTool(srv, requestQuoteTool, wallet.RequestQuote, false)
+	addWalletTool(srv, createOrderTool, wallet.CreateOrder, false)
+	addWalletTool(srv, reconcileOrderTool, wallet.ReconcileOrder, false)
 	return srv
 }
 
@@ -306,6 +306,18 @@ func (w *WalletContext) DelegateGrant(ctx context.Context, in DelegateGrantInput
 		return DelegateGrantOutput{}, errors.New("remainingDepth must be >= 0")
 	}
 
+	var recipient *GrantRecipient
+	if w.cfg.ResolveGrantRecipient != nil && in.SubjectDID != "" && in.SubjectActor == "" {
+		resolved, err := w.cfg.ResolveGrantRecipient(ctx, in.SubjectDID)
+		if err != nil {
+			return DelegateGrantOutput{}, err
+		}
+		if resolved.DID != in.SubjectDID || resolved.KeyVersion == 0 || resolved.CredentialID == "" {
+			return DelegateGrantOutput{}, executionMismatch("resolved recipient differs from delegation")
+		}
+		recipient = &resolved
+	}
+
 	w.mu.Lock()
 	issuer, ok := w.signers[in.IssuerActor]
 	if !ok {
@@ -322,6 +334,9 @@ func (w *WalletContext) DelegateGrant(ctx context.Context, in DelegateGrantInput
 		w.mu.Unlock()
 		return DelegateGrantOutput{}, err
 	}
+	if recipient != nil {
+		granteeSigner = &Signer{DID: recipient.DID, KeyVersion: recipient.KeyVersion, CredentialID: recipient.CredentialID}
+	}
 	signed, err := w.signChildGrantLocked(issuer, parent, granteeSigner, subjectDID, in.GrantID, in.TaskID, in.AuthorizationMode, in.MaxAmountMinor, in.RemainingDepth, in.ExpiresInSeconds)
 	if err != nil {
 		w.mu.Unlock()
@@ -335,18 +350,31 @@ func (w *WalletContext) DelegateGrant(ctx context.Context, in DelegateGrantInput
 	note := "signed locally with isolated actor key"
 	if anchorHook != nil {
 		res, err := anchorHook(ctx, AnchorChildGrantRequest{
-			Claims:      signed.claims,
-			RawGrantJWS: signed.rawJWS,
-			GrantDigest: signed.digest,
-			ParentID:    parentID,
-			IssuerActor: in.IssuerActor,
-			GranteeDID:  subjectDID,
+			Claims:                   signed.claims,
+			RawGrantJWS:              signed.rawJWS,
+			GrantDigest:              signed.digest,
+			ParentID:                 parentID,
+			IssuerActor:              in.IssuerActor,
+			GranteeDID:               subjectDID,
+			RequestedLifetimeSeconds: in.ExpiresInSeconds,
 		})
 		if err != nil {
+			if code := protocol.CodeOf(err); code != "" {
+				return DelegateGrantOutput{}, protocol.NewError(code, w.SanitizeString(err.Error()))
+			}
 			return DelegateGrantOutput{}, fmt.Errorf("anchor child grant: %s", w.SanitizeString(err.Error()))
 		}
 		if res != nil {
 			anchored = res.Anchored
+			if res.Grant != nil {
+				signed.claims = res.Grant.Claims
+				signed.rawJWS = res.Grant.RawGrantJWS
+				signed.digest = res.Grant.Digest
+				signed.chain = slices.Clone(res.Grant.ChainRawGrants)
+				signed.ancestors = slices.Clone(res.Grant.AncestorCredentials)
+				signed.trustPaths = slices.Clone(res.Grant.TrustPaths)
+				signed.taskSpec = res.Grant.TaskSpec
+			}
 			if len(res.TrustPaths) > 0 {
 				signed.trustPaths = slices.Clone(res.TrustPaths)
 			}
@@ -583,6 +611,7 @@ func (w *WalletContext) RequestQuote(ctx context.Context, in RequestQuoteInput) 
 				TotalAmountMinor: execResp.Quote.TotalAmountMinor,
 				IssuedAt:         execResp.Quote.IssuedAt,
 				ValidUntil:       execResp.Quote.ValidUntil,
+				IdempotencyKey:   idem,
 			}
 			w.mu.Unlock()
 		}

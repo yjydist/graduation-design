@@ -1,0 +1,117 @@
+{
+  "runId": "fb2b1245c08af06d660c1ec31fefaebda418c1f1c14ac3bd2d00f366bf21822b",
+  "taskId": "e06aa7f87319cab04399e4f57780ed75e1ccd66e5a631bec38c2eb8990a111b1",
+  "draftId": "34ed5c01ca3ac0d10b736491f7a5331a39e68a00d0ccd5c9b7c3dbc544b335fe",
+  "stage": "EXECUTE",
+  "status": "FAILED",
+  "confirmedAt": 1795420876,
+  "task": {
+    "draftId": "34ed5c01ca3ac0d10b736491f7a5331a39e68a00d0ccd5c9b7c3dbc544b335fe",
+    "version": 1,
+    "productId": "urn:grad:product:P1",
+    "quantity": 1,
+    "mode": "RESOURCE_PREAUTHORIZED",
+    "maxAmountMinor": 100000,
+    "expiresAt": 1795424476,
+    "delegateDid": "did:web:a.local:a1",
+    "description": "采购草稿：商品 urn:grad:product:P1，数量 1，模式 RP，单笔上限 1000 元（100000 分），期限 60 分钟。"
+  },
+  "steps": [
+    {
+      "stage": "REGISTER_TASK",
+      "status": "PENDING",
+      "at": 1795420876
+    },
+    {
+      "stage": "REGISTER_TASK",
+      "status": "PENDING",
+      "operationId": "management:0d21e1ef87d9d76157bcd0886e8d1713a135d009117540c13bafb2c4b4aba76f",
+      "at": 1795420877
+    },
+    {
+      "stage": "REGISTER_TASK",
+      "status": "CONFIRMED",
+      "operationId": "management:0d21e1ef87d9d76157bcd0886e8d1713a135d009117540c13bafb2c4b4aba76f",
+      "txId": "d05c9ef7c0492d670e79b93a2c309cb599db2699487fd551e9de1a135b6888e2",
+      "validationCode": "VALID",
+      "at": 1795420878
+    },
+    {
+      "stage": "DELIVER_G0",
+      "status": "PENDING",
+      "operationId": "management:7f4a1145ef5470d76861ebb08ecaa0b95523f7e813c111d01f2b2409f80fca77",
+      "grantId": "8d33ac504868109be9ccd344624bfda394f9009a718b2b42beea1729459b9002",
+      "at": 1795420879
+    },
+    {
+      "stage": "DELIVER_G0",
+      "status": "DELIVERED",
+      "operationId": "management:7f4a1145ef5470d76861ebb08ecaa0b95523f7e813c111d01f2b2409f80fca77",
+      "txId": "61db6d50b8822ce857db5424230ead95d23ccfcb952ba0cd944d3ae597b43553",
+      "validationCode": "VALID",
+      "grantId": "8d33ac504868109be9ccd344624bfda394f9009a718b2b42beea1729459b9002",
+      "at": 1795420881
+    },
+    {
+      "stage": "DELIVER_G1",
+      "status": "DELIVERED",
+      "operationId": "management:9ebcc7324f7dc51ac08f6922d5feb80c2cf54801e8fbd13f85e91ad7faaf52de",
+      "txId": "86a3c7da655af59c0cb9e5ab4c6942ca3532f38732000e66a4dac0c1fd06d12d",
+      "validationCode": "VALID",
+      "grantId": "8035a2711bd149a403d706de218d89a834918509355f113ce6e172e9e267bb64",
+      "at": 1795420888
+    },
+    {
+      "stage": "EXECUTE",
+      "status": "FAILED",
+      "operationId": "management:75cc2e1ff8595cd1d97f55debe502ab47fa9b5c7b380f211a917e506aaac1de0",
+      "txId": "19475993aa59df4d09cd732d1af92b5a3501f195068e69ea844fdc91e4a1f705",
+      "validationCode": "VALID",
+      "code": "INVALID_SCHEMA",
+      "grantId": "b428870e26feb31e6e8487be6fc02d6acbbb70320f5457c3580d7c9a73507339",
+      "at": 1795420897
+    }
+  ],
+  "traces": [
+    {
+      "step": 1,
+      "toolName": "inspect_wallet",
+      "isError": false,
+      "durationMs": 27
+    },
+    {
+      "step": 1,
+      "toolName": "inspect_wallet",
+      "output": {
+        "code": "BINDING_MISMATCH"
+      },
+      "isError": true,
+      "durationMs": 0
+    },
+    {
+      "step": 2,
+      "toolName": "delegate_grant",
+      "output": {
+        "anchored": true
+      },
+      "isError": false,
+      "durationMs": 385
+    },
+    {
+      "step": 3,
+      "toolName": "model_result",
+      "output": {
+        "provider": "anthropic",
+        "requestedModel": "deepseek-flash",
+        "responseModel": "deepseek-flash"
+      },
+      "isError": false,
+      "durationMs": 8656
+    }
+  ],
+  "grantRevision": 1,
+  "grantStatus": "ACTIVE",
+  "allowedActions": [
+    "suspend"
+  ]
+}

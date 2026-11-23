@@ -61,8 +61,11 @@ var ErrDeploymentMismatch = errors.New("DEPLOYMENT_MISMATCH")
 
 // Instance represents a local isolated Fabric network directory and its runtime environment.
 type Instance struct {
-	dir string
-	env map[string]string
+	dir        string
+	env        map[string]string
+	clientOrg  string
+	clientAddr string
+	readRole   string
 }
 
 // Deployment captures the immutable, verified Fabric channel, chaincode definition,
@@ -168,7 +171,7 @@ func OpenInstance(dir string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	inst := &Instance{dir: abs, env: map[string]string{}}
+	inst := &Instance{dir: abs, env: map[string]string{}, clientOrg: "c", readRole: "read"}
 	for _, line := range strings.Split(strings.TrimSpace(string(b)), "\n") {
 		if line == "" {
 			continue
@@ -180,6 +183,31 @@ func OpenInstance(dir string) (*Instance, error) {
 		inst.env[key] = value
 	}
 	return inst, nil
+}
+
+// ForDomain returns an instance client configured to use only the domain's peer
+// and a local enrollment for ledger reads.
+func (i *Instance) ForDomain(domain, readRole, address string) (*Instance, error) {
+	org := strings.ToLower(domain)
+	role, ok := roleLocations[readRole]
+	if !ok || role.org != org || (org != "a" && org != "b" && org != "c") {
+		return nil, fmt.Errorf("invalid local Fabric reader for domain %q", domain)
+	}
+	if address != "" {
+		host, port, err := net.SplitHostPort(address)
+		n, portErr := strconv.Atoi(port)
+		if err != nil || portErr != nil || host == "" || n < 1 || n > 65535 {
+			return nil, fmt.Errorf("invalid local peer address")
+		}
+	}
+	client := *i
+	client.clientOrg, client.clientAddr, client.readRole = org, address, readRole
+	return &client, nil
+}
+
+// ReadPeer connects with the enrollment configured for committed registry reads.
+func (i *Instance) ReadPeer() (*PeerClient, error) {
+	return i.Peer(i.clientOrg, i.readRole)
 }
 
 // Dir returns the absolute path of the Fabric instance directory.
@@ -320,9 +348,13 @@ func AllRoles() []string {
 
 // Peer connects a pinned gRPC + Fabric Gateway client to peer-<org> authenticated as role.
 func (i *Instance) Peer(org, role string) (*PeerClient, error) {
-	address, err := i.Port("FABRIC_PEER_" + strings.ToUpper(org))
-	if err != nil {
-		return nil, err
+	address := i.clientAddr
+	if org != i.clientOrg || address == "" {
+		var err error
+		address, err = i.Port("FABRIC_PEER_" + strings.ToUpper(org))
+		if err != nil {
+			return nil, err
+		}
 	}
 	id, binding, mspDir, err := i.Role(role)
 	if err != nil {

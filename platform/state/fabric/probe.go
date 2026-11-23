@@ -52,11 +52,11 @@ type probeVersionRow struct {
 // Start launches the continuous full-block Deliver follower and periodic original probe sender.
 // Call the returned stop function to cleanly cancel goroutines and close peer connections.
 func (v *Online) Start(ctx context.Context) (func(), error) {
-	reader, err := v.Instance.Peer("c", "read")
+	reader, err := v.Instance.ReadPeer()
 	if err != nil {
 		return nil, err
 	}
-	sender, err := v.Instance.Peer("c", v.Role)
+	sender, err := v.Instance.Peer(v.Instance.clientOrg, v.Role)
 	if err != nil {
 		reader.Close()
 		return nil, err

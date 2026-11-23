@@ -1,0 +1,144 @@
+{
+  "deploymentId": "2b6a397e51a1153c188488bc0d2a3ad62dcf3ef569a1a9b4c596c447d5720fbd",
+  "fabricProject": "grad-fabric-1c70d115cc97",
+  "fabricPortRange": [
+    19300,
+    19309
+  ],
+  "browserPorts": [
+    19541,
+    19542,
+    19543
+  ],
+  "freshDatabaseVolumes": true,
+  "fabricRebuildDeploySeedCheck": "passed",
+  "initial": [
+    {
+      "domain": "A",
+      "ready": true,
+      "databaseVolume": "grad-fabric-1c70d115cc97-workbench-a_database",
+      "frontendImage": "sha256:1690a04046aeb7fff00f9fe3e5bcdffe777ebfc6b91d08540bedd191160f25fb",
+      "backendImage": "sha256:967f65ea7fcece5cb572974ba9b7b1ff33236b6ca9a9a801ced6da24651d183f",
+      "localSignerFiles": 4,
+      "appSigningActors": [
+        "A1",
+        "PA",
+        "U"
+      ],
+      "staticFiles": [
+        "/srv/api.js",
+        "/srv/app.js",
+        "/srv/index.html",
+        "/srv/style.css"
+      ]
+    },
+    {
+      "domain": "B",
+      "ready": true,
+      "databaseVolume": "grad-fabric-1c70d115cc97-workbench-b_database",
+      "frontendImage": "sha256:1690a04046aeb7fff00f9fe3e5bcdffe777ebfc6b91d08540bedd191160f25fb",
+      "backendImage": "sha256:967f65ea7fcece5cb572974ba9b7b1ff33236b6ca9a9a801ced6da24651d183f",
+      "localSignerFiles": 2,
+      "appSigningActors": [
+        "B1"
+      ],
+      "staticFiles": [
+        "/srv/api.js",
+        "/srv/app.js",
+        "/srv/index.html",
+        "/srv/style.css"
+      ]
+    },
+    {
+      "domain": "C",
+      "ready": true,
+      "databaseVolume": "grad-fabric-1c70d115cc97-workbench-c_database",
+      "frontendImage": "sha256:1690a04046aeb7fff00f9fe3e5bcdffe777ebfc6b91d08540bedd191160f25fb",
+      "backendImage": "sha256:967f65ea7fcece5cb572974ba9b7b1ff33236b6ca9a9a801ced6da24651d183f",
+      "localSignerFiles": 4,
+      "appSigningActors": [
+        "C"
+      ],
+      "staticFiles": [
+        "/srv/api.js",
+        "/srv/app.js",
+        "/srv/index.html",
+        "/srv/style.css"
+      ]
+    }
+  ],
+  "restart": [
+    {
+      "domain": "A",
+      "ready": true,
+      "databaseVolume": "grad-fabric-1c70d115cc97-workbench-a_database",
+      "frontendImage": "sha256:1690a04046aeb7fff00f9fe3e5bcdffe777ebfc6b91d08540bedd191160f25fb",
+      "backendImage": "sha256:967f65ea7fcece5cb572974ba9b7b1ff33236b6ca9a9a801ced6da24651d183f",
+      "localSignerFiles": 4,
+      "appSigningActors": [
+        "A1",
+        "PA",
+        "U"
+      ],
+      "staticFiles": [
+        "/srv/api.js",
+        "/srv/app.js",
+        "/srv/index.html",
+        "/srv/style.css"
+      ]
+    },
+    {
+      "domain": "B",
+      "ready": true,
+      "databaseVolume": "grad-fabric-1c70d115cc97-workbench-b_database",
+      "frontendImage": "sha256:1690a04046aeb7fff00f9fe3e5bcdffe777ebfc6b91d08540bedd191160f25fb",
+      "backendImage": "sha256:967f65ea7fcece5cb572974ba9b7b1ff33236b6ca9a9a801ced6da24651d183f",
+      "localSignerFiles": 2,
+      "appSigningActors": [
+        "B1"
+      ],
+      "staticFiles": [
+        "/srv/api.js",
+        "/srv/app.js",
+        "/srv/index.html",
+        "/srv/style.css"
+      ]
+    },
+    {
+      "domain": "C",
+      "ready": true,
+      "databaseVolume": "grad-fabric-1c70d115cc97-workbench-c_database",
+      "frontendImage": "sha256:1690a04046aeb7fff00f9fe3e5bcdffe777ebfc6b91d08540bedd191160f25fb",
+      "backendImage": "sha256:967f65ea7fcece5cb572974ba9b7b1ff33236b6ca9a9a801ced6da24651d183f",
+      "localSignerFiles": 4,
+      "appSigningActors": [
+        "C"
+      ],
+      "staticFiles": [
+        "/srv/api.js",
+        "/srv/app.js",
+        "/srv/index.html",
+        "/srv/style.css"
+      ]
+    }
+  ],
+  "sameDatabaseVolumesAndBrowserCAs": true,
+  "assetAndImageCredentialCheck": {
+    "testedDomains": [
+      "A",
+      "B",
+      "C"
+    ],
+    "testedImageKinds": [
+      "frontend",
+      "backend"
+    ],
+    "assetNames": [
+      "api.js",
+      "app.js",
+      "index.html",
+      "style.css"
+    ],
+    "matchesToMountedCredentials": 0
+  }
+}

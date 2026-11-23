@@ -1,0 +1,179 @@
+{
+  "runId": "d139978f67c3fea87d9050a92461f6537de4636ad9fcce3540ac5790b752a0bf",
+  "taskId": "8673b6934976a51711b52b0345da99c91178581747a02b0d7df200d7b991c575",
+  "draftId": "95dff80e71ce76fd5df16cca85183cddb6234983880383364b81c106e69dac4f",
+  "stage": "EXECUTE",
+  "status": "DECIDED",
+  "confirmedAt": 1795421045,
+  "task": {
+    "draftId": "95dff80e71ce76fd5df16cca85183cddb6234983880383364b81c106e69dac4f",
+    "version": 1,
+    "productId": "urn:grad:product:P1",
+    "quantity": 1,
+    "mode": "RESOURCE_PREAUTHORIZED",
+    "maxAmountMinor": 100000,
+    "expiresAt": 1795424645,
+    "delegateDid": "did:web:a.local:a1",
+    "description": "采购草稿：商品 urn:grad:product:P1，数量 1，模式 RP（RESOURCE_PREAUTHORIZED），单笔上限 1000 元（100000 分），期限 60 分钟。仅供确认，尚未下单。"
+  },
+  "steps": [
+    {
+      "stage": "REGISTER_TASK",
+      "status": "PENDING",
+      "at": 1795421045
+    },
+    {
+      "stage": "REGISTER_TASK",
+      "status": "PENDING",
+      "operationId": "management:0e93f1e3a503aba9f6f846c943f416fcdc1f3fc7364be5a97b8661b7693aa304",
+      "at": 1795421046
+    },
+    {
+      "stage": "REGISTER_TASK",
+      "status": "CONFIRMED",
+      "operationId": "management:0e93f1e3a503aba9f6f846c943f416fcdc1f3fc7364be5a97b8661b7693aa304",
+      "txId": "7c4cf6634f4e1b6793920f1bb877825775eb251a52dcf127a44129f7a81a2efb",
+      "validationCode": "VALID",
+      "at": 1795421047
+    },
+    {
+      "stage": "DELIVER_G0",
+      "status": "PENDING",
+      "operationId": "management:c0ee0369447da0492fb28f5305cfaf9a16474dd49f21a20003acea5a184eeeb0",
+      "grantId": "e6d2f226fe171016ad02216548de14dd5d5930fb7b51b6c28fd0ee4ad6fda88f",
+      "at": 1795421048
+    },
+    {
+      "stage": "DELIVER_G0",
+      "status": "DELIVERED",
+      "operationId": "management:c0ee0369447da0492fb28f5305cfaf9a16474dd49f21a20003acea5a184eeeb0",
+      "txId": "b99d659646682d16170363c10b2cb8ff25d8d469c02f05ac2b4a5d1722903331",
+      "validationCode": "VALID",
+      "grantId": "e6d2f226fe171016ad02216548de14dd5d5930fb7b51b6c28fd0ee4ad6fda88f",
+      "at": 1795421049
+    },
+    {
+      "stage": "DELIVER_G1",
+      "status": "DELIVERED",
+      "operationId": "management:cd409b362bc9c60fa99a4aa385269228d7e327455acf48179a2421f8ff64c24f",
+      "txId": "39a5aa7c3a3e9fcf262517593da61ae9c8e323453b889ac9c30e45c423fa8113",
+      "validationCode": "VALID",
+      "grantId": "597a04848165b13d36d14744f181441a7c0dc9cd5c685272e077842ddd9be778",
+      "at": 1795421050
+    },
+    {
+      "stage": "EXECUTE",
+      "status": "PENDING",
+      "operationId": "management:2dea1b9de2d7e802cda708ea8cbcae03f43e233090e69d1d0dd77214f3b57e9b",
+      "txId": "eb137820ced0946011624880e65e84fa8f06deda9a8a58c9529122045e9d80ab",
+      "validationCode": "VALID",
+      "grantId": "387588d0918782bc29d2b8576fba3e74a0c4737a0db130d60a2be24f0da94aa5",
+      "at": 1795421058
+    },
+    {
+      "stage": "EXECUTE",
+      "status": "DECIDED",
+      "operationId": "management:2dea1b9de2d7e802cda708ea8cbcae03f43e233090e69d1d0dd77214f3b57e9b",
+      "txId": "eb137820ced0946011624880e65e84fa8f06deda9a8a58c9529122045e9d80ab",
+      "validationCode": "VALID",
+      "grantId": "387588d0918782bc29d2b8576fba3e74a0c4737a0db130d60a2be24f0da94aa5",
+      "at": 1795421067
+    },
+    {
+      "stage": "SuspendGrant",
+      "status": "PENDING",
+      "operationId": "management:f0767ca55ad697a7b2c7d3ddce6b8f5b6fefa77e7c81c47f725a2cabdcdb33dc",
+      "grantId": "597a04848165b13d36d14744f181441a7c0dc9cd5c685272e077842ddd9be778",
+      "at": 1795421118
+    },
+    {
+      "stage": "SuspendGrant",
+      "status": "CONFIRMED",
+      "operationId": "management:f0767ca55ad697a7b2c7d3ddce6b8f5b6fefa77e7c81c47f725a2cabdcdb33dc",
+      "txId": "d5f5943c5d6886a6eaa95c18ba7bf05e453cd68736f9578fe321538c0051b560",
+      "validationCode": "VALID",
+      "grantId": "597a04848165b13d36d14744f181441a7c0dc9cd5c685272e077842ddd9be778",
+      "at": 1795421119
+    }
+  ],
+  "traces": [
+    {
+      "step": 1,
+      "toolName": "inspect_wallet",
+      "isError": false,
+      "durationMs": 31
+    },
+    {
+      "step": 2,
+      "toolName": "delegate_grant",
+      "output": {
+        "anchored": true
+      },
+      "isError": false,
+      "durationMs": 374
+    },
+    {
+      "step": 3,
+      "toolName": "model_result",
+      "output": {
+        "provider": "anthropic",
+        "requestedModel": "deepseek-flash",
+        "responseModel": "deepseek-flash"
+      },
+      "isError": false,
+      "durationMs": 6986
+    },
+    {
+      "step": 1,
+      "toolName": "inspect_wallet",
+      "isError": false,
+      "durationMs": 21
+    },
+    {
+      "step": 2,
+      "toolName": "request_quote",
+      "output": {
+        "currency": "CNY",
+        "decision": "ALLOW",
+        "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da",
+        "quoteId": "urn:grad:quote:041ac2ec-3a47-4b46-94a5-f7ceecbedf20",
+        "statusCode": 200,
+        "totalAmountMinor": 80000
+      },
+      "isError": false,
+      "durationMs": 41
+    },
+    {
+      "step": 3,
+      "toolName": "create_order",
+      "output": {
+        "actionStatus": "COMPLETED",
+        "currency": "CNY",
+        "decision": "ALLOW",
+        "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868",
+        "orderId": "urn:grad:order:46a63b22-c2be-4264-914d-c7bfa1b05952",
+        "quoteId": "urn:grad:quote:041ac2ec-3a47-4b46-94a5-f7ceecbedf20",
+        "statusCode": 200,
+        "totalAmountMinor": 80000
+      },
+      "isError": false,
+      "durationMs": 45
+    },
+    {
+      "step": 4,
+      "toolName": "model_result",
+      "output": {
+        "provider": "anthropic",
+        "requestedModel": "deepseek-flash",
+        "responseModel": "deepseek-flash"
+      },
+      "isError": false,
+      "durationMs": 7112
+    }
+  ],
+  "grantRevision": 2,
+  "grantStatus": "SUSPENDED",
+  "allowedActions": [
+    "resume"
+  ]
+}

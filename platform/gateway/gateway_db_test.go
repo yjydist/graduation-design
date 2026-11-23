@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1388,6 +1389,57 @@ func TestOrderOutcomeReconciliationHistoricalAuditAndOutboxDelivery(t *testing.T
 	assert.Equal(t, "NOT_CREATED", ncResp.Outcome)
 	assert.Equal(t, "NO_DECISION", ncResp.HistoricalStatus)
 	assert.Equal(t, int64(2), ncResp.CheckNo)
+}
+
+func TestWorkbenchDecisionAndTaskEvidenceScope(t *testing.T) {
+	f := newGatewayFixture(t)
+	srv := f.newServer(t, func(cfg *gateway.ServerConfig) { cfg.RecordWorkbenchEvidence = true })
+	h := srv.Handler()
+	ctx := t.Context()
+	f.updateContext(t, h, f.directU.taskID, 0, policy.RiskNormal, f.fixedNow.Unix()+3600)
+	req := f.buildRequest(f.didU, f.directU, protocol.ActionQuoteRead, protocol.ResourceQuotes, gateway.DefaultProductID, 1, nil, 0, "workbench-decision-scope")
+	reqHash, err := req.Hash(false)
+	require.NoError(t, err)
+	chal := f.requestChallenge(t, h, f.didU, f.directU.taskID, reqHash)
+	pkg := f.assemblePackage(t, req, f.directU, chal, f.uPresPrefix, f.uKeyID, f.privU, f.fixedNow.Unix())
+	response := f.postJSON(t, h, "/v1/access/execute", pkg, nil)
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	var out gateway.ExecuteResponse
+	require.NoError(t, json.Unmarshal(response.Body.Bytes(), &out))
+
+	actorDecision, err := srv.ReadDecision(ctx, out.DecisionID, f.didU, false)
+	require.NoError(t, err)
+	require.Equal(t, f.didU, actorDecision.Actor)
+	require.Equal(t, f.directU.taskID, actorDecision.TaskID)
+	_, err = srv.ReadDecision(ctx, out.DecisionID, f.didB1, false)
+	require.ErrorIs(t, err, pgx.ErrNoRows)
+	auditorDecision, err := srv.ReadDecision(ctx, out.DecisionID, "did:web:c.local:auditor", true)
+	require.NoError(t, err)
+	require.Equal(t, actorDecision, auditorDecision)
+	_, err = srv.ReadDecision(ctx, "unknown-decision", f.didU, true)
+	require.ErrorIs(t, err, pgx.ErrNoRows)
+
+	owned, err := srv.ReadTaskEvidence(ctx, f.didU, f.directU.taskID)
+	require.NoError(t, err)
+	require.Len(t, owned.Decisions, 1)
+	require.Equal(t, out.DecisionID, owned.Decisions[0].DecisionID)
+	require.Len(t, owned.Quotes, 1)
+	require.Equal(t, out.Quote.QuoteID, owned.Quotes[0].QuoteID)
+	require.NotEmpty(t, owned.Identity)
+	require.NotEmpty(t, owned.Disclosures)
+	for _, disclosure := range owned.Disclosures {
+		for key := range disclosure.Disclosed {
+			require.Contains(t, []string{"domain", "role"}, key)
+		}
+	}
+	for _, scope := range [][2]string{{f.didB1, f.directU.taskID}, {f.didU, f.rp.taskID}} {
+		outside, err := srv.ReadTaskEvidence(ctx, scope[0], scope[1])
+		require.NoError(t, err)
+		require.Empty(t, outside.Decisions)
+		require.Empty(t, outside.Quotes)
+		require.Empty(t, outside.Identity)
+		require.Empty(t, outside.Disclosures)
+	}
 }
 
 func TestOnDecisionCommittedSubSecondTimingHook(t *testing.T) {

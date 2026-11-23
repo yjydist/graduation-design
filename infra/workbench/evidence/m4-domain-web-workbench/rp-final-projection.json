@@ -1,0 +1,664 @@
+{
+  "identity": [
+    {
+      "did": "did:web:t.local",
+      "kind": "ROOT",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:b.local",
+      "domainId": "B",
+      "issuerDid": "did:web:t.local",
+      "kind": "DOMAIN",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:B-v1",
+      "certificationDigest": "d04de0627abcfa2f2afc4149c7643b3bccf75e0887b81679e876ec2a09eb59a0",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:b.local:issuer",
+      "domainId": "B",
+      "issuerDid": "did:web:b.local",
+      "kind": "ISSUER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:B-v1",
+      "certificationDigest": "d04de0627abcfa2f2afc4149c7643b3bccf75e0887b81679e876ec2a09eb59a0",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:b.local:b1",
+      "domainId": "B",
+      "issuerDid": "did:web:b.local:issuer",
+      "kind": "AGENT",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:B-v1",
+      "certificationDigest": "d04de0627abcfa2f2afc4149c7643b3bccf75e0887b81679e876ec2a09eb59a0",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:a.local",
+      "domainId": "A",
+      "issuerDid": "did:web:t.local",
+      "kind": "DOMAIN",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:a.local:issuer",
+      "domainId": "A",
+      "issuerDid": "did:web:a.local",
+      "kind": "ISSUER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:a.local:a1",
+      "domainId": "A",
+      "issuerDid": "did:web:a.local:issuer",
+      "kind": "AGENT",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:c.local",
+      "domainId": "C",
+      "issuerDid": "did:web:t.local",
+      "kind": "DOMAIN",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:C-v1",
+      "certificationDigest": "ce7556009ddc906a06a1339f6937f9d1d2d92183eb99835e7a5736c0e7aab3b4",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:c.local:issuer",
+      "domainId": "C",
+      "issuerDid": "did:web:c.local",
+      "kind": "ISSUER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:C-v1",
+      "certificationDigest": "ce7556009ddc906a06a1339f6937f9d1d2d92183eb99835e7a5736c0e7aab3b4",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:c.local:supplier",
+      "domainId": "C",
+      "issuerDid": "did:web:c.local:issuer",
+      "kind": "SERVICE",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:C-v1",
+      "certificationDigest": "ce7556009ddc906a06a1339f6937f9d1d2d92183eb99835e7a5736c0e7aab3b4",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:a.local:u",
+      "domainId": "A",
+      "issuerDid": "did:web:a.local:issuer",
+      "kind": "USER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "did": "did:web:t.local",
+      "kind": "ROOT",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:b.local",
+      "domainId": "B",
+      "issuerDid": "did:web:t.local",
+      "kind": "DOMAIN",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:B-v1",
+      "certificationDigest": "d04de0627abcfa2f2afc4149c7643b3bccf75e0887b81679e876ec2a09eb59a0",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:b.local:issuer",
+      "domainId": "B",
+      "issuerDid": "did:web:b.local",
+      "kind": "ISSUER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:B-v1",
+      "certificationDigest": "d04de0627abcfa2f2afc4149c7643b3bccf75e0887b81679e876ec2a09eb59a0",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:b.local:b1",
+      "domainId": "B",
+      "issuerDid": "did:web:b.local:issuer",
+      "kind": "AGENT",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:B-v1",
+      "certificationDigest": "d04de0627abcfa2f2afc4149c7643b3bccf75e0887b81679e876ec2a09eb59a0",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:a.local",
+      "domainId": "A",
+      "issuerDid": "did:web:t.local",
+      "kind": "DOMAIN",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:a.local:issuer",
+      "domainId": "A",
+      "issuerDid": "did:web:a.local",
+      "kind": "ISSUER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:a.local:a1",
+      "domainId": "A",
+      "issuerDid": "did:web:a.local:issuer",
+      "kind": "AGENT",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:c.local",
+      "domainId": "C",
+      "issuerDid": "did:web:t.local",
+      "kind": "DOMAIN",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:C-v1",
+      "certificationDigest": "ce7556009ddc906a06a1339f6937f9d1d2d92183eb99835e7a5736c0e7aab3b4",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:c.local:issuer",
+      "domainId": "C",
+      "issuerDid": "did:web:c.local",
+      "kind": "ISSUER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:C-v1",
+      "certificationDigest": "ce7556009ddc906a06a1339f6937f9d1d2d92183eb99835e7a5736c0e7aab3b4",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:c.local:supplier",
+      "domainId": "C",
+      "issuerDid": "did:web:c.local:issuer",
+      "kind": "SERVICE",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:C-v1",
+      "certificationDigest": "ce7556009ddc906a06a1339f6937f9d1d2d92183eb99835e7a5736c0e7aab3b4",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:a.local:u",
+      "domainId": "A",
+      "issuerDid": "did:web:a.local:issuer",
+      "kind": "USER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "did": "did:web:t.local",
+      "kind": "ROOT",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "did": "did:web:b.local",
+      "domainId": "B",
+      "issuerDid": "did:web:t.local",
+      "kind": "DOMAIN",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:B-v1",
+      "certificationDigest": "d04de0627abcfa2f2afc4149c7643b3bccf75e0887b81679e876ec2a09eb59a0",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "did": "did:web:b.local:issuer",
+      "domainId": "B",
+      "issuerDid": "did:web:b.local",
+      "kind": "ISSUER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:B-v1",
+      "certificationDigest": "d04de0627abcfa2f2afc4149c7643b3bccf75e0887b81679e876ec2a09eb59a0",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "did": "did:web:b.local:b1",
+      "domainId": "B",
+      "issuerDid": "did:web:b.local:issuer",
+      "kind": "AGENT",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:B-v1",
+      "certificationDigest": "d04de0627abcfa2f2afc4149c7643b3bccf75e0887b81679e876ec2a09eb59a0",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "did": "did:web:a.local",
+      "domainId": "A",
+      "issuerDid": "did:web:t.local",
+      "kind": "DOMAIN",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "did": "did:web:a.local:issuer",
+      "domainId": "A",
+      "issuerDid": "did:web:a.local",
+      "kind": "ISSUER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "did": "did:web:a.local:a1",
+      "domainId": "A",
+      "issuerDid": "did:web:a.local:issuer",
+      "kind": "AGENT",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "did": "did:web:c.local",
+      "domainId": "C",
+      "issuerDid": "did:web:t.local",
+      "kind": "DOMAIN",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:C-v1",
+      "certificationDigest": "ce7556009ddc906a06a1339f6937f9d1d2d92183eb99835e7a5736c0e7aab3b4",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "did": "did:web:c.local:issuer",
+      "domainId": "C",
+      "issuerDid": "did:web:c.local",
+      "kind": "ISSUER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:C-v1",
+      "certificationDigest": "ce7556009ddc906a06a1339f6937f9d1d2d92183eb99835e7a5736c0e7aab3b4",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "did": "did:web:c.local:supplier",
+      "domainId": "C",
+      "issuerDid": "did:web:c.local:issuer",
+      "kind": "SERVICE",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:C-v1",
+      "certificationDigest": "ce7556009ddc906a06a1339f6937f9d1d2d92183eb99835e7a5736c0e7aab3b4",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "did": "did:web:a.local:u",
+      "domainId": "A",
+      "issuerDid": "did:web:a.local:issuer",
+      "kind": "USER",
+      "status": "ACTIVE",
+      "keyVersion": 1,
+      "certificationId": "urn:grad:domain-certification:A-v1",
+      "certificationDigest": "84572ec47edb764f33f3f234852cc61d2e2b3b0c34dc3821fa0237f5297e5bd1",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    }
+  ],
+  "disclosures": [
+    {
+      "subjectDid": "did:web:b.local:b1",
+      "issuerDid": "did:web:b.local:issuer",
+      "credentialId": "urn:grad:credential:B1-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "B",
+        "role": "broker-agent"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "subjectDid": "did:web:a.local:a1",
+      "issuerDid": "did:web:a.local:issuer",
+      "credentialId": "urn:grad:credential:A1-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "A",
+        "role": "procurement-agent"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "subjectDid": "did:web:c.local:supplier",
+      "issuerDid": "did:web:c.local:issuer",
+      "credentialId": "urn:grad:credential:C-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "C",
+        "role": "supplier-service"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "subjectDid": "did:web:a.local:u",
+      "issuerDid": "did:web:a.local:issuer",
+      "credentialId": "urn:grad:credential:U-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "A",
+        "role": "procurement-owner"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da"
+    },
+    {
+      "subjectDid": "did:web:b.local:b1",
+      "issuerDid": "did:web:b.local:issuer",
+      "credentialId": "urn:grad:credential:B1-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "B",
+        "role": "broker-agent"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "subjectDid": "did:web:a.local:a1",
+      "issuerDid": "did:web:a.local:issuer",
+      "credentialId": "urn:grad:credential:A1-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "A",
+        "role": "procurement-agent"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "subjectDid": "did:web:c.local:supplier",
+      "issuerDid": "did:web:c.local:issuer",
+      "credentialId": "urn:grad:credential:C-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "C",
+        "role": "supplier-service"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "subjectDid": "did:web:a.local:u",
+      "issuerDid": "did:web:a.local:issuer",
+      "credentialId": "urn:grad:credential:U-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "A",
+        "role": "procurement-owner"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868"
+    },
+    {
+      "subjectDid": "did:web:b.local:b1",
+      "issuerDid": "did:web:b.local:issuer",
+      "credentialId": "urn:grad:credential:B1-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "B",
+        "role": "broker-agent"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "subjectDid": "did:web:a.local:a1",
+      "issuerDid": "did:web:a.local:issuer",
+      "credentialId": "urn:grad:credential:A1-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "A",
+        "role": "procurement-agent"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "subjectDid": "did:web:c.local:supplier",
+      "issuerDid": "did:web:c.local:issuer",
+      "credentialId": "urn:grad:credential:C-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "C",
+        "role": "supplier-service"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "subjectDid": "did:web:a.local:u",
+      "issuerDid": "did:web:a.local:issuer",
+      "credentialId": "urn:grad:credential:U-v1",
+      "subjectKeyVersion": 1,
+      "issuerKeyVersion": 1,
+      "disclosed": {
+        "domain": "A",
+        "role": "procurement-owner"
+      },
+      "status": "ACTIVE",
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    }
+  ],
+  "delegations": [
+    {
+      "grantId": "e6d2f226fe171016ad02216548de14dd5d5930fb7b51b6c28fd0ee4ad6fda88f",
+      "rootId": "e6d2f226fe171016ad02216548de14dd5d5930fb7b51b6c28fd0ee4ad6fda88f",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "issuerDid": "did:web:c.local:supplier",
+      "granteeDid": "did:web:a.local:u",
+      "status": "ACTIVE",
+      "revision": 1,
+      "maxAmountMinor": 100000,
+      "remainingDepth": 2,
+      "nbf": 1795421040,
+      "exp": 1795424645,
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "grantId": "597a04848165b13d36d14744f181441a7c0dc9cd5c685272e077842ddd9be778",
+      "parentId": "e6d2f226fe171016ad02216548de14dd5d5930fb7b51b6c28fd0ee4ad6fda88f",
+      "rootId": "e6d2f226fe171016ad02216548de14dd5d5930fb7b51b6c28fd0ee4ad6fda88f",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "issuerDid": "did:web:a.local:u",
+      "granteeDid": "did:web:a.local:a1",
+      "status": "ACTIVE",
+      "revision": 3,
+      "maxAmountMinor": 100000,
+      "remainingDepth": 1,
+      "nbf": 1795421045,
+      "exp": 1795424645,
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    },
+    {
+      "grantId": "387588d0918782bc29d2b8576fba3e74a0c4737a0db130d60a2be24f0da94aa5",
+      "parentId": "597a04848165b13d36d14744f181441a7c0dc9cd5c685272e077842ddd9be778",
+      "rootId": "e6d2f226fe171016ad02216548de14dd5d5930fb7b51b6c28fd0ee4ad6fda88f",
+      "mode": "RESOURCE_PREAUTHORIZED",
+      "issuerDid": "did:web:a.local:a1",
+      "granteeDid": "did:web:b.local:b1",
+      "status": "ACTIVE",
+      "revision": 1,
+      "maxAmountMinor": 100000,
+      "remainingDepth": 0,
+      "nbf": 1795421051,
+      "exp": 1795424645,
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6"
+    }
+  ],
+  "purchase": {
+    "taskId": "8673b6934976a51711b52b0345da99c91178581747a02b0d7df200d7b991c575",
+    "productId": "urn:grad:product:P1",
+    "quantity": 1,
+    "quotes": [
+      {
+        "quoteId": "urn:grad:quote:041ac2ec-3a47-4b46-94a5-f7ceecbedf20",
+        "taskId": "8673b6934976a51711b52b0345da99c91178581747a02b0d7df200d7b991c575",
+        "actor": "did:web:b.local:b1",
+        "supplierId": "urn:grad:supplier:C",
+        "productId": "urn:grad:product:P1",
+        "quantity": 1,
+        "currency": "CNY",
+        "unitPriceMinor": 80000,
+        "totalAmountMinor": 80000,
+        "issuedAt": 1795421063,
+        "validUntil": 1795421363
+      },
+      {
+        "quoteId": "urn:grad:quote:1daf5ff8-335d-49ab-83e1-c867bf2466d6",
+        "taskId": "8673b6934976a51711b52b0345da99c91178581747a02b0d7df200d7b991c575",
+        "actor": "did:web:b.local:b1",
+        "supplierId": "urn:grad:supplier:C",
+        "productId": "urn:grad:product:P1",
+        "quantity": 1,
+        "currency": "CNY",
+        "unitPriceMinor": 80000,
+        "totalAmountMinor": 80000,
+        "issuedAt": 1795421213,
+        "validUntil": 1795421513
+      }
+    ],
+    "orders": [
+      {
+        "orderId": "urn:grad:order:46a63b22-c2be-4264-914d-c7bfa1b05952",
+        "quoteId": "urn:grad:quote:041ac2ec-3a47-4b46-94a5-f7ceecbedf20",
+        "taskId": "8673b6934976a51711b52b0345da99c91178581747a02b0d7df200d7b991c575",
+        "actor": "did:web:b.local:b1",
+        "supplierId": "urn:grad:supplier:C",
+        "productId": "urn:grad:product:P1",
+        "quantity": 1,
+        "currency": "CNY",
+        "totalAmountMinor": 80000,
+        "idempotencyKey": "wb-28b8c5d500b376850e6bb0184e48d065c8659baa",
+        "status": "CREATED",
+        "createdAt": 1795421064
+      }
+    ]
+  },
+  "decisions": [
+    {
+      "decisionId": "urn:grad:decision:8d62a9cb-fa96-4985-af91-af4f7388b4da",
+      "action": "quote.read",
+      "outcome": "ALLOW",
+      "code": "ALLOW",
+      "quoteId": "urn:grad:quote:041ac2ec-3a47-4b46-94a5-f7ceecbedf20",
+      "blockNumber": 402,
+      "blockHash": "b4c29f9b0629512ca03c24de5beb52a3ca35319d381baf1ebb5ba990c5250212",
+      "policyDigest": "fb345417e96c4d3f7211aae03dfbab5a0302b194d45d97db02a2534c31536fec",
+      "contextVersion": 1,
+      "probeDeadline": 1795421066,
+      "decisionAt": 1795421063
+    },
+    {
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868",
+      "action": "order.create",
+      "outcome": "ALLOW",
+      "code": "ALLOW",
+      "quoteId": "urn:grad:quote:041ac2ec-3a47-4b46-94a5-f7ceecbedf20",
+      "orderId": "urn:grad:order:46a63b22-c2be-4264-914d-c7bfa1b05952",
+      "blockNumber": 404,
+      "blockHash": "4ad31956e54f0320e699f36b8357df120863afa09e9d831f7221f72e44acc5a2",
+      "policyDigest": "fb345417e96c4d3f7211aae03dfbab5a0302b194d45d97db02a2534c31536fec",
+      "contextVersion": 1,
+      "probeDeadline": 1795421068,
+      "decisionAt": 1795421064
+    },
+    {
+      "requestId": "urn:grad:req:1875a0bc-5e0f-41a1-a17a-0540e1240821",
+      "probeTxId": "bfb924343003cfc42a571e7880bc55edd36c12e052948bda44a1bed0a3657ad0",
+      "action": "quote.read",
+      "outcome": "REJECTED",
+      "code": "ANCESTOR_INACTIVE",
+      "failedObjectId": "597a04848165b13d36d14744f181441a7c0dc9cd5c685272e077842ddd9be778",
+      "blockNumber": 507,
+      "blockHash": "76d2ba8a2f5e50ac5118c7e7b57202a5c152067ff7e2fe3d7c48cff95f3ea7f0",
+      "policyDigest": "",
+      "contextVersion": 0,
+      "probeDeadline": 1795421170,
+      "decisionAt": 1795421165
+    },
+    {
+      "decisionId": "urn:grad:decision:299eed11-2b76-49eb-8c87-60d9b23146a6",
+      "action": "quote.read",
+      "outcome": "ALLOW",
+      "code": "ALLOW",
+      "quoteId": "urn:grad:quote:1daf5ff8-335d-49ab-83e1-c867bf2466d6",
+      "blockNumber": 558,
+      "blockHash": "f45018e3d1c26e1f6e4731d07c63340c0fd0e11b2b14967f9ad2a11a7254e8d5",
+      "policyDigest": "fb345417e96c4d3f7211aae03dfbab5a0302b194d45d97db02a2534c31536fec",
+      "contextVersion": 1,
+      "probeDeadline": 1795421216,
+      "decisionAt": 1795421213
+    }
+  ]
+}

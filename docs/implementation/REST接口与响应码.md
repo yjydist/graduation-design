@@ -135,3 +135,18 @@ T 和各域采用相同操作键和提交规则. 域认证更新走 T 接口, �
 | 500 | POLICY_EVALUATION_ERROR / INTERNAL_ERROR | 内部错误; 不得退化成允许 |
 
 只有已确认提交的终态决策返回 decisionId. 未证明持有者, 挑战已用或过期, 暂时不可判定和提交结果不明均返回 decisionId=null. 不返回原挑战对应的订单或原决策 ID. 拒绝体没有 quote/order. 传输中断时客户端可能连 requestId 都收不到, 可按本地已持久化的 challengeId 对账.
+
+## 4 浏览器工作台接口
+
+浏览器以同源 `/api/v1` 调用本域工作台. `platform/workbench/openapi.json` 描述请求字段, 成功响应和错误信封, 可从 `GET /api/v1/openapi.json` 获取. 工作台从服务端会话和本域运行配置选定部署, 域, 角色, DID 及管理证书. 现有 `/v1` 管理和材料交付接口继续承接受控服务调用, C 网关继续核对实际凭证, 授权路径和业务键并定案.
+
+| 入口 | 会话及业务边界 |
+| --- | --- |
+| `/session/login`, `/session`, `/session/logout` | 使用本域预置账号映射和随机会话. 服务端仅存储会话令牌摘要, 用 `Secure`, `HttpOnly`, `SameSite=Strict` 的主机专属 Cookie 传输令牌. 登录返回 CSRF 令牌, 后续写请求通过 `X-CSRF-Token` 发送. 当前账号角色和允许动作从同一会话取得. |
+| `/management/purchasing-authority` | 本域管理员读取当前登记版本和合资格服务, 用唯一 `Idempotency-Key` 提交 `SetPurchasingAuthority`. `purchasingAuthority` 为本域有效服务 DID 或显式 `null`. 域与管理证书取自可信账号映射. |
+| `/operations/{operationId}` | 按发起者或本域获准审计者读取原操作. `PENDING` 表示已受理, `CONFIRMED` 表示已核对原交易有效入块, `FAILED` 携带原失败码. 原交易或入块信息尚未取得时相应字段为 `null` 或缺省. |
+| `/chat`, `/drafts/{draftId}`, `/drafts/{draftId}/confirm` | 采购员 U 查看草稿及版本, 通过显式确认获得可持久查询的任务和运行. 同一版本的重复确认复用原运行. |
+| `/runs`, `/runs/{runId}`, `/runs/{runId}/suspend`, `/runs/{runId}/resume` | 采购员 U 查询自己的运行和脱敏轨迹, 用管理操作键暂停或恢复本任务的 G1. |
+| `/runs/{runId}/evidence`, `/decisions/{decisionId}` | 按任务归属读取可分享证据. 完整决策限实际请求主体或授权审计者. |
+
+浏览器错误使用同一 `{requestId,code,decisionId,message}` 信封. 会话缺失或撤销返回 401 `SESSION_REQUIRED`, 用户名或密码无效返回 401 `LOGIN_FAILED`, CSRF 验证失败返回 403 `CSRF_INVALID`. 无权读取的原交易与未知操作统一返回 404 `OPERATION_UNKNOWN`. PA 同键同输入由管理服务复用原 `operationId`. 同键不同输入返回 409 `IDEMPOTENCY_CONFLICT`, 新操作版本过期返回 409 `STATE_CHANGED`.

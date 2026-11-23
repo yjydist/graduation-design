@@ -59,8 +59,23 @@ func TestMigrationsUpIdempotentAndAllTablesPresent(t *testing.T) {
 		// 005_agent.sql (2)
 		"client_actions",
 		"order_outcome_receipts",
+		// 006_web_sessions.sql (2)
+		"workbench_accounts",
+		"workbench_sessions",
+		// 007_workbench_runs.sql (5)
+		"workbench_drafts",
+		"workbench_runs",
+		"workbench_grant_controls",
+		"workbench_store_binding",
+		"workbench_dispatch",
+		// 008_workbench_grants.sql (1)
+		"workbench_grant_issue",
+		// 009_workbench_proof.sql (1)
+		"workbench_decision_proof",
+		// 010_workbench_rejections.sql (1)
+		"workbench_gateway_rejections",
 	}
-	require.Len(t, expectedTables, 26)
+	require.Len(t, expectedTables, 36)
 
 	rows, err := pool.Query(ctx, `
 		SELECT table_name

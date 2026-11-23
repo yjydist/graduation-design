@@ -1,0 +1,85 @@
+services:
+  frontend:
+    image: ${WORKBENCH_FRONTEND_IMAGE:-grad-workbench-frontend:local}
+    environment:
+      WORKBENCH_BROWSER_HOST: ${WORKBENCH_BROWSER_HOST:?set the browser hostname}
+      WORKBENCH_BACKEND: ${WORKBENCH_BROWSER_UPSTREAM:-backend:8080}
+    ports:
+      - "127.0.0.1:${WORKBENCH_PORT:?set a local browser port}:8443"
+    volumes:
+      - frontend-tls:/data
+    tmpfs: [/config]
+    networks: [app, ingress]
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    image: ${WORKBENCH_BACKEND_IMAGE:-grad-workbench-backend:local}
+    command: ["--config", "/run/workbench/config.json"]
+    user: "${WORKBENCH_UID:?set the mount owner UID}:${WORKBENCH_GID:?set the mount owner GID}"
+    environment:
+      WORKBENCH_DATABASE_HOST: workbench-db:5432
+      WORKBENCH_PEER_ENDPOINT: peer-${WORKBENCH_DOMAIN:?set a, b, or c}:7051
+      LLM_API_KEY_FILE: /run/workbench/model-api-key
+    env_file:
+      - path: ${WORKBENCH_CONFIG_DIR:?set an absolute per-domain configuration path}/llm.env
+        required: false
+    read_only: true
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${WORKBENCH_CONFIG_DIR}
+        target: /run/workbench
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      app:
+      fabric:
+        aliases:
+          - workbench-${WORKBENCH_DOMAIN}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/health/ready"]
+      interval: 3s
+      timeout: 2s
+      retries: 35
+      start_period: 10s
+
+  db:
+    image: postgres:17.9-alpine@sha256:c7526c0f6c3f30260a563d7bcf8ad778effac59a44f8ffa86678c35418338609
+    environment:
+      POSTGRES_USER: workbench
+      POSTGRES_DB: workbench
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+    volumes:
+      - database:/var/lib/postgresql/data
+      - type: bind
+        source: ${WORKBENCH_CONFIG_DIR}/postgres-password
+        target: /run/secrets/postgres-password
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      app:
+        aliases: [workbench-db]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "workbench", "-d", "workbench"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+networks:
+  app:
+    internal: true
+  ingress:
+  fabric:
+    external: true
+    name: ${WORKBENCH_FABRIC_NETWORK:?set the isolated Fabric network}
+
+volumes:
+  database:
+  frontend-tls:

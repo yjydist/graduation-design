@@ -333,6 +333,15 @@ type DIDWebResolver struct {
 // NewDIDWebResolver creates a resolver pinned to caPool and routing specified host:port targets
 // to loopback addresses without external network resolution.
 func NewDIDWebResolver(caPool *x509.CertPool, hostRoutes map[string]string) (*DIDWebResolver, error) {
+	return newDIDWebResolver(caPool, hostRoutes, nil)
+}
+
+// NewMTLSDIDWebResolver resolves pinned DID hosts over a mutually authenticated service network.
+func NewMTLSDIDWebResolver(caPool *x509.CertPool, hostRoutes map[string]string, cert tls.Certificate) (*DIDWebResolver, error) {
+	return newDIDWebResolver(caPool, hostRoutes, []tls.Certificate{cert})
+}
+
+func newDIDWebResolver(caPool *x509.CertPool, hostRoutes map[string]string, certs []tls.Certificate) (*DIDWebResolver, error) {
 	if caPool == nil {
 		return nil, NewError(ErrCodeInvalidSchema, "DIDWebResolver requires non-nil RootCAs")
 	}
@@ -343,8 +352,9 @@ func NewDIDWebResolver(caPool *x509.CertPool, hostRoutes map[string]string) (*DI
 	dialer := &net.Dialer{Timeout: 5 * time.Second}
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
-			RootCAs:    caPool,
-			MinVersion: tls.VersionTLS12,
+			RootCAs:      caPool,
+			MinVersion:   tls.VersionTLS12,
+			Certificates: certs,
 		},
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			if target, ok := routes[addr]; ok {

@@ -1,0 +1,753 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title":"三域采购工作台浏览器 API","version":"1.0.0","description":"浏览器只访问本域工作台. 签名主体, 部署和角色由服务端会话与固定配置绑定."},
+  "servers": [{"url":"/api/v1"}],
+  "security": [{"sessionA":[]},{"sessionB":[]},{"sessionC":[]}],
+  "paths": {
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenAPI",
+        "summary": "读取浏览器 API 契约",
+        "security": [],
+        "responses": {"200":{"description":"OpenAPI 契约.","content":{"application/json":{"schema":{"type":"object"}}}}}
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "checkReadiness",
+        "summary": "检查本域就绪状态",
+        "security": [],
+        "responses": {
+          "200": {"description":"成功.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Ready"}}}},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/session/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "登录本域工作台",
+        "security": [],
+        "requestBody": {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Login"}}}},
+        "responses": {
+          "200": {"description":"成功.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Session"}}}},
+          "400": {"$ref":"#/components/responses/Error"},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "413": {"$ref":"#/components/responses/Error"},
+          "415": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/session": {
+      "get": {
+        "operationId": "getSession",
+        "summary": "读取当前已验证角色和允许的操作",
+        "responses": {
+          "200": {"description":"成功.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Session"}}}},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/session/logout": {
+      "post": {
+        "operationId": "logout",
+        "summary": "撤销当前会话",
+        "parameters": [{"$ref":"#/components/parameters/CsrfToken"}],
+        "responses": {
+          "204": {"description":"会话已撤销."},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/management/purchasing-authority": {
+      "get": {
+        "operationId": "getPurchasingAuthority",
+        "summary": "查询本域 PA 资格及当前登记版本",
+        "responses": {
+          "200": {
+            "description": "成功.",
+            "content": {"application/json":{"schema":{"$ref":"#/components/schemas/PurchasingAuthority"}}}
+          },
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      },
+      "post": {
+        "operationId": "setPurchasingAuthority",
+        "summary": "提交本域 PA 资格操作",
+        "parameters": [{"$ref":"#/components/parameters/CsrfToken"},{"$ref":"#/components/parameters/IdempotencyKey"}],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json":{"schema":{"$ref":"#/components/schemas/SetPurchasingAuthority"}}}
+        },
+        "responses": {
+          "202": {
+            "description": "已受理.",
+            "content": {"application/json":{"schema":{"$ref":"#/components/schemas/Operation"}}}
+          },
+          "400": {"$ref":"#/components/responses/Error"},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "409": {"$ref":"#/components/responses/Error"},
+          "413": {"$ref":"#/components/responses/Error"},
+          "415": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/operations/{operationId}": {
+      "get": {
+        "operationId": "getOperation",
+        "summary": "查询有权查看的原交易状态",
+        "parameters": [{"name":"operationId","in":"path","required":true,"schema":{"type":"string","minLength":1}}],
+        "responses": {
+          "200": {"description":"成功.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Operation"}}}},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "404": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/chat": {
+      "post": {
+        "operationId": "chat",
+        "summary": "将采购需求提交给 A1 并返回草稿",
+        "parameters": [{"$ref":"#/components/parameters/CsrfToken"}],
+        "requestBody": {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ChatInput"}}}},
+        "responses": {
+          "200": {
+            "description": "成功.",
+            "content": {"application/json":{"schema":{"$ref":"#/components/schemas/ChatResult"}}}
+          },
+          "400": {"$ref":"#/components/responses/Error"},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "404": {"$ref":"#/components/responses/Error"},
+          "409": {"$ref":"#/components/responses/Error"},
+          "413": {"$ref":"#/components/responses/Error"},
+          "415": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/drafts/{draftId}": {
+      "get": {
+        "operationId": "getDraft",
+        "summary": "读取自己的采购草稿",
+        "parameters": [{"name":"draftId","in":"path","required":true,"schema":{"type":"string","minLength":1}}],
+        "responses": {
+          "200": {"description":"成功.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Draft"}}}},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "404": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      },
+      "put": {
+        "operationId": "updateDraft",
+        "summary": "修改未确认草稿的当前版本",
+        "parameters": [
+          {"name":"draftId","in":"path","required":true,"schema":{"type":"string","minLength":1}},
+          {"$ref":"#/components/parameters/CsrfToken"}
+        ],
+        "requestBody": {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/DraftEdit"}}}},
+        "responses": {
+          "200": {"description":"成功.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Draft"}}}},
+          "400": {"$ref":"#/components/responses/Error"},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "404": {"$ref":"#/components/responses/Error"},
+          "409": {"$ref":"#/components/responses/Error"},
+          "413": {"$ref":"#/components/responses/Error"},
+          "415": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/drafts/{draftId}/confirm": {
+      "post": {
+        "operationId": "confirmDraft",
+        "summary": "确认草稿版本并取得同一次运行和任务记录",
+        "parameters": [
+          {"name":"draftId","in":"path","required":true,"schema":{"type":"string","minLength":1}},
+          {"$ref":"#/components/parameters/CsrfToken"}
+        ],
+        "requestBody": {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/DraftVersion"}}}},
+        "responses": {
+          "202": {"description":"已受理.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Run"}}}},
+          "400": {"$ref":"#/components/responses/Error"},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "404": {"$ref":"#/components/responses/Error"},
+          "409": {"$ref":"#/components/responses/Error"},
+          "413": {"$ref":"#/components/responses/Error"},
+          "415": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/runs": {
+      "get": {
+        "operationId": "listRuns",
+        "summary": "列出当前采购员自己的已确认运行",
+        "responses": {
+          "200": {"description":"成功.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/RunList"}}}},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/runs/{runId}": {
+      "get": {
+        "operationId": "getRun",
+        "summary": "读取自己的运行进度和已脱敏工具轨迹",
+        "parameters": [{"name":"runId","in":"path","required":true,"schema":{"type":"string","minLength":1}}],
+        "responses": {
+          "200": {"description":"成功.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Run"}}}},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "404": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/runs/{runId}/suspend": {
+      "post": {
+        "operationId": "suspendRunGrant",
+        "summary": "提交暂停本运行 G1 的操作",
+        "parameters": [
+          {"name":"runId","in":"path","required":true,"schema":{"type":"string","minLength":1}},
+          {"$ref":"#/components/parameters/CsrfToken"},
+          {"$ref":"#/components/parameters/IdempotencyKey"}
+        ],
+        "responses": {
+          "202": {"description":"已受理.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Run"}}}},
+          "400": {"$ref":"#/components/responses/Error"},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "404": {"$ref":"#/components/responses/Error"},
+          "409": {"$ref":"#/components/responses/Error"},
+          "413": {"$ref":"#/components/responses/Error"},
+          "415": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/runs/{runId}/resume": {
+      "post": {
+        "operationId": "resumeRunGrant",
+        "summary": "提交恢复本运行 G1 的操作",
+        "parameters": [
+          {"name":"runId","in":"path","required":true,"schema":{"type":"string","minLength":1}},
+          {"$ref":"#/components/parameters/CsrfToken"},
+          {"$ref":"#/components/parameters/IdempotencyKey"}
+        ],
+        "responses": {
+          "202": {"description":"已受理.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Run"}}}},
+          "400": {"$ref":"#/components/responses/Error"},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "404": {"$ref":"#/components/responses/Error"},
+          "409": {"$ref":"#/components/responses/Error"},
+          "413": {"$ref":"#/components/responses/Error"},
+          "415": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/runs/{runId}/evidence": {
+      "get": {
+        "operationId": "getRunEvidence",
+        "summary": "查询自己运行的可分享证据摘要",
+        "parameters": [{"name":"runId","in":"path","required":true,"schema":{"type":"string","minLength":1}}],
+        "responses": {
+          "200": {
+            "description": "成功.",
+            "content": {"application/json":{"schema":{"$ref":"#/components/schemas/RunEvidence"}}}
+          },
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "404": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    },
+    "/decisions/{decisionId}": {
+      "get": {
+        "operationId": "getDecision",
+        "summary": "查询有权访问的完整决策记录",
+        "parameters": [{"name":"decisionId","in":"path","required":true,"schema":{"type":"string","minLength":1}}],
+        "responses": {
+          "200": {"description":"成功.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Decision"}}}},
+          "401": {"$ref":"#/components/responses/Error"},
+          "403": {"$ref":"#/components/responses/Error"},
+          "404": {"$ref":"#/components/responses/Error"},
+          "503": {"$ref":"#/components/responses/Error"},
+          "default": {"$ref":"#/components/responses/Error"}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionA": {"type":"apiKey","in":"cookie","name":"__Host-grad-workbench-a","description":"A 域会话 Cookie."},
+      "sessionB": {"type":"apiKey","in":"cookie","name":"__Host-grad-workbench-b","description":"B 域会话 Cookie."},
+      "sessionC": {"type":"apiKey","in":"cookie","name":"__Host-grad-workbench-c","description":"C 域会话 Cookie."}
+    },
+    "parameters": {
+      "CsrfToken": {
+        "name": "X-CSRF-Token",
+        "in": "header",
+        "required": true,
+        "schema": {"type":"string","pattern":"^[A-Za-z0-9_-]{43}$"},
+        "description": "使用本次会话返回的 csrfToken."
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {"type":"string","pattern":"^[A-Za-z0-9_-]{1,64}$"},
+        "description": "重试同一操作时保留原键和输入."
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "结构化错误.",
+        "content": {"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}},
+        "headers": {"X-Request-Id":{"schema":{"type":"string","minLength":1}}}
+      }
+    },
+    "schemas": {
+      "ErrorEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["requestId","code","decisionId","message"],
+        "properties": {
+          "requestId": {"type":"string","minLength":1},
+          "code": {"type":"string","minLength":1},
+          "decisionId": {"anyOf":[{"type":"string"},{"type":"null"}]},
+          "message": {"type":"string","minLength":1}
+        }
+      },
+      "Ready": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["domainId","ready"],
+        "properties": {"domainId":{"type":"string","enum":["A","B","C"]},"ready":{"type":"boolean","const":true}}
+      },
+      "Login": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["username","password"],
+        "properties": {
+          "username": {"type":"string","pattern":"^[A-Za-z0-9_.-]{1,64}$"},
+          "password": {"type":"string","minLength":1,"maxLength":72,"writeOnly":true}
+        }
+      },
+      "Session": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["domainId","subjectId","role","actions","csrfToken"],
+        "properties": {
+          "domainId": {"type":"string","enum":["A","B","C"]},
+          "subjectId": {"type":"string","pattern":"^did:web:.+$"},
+          "role": {"type":"string","enum":["ADMIN","BUYER","AUDITOR"]},
+          "actions": {
+            "type": "array",
+            "items": {"type":"string","enum":["managePurchasingAuthority","procure","auditDecisions"]}
+          },
+          "csrfToken": {"type":"string","minLength":1}
+        }
+      },
+      "PurchasingAuthority": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["domainId","expectedRevision","purchasingAuthority","eligibleServiceIds"],
+        "properties": {
+          "domainId": {"type":"string","enum":["A","B","C"]},
+          "expectedRevision": {"type":"integer","minimum":1,"maximum":9007199254740991},
+          "purchasingAuthority": {"anyOf":[{"type":"string","pattern":"^did:web:.+$"},{"type":"null"}]},
+          "eligibleServiceIds": {"type":"array","items":{"type":"string","pattern":"^did:web:.+$"}}
+        }
+      },
+      "SetPurchasingAuthority": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["expectedRevision","purchasingAuthority"],
+        "properties": {
+          "expectedRevision": {"type":"integer","minimum":1,"maximum":9007199254740991},
+          "purchasingAuthority": {"anyOf":[{"type":"string","pattern":"^did:web:.+$"},{"type":"null"}]}
+        }
+      },
+      "Operation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "operationKey",
+          "method",
+          "status",
+          "stage",
+          "txId",
+          "validationCode",
+          "failureCode",
+          "blockNumber",
+          "transactionIndex",
+          "observedPeer",
+          "delivered"
+        ],
+        "properties": {
+          "operationId": {"type":"string","minLength":1},
+          "operationKey": {"type":"string","minLength":1},
+          "method": {"type":"string"},
+          "status": {"type":"string","enum":["PENDING","CONFIRMED","FAILED"]},
+          "stage": {"type":"string","minLength":1},
+          "txId": {"anyOf":[{"type":"string","minLength":1},{"type":"null"}]},
+          "validationCode": {"anyOf":[{"type":"string","minLength":1},{"type":"null"}]},
+          "failureCode": {"anyOf":[{"type":"string","minLength":1},{"type":"null"}]},
+          "blockNumber": {"anyOf":[{"type":"integer","minimum":0},{"type":"null"}]},
+          "blockHash": {"type":"string","minLength":1},
+          "transactionIndex": {"anyOf":[{"type":"integer","minimum":0},{"type":"null"}]},
+          "observedPeer": {"anyOf":[{"type":"string","minLength":1},{"type":"null"}]},
+          "delivered": {"type":"boolean"}
+        }
+      },
+      "ChatInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["message"],
+        "properties": {"message":{"type":"string","minLength":1,"maxLength":4000},"draftId":{"type":"string","minLength":1}}
+      },
+      "ChatResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["reply","draft"],
+        "properties": {"reply":{"type":"string"},"draft":{"$ref":"#/components/schemas/Draft"}}
+      },
+      "Draft": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "draftId",
+          "version",
+          "productId",
+          "quantity",
+          "mode",
+          "maxAmountMinor",
+          "expiresAt",
+          "delegateDid",
+          "description"
+        ],
+        "properties": {
+          "draftId": {"type":"string","minLength":1},
+          "version": {"type":"integer","minimum":1,"maximum":9007199254740991},
+          "productId": {"type":"string","enum":["urn:grad:product:P1","urn:grad:product:P2"]},
+          "quantity": {"type":"integer","minimum":1,"maximum":9007199254740991},
+          "mode": {"type":"string","enum":["RP","BM"]},
+          "maxAmountMinor": {"type":"integer","minimum":1,"maximum":9007199254740991},
+          "expiresAt": {"type":"integer","format":"int64","description":"Unix timestamp in seconds."},
+          "delegateDid": {"type":"string","pattern":"^did:web:.+$"},
+          "description": {"type":"string","minLength":1,"maxLength":512}
+        }
+      },
+      "DraftEdit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version","productId","quantity","mode","maxAmountMinor","expiresAt","delegateDid","description"],
+        "properties": {
+          "draftId": {"type":"string","minLength":1},
+          "version": {"type":"integer","minimum":1,"maximum":9007199254740991},
+          "productId": {"type":"string","enum":["urn:grad:product:P1","urn:grad:product:P2"]},
+          "quantity": {"type":"integer","minimum":1,"maximum":9007199254740991},
+          "mode": {"type":"string","enum":["RP","BM"]},
+          "maxAmountMinor": {"type":"integer","minimum":1,"maximum":9007199254740991},
+          "expiresAt": {"type":"integer","format":"int64","description":"Unix timestamp in seconds."},
+          "delegateDid": {"type":"string","pattern":"^did:web:.+$"},
+          "description": {"type":"string","minLength":1,"maxLength":512}
+        }
+      },
+      "DraftVersion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version"],
+        "properties": {"version":{"type":"integer","minimum":1,"maximum":9007199254740991}}
+      },
+      "RunStep": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage","status","at"],
+        "properties": {
+          "stage": {"type":"string","minLength":1},
+          "status": {"type":"string","minLength":1},
+          "operationId": {"type":"string","minLength":1},
+          "txId": {"type":"string","minLength":1},
+          "validationCode": {"type":"string","minLength":1},
+          "code": {"type":"string","minLength":1},
+          "grantId": {"type":"string","minLength":1},
+          "at": {"type":"integer","format":"int64","description":"Unix timestamp in seconds."}
+        }
+      },
+      "ToolTrace": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step","toolName","isError","durationMs"],
+        "properties": {
+          "step": {"type":"integer","minimum":1,"maximum":9007199254740991},
+          "toolName": {"type":"string","minLength":1},
+          "arguments": {"type":"object"},
+          "output": {"type":"object"},
+          "isError": {"type":"boolean"},
+          "durationMs": {"type":"integer","minimum":0}
+        }
+      },
+      "Run": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["runId","taskId","draftId","stage","status","confirmedAt","task","steps","traces"],
+        "properties": {
+          "runId": {"type":"string","minLength":1},
+          "taskId": {"type":"string","minLength":1},
+          "draftId": {"type":"string","minLength":1},
+          "stage": {"type":"string","enum":["REGISTER_TASK","DELIVER_G0","DELIVER_G1","EXECUTE"]},
+          "status": {
+            "type": "string",
+            "enum": ["PENDING","FAILED","MODEL_STOPPED","GATEWAY_DENIED","OUTCOME_UNKNOWN","DECIDED"]
+          },
+          "confirmedAt": {"type":"integer","format":"int64","description":"Unix timestamp in seconds."},
+          "task": {"$ref":"#/components/schemas/Draft"},
+          "steps": {"type":"array","items":{"$ref":"#/components/schemas/RunStep"}},
+          "traces": {"anyOf":[{"type":"array","items":{"$ref":"#/components/schemas/ToolTrace"}},{"type":"null"}]},
+          "grantRevision": {"type":"integer","minimum":1},
+          "grantStatus": {"type":"string","minLength":1},
+          "allowedActions": {"type":"array","items":{"type":"string"}}
+        }
+      },
+      "RunList": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["runs"],
+        "properties": {"runs":{"anyOf":[{"type":"array","items":{"$ref":"#/components/schemas/Run"}},{"type":"null"}]}}
+      },
+      "RunEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "由当前任务的实际登记, 交付和网关结果投影.",
+        "required": ["identity","disclosures","delegations","purchase","decisions"],
+        "properties": {
+          "identity": {"type":"array","items":{"$ref":"#/components/schemas/IdentityEvidence"}},
+          "disclosures": {"type":"array","items":{"$ref":"#/components/schemas/DisclosureEvidence"}},
+          "delegations": {"type":"array","items":{"$ref":"#/components/schemas/DelegationEvidence"}},
+          "purchase": {"$ref":"#/components/schemas/PurchaseEvidence"},
+          "decisions": {"type":"array","items":{"$ref":"#/components/schemas/DecisionSummary"}}
+        }
+      },
+      "IdentityEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["did","kind","status","keyVersion","decisionId"],
+        "properties": {
+          "did": {"type":"string"},
+          "domainId": {"type":"string","enum":["A","B","C"]},
+          "issuerDid": {"type":"string"},
+          "kind": {"type":"string"},
+          "status": {"type":"string"},
+          "keyVersion": {"type":"integer","minimum":1},
+          "certificationId": {"type":"string"},
+          "certificationDigest": {"type":"string"},
+          "decisionId": {"type":"string"}
+        }
+      },
+      "DisclosureEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["subjectDid","issuerDid","credentialId","subjectKeyVersion","issuerKeyVersion","disclosed","status","decisionId"],
+        "properties": {
+          "subjectDid": {"type":"string"},
+          "issuerDid": {"type":"string"},
+          "credentialId": {"type":"string"},
+          "subjectKeyVersion": {"type":"integer","minimum":1},
+          "issuerKeyVersion": {"type":"integer","minimum":1},
+          "disclosed": {"type":"object","additionalProperties":false,"properties":{"domain":{"type":"string"},"role":{"type":"string"}}},
+          "status": {"type":"string"},
+          "decisionId": {"type":"string"}
+        }
+      },
+      "DelegationEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["grantId","rootId","mode","issuerDid","granteeDid","status","revision","remainingDepth","nbf","exp"],
+        "properties": {
+          "grantId": {"type":"string"},
+          "parentId": {"type":"string"},
+          "rootId": {"type":"string"},
+          "mode": {"type":"string","enum":["RP","BM"]},
+          "issuerDid": {"type":"string"},
+          "granteeDid": {"type":"string"},
+          "status": {"type":"string"},
+          "revision": {"type":"integer","minimum":1},
+          "maxAmountMinor": {"type":"integer","minimum":1},
+          "remainingDepth": {"type":"integer","minimum":0},
+          "nbf": {"type":"integer","format":"int64"},
+          "exp": {"type":"integer","format":"int64"},
+          "decisionId": {"type":"string"}
+        }
+      },
+      "PurchaseEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["taskId","productId","quantity","quotes","orders"],
+        "properties": {
+          "taskId": {"type":"string"},
+          "productId": {"type":"string"},
+          "quantity": {"type":"integer","minimum":1},
+          "quotes": {"type":"array","items":{"$ref":"#/components/schemas/Quote"}},
+          "orders": {"type":"array","items":{"$ref":"#/components/schemas/Order"}}
+        }
+      },
+      "Quote": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["quoteId","taskId","actor","supplierId","productId","quantity","currency","unitPriceMinor","totalAmountMinor","issuedAt","validUntil"],
+        "properties": {
+          "quoteId": {"type":"string"},
+          "taskId": {"type":"string"},
+          "actor": {"type":"string"},
+          "supplierId": {"type":"string"},
+          "productId": {"type":"string"},
+          "quantity": {"type":"integer","minimum":1},
+          "currency": {"type":"string"},
+          "unitPriceMinor": {"type":"integer","minimum":1},
+          "totalAmountMinor": {"type":"integer","minimum":1},
+          "issuedAt": {"type":"integer","format":"int64"},
+          "validUntil": {"type":"integer","format":"int64"}
+        }
+      },
+      "Order": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["orderId","quoteId","taskId","actor","supplierId","productId","quantity","currency","totalAmountMinor","idempotencyKey","status","createdAt"],
+        "properties": {
+          "orderId": {"type":"string"},
+          "quoteId": {"type":"string"},
+          "taskId": {"type":"string"},
+          "actor": {"type":"string"},
+          "supplierId": {"type":"string"},
+          "productId": {"type":"string"},
+          "quantity": {"type":"integer","minimum":1},
+          "currency": {"type":"string"},
+          "totalAmountMinor": {"type":"integer","minimum":1},
+          "idempotencyKey": {"type":"string"},
+          "status": {"type":"string"},
+          "createdAt": {"type":"integer","format":"int64"}
+        }
+      },
+      "DecisionSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action","outcome","code","blockNumber","blockHash","policyDigest","contextVersion","probeDeadline","decisionAt"],
+        "properties": {
+          "decisionId": {"type":"string"},
+          "requestId": {"type":"string"},
+          "probeTxId": {"type":"string"},
+          "action": {"type":"string"},
+          "outcome": {"type":"string"},
+          "code": {"type":"string"},
+          "quoteId": {"type":"string"},
+          "orderId": {"type":"string"},
+          "failedObjectId": {"type":"string"},
+          "blockNumber": {"type":"integer","minimum":0},
+          "blockHash": {"type":"string"},
+          "policyDigest": {"type":"string"},
+          "contextVersion": {"type":"integer","minimum":0},
+          "probeDeadline": {"type":"integer","format":"int64"},
+          "decisionAt": {"type":"integer","format":"int64"}
+        }
+      },
+      "Decision": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "已授权主体或 C 审计者可访问的完整决策记录.",
+        "required": [
+          "stateSource","revision","stateReadAt","stateRechecks","deploymentId","decisionId","requestId",
+          "challengeId","actor","taskId","action","idempotencyKey","outcome","code","blockNumber","blockHash",
+          "revocationEpoch","probeTxId","probeBlock","probeSentAt","probeDeadline","probeSentMonoNs",
+          "probeDeadlineMonoNs","decisionAt","rootDid","rootKeyVersion","domainRevision","policyDigest",
+          "contextVersion","contextRiskLevel","contextObservedAt","contextAccessDeadline","effectiveDeadline","grantPath"
+        ],
+        "properties": {
+          "stateSource": {"type":"string"},
+          "revision": {"type":["integer","null"]},
+          "stateReadAt": {"type":["string","null"],"format":"date-time"},
+          "stateRechecks": {"type":"integer"},
+          "deploymentId": {"type":"string"},
+          "decisionId": {"type":"string"},
+          "requestId": {"type":"string"},
+          "challengeId": {"type":"string"},
+          "actor": {"type":"string"},
+          "taskId": {"type":"string"},
+          "action": {"type":"string"},
+          "idempotencyKey": {"type":"string"},
+          "outcome": {"type":"string"},
+          "code": {"type":"string"},
+          "reason": {"type":"string"},
+          "quoteId": {"type":"string"},
+          "orderId": {"type":"string"},
+          "blockNumber": {"type":["integer","null"]},
+          "blockHash": {"type":["string","null"]},
+          "revocationEpoch": {"type":["integer","null"]},
+          "probeTxId": {"type":["string","null"]},
+          "probeBlock": {"type":["integer","null"]},
+          "probeSentAt": {"type":["integer","null"]},
+          "probeDeadline": {"type":["integer","null"]},
+          "probeSentAtNs": {"type":["integer","null"]},
+          "probeDeadlineNs": {"type":["integer","null"]},
+          "probeSentMonoNs": {"type":["integer","null"]},
+          "probeDeadlineMonoNs": {"type":["integer","null"]},
+          "probeCheckedMonoNs": {"type":["integer","null"]},
+          "decisionAt": {"type":"integer"},
+          "decisionAtNs": {"type":"integer"},
+          "rootDid": {"type":"string"},
+          "rootKeyVersion": {"type":"integer"},
+          "domainId": {"type":"string"},
+          "certificationId": {"type":"string"},
+          "certificationDigest": {"type":"string"},
+          "domainRevision": {"type":"integer"},
+          "identityIssuer": {"type":"string"},
+          "policyDigest": {"type":"string"},
+          "contextVersion": {"type":"integer"},
+          "contextRiskLevel": {"type":"string"},
+          "contextObservedAt": {"type":"integer"},
+          "contextAccessDeadline": {"type":"integer"},
+          "effectiveDeadline": {"type":"integer"},
+          "grantPath": {"type":["array","null"],"items":{"type":"string"}},
+          "failedObjectId": {"type":"string"}
+        }
+      }
+    }
+  }
+}

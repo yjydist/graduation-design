@@ -1,0 +1,22 @@
+{
+	admin off
+	auto_https disable_redirects
+	skip_install_trust
+}
+
+https://{$WORKBENCH_BROWSER_HOST}:8443 {
+	tls internal
+	header {
+		Content-Security-Policy "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+		Referrer-Policy "no-referrer"
+		X-Content-Type-Options "nosniff"
+	}
+	@browser_api path /api/v1 /api/v1/*
+	handle @browser_api {
+		reverse_proxy {$WORKBENCH_BACKEND}
+	}
+	handle {
+		root * /srv
+		file_server
+	}
+}

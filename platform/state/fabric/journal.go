@@ -203,7 +203,7 @@ func (j Journal) Prepare(ctx context.Context, key, role, method string, input []
 	if op != nil && (op.Status != "PENDING" || len(op.Signed) > 0 || op.BroadcastAt != nil) {
 		return op, nil
 	}
-	p, err := j.Instance.Peer("c", role)
+	p, err := j.Instance.Peer(j.Instance.clientOrg, role)
 	if err != nil {
 		return op, err
 	}
@@ -355,7 +355,7 @@ func (j Journal) Recover(ctx context.Context, key string, submitOverride func(co
 	if op.Status != "PENDING" {
 		return op, nil
 	}
-	p, err := j.Instance.Peer("c", op.Role)
+	p, err := j.Instance.Peer(j.Instance.clientOrg, op.Role)
 	if err != nil {
 		return op, err
 	}

@@ -106,6 +106,44 @@ type grantPackageRow struct {
 	PackageJSON []byte `db:"package_json"`
 }
 
+// PublishedGrant loads an immutable package from the issuer's outbox.
+func (ds *DeliveryService) PublishedGrant(ctx context.Context, recipient, grantID string) (GrantDeliveryPackage, string, error) {
+	return ds.storedGrant(ctx, "grant_outbox", recipient, grantID)
+}
+
+// ReceivedGrant loads material that has already passed recipient-side verification.
+func (ds *DeliveryService) ReceivedGrant(ctx context.Context, recipient, grantID string) (GrantDeliveryPackage, string, error) {
+	return ds.storedGrant(ctx, "wallet_receipts", recipient, grantID)
+}
+
+func (ds *DeliveryService) storedGrant(ctx context.Context, table, recipient, grantID string) (GrantDeliveryPackage, string, error) {
+	var pkg GrantDeliveryPackage
+	if ds == nil || ds.db == nil || ds.deploymentID == "" {
+		return pkg, "", protocol.NewError(registry.ErrCodeStateUnavailable, "bound delivery store required")
+	}
+	var raw []byte
+	var digest string
+	err := ds.db.QueryRow(ctx, `SELECT package_json, package_digest FROM `+table+
+		` WHERE deployment_id=$1 AND recipient=$2 AND grant_id=$3`, ds.deploymentID, recipient, grantID).Scan(&raw, &digest)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return pkg, "", protocol.NewError(registry.ErrCodeMaterialNotSynced, "grant material has not been delivered")
+	}
+	if err != nil {
+		return pkg, "", err
+	}
+	if err := protocol.DecodeStrictJSON(raw, &pkg); err != nil {
+		return GrantDeliveryPackage{}, "", err
+	}
+	_, actual, err := pkg.Digest()
+	if err != nil {
+		return GrantDeliveryPackage{}, "", err
+	}
+	if actual != digest || pkg.DeploymentID != ds.deploymentID || pkg.Recipient != recipient || pkg.GrantID != grantID {
+		return GrantDeliveryPackage{}, "", protocol.NewError(registry.ErrCodeDeliveryConflict, "stored grant package binding differs")
+	}
+	return pkg, digest, nil
+}
+
 // PublishDomainCertification verifies T's DomainAuthorityCredential JWS against the fixed-height snapshot
 // and confirms original transaction VALID status before persisting raw JWS bytes into certification_outbox.
 func (ds *DeliveryService) PublishDomainCertification(
@@ -315,6 +353,10 @@ func (ds *DeliveryService) PublishGrantOutbox(
 	}
 	defer tx.Rollback(context.Background())
 
+	lockKey, _ := protocol.MarshalJCS([]string{"grant_outbox", pkg.DeploymentID, pkg.Recipient, pkg.GrantID})
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, string(lockKey)); err != nil {
+		return "", err
+	}
 	rows, err := tx.Query(ctx, `SELECT package_digest FROM grant_outbox
 		WHERE deployment_id=$1 AND recipient=$2 AND grant_id=$3 FOR UPDATE`,
 		pkg.DeploymentID, pkg.Recipient, pkg.GrantID)
@@ -405,6 +447,10 @@ func (ds *DeliveryService) DeliverGrantReceipt(
 	}
 	defer tx.Rollback(context.Background())
 
+	lockKey, _ := protocol.MarshalJCS([]string{"wallet_receipts", deploymentID, recipient, grantID})
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, string(lockKey)); err != nil {
+		return nil, "", err
+	}
 	rows, err := tx.Query(ctx, `SELECT package_digest FROM wallet_receipts
 		WHERE deployment_id=$1 AND recipient=$2 AND grant_id=$3 FOR UPDATE`,
 		deploymentID, recipient, grantID)

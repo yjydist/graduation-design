@@ -1,0 +1,24 @@
+{
+  "runs": [
+    {
+      "mode": "RP",
+      "runId": "d139978f67c3fea87d9050a92461f6537de4636ad9fcce3540ac5790b752a0bf",
+      "decisionId": "urn:grad:decision:2fc51bce-eaa9-49e4-97e9-851a77839868",
+      "fullDecisionForBuyer": 404,
+      "fullDecisionForAuditor": 200,
+      "matchedBlockHash": "4ad31956e54f0320e699f36b8357df120863afa09e9d831f7221f72e44acc5a2",
+      "matchedProbeDeadline": 1795421068,
+      "rejectionRequestId": "urn:grad:req:1875a0bc-5e0f-41a1-a17a-0540e1240821"
+    },
+    {
+      "mode": "BM",
+      "runId": "b36ea9a7670b468e44540caea74d38a6b377b7bfe097376904a3a0e531d74081",
+      "decisionId": "urn:grad:decision:0b8ca5d5-bf24-4f05-996c-c43b21339f28",
+      "fullDecisionForBuyer": 404,
+      "fullDecisionForAuditor": 200,
+      "matchedBlockHash": "86aacbd7184744bfcb0dd05b1578a798d6a027d8cffee6f625a40a29364fb01b",
+      "matchedProbeDeadline": 1795421261,
+      "rejectionRequestId": null
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+**
+!platform/
+!platform/**
+!protocol/
+!protocol/**
+**/.DS_Store
+**/*.env
+**/.local/

@@ -109,6 +109,12 @@ func (s *Server) handleExecute(w http.ResponseWriter, r *http.Request) {
 		nowTime := s.now()
 		pre, err := s.runPrecheck(r.Context(), pkg, leafGrantID, reqHash, nowTime)
 		if err != nil {
+			if s.cfg.RecordWorkbenchEvidence && pre != nil {
+				if auditErr := s.recordInactiveRejection(r.Context(), pkg, pre.view, leafGrantID, reqID, nowTime, err); auditErr != nil {
+					writeMappedError(w, r, nil, protocol.WrapError(protocol.ErrCodeStateUnavailable, "record supplier rejection", auditErr))
+					return
+				}
+			}
 			writeMappedError(w, r, nil, err)
 			return
 		}
@@ -254,7 +260,7 @@ func (s *Server) runPrecheck(
 	// 4. Verify cryptographic evidence and delegation chain on consistent snapshot (with optional B1 cache).
 	verified, err := protocol.VerifyAccessEvidencePackageWithCache(ctx, pkg, snap, s.cfg.DIDs, chalCtx, s.cfg.SignatureCache)
 	if err != nil {
-		return nil, err
+		return &precheckResult{view: view}, err
 	}
 
 	// 5. Verify root authority according to authorization mode.
@@ -913,6 +919,12 @@ func (s *Server) executeInTx(
 		GrantPath:             pre.grantPath,
 	}); err != nil {
 		return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "insert allow decision", err)
+	}
+
+	if s.cfg.RecordWorkbenchEvidence {
+		if err := recordWorkbenchProof(ctx, tx, pre, decID); err != nil {
+			return nil, false, protocol.WrapError(protocol.ErrCodeStateUnavailable, "record allow evidence", err)
+		}
 	}
 
 	// Archive the original verified inputs atomically with the decision and order.

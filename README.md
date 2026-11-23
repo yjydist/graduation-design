@@ -26,6 +26,7 @@ flowchart TB
 | 搭建网络, 编写验证器 | [技术栈](docs/implementation/技术栈.md), [实现导航](docs/AGENTS.md#实现导航) |
 | 了解四模块边界与源码布局 | [协议模块](protocol/AGENTS.md), [链码模块](chaincode/AGENTS.md), [平台模块](platform/AGENTS.md), [实验模块](experiments/AGENTS.md) |
 | 复跑 Fabric 集成验收 | [网络与 ledgerctl](infra/fabric/README.md), [Fabric 证据](infra/fabric/evidence/README.md) |
+| 启动 A/B/C 浏览器工作台 | [三域部署与演示](infra/workbench/README.md) |
 | 查阶段状态, 任务和验证证据 | [任务安排与退出条件](TODO.md) |
 | 阅读论文或准备写作 | [文献清单](paper/论文.md), [全文与笔记索引](paper/README.md) |
 

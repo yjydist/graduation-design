@@ -31,13 +31,14 @@ const (
 
 // RunnerConfig configures dual-SDK LLM execution on top of an MCP tool session.
 type RunnerConfig struct {
-	Provider     string       `json:"provider"`
-	BaseURL      string       `json:"baseUrl,omitempty"`
-	APIKey       string       `json:"-"`
-	Model        string       `json:"model"`
-	MaxSteps     int          `json:"maxSteps"`
-	SystemPrompt string       `json:"systemPrompt,omitempty"`
-	HTTPClient   *http.Client `json:"-"`
+	Provider     string          `json:"provider"`
+	BaseURL      string          `json:"baseUrl,omitempty"`
+	APIKey       string          `json:"-"`
+	Model        string          `json:"model"`
+	MaxSteps     int             `json:"maxSteps"`
+	SystemPrompt string          `json:"systemPrompt,omitempty"`
+	HTTPClient   *http.Client    `json:"-"`
+	OnToolTrace  func(ToolTrace) `json:"-"`
 }
 
 // LoadRunnerConfigFromEnv reads LLM_PROVIDER, LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, and LLM_MAX_STEPS.
@@ -161,13 +162,34 @@ func RunWithMCPSession(ctx context.Context, session *mcp.ClientSession, cfg Runn
 		return nil, fmt.Errorf("list MCP tools: %s", sanitizeLLMText(err.Error(), norm.APIKey))
 	}
 
+	return runModel(ctx, session, listed.Tools, norm, userPrompt)
+}
+
+// RunDraftDialogue requests one text response with no wallet or MCP tools.
+func RunDraftDialogue(ctx context.Context, cfg RunnerConfig, userPrompt string) (*RunResult, error) {
+	if strings.TrimSpace(cfg.SystemPrompt) == "" {
+		cfg.SystemPrompt = "Help the buyer prepare a procurement task draft from the provided context."
+	}
+	norm, err := cfg.normalized()
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(userPrompt) == "" {
+		return nil, errors.New("userPrompt is required")
+	}
+	norm.MaxSteps = 1
+	return runModel(ctx, nil, nil, norm, userPrompt)
+}
+
+func runModel(ctx context.Context, session *mcp.ClientSession, tools []*mcp.Tool, norm RunnerConfig, userPrompt string) (*RunResult, error) {
 	started := time.Now()
+	var err error
 	var res *RunResult
 	switch norm.Provider {
 	case ProviderOpenAI:
-		res, err = runOpenAILoop(ctx, session, listed.Tools, norm, userPrompt)
+		res, err = runOpenAILoop(ctx, session, tools, norm, userPrompt)
 	case ProviderAnthropic:
-		res, err = runAnthropicLoop(ctx, session, listed.Tools, norm, userPrompt)
+		res, err = runAnthropicLoop(ctx, session, tools, norm, userPrompt)
 	default:
 		return nil, fmt.Errorf("unsupported LLM provider %q", norm.Provider)
 	}
@@ -245,12 +267,18 @@ func runOpenAILoop(
 			res.FinalText = msg.Content
 			return res, nil
 		}
+		if session == nil {
+			return res, errors.New("draft dialogue returned a tool call")
+		}
 
 		messages = append(messages, msg.ToParam())
 		for _, tc := range msg.ToolCalls {
 			trace, contentStr := executeMCPTool(ctx, session, step, tc.Function.Name, tc.Function.Arguments, cfg.APIKey)
 			res.ToolCallsCount++
 			res.ToolTraces = append(res.ToolTraces, trace)
+			if cfg.OnToolTrace != nil {
+				cfg.OnToolTrace(trace)
+			}
 			messages = append(messages, openai.ToolMessage(contentStr, tc.ID))
 		}
 	}
@@ -340,6 +368,9 @@ func runAnthropicLoop(
 			res.FinalText = strings.Join(textParts, "\n")
 			return res, nil
 		}
+		if session == nil {
+			return res, errors.New("draft dialogue returned a tool call")
+		}
 
 		messages = append(messages, resp.ToParam())
 		toolResults := make([]anthropic.ContentBlockParamUnion, 0, len(toolUses))
@@ -356,6 +387,9 @@ func runAnthropicLoop(
 			trace, contentStr := executeMCPTool(ctx, session, step, tu.Name, rawArgs, cfg.APIKey)
 			res.ToolCallsCount++
 			res.ToolTraces = append(res.ToolTraces, trace)
+			if cfg.OnToolTrace != nil {
+				cfg.OnToolTrace(trace)
+			}
 			toolResults = append(toolResults, anthropic.NewToolResultBlock(tu.ID, contentStr, trace.IsError))
 		}
 		messages = append(messages, anthropic.NewUserMessage(toolResults...))

@@ -83,21 +83,22 @@ type DecisionTiming struct {
 
 // ServerConfig configures the C resource gateway HTTP server.
 type ServerConfig struct {
-	DB               *pgxpool.Pool
-	State            state.StateSource
-	CertChecker      CertificationChecker
-	DIDs             *protocol.DIDWebResolver
-	Policy           *policy.VerifiedBundle
-	PolicyArchive    map[string]*policy.VerifiedBundle
-	SignatureCache   *protocol.SignatureCache
-	AuditorDIDs      []string
-	VerifierID       string
-	DeploymentID     string
-	ServiceDID       string
-	Audience         string
-	SupplierID       string
-	ClockErrorMargin time.Duration
-	NowFn            func() time.Time
+	RecordWorkbenchEvidence bool
+	DB                      *pgxpool.Pool
+	State                   state.StateSource
+	CertChecker             CertificationChecker
+	DIDs                    *protocol.DIDWebResolver
+	Policy                  *policy.VerifiedBundle
+	PolicyArchive           map[string]*policy.VerifiedBundle
+	SignatureCache          *protocol.SignatureCache
+	AuditorDIDs             []string
+	VerifierID              string
+	DeploymentID            string
+	ServiceDID              string
+	Audience                string
+	SupplierID              string
+	ClockErrorMargin        time.Duration
+	NowFn                   func() time.Time
 
 	// AfterInitialCheck is an optional deterministic test hook invoked after precheck
 	// completes and right before opening the execute transaction.

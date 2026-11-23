@@ -12,6 +12,7 @@
 | `protocol/` | 独立 Go 模块 `grad/protocol`: 协议编解码, 密码学原语, 凭证/委托/证据包校验与链上登记共享类型. |
 | `chaincode/` | 独立 Go 模块 `grad/chaincode`: Fabric 登记链码 `authregistry`. |
 | `platform/` | 独立 Go 模块 `grad/platform`: 状态源, OPA 策略, 管理服务, 网关, 智能体钱包, 运行时装配与 `ledgerctl` CLI. |
+| `web/` | A/B/C 共用的工作台前端与同源 HTTPS 代理镜像. |
 | `experiments/` | 独立 Go 模块 `grad/experiments`: 论文实验方法, 统一 `exp` CLI, 底座, 驱动, 进度和证据. |
 | `infra/` | 基础设施配置与 Fabric 网络脚本及集成验收记录. |
 | `docs/` | 项目设计, 需求追踪及实现契约. |

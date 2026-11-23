@@ -114,6 +114,7 @@ type QuoteRecord struct {
 	TotalAmountMinor int64  `json:"totalAmountMinor"`
 	IssuedAt         int64  `json:"issuedAt,omitempty"`
 	ValidUntil       int64  `json:"validUntil"`
+	IdempotencyKey   string `json:"-"`
 }
 
 // OrderRecord caches a confirmed supplier order inside the wallet.
@@ -195,12 +196,13 @@ func (a ClientAction) View() ClientActionView {
 
 // AnchorChildGrantRequest provides inputs from delegate_grant when anchoring a child grant onto a ledger.
 type AnchorChildGrantRequest struct {
-	Claims      protocol.GrantClaims
-	RawGrantJWS string
-	GrantDigest string
-	ParentID    string
-	IssuerActor string
-	GranteeDID  string
+	Claims                   protocol.GrantClaims
+	RawGrantJWS              string
+	GrantDigest              string
+	ParentID                 string
+	IssuerActor              string
+	GranteeDID               string
+	RequestedLifetimeSeconds int64
 }
 
 // AnchorChildGrantResult returns the anchored trust paths and optional materials from the ledger.
@@ -208,6 +210,14 @@ type AnchorChildGrantResult struct {
 	Anchored            bool
 	TrustPaths          []protocol.TrustPathEntry
 	AncestorCredentials []protocol.AncestorCredential
+	Grant               *GrantBundle
+}
+
+// GrantRecipient is the public key and credential binding for a remote grantee.
+type GrantRecipient struct {
+	DID          string
+	KeyVersion   uint64
+	CredentialID string
 }
 
 // ReplaceGrantRequest provides inputs from replace_grant when atomically revoking an old child grant
@@ -233,27 +243,28 @@ type ReplaceGrantResult struct {
 
 // WalletConfig configures WalletContext.
 type WalletConfig struct {
-	DeploymentID     string
-	GatewayURL       string
-	ReceiptURL       string
-	Audience         string
-	SupplierID       string
-	SupplierDID      string
-	DefaultTaskSpec  protocol.TaskSpec
-	Currency         string
-	AuditorDID       string
-	RecoveryDID      string
-	DB               *pgxpool.Pool
-	GatewayClient    *GatewayClient
-	HTTPClient       *http.Client
-	HTTPHandler      http.Handler
-	RecoveryClient   *http.Client
-	AuditClient      *http.Client
-	ReceiptClient    *http.Client
-	ReceiptDelivery  func(context.Context, OrderOutcomeReceipt) (*OrderOutcomeReceiptResponse, error)
-	Now              func() time.Time
-	AnchorChildFunc  func(ctx context.Context, req AnchorChildGrantRequest) (*AnchorChildGrantResult, error)
-	ReplaceGrantFunc func(ctx context.Context, req ReplaceGrantRequest) (*ReplaceGrantResult, error)
+	DeploymentID          string
+	GatewayURL            string
+	ReceiptURL            string
+	Audience              string
+	SupplierID            string
+	SupplierDID           string
+	DefaultTaskSpec       protocol.TaskSpec
+	Currency              string
+	AuditorDID            string
+	RecoveryDID           string
+	DB                    *pgxpool.Pool
+	GatewayClient         *GatewayClient
+	HTTPClient            *http.Client
+	HTTPHandler           http.Handler
+	RecoveryClient        *http.Client
+	AuditClient           *http.Client
+	ReceiptClient         *http.Client
+	ReceiptDelivery       func(context.Context, OrderOutcomeReceipt) (*OrderOutcomeReceiptResponse, error)
+	Now                   func() time.Time
+	AnchorChildFunc       func(ctx context.Context, req AnchorChildGrantRequest) (*AnchorChildGrantResult, error)
+	ResolveGrantRecipient func(context.Context, string) (GrantRecipient, error)
+	ReplaceGrantFunc      func(ctx context.Context, req ReplaceGrantRequest) (*ReplaceGrantResult, error)
 }
 
 type receiptKey struct {

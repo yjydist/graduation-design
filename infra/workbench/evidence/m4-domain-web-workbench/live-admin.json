@@ -1,0 +1,177 @@
+{
+  "domains": {
+    "A": {
+      "key": "m4-admin-validation-A",
+      "input": {
+        "expectedRevision": 3,
+        "purchasingAuthority": "did:web:a.local:pa"
+      },
+      "accepted": {
+        "operationId": "management:381ee9ba1512b493f4d5501102219600793bb7f0dcef0697f163cdea55e3dcd8",
+        "operationKey": "m4-admin-validation-A",
+        "method": "SetPurchasingAuthority",
+        "stage": "ACCEPT",
+        "status": "PENDING",
+        "failureCode": null,
+        "validationCode": null,
+        "transactionIndex": null,
+        "observedPeer": null,
+        "delivered": false,
+        "txId": null,
+        "blockNumber": null
+      },
+      "confirmed": {
+        "operationId": "management:381ee9ba1512b493f4d5501102219600793bb7f0dcef0697f163cdea55e3dcd8",
+        "operationKey": "m4-admin-validation-A",
+        "method": "SetPurchasingAuthority",
+        "stage": "COMMIT",
+        "status": "CONFIRMED",
+        "failureCode": null,
+        "validationCode": "VALID",
+        "blockHash": "2d6fced25ee4df09a950851b9c57c4d52c488d3707482885d2cf6fe90c27d4e7",
+        "transactionIndex": 0,
+        "observedPeer": "peer-a",
+        "delivered": false,
+        "txId": "ddeecead415ac45350493e7bc2a9267dc0a4796cc80173afd3f54c653d3483f7",
+        "blockNumber": 93
+      },
+      "resultingRevision": 4,
+      "retryOperationId": "management:381ee9ba1512b493f4d5501102219600793bb7f0dcef0697f163cdea55e3dcd8",
+      "crossDomainOperation": "OPERATION_UNKNOWN",
+      "missingCsrf": "CSRF_INVALID",
+      "forgedDomain": "INVALID_SCHEMA",
+      "primaryDatabase": {
+        "operationId": "management:381ee9ba1512b493f4d5501102219600793bb7f0dcef0697f163cdea55e3dcd8",
+        "operationKey": "m4-admin-validation-A",
+        "callerMspId": "AMsp",
+        "method": "SetPurchasingAuthority",
+        "txId": "ddeecead415ac45350493e7bc2a9267dc0a4796cc80173afd3f54c653d3483f7",
+        "status": "CONFIRMED",
+        "validationCode": "VALID",
+        "blockNumber": 93,
+        "blockHash": "2d6fced25ee4df09a950851b9c57c4d52c488d3707482885d2cf6fe90c27d4e7",
+        "journalRole": "domainA",
+        "journalTxId": "ddeecead415ac45350493e7bc2a9267dc0a4796cc80173afd3f54c653d3483f7",
+        "journalValidationCode": "VALID"
+      },
+      "managementOperationsForTestKeys": 1
+    },
+    "B": {
+      "key": "m4-admin-validation-B",
+      "input": {
+        "expectedRevision": 2,
+        "purchasingAuthority": "did:web:b.local:pa"
+      },
+      "accepted": {
+        "operationId": "management:5c6174367ce6611f5a45fef0c669f881211c2716569b99faa0762a86612ac37d",
+        "operationKey": "m4-admin-validation-B",
+        "method": "SetPurchasingAuthority",
+        "stage": "ACCEPT",
+        "status": "PENDING",
+        "failureCode": null,
+        "validationCode": null,
+        "transactionIndex": null,
+        "observedPeer": null,
+        "delivered": false,
+        "txId": null,
+        "blockNumber": null
+      },
+      "confirmed": {
+        "operationId": "management:5c6174367ce6611f5a45fef0c669f881211c2716569b99faa0762a86612ac37d",
+        "operationKey": "m4-admin-validation-B",
+        "method": "SetPurchasingAuthority",
+        "stage": "COMMIT",
+        "status": "CONFIRMED",
+        "failureCode": null,
+        "validationCode": "VALID",
+        "blockHash": "c53a14ca56554fce75a0c650c4d8c49c828f829dba8e984bd9f9b0cd336ef1f4",
+        "transactionIndex": 0,
+        "observedPeer": "peer-b",
+        "delivered": false,
+        "txId": "abbe8abdeffe3138353bc100489c9fbbf44c9cafd6f876871a77c4364e18a5a0",
+        "blockNumber": 94
+      },
+      "resultingRevision": 3,
+      "retryOperationId": "management:5c6174367ce6611f5a45fef0c669f881211c2716569b99faa0762a86612ac37d",
+      "crossDomainOperation": "OPERATION_UNKNOWN",
+      "missingCsrf": "CSRF_INVALID",
+      "forgedDomain": "INVALID_SCHEMA",
+      "primaryDatabase": {
+        "operationId": "management:5c6174367ce6611f5a45fef0c669f881211c2716569b99faa0762a86612ac37d",
+        "operationKey": "m4-admin-validation-B",
+        "callerMspId": "BMsp",
+        "method": "SetPurchasingAuthority",
+        "txId": "abbe8abdeffe3138353bc100489c9fbbf44c9cafd6f876871a77c4364e18a5a0",
+        "status": "CONFIRMED",
+        "validationCode": "VALID",
+        "blockNumber": 94,
+        "blockHash": "c53a14ca56554fce75a0c650c4d8c49c828f829dba8e984bd9f9b0cd336ef1f4",
+        "journalRole": "domainB",
+        "journalTxId": "abbe8abdeffe3138353bc100489c9fbbf44c9cafd6f876871a77c4364e18a5a0",
+        "journalValidationCode": "VALID"
+      },
+      "managementOperationsForTestKeys": 1
+    },
+    "C": {
+      "key": "m4-admin-validation-C",
+      "input": {
+        "expectedRevision": 2,
+        "purchasingAuthority": "did:web:c.local:supplier"
+      },
+      "accepted": {
+        "operationId": "management:572799d96e265766ad0bb231721a7828a6ede7303f3a6c5650f8ff43619081b5",
+        "operationKey": "m4-admin-validation-C",
+        "method": "SetPurchasingAuthority",
+        "stage": "ACCEPT",
+        "status": "PENDING",
+        "failureCode": null,
+        "validationCode": null,
+        "transactionIndex": null,
+        "observedPeer": null,
+        "delivered": false,
+        "txId": null,
+        "blockNumber": null
+      },
+      "confirmed": {
+        "operationId": "management:572799d96e265766ad0bb231721a7828a6ede7303f3a6c5650f8ff43619081b5",
+        "operationKey": "m4-admin-validation-C",
+        "method": "SetPurchasingAuthority",
+        "stage": "COMMIT",
+        "status": "CONFIRMED",
+        "failureCode": null,
+        "validationCode": "VALID",
+        "blockHash": "caa2da84fa3e9955890391132aeba84f5af2d2f7072e433426f3f2e1beeccfe0",
+        "transactionIndex": 0,
+        "observedPeer": "peer-c",
+        "delivered": false,
+        "txId": "bd6643f95004e3c11e55941345a43b2280bcff81938e1b4da4ac21c5cf61bd69",
+        "blockNumber": 96
+      },
+      "resultingRevision": 3,
+      "retryOperationId": "management:572799d96e265766ad0bb231721a7828a6ede7303f3a6c5650f8ff43619081b5",
+      "crossDomainOperation": "OPERATION_UNKNOWN",
+      "missingCsrf": "CSRF_INVALID",
+      "forgedDomain": "INVALID_SCHEMA",
+      "primaryDatabase": {
+        "operationId": "management:572799d96e265766ad0bb231721a7828a6ede7303f3a6c5650f8ff43619081b5",
+        "operationKey": "m4-admin-validation-C",
+        "callerMspId": "CMsp",
+        "method": "SetPurchasingAuthority",
+        "txId": "bd6643f95004e3c11e55941345a43b2280bcff81938e1b4da4ac21c5cf61bd69",
+        "status": "CONFIRMED",
+        "validationCode": "VALID",
+        "blockNumber": 96,
+        "blockHash": "caa2da84fa3e9955890391132aeba84f5af2d2f7072e433426f3f2e1beeccfe0",
+        "journalRole": "domainC",
+        "journalTxId": "bd6643f95004e3c11e55941345a43b2280bcff81938e1b4da4ac21c5cf61bd69",
+        "journalValidationCode": "VALID"
+      },
+      "managementOperationsForTestKeys": 1
+    }
+  },
+  "checks": {
+    "crossDomainCookie": "SESSION_REQUIRED",
+    "buyerPAOperation": "IDENTITY_MANAGEMENT_FORBIDDEN",
+    "loggedOutReplay": "SESSION_REQUIRED"
+  }
+}

@@ -266,7 +266,10 @@ func TestRecoveryDualProofAndDIDCanonicalVectors(t *testing.T) {
 
 	// Negative 1: mutate new application key proof.
 	badApp := *bundle
-	badApp.NewAppJWSSignature = "B" + badApp.NewAppJWSSignature[1:]
+	signature, err := DecodeStrictBase64URLFixed(badApp.NewAppJWSSignature, 64)
+	require.NoError(t, err)
+	signature[0] ^= 1
+	badApp.NewAppJWSSignature = base64.RawURLEncoding.EncodeToString(signature)
 	assert.True(t, HasCode(badApp.Verify(), ErrCodeRecoveryProofInvalid))
 
 	// Negative 2: mutate subjectId -> RECOVERY_PROOF_INVALID; mutate challengeId -> CHALLENGE_MISMATCH.

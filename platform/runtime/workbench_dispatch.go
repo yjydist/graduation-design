@@ -388,7 +388,7 @@ func (d *domainWorkbench) runProbe(w http.ResponseWriter, r *http.Request) {
 		order = &out
 		if err := d.storeTrace(ctx, run.RunID, agent.ToolTrace{ToolName: "create_order", Output: map[string]any{
 			"decision": out.Decision, "decisionId": out.DecisionID, "orderId": out.OrderID, "quoteId": out.QuoteID,
-			"totalAmountMinor": quote.TotalAmountMinor, "errorCode": out.ErrorCode,
+			"actionId": out.ActionID, "totalAmountMinor": quote.TotalAmountMinor, "errorCode": out.ErrorCode,
 		}}); err != nil {
 			writeInternalError(w, r, err)
 			return
@@ -420,6 +420,23 @@ func boundedTrace(trace agent.ToolTrace) agent.ToolTrace {
 				out.Output[key] = v
 			}
 		}
+	}
+	var key string
+	var reference any
+	switch out.ToolName {
+	case "delegate_grant":
+		key = "grantId"
+		grant, _ := trace.Output["grant"].(map[string]any)
+		reference = grant[key]
+	case "create_order":
+		key = "actionId"
+		reference = trace.Output[key]
+	case "reconcile_order":
+		key = "decisionId"
+		reference = trace.Output["creationDecisionId"]
+	}
+	if id, ok := reference.(string); ok && id != "" && len(id) <= 200 {
+		out.Output[key] = id
 	}
 	return out
 }

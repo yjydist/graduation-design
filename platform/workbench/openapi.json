@@ -449,6 +449,10 @@
         "required": ["reply","draft"],
         "properties": {"reply":{"type":"string"},"draft":{"$ref":"#/components/schemas/Draft"}}
       },
+      "AuthorizationMode": {
+        "type": "string",
+        "enum": ["RESOURCE_PREAUTHORIZED", "BUYER_MANDATE"]
+      },
       "Draft": {
         "type": "object",
         "additionalProperties": false,
@@ -468,7 +472,7 @@
           "version": {"type":"integer","minimum":1,"maximum":9007199254740991},
           "productId": {"type":"string","enum":["urn:grad:product:P1","urn:grad:product:P2"]},
           "quantity": {"type":"integer","minimum":1,"maximum":9007199254740991},
-          "mode": {"type":"string","enum":["RP","BM"]},
+          "mode": {"$ref":"#/components/schemas/AuthorizationMode"},
           "maxAmountMinor": {"type":"integer","minimum":1,"maximum":9007199254740991},
           "expiresAt": {"type":"integer","format":"int64","description":"Unix timestamp in seconds."},
           "delegateDid": {"type":"string","pattern":"^did:web:.+$"},
@@ -484,7 +488,7 @@
           "version": {"type":"integer","minimum":1,"maximum":9007199254740991},
           "productId": {"type":"string","enum":["urn:grad:product:P1","urn:grad:product:P2"]},
           "quantity": {"type":"integer","minimum":1,"maximum":9007199254740991},
-          "mode": {"type":"string","enum":["RP","BM"]},
+          "mode": {"$ref":"#/components/schemas/AuthorizationMode"},
           "maxAmountMinor": {"type":"integer","minimum":1,"maximum":9007199254740991},
           "expiresAt": {"type":"integer","format":"int64","description":"Unix timestamp in seconds."},
           "delegateDid": {"type":"string","pattern":"^did:web:.+$"},
@@ -517,7 +521,7 @@
         "additionalProperties": false,
         "required": ["step","toolName","isError","durationMs"],
         "properties": {
-          "step": {"type":"integer","minimum":1,"maximum":9007199254740991},
+          "step": {"type":"integer","minimum":0,"maximum":9007199254740991,"description":"模型轮次从 1 开始. 0 表示域间 HTTP, 演示探针或后台自动核账等服务调用."},
           "toolName": {"type":"string","minLength":1},
           "arguments": {"type":"object"},
           "output": {"type":"object"},
@@ -605,7 +609,7 @@
           "grantId": {"type":"string"},
           "parentId": {"type":"string"},
           "rootId": {"type":"string"},
-          "mode": {"type":"string","enum":["RP","BM"]},
+          "mode": {"$ref":"#/components/schemas/AuthorizationMode"},
           "issuerDid": {"type":"string"},
           "granteeDid": {"type":"string"},
           "status": {"type":"string"},

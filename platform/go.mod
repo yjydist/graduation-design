@@ -4,6 +4,7 @@ go 1.27
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.84.0
+	github.com/google/jsonschema-go v0.4.3
 	github.com/google/renameio/v2 v2.0.2
 	github.com/hyperledger/fabric-gateway v1.13.0
 	github.com/hyperledger/fabric-protos-go-apiv2 v0.3.7
@@ -46,7 +47,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

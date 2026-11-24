@@ -3,6 +3,7 @@
 package workbench
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/require"
 
 	"grad/platform/agent"
@@ -182,8 +184,9 @@ func TestProcurementConfirmAndRestartPreserveRunAndOriginalOperation(t *testing.
 	require.Equal(t, StageDelegation, lastStage)
 
 	decision := "urn:grad:decision:workbench-restart"
+	action := "urn:grad:action:workbench-restart"
 	dispatch = StageResult{Status: RunUnknown, Traces: []agent.ToolTrace{{
-		ToolName: "create_order", Output: map[string]any{"decision": "UNKNOWN", "decisionId": decision},
+		ToolName: "create_order", Step: 2, Output: map[string]any{"decision": "UNKNOWN", "actionId": action},
 	}}}
 	require.NoError(t, restarted.ProcessPending(ctx))
 	unknown := readProcurementRun(t, browserRequest(h, http.MethodGet, runPath, "", token, ""), http.StatusOK)
@@ -200,15 +203,45 @@ func TestProcurementConfirmAndRestartPreserveRunAndOriginalOperation(t *testing.
 	require.Equal(t, RunDecided, decided.Status)
 	require.Equal(t, dispatch.Traces, decided.Traces)
 
+	delegation := agent.ToolTrace{ToolName: "delegate_grant", Step: 1, Output: map[string]any{"grantId": run.GrantID("G2")}}
 	_, err = db.Exec(ctx, `INSERT INTO workbench_tool_trace(deployment_id,domain_id,run_id,body)
-		VALUES($1,$2,$3,$4)`, deploy, domain, run.RunID, agent.ToolTrace{ToolName: "delegate_grant"})
+		VALUES($1,$2,$3,$4)`, deploy, domain, run.RunID, delegation)
 	require.NoError(t, err)
 	liveTraces = append(dispatch.Traces, agent.ToolTrace{
 		ToolName: "request_quote", Output: map[string]any{"decision": "DENY", "errorCode": registry.ErrCodeAncestorInactive},
 	})
-	refreshed := readProcurementRun(t, browserRequest(h, http.MethodGet, runPath, "", token, ""), http.StatusOK)
+	resp = browserRequest(h, http.MethodGet, runPath, "", token, "")
+	refreshed := readProcurementRun(t, resp, http.StatusOK)
 	require.Equal(t, RunDecided, refreshed.Status)
-	require.Equal(t, append([]agent.ToolTrace{{ToolName: "delegate_grant"}}, liveTraces...), refreshed.Traces)
+	require.Equal(t, append([]agent.ToolTrace{delegation}, liveTraces...), refreshed.Traces)
+	assertRunMatchesOpenAPI(t, h, resp.Body.Bytes())
+
+	// A fresh handler still returns the stored references while B is unavailable.
+	liveTraces = nil
+	api.cfg.Procurement = NewProcurement(db, deploy, domain, delegate, executor(service)).Handlers()
+	reloaded := readProcurementRun(t, browserRequest(api.Handler(), http.MethodGet, runPath, "", token, ""), http.StatusOK)
+	require.Equal(t, append([]agent.ToolTrace{delegation}, dispatch.Traces...), reloaded.Traces)
+}
+
+func assertRunMatchesOpenAPI(t *testing.T, h http.Handler, body []byte) {
+	t.Helper()
+	doc := browserRequest(h, http.MethodGet, "/openapi.json", "", browserToken{}, "")
+	require.Equal(t, http.StatusOK, doc.Code)
+	var contract struct {
+		Components struct {
+			Schemas json.RawMessage `json:"schemas"`
+		} `json:"components"`
+	}
+	require.NoError(t, json.Unmarshal(doc.Body.Bytes(), &contract))
+	// Expose the OpenAPI components as JSON Schema definitions for validation.
+	raw := bytes.ReplaceAll(contract.Components.Schemas, []byte(`"#/components/schemas/`), []byte(`"#/$defs/`))
+	var schemas map[string]*jsonschema.Schema
+	require.NoError(t, json.Unmarshal(raw, &schemas))
+	schema, err := (&jsonschema.Schema{Defs: schemas, Ref: "#/$defs/Run"}).Resolve(nil)
+	require.NoError(t, err)
+	var run any
+	require.NoError(t, json.Unmarshal(body, &run))
+	require.NoError(t, schema.Validate(run))
 }
 
 func TestProcurementPendingRunsRotateAcrossRestart(t *testing.T) {

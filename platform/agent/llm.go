@@ -70,7 +70,7 @@ func LoadRunnerConfigFromEnv() RunnerConfig {
 
 // ToolTrace records a single sanitized MCP tool invocation produced during an agent run.
 type ToolTrace struct {
-	Step       int            `json:"step"`
+	Step       int            `json:"step"` // Model turns start at 1. Workbench service calls use 0.
 	ToolName   string         `json:"toolName"`
 	Arguments  map[string]any `json:"arguments,omitempty"`
 	Output     map[string]any `json:"output,omitempty"`

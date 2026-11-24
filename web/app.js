@@ -585,7 +585,7 @@ function toolTraces(traces) {
         trace.toolName === 'model_result' ? element('code', {}, trace.toolName) : null,
         status(output.actionStatus === 'UNKNOWN' ? 'unknown' : output.decision || (trace.isError ? 'failed' : 'returned'))),
       facts([
-        ['步骤', trace.step],
+        ['模型步骤', trace.step > 0 ? trace.step : null],
         ['耗时 (ms)', trace.durationMs],
         ...displayFields.map((key) => [
           fieldLabels[key] ?? key,

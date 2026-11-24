@@ -1,5 +1,49 @@
 # m4-domain-web-workbench 核验报告
 
+## 工具轨迹警告修复复核
+
+两项警告均已修复. OpenSpec 任务完成度为 23/23.
+
+| 警告 | 修复及证据 |
+| --- | --- |
+| 轨迹丢失原业务结果 ID | 转委托提取 `grantId`, 下单保留 `actionId`, MCP 核账将 `creationDecisionId` 投影为 `decisionId`. 定向测试确认三个字段保留, 原始参数, 文本和完整委托材料继续脱敏. PostgreSQL 回归确认重新创建运行详情处理器后仍能读回三个 ID. [轨迹投影](../../../platform/runtime/workbench_dispatch.go#L403), [投影回归](../../../platform/runtime/workbench_flow_test.go#L16), [重载回归](../../../platform/workbench/procurement_db_test.go#L187). |
+| 服务调用轨迹不符合 OpenAPI | `step: 0` 表示服务发起, 模型轮次从 1 开始. 前端仅为正数显示模型步骤. 域间 HTTP 配对回归从 B 读回 `step: 0` 及原业务 ID. 浏览器回归用发布的 OpenAPI 校验实际运行详情响应, 并将测试发现的 `mode` 枚举偏差修正为协议中的完整授权模式值. [OpenAPI](../../../platform/workbench/openapi.json#L519), [HTTP 回归](../../../platform/runtime/workbench_grants_db_test.go#L391), [响应契约回归](../../../platform/workbench/procurement_db_test.go#L226). |
+
+通过 OpenSpec 严格校验, 三模块无缓存单测, 全量 PostgreSQL 集成测试, 工作台相关竞态检测, `fabriclive` 标签编译, 前端语法和轨迹渲染检查, 前后端镜像构建. 浏览器和真实模型全流程仍以已留存的 [实机证据](../../../infra/workbench/evidence/m4-domain-web-workbench/README.md) 为依据. 修复前已持久化的轨迹中, 当时丢失的字段无法从轨迹原文补回.
+
+## 提交 `e3f9b65` 的独立复核
+
+| 维度 | 结果 |
+| --- | --- |
+| 完整性 | 21/21 项任务已勾选, 7/7 项新增要求找到实现. 修改, 删除和重命名要求均为 0. |
+| 正确性 | 7/7 项要求已映射, 10 个场景均已核对. 报价恢复通过. 工具轨迹存在关联字段丢失和响应契约偏差. |
+| 一致性 | 已核对 4 项设计决策及代码组织. 双镜像, 本域会话与执行绑定, 持久化队列和证据投影均有对应实现. 轨迹关联存在下述偏差. 四模块依赖边界检查通过. |
+
+### 警告
+
+1. **脱敏投影丢失关联原业务结果所需的 ID.** 通过临时定向测试确认, `delegate_grant` 的 `grant.grantId`, 订单结果未知时的 `actionId`, 以及 MCP 核账返回的 `creationDecisionId` 经 `boundedTrace` 后均消失. 从相应工具调用无法直接关联链上 G2, 原订单意图或 C 的原决定. 建议仅保留这些获准展示的结构化 ID, 将 `creationDecisionId` 投影到 `decisionId`, 并增加运行详情重载后仍可逐项对账的回归. [规范场景](specs/domain-web-workbench/spec.md#scenario-从采购任务追踪真实业务事实), [轨迹投影](../../../platform/runtime/workbench_dispatch.go#L403), [委托结果](../../../platform/agent/tools.go#L53), [订单与核账结果](../../../platform/agent/tools.go#L125).
+2. **受控 HTTP 产生的轨迹不符合浏览器 OpenAPI.** `ToolTrace.step` 为必填项且最小值为 1. 在隔离 PostgreSQL 配对回归中, 经实际域间 HTTP 入口询价成功, A 侧读回的持久化轨迹 `step` 为 0. 浏览器运行详情直接返回该轨迹. 确定性探针和后台自动核账也未赋步骤值. 建议文档明确非模型轨迹的步骤语义, 统一写入及读取行为, 并用实际运行详情响应验证 `Run` 模型. [OpenAPI 定义](../../../platform/workbench/openapi.json#L515), [HTTP 轨迹写入](../../../platform/runtime/workbench_dispatch.go#L247), [运行详情读取](../../../platform/workbench/procurement.go#L358), [配对回归](../../../platform/runtime/workbench_grants_db_test.go#L355).
+
+### 要求与场景证据
+
+| 新增要求 | 场景数 | 核对结果 |
+| --- | --- | --- |
+| Web 与 MCP 共用确定性业务操作 | 2 | HTTP 和 MCP 使用同一绑定及业务键. 钱包重建后原报价可用于首次下单, 重试返回同一订单. 绑定判据, 过期报价和当前授权分别由配对回归和 C 网关回归覆盖. [HTTP 入口](../../../platform/runtime/workbench_transport.go#L125), [报价恢复](../../../platform/runtime/workbench_grants_db_test.go#L355), [报价有效期回归](../../../platform/gateway/gateway_db_test.go#L918). |
+| 工作台派单绑定各域智能体身份与当前任务 | 2 | A1 绑定 G1 及指定收件人, B 校验已交付的 G2 及原任务, MCP 裁剪阶段工具. 身份, 模式及任务绑定错误有回归, 两域模型执行有实机记录. [A1 装配](../../../platform/runtime/workbench_flow.go#L318), [B 域派单](../../../platform/runtime/workbench_flow.go#L520), [绑定回归](../../../platform/agent/bound_test.go#L15). |
+| 三域复用独立构建的前后端 | 1 | 两个镜像重新构建成功, 三域 Compose 配置通过. 已有实机记录覆盖镜像一致, 运行时配置, 就绪, 独立存储和凭据隔离. OpenAPI 响应发现上述警告. [Compose 模板](../../../infra/workbench/compose.yaml), [干净部署记录](../../../infra/workbench/evidence/m4-domain-web-workbench/clean-rerun.json). |
+| 浏览器会话绑定可信域身份和权限 | 2 | 三域管理员读取原 `operationId` 及有效交易结果. 跨域会话, 无效会话, 越权及 CSRF 均有回归. [会话校验](../../../platform/workbench/session.go#L292), [管理回归](../../../platform/workbench/server_db_test.go#L33), [实机管理记录](../../../infra/workbench/evidence/m4-domain-web-workbench/live-admin.json). |
+| 采购员确认结构化任务后派发智能体 | 1 | 草稿版本, 并发确认, 待确认状态恢复和未交付材料门槛有回归. RP/BM 分别使用 C 和 PA 的根. [草稿确认](../../../platform/workbench/procurement.go#L286), [采购回归](../../../platform/workbench/procurement_db_test.go#L24), [阶段推进](../../../platform/runtime/workbench_flow.go#L80). |
+| 角色可见的采购与决策证据 | 1 | 核对五个视图和摘要与完整决定的访问边界, 确认 C 尚无决定时能显示逐跳金额. 工具结果关联存在上述警告. [逐跳金额回归](../../../platform/runtime/workbench_grants_db_test.go#L281), [证据权限回归](../../../platform/gateway/gateway_db_test.go#L1394), [实机证据索引](../../../infra/workbench/evidence/m4-domain-web-workbench/README.md). |
+| 浏览器复现两种根和动态状态变化 | 1 | 已有实机记录和主库导出相符. RP 唯一 800 元订单, BM 的 1200 元下单以 `AMOUNT_LIMIT_EXCEEDED` 拒绝, C 采用第 507 块后返回 `ANCESTOR_INACTIVE`, G1 恢复后沿用原期限且询价成功. [主库与交易对账](../../../infra/workbench/evidence/m4-domain-web-workbench/ledger-reconciliation.json), [恢复后询价](../../../infra/workbench/evidence/m4-domain-web-workbench/resumed-probe.json). |
+
+### 验证结果
+
+- 通过 OpenSpec 严格校验, 三模块无缓存单测, 平台全量 PostgreSQL 集成测试, 工作台相关竞态检测, `fabriclive` 标签编译, 四模块依赖边界检查, 前端脚本语法检查, 前后端镜像构建及三域 Compose 配置检查.
+- 两项新增轨迹问题均通过临时定向检查复现. 定向检查未写入仓库.
+- 三域实机启动, 浏览器和真实模型全流程采用仓库中已有的隔离实例证据. 本轮重新对账留存的交易, 网关结果和 C 主库导出.
+
+0 项严重问题, 2 项警告, 0 项建议, 0 项未核实检查. 可归档, 建议先补齐工具轨迹关联和 OpenAPI 响应契约.
+
 ## 报价恢复警告修复复核
 
 21/21 项任务已完成. 7 项新增要求和 10 个场景均有实现及回归或既有实机证据. 报价恢复警告已关闭.

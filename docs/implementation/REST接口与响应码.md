@@ -149,6 +149,8 @@ T 和各域采用相同操作键和提交规则. 域认证更新走 T 接口, �
 | `/runs`, `/runs/{runId}`, `/runs/{runId}/suspend`, `/runs/{runId}/resume` | 采购员 U 查询自己的运行和脱敏轨迹, 用管理操作键暂停或恢复本任务的 G1. |
 | `/runs/{runId}/evidence`, `/decisions/{decisionId}` | 按任务归属读取可分享证据. 完整决策限实际请求主体或授权审计者. |
 
+草稿, 运行和委托证据的 `mode` 使用 `RESOURCE_PREAUTHORIZED` (RP) 或 `BUYER_MANDATE` (BM). 运行详情中的脱敏轨迹保留转委托的 `output.grantId`, 下单的 `output.actionId` 及核账所得原网关决定的 `output.decisionId`. `step` 从 1 开始记录模型轮次, 域间 HTTP, 演示探针和后台自动核账的 `step` 为 0.
+
 浏览器错误使用同一 `{requestId,code,decisionId,message}` 信封. 会话缺失或撤销返回 401 `SESSION_REQUIRED`, 用户名或密码无效返回 401 `LOGIN_FAILED`, CSRF 验证失败返回 403 `CSRF_INVALID`. 无权读取的原交易与未知操作统一返回 404 `OPERATION_UNKNOWN`. PA 同键同输入由管理服务复用原 `operationId`. 同键不同输入返回 409 `IDEMPOTENCY_CONFLICT`, 新操作版本过期返回 409 `STATE_CHANGED`.
 
 ### 4.1 域间工作台接口

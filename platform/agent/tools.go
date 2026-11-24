@@ -528,6 +528,10 @@ func (w *WalletContext) ReplaceGrant(ctx context.Context, in ReplaceGrantInput) 
 
 // RequestQuote obtains a binding supplier quote via gateway quote.read using canonical urn:grad:resource:C:quotes.
 func (w *WalletContext) RequestQuote(ctx context.Context, in RequestQuoteInput) (RequestQuoteOutput, error) {
+	return w.requestQuote(ctx, in, false)
+}
+
+func (w *WalletContext) requestQuote(ctx context.Context, in RequestQuoteInput, persistBoundQuote bool) (RequestQuoteOutput, error) {
 	if in.Actor == "" || in.TaskID == "" || in.ProductID == "" || in.Quantity <= 0 {
 		return RequestQuoteOutput{}, errors.New("actor, taskId, productId, and quantity > 0 are required")
 	}
@@ -590,6 +594,11 @@ func (w *WalletContext) RequestQuote(ctx context.Context, in RequestQuoteInput) 
 		Currency:   req.Currency,
 	}
 	if code == http.StatusOK && execResp != nil {
+		if persistBoundQuote && w.cfg.DB != nil {
+			if err := w.saveBoundQuote(ctx, req, execResp.Quote); err != nil {
+				return RequestQuoteOutput{}, err
+			}
+		}
 		out.Decision = "ALLOW"
 		out.DecisionID = execResp.DecisionID
 		if execResp.Quote != nil {

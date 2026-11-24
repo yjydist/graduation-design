@@ -363,15 +363,37 @@ func TestWorkbenchGrantIssueAndDeliveryUseOriginalCommitAndActualTask(t *testing
 
 	orderInput := agent.CreateOrderInput{Actor: "B1", TaskID: run.TaskID, AuthorizationMode: run.Task.Mode,
 		GrantID: g2Anchor.ID, QuoteID: httpQuote.QuoteID, AmountMinor: httpQuote.TotalAmountMinor}
+	var quoteDecisions int
+	require.NoError(t, dbC.QueryRow(ctx, `SELECT count(*) FROM decisions
+		WHERE deployment_id=$1 AND task_id=$2 AND action=$3`,
+		dep.DeploymentID, run.TaskID, protocol.ActionQuoteRead).Scan(&quoteDecisions))
+	require.Positive(t, quoteDecisions)
+
+	// Restart before any order intent exists and submit the original quote directly.
+	b.wallet = newB1Wallet()
+	restartedOps, err := b.loadB1(ctx, run, false)
+	require.NoError(t, err)
+	toolSession = workbenchMCPSession(t, restartedOps)
+	wrongQuote := orderInput
+	wrongQuote.QuoteID = "urn:grad:quote:other"
+	assertWorkbenchOperationError(t, a, toolSession, path+"/order", "create_order", wrongQuote, registry.ErrCodeBindingMismatch)
+	wrongAmount := orderInput
+	wrongAmount.AmountMinor++
+	assertWorkbenchOperationError(t, a, toolSession, path+"/order", "create_order", wrongAmount, registry.ErrCodeBindingMismatch)
+	otherRun, err := agent.NewBoundOperations(b.wallet, b.b1Binding(run, "another quote scope", nil))
+	require.NoError(t, err)
+	_, err = otherRun.CreateOrder(ctx, orderInput)
+	require.True(t, protocol.HasCode(err, registry.ErrCodeBindingMismatch), "%v", err)
 	var httpOrder agent.CreateOrderOutput
 	require.NoError(t, a.callPeer(ctx, "B", http.MethodPost, path+"/order", orderInput, &httpOrder))
 	require.Equal(t, "ALLOW", httpOrder.Decision, "%s", httpOrder.ErrorCode)
+	require.Equal(t, httpQuote.QuoteID, httpOrder.QuoteID)
 	mcpOrder := callWorkbenchMCP[agent.CreateOrderOutput](t, toolSession, "create_order", orderInput)
 	require.Equal(t, httpOrder, mcpOrder)
 	b.wallet = newB1Wallet()
 	require.NoError(t, a.callPeer(ctx, "B", http.MethodPost, path+"/order", orderInput, &httpOrder))
 	require.Equal(t, mcpOrder, httpOrder)
-	restartedOps, err := b.loadB1(ctx, run, false)
+	restartedOps, err = b.loadB1(ctx, run, false)
 	require.NoError(t, err)
 	toolSession = workbenchMCPSession(t, restartedOps)
 	require.Equal(t, httpOrder, callWorkbenchMCP[agent.CreateOrderOutput](t, toolSession, "create_order", orderInput))
@@ -381,6 +403,11 @@ func TestWorkbenchGrantIssueAndDeliveryUseOriginalCommitAndActualTask(t *testing
 		WHERE deployment_id=$1 AND task_id=$2 AND actor=$3`, dep.DeploymentID, run.TaskID, rec("B1").DID).Scan(&orderCount, &storedOrderKey))
 	require.Equal(t, 1, orderCount)
 	require.Equal(t, ops.OrderKey(), storedOrderKey)
+	var finalQuoteDecisions int
+	require.NoError(t, dbC.QueryRow(ctx, `SELECT count(*) FROM decisions
+		WHERE deployment_id=$1 AND task_id=$2 AND action=$3`,
+		dep.DeploymentID, run.TaskID, protocol.ActionQuoteRead).Scan(&finalQuoteDecisions))
+	require.Equal(t, quoteDecisions, finalQuoteDecisions, "order recovery must not submit a new quote request")
 	badQuote := quoteInput
 	badQuote.Actor = "A1"
 	assertWorkbenchOperationError(t, a, toolSession, path+"/quote", "request_quote", badQuote, registry.ErrCodeBindingMismatch)

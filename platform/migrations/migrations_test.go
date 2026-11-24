@@ -78,8 +78,10 @@ func TestMigrationsUpIdempotentAndAllTablesPresent(t *testing.T) {
 		"workbench_decision_proof",
 		// 010_workbench_rejections.sql (1)
 		"workbench_gateway_rejections",
+		// 012_bound_quotes.sql (1)
+		"wallet_bound_quotes",
 	}
-	require.Len(t, expectedTables, 36)
+	require.Len(t, expectedTables, 37)
 
 	rows, err := pool.Query(ctx, `
 		SELECT table_name

@@ -155,4 +155,6 @@ T 和各域采用相同操作键和提交规则. 域认证更新走 T 接口, �
 
 B 域在 mTLS 服务监听器上接受已绑定的 A 域工作台服务调用. `POST /internal/workbench/dispatch/{runId}/quote` 和 `POST /internal/workbench/dispatch/{runId}/order` 分别使用与 B1 MCP 的 `request_quote` 和 `create_order` 相同的输入和结果. B 从原派单选定 B1, 复核任务和 G2, 复用运行固定的报价和订单业务键. 待执行或已定案的运行可调用相应操作, 网关定案和业务键约束仍然适用. 订单结果未知时由原运行的核账流程推进. 同一运行的 HTTP 操作和后台执行串行, 执行已占用时返回 409 `STATE_CHANGED`.
 
+成功报价在返回前绑定原运行的询价键并持久化. B 重启后, 首次下单可直接提交该运行原报价的 `quoteId` 和金额. 错误的报价引用或金额返回 `BINDING_MISMATCH`, 首次下单仍由 C 核对报价有效期及当前授权.
+
 `GET /internal/workbench/root-amount/{taskId}` 供 A 域工作台服务向 C 域读取 RP 根授权额度. C 核对本任务的已登记锚点及签发记录, 仅返回授权摘要和签发金额. A 对照自己的锚点核对该摘要.

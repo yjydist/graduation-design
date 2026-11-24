@@ -185,8 +185,31 @@ func (o *BoundOperations) RequestQuote(ctx context.Context, in RequestQuoteInput
 	}
 	in.Actor, in.GrantID, in.TaskID, in.AuthorizationMode = b.Actor, b.GrantID, b.TaskID, b.Mode
 	in.ProductID, in.Quantity, in.IdempotencyKey = b.ProductID, b.Quantity, o.QuoteKey()
-	out, err := o.wallet.RequestQuote(ctx, in)
+	out, err := o.wallet.requestQuote(ctx, in, true)
 	return out, executionFailure(err)
+}
+
+func (w *WalletContext) saveBoundQuote(ctx context.Context, req protocol.AccessRequest, quote *QuotePayload) error {
+	if quote == nil || quote.QuoteID == "" || quote.Actor != req.Actor || quote.TaskID != req.TaskID ||
+		quote.SupplierID != req.SupplierID || quote.ProductID != req.ProductID || quote.Quantity != req.Quantity ||
+		quote.Currency != req.Currency || quote.TotalAmountMinor <= 0 {
+		return executionMismatch("gateway quote differs from the run request")
+	}
+	// A repeat of the same quote may confirm the stored terms, but may never change them.
+	tag, err := w.cfg.DB.Exec(ctx, `INSERT INTO wallet_bound_quotes
+		(deployment_id, actor, task_id, quote_key, quote_id, currency, total_amount_minor)
+		VALUES ($1,$2,$3,$4,$5,$6,$7)
+		ON CONFLICT (deployment_id, actor, task_id, quote_key) DO UPDATE SET quote_id=EXCLUDED.quote_id
+		WHERE (wallet_bound_quotes.quote_id, wallet_bound_quotes.currency, wallet_bound_quotes.total_amount_minor)
+			= (EXCLUDED.quote_id, EXCLUDED.currency, EXCLUDED.total_amount_minor)`,
+		req.DeploymentID, req.Actor, req.TaskID, req.IdempotencyKey, quote.QuoteID, quote.Currency, quote.TotalAmountMinor)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return executionMismatch("quote terms differ from the original run quote")
+	}
+	return nil
 }
 
 func (o *BoundOperations) CreateOrder(ctx context.Context, in CreateOrderInput) (CreateOrderOutput, error) {
@@ -216,20 +239,36 @@ func (o *BoundOperations) CreateOrder(ctx context.Context, in CreateOrderInput) 
 }
 
 func (o *BoundOperations) orderQuoteTerms(ctx context.Context, id string) (string, int64, error) {
-	b := o.scope
-	o.wallet.mu.Lock()
-	quote, found := o.wallet.quotes[id]
-	o.wallet.mu.Unlock()
-	if found {
-		if quote.Actor != b.Actor || quote.TaskID != b.TaskID || quote.IdempotencyKey != o.QuoteKey() {
-			return "", 0, executionMismatch("quote differs from the run binding")
+	w, b := o.wallet, o.scope
+	if w.cfg.DB != nil {
+		var quoteID, currency string
+		var amount int64
+		err := w.cfg.DB.QueryRow(ctx, `SELECT quote_id, currency, total_amount_minor FROM wallet_bound_quotes
+			WHERE deployment_id=$1 AND actor=$2 AND task_id=$3 AND quote_key=$4`,
+			b.DeploymentID, b.DID, b.TaskID, o.QuoteKey()).Scan(&quoteID, &currency, &amount)
+		if err == nil {
+			if id != quoteID {
+				return "", 0, executionMismatch("quote differs from the run binding")
+			}
+			return currency, amount, nil
 		}
-		return quote.Currency, quote.TotalAmountMinor, nil
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return "", 0, executionFailure(err)
+		}
+	} else {
+		w.mu.Lock()
+		quote, found := w.quotes[id]
+		w.mu.Unlock()
+		if found {
+			if quote.Actor != b.Actor || quote.TaskID != b.TaskID || quote.IdempotencyKey != o.QuoteKey() {
+				return "", 0, executionMismatch("quote differs from the run binding")
+			}
+			return quote.Currency, quote.TotalAmountMinor, nil
+		}
 	}
 
-	// The quote cache is transient. An existing order intent binds its original
-	// quote and terms to the same run key across wallet restarts.
-	action, err := o.wallet.GetClientActionByKey(ctx, b.DID, b.TaskID, protocol.ActionOrderCreate, o.OrderKey())
+	// An existing order intent can still supply its original terms after an upgrade.
+	action, err := w.GetClientActionByKey(ctx, b.DID, b.TaskID, protocol.ActionOrderCreate, o.OrderKey())
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", 0, executionMismatch("order must use the confirmed run quote")
 	}

@@ -70,7 +70,7 @@
 
 ## M4 演示与交付
 
-[演示与交付规格](docs/implementation/证据交付与网关执行.md#4-演示与交付), [三域 Web 工作台提案](openspec/changes/m4-domain-web-workbench/proposal.md), [实施任务](openspec/changes/m4-domain-web-workbench/tasks.md), [三域实机核验](infra/workbench/evidence/m4-domain-web-workbench/README.md).
+[演示与交付规格](docs/implementation/证据交付与网关执行.md#4-演示与交付), [三域 Web 工作台提案](openspec/changes/archive/2026-11-24-m4-domain-web-workbench/proposal.md), [归档任务](openspec/changes/archive/2026-11-24-m4-domain-web-workbench/tasks.md), [独立核验](openspec/changes/archive/2026-11-24-m4-domain-web-workbench/verification.md), [三域实机核验](infra/workbench/evidence/m4-domain-web-workbench/README.md).
 
 - [x] 建立 Web 与 MCP 共用的业务操作. 交付按主体及任务约束的工具入口, 以及人工操作和智能体调用共用授权与幂等判据的回归.
 - [x] 交付三域共用的前后端镜像和 Compose 模板. 验证 A/B/C 用相同镜像摘要及各自运行配置独立启动, 浏览器按版本化 API 访问本域后端.

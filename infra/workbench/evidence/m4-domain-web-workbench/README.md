@@ -1,6 +1,6 @@
 # M4 三域工作台实机核验
 
-在同一隔离 Fabric 项目 `grad-fabric-499a67adbca3` 中, 从 A/B/C 浏览器登录到原链上交易和 C 订单主库对账. 三域使用相同的前后端镜像, 各自绑定独立存储, 本域账号和签名材料. [操作手册](../../README.md), [实施任务](../../../../openspec/changes/m4-domain-web-workbench/tasks.md).
+在同一隔离 Fabric 项目 `grad-fabric-499a67adbca3` 中, 从 A/B/C 浏览器登录到原链上交易和 C 订单主库对账. 三域使用相同的前后端镜像, 各自绑定独立存储, 本域账号和签名材料. [操作手册](../../README.md), [归档任务](../../../../openspec/changes/archive/2026-11-24-m4-domain-web-workbench/tasks.md).
 
 | 场景 | 实际结果 | 证据 |
 | --- | --- | --- |

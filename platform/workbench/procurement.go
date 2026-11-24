@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -31,6 +32,9 @@ const (
 	RunDenied       = "GATEWAY_DENIED"
 	RunUnknown      = "OUTCOME_UNKNOWN"
 	RunDecided      = "DECIDED"
+
+	maxChatMessageLength      = 4000
+	maxDraftDescriptionLength = 512
 )
 
 type Draft struct {
@@ -67,7 +71,7 @@ func (d Draft) validate(delegate string, now time.Time) error {
 		return protocol.NewError(registry.ErrCodeInvalidSchema, "expiration must be within the next 24 hours")
 	case d.ProductID != "urn:grad:product:P1" && d.ProductID != "urn:grad:product:P2":
 		return protocol.NewError(registry.ErrCodeInvalidSchema, "unknown product")
-	case len(d.Description) > 512:
+	case utf8.RuneCountInString(d.Description) > maxDraftDescriptionLength:
 		return protocol.NewError(registry.ErrCodeInvalidSchema, "description is too long")
 	default:
 		return spec.Validate()
@@ -180,7 +184,7 @@ func (p *Procurement) chat(w http.ResponseWriter, r *http.Request, principal Pri
 	}
 	ctx := r.Context()
 	msg := strings.TrimSpace(in.Message)
-	if msg == "" || len(msg) > 4000 {
+	if msg == "" || utf8.RuneCountInString(in.Message) > maxChatMessageLength {
 		procurementError(w, r, protocol.NewError(registry.ErrCodeInvalidSchema, "invalid message"))
 		return
 	}

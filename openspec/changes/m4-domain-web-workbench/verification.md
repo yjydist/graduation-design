@@ -1,5 +1,49 @@
 # m4-domain-web-workbench 核验报告
 
+## 中文输入与核账状态修复复核
+
+两项警告已修复. OpenSpec 任务完成度为 25/25.
+
+| 警告 | 修复及验证 |
+| --- | --- |
+| 中文输入长度契约不一致 | 浏览器与 Go 按 OpenAPI 的 Unicode 码点计数. Chrome 测试和隔离 PostgreSQL HTTP 回归均确认, 汉字与补充平面字符在 4000 码点的消息上限和 512 码点的草稿说明上限处可提交, 超出 1 个码点时被拒绝. 草稿返回值也通过 OpenAPI 验证. [浏览器校验](../../../web/app.js#L384), [后端校验](../../../platform/workbench/procurement.go#L184), [HTTP 回归](../../../platform/workbench/procurement_db_test.go#L27). |
+| 未知核账轨迹显示为"已返回" | 页面按 `actionStatus: OUTCOME_UNKNOWN` 或 `outcome: UNKNOWN` 显示"业务结果未知". Chrome 加载实际前端和测试响应, 验证 `step: 0` 的后台核账及模型发起的 MCP 核账均显示该状态, 同时保留拒绝与正常返回的状态. [轨迹渲染](../../../web/app.js#L584). |
+
+OpenSpec 严格校验, 三模块无缓存单测, 全量 PostgreSQL 集成测试, 工作台数据库回归竞态检测, 前端语法检查和前后端镜像构建均通过. 浏览器定向回归使用测试响应, 三域实机和真实模型全流程采用[既有验收记录](../../../infra/workbench/evidence/m4-domain-web-workbench/README.md).
+
+## 提交 `e96619b` 的独立复核
+
+| 维度 | 结果 |
+| --- | --- |
+| 完整性 | 23/23 项任务已勾选, 7/7 项新增要求均找到实现. 修改, 删除和重命名要求均为 0. |
+| 正确性 | 7/7 项要求已映射, 10/10 个场景均有回归或已留存实机证据. 核账轨迹的未知状态提示存在偏差. |
+| 一致性 | 已核对 4 项设计决策及代码组织. 双镜像, 本域身份与运行绑定, 持久化流程及证据投影均有对应实现. 浏览器输入长度契约存在偏差. 四模块依赖边界检查通过. |
+
+### 警告
+
+1. **中文输入的长度限制在 OpenAPI 与 Go 处理器之间不一致.** OpenAPI 的 `maxLength` 按字符计数, Go 的 `len` 按 UTF-8 字节计数. 隔离 PostgreSQL 回归通过已登录的 HTTP 处理器复现, 1500 个汉字的对话消息和 200 个汉字的草稿说明均通过发布的 OpenAPI 校验, 实际请求均返回 `400 INVALID_SCHEMA`. 建议统一前端, OpenAPI 和 Go 的长度单位, 并用多字节输入验证 `ChatInput` 和 `DraftEdit` 的边界. [对话处理器](../../../platform/workbench/procurement.go#L173), [草稿限制](../../../platform/workbench/procurement.go#L57), [消息契约](../../../platform/workbench/openapi.json#L440), [草稿契约](../../../platform/workbench/openapi.json#L482).
+2. **未知核账结果在工具轨迹上显示为"已返回".** 后台及 MCP 核账可返回 `actionStatus: OUTCOME_UNKNOWN` 和 `outcome: UNKNOWN`. 轨迹渲染判断的是 `actionStatus === 'UNKNOWN'`, 此类轨迹没有 `decision` 时便显示"已返回". 对实际 `toolTraces` 函数的定向检查复现了该结果. 建议用 `OUTCOME_UNKNOWN` 或核账 `outcome` 映射"业务结果未知", 并覆盖 `step: 0` 后台核账与模型核账轨迹. [后台核账投影](../../../platform/runtime/workbench_dispatch.go#L305), [核账输出](../../../platform/agent/tools.go#L934), [轨迹渲染](../../../web/app.js#L573).
+
+### 要求与场景证据
+
+| 新增要求 | 场景数 | 核验依据 |
+| --- | --- | --- |
+| Web 与 MCP 共用确定性业务操作 | 2 | 域间 HTTP 和 MCP 使用同一组绑定操作及业务键. 钱包重启后, 原报价可用于首次下单, 重试只对应一笔订单. 网关的报价有效期和当前授权有独立回归. [域间路由](../../../platform/runtime/workbench_transport.go#L125), [配对回归](../../../platform/runtime/workbench_grants_db_test.go#L355), [网关回归](../../../platform/gateway/gateway_db_test.go#L811). |
+| 工作台派单绑定各域智能体身份与当前任务 | 2 | A1 按 G1 与收件者绑定转委托. B 域验证 G2, 签发者, 任务摘要与派单重放. MCP 回归覆盖伪造主体, 任务, 模式与委托参数. [A1 执行](../../../platform/runtime/workbench_flow.go#L318), [B 域接单](../../../platform/runtime/workbench_flow.go#L520), [绑定回归](../../../platform/agent/bound_test.go#L15). |
+| 三域复用独立构建的前后端 | 1 | 当前前后端镜像均可构建, 三域 Compose 配置通过. 已留存的干净部署记录覆盖镜像复用, 就绪, 独立存储及凭据隔离. [Compose 模板](../../../infra/workbench/compose.yaml), [部署记录](../../../infra/workbench/evidence/m4-domain-web-workbench/clean-rerun.json). |
+| 浏览器会话绑定可信域身份和权限 | 2 | 会话, CSRF, 本域角色校验及原交易查询均有回归. 三域管理员的真实管理操作在原块确认. [会话校验](../../../platform/workbench/session.go#L292), [浏览器 API 回归](../../../platform/workbench/server_db_test.go#L33), [实机管理记录](../../../infra/workbench/evidence/m4-domain-web-workbench/live-admin.json). |
+| 采购员确认结构化任务后派发智能体 | 1 | 回归覆盖草稿修改, 旧版本拒绝, 并发确认, 原登记操作恢复及等待交付. 实机记录区分 C 签发的 RP 根和 PA 签发的 BM 根. [采购回归](../../../platform/workbench/procurement_db_test.go#L26), [流程推进](../../../platform/runtime/workbench_flow.go#L80), [实机证据](../../../infra/workbench/evidence/m4-domain-web-workbench/README.md). |
+| 角色可见的采购与决策证据 | 1 | 五个视图引用真实记录, 逐跳金额可在 C 定案前读取. 核对了摘要与原决定权限, 业务 ID 重载及 `step: 0` 响应. 核账状态提示见警告. [证据投影](../../../platform/runtime/workbench_evidence.go#L40), [决定权限回归](../../../platform/gateway/gateway_db_test.go#L1394), [运行详情回归](../../../platform/workbench/procurement_db_test.go#L186). |
+| 浏览器复现两种根和动态状态变化 | 1 | 留存的主库与交易证据显示唯一 800 元订单, 1200 元订单请求以 `AMOUNT_LIMIT_EXCEEDED` 拒绝, C 在第 507 块返回 `ANCESTOR_INACTIVE`. G1 恢复沿用原截止, 随后询价成功. [主库与交易对账](../../../infra/workbench/evidence/m4-domain-web-workbench/ledger-reconciliation.json), [恢复后询价](../../../infra/workbench/evidence/m4-domain-web-workbench/resumed-probe.json). |
+
+### 本轮验证结果
+
+- 通过 OpenSpec 严格校验, 三模块无缓存单测, 全量 PostgreSQL 集成测试, `agent`, `runtime` 和 `workbench` 的数据库回归竞态检测, `fabriclive` 标签编译, 四模块依赖边界检查, 前端脚本语法检查, 两个镜像构建及三域 Compose 配置检查.
+- 当前 OpenAPI 校验通过 4 份留存运行响应, 2 份任务证据投影及 2 份 C 审计决定. 另用临时定向检查复现两项警告.
+- 三域实机部署, 浏览器和真实模型全流程采用仓库已留存的隔离实例证据. 本轮重新核对镜像一致性记录, 主库订单, 网关决定, G1 截止和恢复回执.
+
+0 项严重问题, 2 项警告, 0 项建议, 0 项未核实检查. 可归档, 建议优先修正中文输入契约和未知核账的状态提示.
+
 ## 工具轨迹警告修复复核
 
 两项警告均已修复. OpenSpec 任务完成度为 23/23.

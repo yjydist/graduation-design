@@ -441,7 +441,7 @@
         "type": "object",
         "additionalProperties": false,
         "required": ["message"],
-        "properties": {"message":{"type":"string","minLength":1,"maxLength":4000},"draftId":{"type":"string","minLength":1}}
+        "properties": {"message":{"type":"string","minLength":1,"maxLength":4000,"description":"长度按 Unicode 码点计数."},"draftId":{"type":"string","minLength":1}}
       },
       "ChatResult": {
         "type": "object",
@@ -476,7 +476,7 @@
           "maxAmountMinor": {"type":"integer","minimum":1,"maximum":9007199254740991},
           "expiresAt": {"type":"integer","format":"int64","description":"Unix timestamp in seconds."},
           "delegateDid": {"type":"string","pattern":"^did:web:.+$"},
-          "description": {"type":"string","minLength":1,"maxLength":512}
+          "description": {"type":"string","minLength":1,"maxLength":512,"description":"长度按 Unicode 码点计数."}
         }
       },
       "DraftEdit": {
@@ -492,7 +492,7 @@
           "maxAmountMinor": {"type":"integer","minimum":1,"maximum":9007199254740991},
           "expiresAt": {"type":"integer","format":"int64","description":"Unix timestamp in seconds."},
           "delegateDid": {"type":"string","pattern":"^did:web:.+$"},
-          "description": {"type":"string","minLength":1,"maxLength":512}
+          "description": {"type":"string","minLength":1,"maxLength":512,"description":"长度按 Unicode 码点计数."}
         }
       },
       "DraftVersion": {

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,6 +23,64 @@ import (
 	"grad/platform/state/fabric"
 	"grad/protocol/registry"
 )
+
+func TestProcurementTextLimitsMatchOpenAPI(t *testing.T) {
+	const deploy, domain, delegate = "procurement-text", "A", "did:web:a.local:a1"
+	db := testutil.OpenMigratedPool(t)
+	buyer := testAccount(domain, "buyer", RoleBuyer, "a")
+	api := testServer(t, db, nil, deploy, domain)
+	require.NoError(t, api.SeedAccounts(t.Context(), []AccountSeed{buyer}))
+	executor := procurementTestExecutor{draft: Draft{
+		ProductID: "urn:grad:product:P1", Quantity: 1, Mode: registry.RP, MaxAmountMinor: 100000,
+		ExpiresAt: time.Now().Add(time.Hour).Unix(), DelegateDID: delegate, Description: "Procurement demo",
+	}}
+	api.cfg.Procurement = NewProcurement(db, deploy, domain, delegate, executor).Handlers()
+	h := api.Handler()
+	token := loginTestAccount(t, h, buyer)
+	chatSchema := browserOpenAPISchema(t, h, "ChatInput")
+	draftEditSchema := browserOpenAPISchema(t, h, "DraftEdit")
+	draftSchema := browserOpenAPISchema(t, h, "Draft")
+
+	for _, tc := range []struct{ name, char string }{{"CJK", "采"}, {"supplementary plane", "\U00020000"}} {
+		t.Run(tc.name, func(t *testing.T) {
+			request := func(method, path string, schema *jsonschema.Resolved, body any, valid bool) *httptest.ResponseRecorder {
+				t.Helper()
+				raw, err := json.Marshal(body)
+				require.NoError(t, err)
+				var input any
+				require.NoError(t, json.Unmarshal(raw, &input))
+				res := browserRequest(h, method, path, string(raw), token, "")
+				if valid {
+					require.NoError(t, schema.Validate(input))
+					require.Equal(t, http.StatusOK, res.Code, res.Body.String())
+				} else {
+					require.Error(t, schema.Validate(input))
+					assertError(t, res, http.StatusBadRequest, registry.ErrCodeInvalidSchema)
+				}
+				return res
+			}
+
+			chat := map[string]string{"message": strings.Repeat(tc.char, 4000)}
+			res := request(http.MethodPost, "/chat", chatSchema, chat, true)
+			var result struct{ Draft Draft }
+			require.NoError(t, json.Unmarshal(res.Body.Bytes(), &result))
+			chat["message"] += tc.char
+			request(http.MethodPost, "/chat", chatSchema, chat, false)
+
+			edit := result.Draft
+			path := "/drafts/" + edit.DraftID
+			edit.Description = strings.Repeat(tc.char, 512)
+			res = request(http.MethodPut, path, draftEditSchema, edit, true)
+			var stored map[string]any
+			require.NoError(t, json.Unmarshal(res.Body.Bytes(), &stored))
+			require.NoError(t, draftSchema.Validate(stored))
+			require.Equal(t, edit.Description, stored["description"])
+			edit.Version++
+			edit.Description += tc.char
+			request(http.MethodPut, path, draftEditSchema, edit, false)
+		})
+	}
+}
 
 func TestProcurementConfirmAndRestartPreserveRunAndOriginalOperation(t *testing.T) {
 	ctx := t.Context()
@@ -214,7 +273,10 @@ func TestProcurementConfirmAndRestartPreserveRunAndOriginalOperation(t *testing.
 	refreshed := readProcurementRun(t, resp, http.StatusOK)
 	require.Equal(t, RunDecided, refreshed.Status)
 	require.Equal(t, append([]agent.ToolTrace{delegation}, liveTraces...), refreshed.Traces)
-	assertRunMatchesOpenAPI(t, h, resp.Body.Bytes())
+	schema := browserOpenAPISchema(t, h, "Run")
+	var body any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	require.NoError(t, schema.Validate(body))
 
 	// A fresh handler still returns the stored references while B is unavailable.
 	liveTraces = nil
@@ -223,7 +285,7 @@ func TestProcurementConfirmAndRestartPreserveRunAndOriginalOperation(t *testing.
 	require.Equal(t, append([]agent.ToolTrace{delegation}, dispatch.Traces...), reloaded.Traces)
 }
 
-func assertRunMatchesOpenAPI(t *testing.T, h http.Handler, body []byte) {
+func browserOpenAPISchema(t *testing.T, h http.Handler, name string) *jsonschema.Resolved {
 	t.Helper()
 	doc := browserRequest(h, http.MethodGet, "/openapi.json", "", browserToken{}, "")
 	require.Equal(t, http.StatusOK, doc.Code)
@@ -237,11 +299,9 @@ func assertRunMatchesOpenAPI(t *testing.T, h http.Handler, body []byte) {
 	raw := bytes.ReplaceAll(contract.Components.Schemas, []byte(`"#/components/schemas/`), []byte(`"#/$defs/`))
 	var schemas map[string]*jsonschema.Schema
 	require.NoError(t, json.Unmarshal(raw, &schemas))
-	schema, err := (&jsonschema.Schema{Defs: schemas, Ref: "#/$defs/Run"}).Resolve(nil)
+	schema, err := (&jsonschema.Schema{Defs: schemas, Ref: "#/$defs/" + name}).Resolve(nil)
 	require.NoError(t, err)
-	var run any
-	require.NoError(t, json.Unmarshal(body, &run))
-	require.NoError(t, schema.Validate(run))
+	return schema
 }
 
 func TestProcurementPendingRunsRotateAcrossRestart(t *testing.T) {

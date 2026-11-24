@@ -7,6 +7,8 @@ const layout = document.querySelector('#layout');
 const view = document.querySelector('#view');
 const notice = document.querySelector('#notice');
 const state = { session: null, epoch: 0, poll: null, messages: [] };
+const maxChatMessageLength = 4000;
+const maxDraftDescriptionLength = 512;
 const roleLabel = { ADMIN: '域管理员', BUYER: '采购员', AUDITOR: '审计员' };
 const modeLabels = { RESOURCE_PREAUTHORIZED: 'RP / 供应商授权', BUYER_MANDATE: 'BM / 采购权威授权' };
 const statusLabel = {
@@ -341,7 +343,7 @@ function draftFields(draft) {
     maxAmountMinor: element('input', { type: 'number', value: draft.maxAmountMinor, required: true, min: 1 }),
     expiresAt: element('input', { type: 'datetime-local', value: expiresAt, required: true, step: 1 }),
     delegateDid: element('input', { value: draft.delegateDid, required: true, spellcheck: false }),
-    description: element('textarea', { maxlength: 512 }, draft.description ?? ''),
+    description: element('textarea', { required: true }, draft.description ?? ''),
   };
   form.mode.value = draft.mode;
   return form;
@@ -382,6 +384,11 @@ function draftEditor(draft, epoch) {
     element('div', { class: 'toolbar actions' }, save, confirm),
   );
   form.addEventListener('submit', busy(save, async () => {
+    const description = fields.description.value.trim();
+    if (!description || [...description].length > maxDraftDescriptionLength) {
+      setNotice(`任务说明须为 1 至 ${maxDraftDescriptionLength} 个字符.`, 'error');
+      return;
+    }
     const body = {
       version: draft.version,
       productId: fields.productId.value.trim(),
@@ -390,7 +397,7 @@ function draftEditor(draft, epoch) {
       maxAmountMinor: Number(fields.maxAmountMinor.value),
       expiresAt: Math.floor(new Date(fields.expiresAt.value).valueOf() / 1000),
       delegateDid: fields.delegateDid.value.trim(),
-      description: fields.description.value.trim(),
+      description,
     };
     await write('/drafts/' + encodeURIComponent(draft.draftId), body, { method: 'PUT' });
     if (epoch === state.epoch) navigate('chat', draft.draftId);
@@ -407,7 +414,7 @@ function draftEditor(draft, epoch) {
 
 async function showChat(id, epoch) {
   const content = element('div', { class: 'stack' });
-  const message = element('textarea', { name: 'message', required: true, maxlength: 4000, placeholder: '请输入商品, 数量, 单笔上限和采购要求' });
+  const message = element('textarea', { name: 'message', required: true, placeholder: '请输入商品, 数量, 单笔上限和采购要求' });
   const send = element('button', { type: 'submit' }, '发送给 A1');
   const transcript = element('ol', { class: 'history', 'aria-label': '当前对话' },
     ...state.messages.map(({ text, author }) => element('li', {},
@@ -418,6 +425,10 @@ async function showChat(id, epoch) {
       const text = message.value.trim();
       if (!text) {
         setNotice('请输入采购需求.', 'error');
+        return;
+      }
+      if ([...text].length > maxChatMessageLength) {
+        setNotice(`采购需求最多 ${maxChatMessageLength} 个字符.`, 'error');
         return;
       }
       const body = id ? { message: text, draftId: id } : { message: text };
@@ -579,11 +590,12 @@ function toolTraces(traces) {
   ];
   return element('ul', { class: 'records' }, ...traces.map((trace) => {
     const output = trace.output ?? {};
+    const unknownOutcome = output.actionStatus === 'OUTCOME_UNKNOWN' || output.outcome === 'UNKNOWN';
     return element('li', {},
       element('div', { class: 'toolbar' },
         element('strong', {}, trace.toolName === 'model_result' ? '模型运行结果' : trace.toolName),
         trace.toolName === 'model_result' ? element('code', {}, trace.toolName) : null,
-        status(output.actionStatus === 'UNKNOWN' ? 'unknown' : output.decision || (trace.isError ? 'failed' : 'returned'))),
+        status(unknownOutcome ? 'OUTCOME_UNKNOWN' : output.decision || (trace.isError ? 'failed' : 'returned'))),
       facts([
         ['模型步骤', trace.step > 0 ? trace.step : null],
         ['耗时 (ms)', trace.durationMs],

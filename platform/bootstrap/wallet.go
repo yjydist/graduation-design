@@ -117,17 +117,45 @@ func BuildWallet(
 		if err := dao.Up(ctx, db); err != nil {
 			return nil, err
 		}
-		bridge := &walletRegistryBridge{
-			inst:    inst,
-			dep:     d,
-			fx:      f,
-			mat:     mat,
-			nowFn:   cfg.nowFn,
-			journal: ledger.NewJournal(inst, db, d.DeploymentID),
-			deliver: domreg.NewDeliveryService(db, d.DeploymentID),
+		anchorer, err := newWalletGrantAnchorer(inst, d, f, mat, db, cfg.nowFn)
+		if err != nil {
+			return nil, err
 		}
-		anchorFn = bridge.anchorChild
-		replaceFn = bridge.replaceGrant
+		anchorFn = func(callCtx context.Context, req wallet.AnchorChildGrantRequest) (*wallet.AnchorChildGrantResult, error) {
+			res, err := anchorer.AnchorGrant(callCtx, domreg.AnchorGrantRequest{
+				Claims:      req.Claims,
+				RawGrantJWS: req.RawGrantJWS,
+				GrantDigest: req.GrantDigest,
+				ParentID:    req.ParentID,
+				IssuerActor: req.IssuerActor,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return &wallet.AnchorChildGrantResult{
+				Anchored:   res.Anchored,
+				TrustPaths: mat.trustPathsForMode(req.Claims.AuthorizationMode),
+			}, nil
+		}
+		replaceFn = func(callCtx context.Context, req wallet.ReplaceGrantRequest) (*wallet.ReplaceGrantResult, error) {
+			res, err := anchorer.ReplaceGrant(callCtx, domreg.ReplaceGrantAnchorRequest{
+				OldGrantID:       req.OldGrantID,
+				OldGrantRevision: req.OldGrantRevision,
+				OldGrantDigest:   req.OldGrantDigest,
+				NewClaims:        req.NewClaims,
+				NewRawGrantJWS:   req.NewRawGrantJWS,
+				NewGrantDigest:   req.NewGrantDigest,
+				IssuerActor:      req.IssuerActor,
+				Reason:           req.Reason,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return &wallet.ReplaceGrantResult{
+				Anchored:   res.Anchored,
+				TrustPaths: mat.trustPathsForMode(req.NewClaims.AuthorizationMode),
+			}, nil
+		}
 	}
 
 	recoveryClient, auditClient, receiptClient, err := resolveWalletMTLSClients(handler, cfg)
@@ -258,172 +286,53 @@ func loadWalletMaterials(inst *ledger.Instance, f *Fixtures) (*walletMaterials, 
 	}, nil
 }
 
-type walletRegistryBridge struct {
-	inst    *ledger.Instance
-	dep     *ledger.Deployment
-	fx      *Fixtures
-	mat     *walletMaterials
-	nowFn   func() time.Time
-	journal ledger.Journal
-	deliver *domreg.DeliveryService
-}
-
-func (b *walletRegistryBridge) buildChainGrant(claims protocol.GrantClaims, digest, parentOverride string) registry.Grant {
-	parentID, parentDigest := parentOverride, ""
-	if claims.ParentID != nil && *claims.ParentID != "" {
-		parentID = *claims.ParentID
-	}
-	if claims.ParentDigest != nil {
-		parentDigest = *claims.ParentDigest
-	}
-	return registry.Grant{
-		Bound:             registry.Bound{DeploymentID: b.dep.DeploymentID},
-		ID:                claims.ID,
-		Schema:            registry.Schema,
-		Parent:            parentID,
-		ParentDigest:      parentDigest,
-		Root:              claims.RootID,
-		Task:              claims.TaskID,
-		Mode:              claims.AuthorizationMode,
-		Domain:            claims.PrincipalDomain,
-		Resource:          claims.ResourceID,
-		Issuer:            claims.Issuer,
-		Grantee:           claims.Grantee,
-		IssuerKeyVersion:  claims.IssuerKeyVersion,
-		GranteeKeyVersion: claims.GranteeKeyVersion,
-		IssuerCredential:  claims.IssuerCredentialID,
-		GranteeCredential: claims.GranteeCredentialID,
-		Depth:             uint8(claims.RemainingDepth),
-		Digest:            digest,
-		Interval:          registry.Interval{NBF: claims.NBF, EXP: claims.EXP},
-	}
-}
-
-func (b *walletRegistryBridge) deliverAnchoredChild(
-	ctx context.Context,
-	issuerActor string,
-	chainGrant registry.Grant,
-	rawJWS string,
-	op *ledger.Operation,
-) error {
-	issuerRec, ok := b.fx.Identities[issuerActor]
-	if !ok {
-		return nil
-	}
-	synced, err := b.deliver.HasSyncedCertification(ctx, issuerRec.Domain)
-	if err != nil || !synced {
-		return err
-	}
-	nowSec := b.nowFn().UTC().Unix()
-	snap := BuildFixtureSnapshot(b.dep, b.fx, time.Unix(nowSec, 0).UTC())
-	activeGrant := chainGrant
-	activeGrant.Version = registry.Version{Status: registry.Active, Revision: 1}
-	snap.Grants[activeGrant.ID] = activeGrant
-
-	rootPub, err := protocol.ParseAppPublicKey(b.dep.Bootstrap.Root.PublicKey)
-	if err != nil {
-		return err
-	}
-	credIssuerPub, err := protocol.ParseAppPublicKey(b.fx.Domains[issuerRec.Domain].Issuers[0].PublicKey)
-	if err != nil {
-		return err
-	}
-	grantorPub, err := protocol.ParseAppPublicKey(issuerRec.PublicKey)
-	if err != nil {
-		return err
-	}
-	grantorSD := b.mat.sdByActor[issuerActor]
-	if grantorSD == "" {
-		rawSD, readErr := os.ReadFile(b.inst.RegistryPath("credentials", issuerActor+".sdjwt"))
-		if readErr != nil {
-			return readErr
-		}
-		grantorSD = string(rawSD)
-	}
-	txID, blockNo := op.TxID, int64(1)
-	if op.Commit != nil {
-		blockNo = int64(op.Commit.Number)
-	}
-	pkg := domreg.GrantDeliveryPackage{
-		DeploymentID:           b.dep.DeploymentID,
-		Recipient:              chainGrant.Grantee,
-		GrantID:                chainGrant.ID,
-		GrantJWS:               rawJWS,
-		TaskSpec:               b.fx.ProcurementTaskSpec,
-		ServicePresentation:    grantorSD,
-		DomainCertificationJWS: b.mat.certByDomain[issuerRec.Domain],
-	}
-	if _, err := b.deliver.PublishGrantOutbox(ctx, snap, pkg, rootPub, credIssuerPub, grantorPub, txID, blockNo, true, nowSec); err != nil {
-		return err
-	}
-	_, _, err = b.deliver.DeliverGrantReceipt(ctx, snap, b.dep.DeploymentID, chainGrant.Grantee, chainGrant.ID, nil, rootPub, credIssuerPub, grantorPub, nowSec)
-	return err
-}
-
-func (b *walletRegistryBridge) anchorChild(ctx context.Context, req wallet.AnchorChildGrantRequest) (*wallet.AnchorChildGrantResult, error) {
-	chainGrant := b.buildChainGrant(req.Claims, req.GrantDigest, req.ParentID)
-	raw, err := json.Marshal(chainGrant)
-	if err != nil {
-		return nil, err
-	}
-	opKey := "mcp-anchor/" + registry.Digest([]byte(req.Claims.ID))[:24]
-	op, err := b.journal.Write(ctx, opKey, req.IssuerActor, "RegisterGrant", raw)
-	if err != nil {
-		return nil, err
-	}
-	if err := ledger.ExpectOperation(op, "VALID"); err != nil {
-		return nil, err
-	}
-	if err := b.inst.AwaitEndorsers(ctx, *op.Commit); err != nil {
-		return nil, err
-	}
-	if err := b.deliverAnchoredChild(ctx, req.IssuerActor, chainGrant, req.RawGrantJWS, op); err != nil {
-		return nil, err
-	}
-	return &wallet.AnchorChildGrantResult{
-		Anchored:   true,
-		TrustPaths: b.mat.trustPathsForMode(req.Claims.AuthorizationMode),
-	}, nil
-}
-
-func (b *walletRegistryBridge) replaceGrant(ctx context.Context, req wallet.ReplaceGrantRequest) (*wallet.ReplaceGrantResult, error) {
-	rev := req.OldGrantRevision
-	if rev == 0 {
-		rev = 1
-	}
-	chainGrant := b.buildChainGrant(req.NewClaims, req.NewGrantDigest, "")
-	rep := registry.Replacement{
-		Old: registry.Mutation{
-			Bound:            registry.Bound{DeploymentID: b.dep.DeploymentID},
-			ID:               req.OldGrantID,
-			ExpectedRevision: rev,
-			ExpectedDigest:   req.OldGrantDigest,
-			Reason:           req.Reason,
+func newWalletGrantAnchorer(
+	inst *ledger.Instance,
+	dep *ledger.Deployment,
+	fx *Fixtures,
+	mat *walletMaterials,
+	db *pgxpool.Pool,
+	nowFn func() time.Time,
+) (*domreg.GrantAnchorService, error) {
+	return domreg.NewGrantAnchorService(domreg.GrantAnchorConfig{
+		Instance:   inst,
+		DB:         db,
+		Deployment: dep,
+		TaskSpec:   fx.ProcurementTaskSpec,
+		Now:        nowFn,
+		SnapshotBuilder: func(at time.Time) *protocol.SnapshotView {
+			return BuildFixtureSnapshot(dep, fx, at)
 		},
-		New: chainGrant,
-	}
-	raw, err := json.Marshal(rep)
-	if err != nil {
-		return nil, err
-	}
-	opKey := "mcp-replace/" + registry.Digest([]byte(req.OldGrantID+"/"+req.NewClaims.ID))[:24]
-	op, err := b.journal.Write(ctx, opKey, req.IssuerActor, "ReplaceGrant", raw)
-	if err != nil {
-		return nil, err
-	}
-	if err := ledger.ExpectOperation(op, "VALID"); err != nil {
-		return nil, err
-	}
-	if err := b.inst.AwaitEndorsers(ctx, *op.Commit); err != nil {
-		return nil, err
-	}
-	if err := b.deliverAnchoredChild(ctx, req.IssuerActor, chainGrant, req.NewRawGrantJWS, op); err != nil {
-		return nil, err
-	}
-	return &wallet.ReplaceGrantResult{
-		Anchored:   true,
-		TrustPaths: b.mat.trustPathsForMode(req.NewClaims.AuthorizationMode),
-	}, nil
+		ResolveIssuer: func(actor string) (domreg.IssuerDeliveryMaterial, bool, error) {
+			issuerRec, ok := fx.Identities[actor]
+			if !ok {
+				return domreg.IssuerDeliveryMaterial{}, false, nil
+			}
+			credIssuerPub, err := protocol.ParseAppPublicKey(fx.Domains[issuerRec.Domain].Issuers[0].PublicKey)
+			if err != nil {
+				return domreg.IssuerDeliveryMaterial{}, false, err
+			}
+			grantorPub, err := protocol.ParseAppPublicKey(issuerRec.PublicKey)
+			if err != nil {
+				return domreg.IssuerDeliveryMaterial{}, false, err
+			}
+			grantorSD := mat.sdByActor[actor]
+			if grantorSD == "" {
+				rawSD, readErr := os.ReadFile(inst.RegistryPath("credentials", actor+".sdjwt"))
+				if readErr != nil {
+					return domreg.IssuerDeliveryMaterial{}, false, readErr
+				}
+				grantorSD = string(rawSD)
+			}
+			return domreg.IssuerDeliveryMaterial{
+				DomainID:               issuerRec.Domain,
+				IssuerPublicKey:        grantorPub,
+				CredentialIssuerPubKey: credIssuerPub,
+				ServicePresentation:    grantorSD,
+				DomainCertificationJWS: mat.certByDomain[issuerRec.Domain],
+			}, true, nil
+		},
+	})
 }
 
 func resolveWalletMTLSClients(handler http.Handler, cfg walletOptions) (recovery, audit, receipt *http.Client, err error) {

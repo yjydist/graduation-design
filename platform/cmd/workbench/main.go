@@ -65,6 +65,13 @@ func serve(ctx context.Context, config string) error {
 		return err
 	}
 	defer app.Close()
+	return serveWorkbench(ctx, app)
+}
+
+func serveWorkbench(ctx context.Context, app *bootstrap.Workbench) error {
+	if app == nil || app.Browser == nil || app.BrowserAddr == "" {
+		return errors.New("browser handler and listener address are required")
+	}
 
 	browser := newHTTPServer(app.BrowserAddr, app.Browser)
 	listener, err := net.Listen("tcp", browser.Addr)

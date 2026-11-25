@@ -19,7 +19,7 @@
 | `openspec/` | 工作流配置 (`config.yaml`), 已接受的能力规范 (`specs/`) 与变更制品及历史归档 (`changes/`). |
 | `paper/` | 毕设论文 Markdown 单文件写作工作区 (`thesis.md`, `references.md`, `README.md`). |
 
-目录结构只列直属文件和目录. 下一级细节由顶层模块的 `AGENTS.md` 维护 (`protocol/`, `chaincode/`, `platform/`, `experiments/`, `infra/`), 其余子目录继承最近的父级指引.
+目录结构只列直属文件和目录. 下一级细节由顶层模块的 `AGENTS.md` 维护 (`protocol/`, `chaincode/`, `platform/`, `web/`, `experiments/`, `infra/`), 其余子目录继承最近的父级指引.
 
 平台系统遵循严格自顶向下的五层单向依赖架构 (各业务层并行共享零反向依赖的纯协议核 `grad/protocol`):
 

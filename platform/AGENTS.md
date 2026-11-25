@@ -77,7 +77,7 @@ flowchart TB
 所有分层规则均由 `arch_test.go` 在 `go test` 时强制校验:
 
 - **L4 Agent 严格隔离**: `agent/` (`agent/llm`, `agent/orchestrator`) 严禁导入 `core/...`, `service/api/...`, `bootstrap/`, `cmd/`, `internal/testutil`, 以及 `pgx`, `goose`, Fabric SDK 或 OPA; 只能通过标准 MCP 协议 (`modelcontextprotocol/go-sdk`) 调用 L3 `service/mcp`.
-- **L3 服务层无基础设施直连**: `service/api/` 与 `service/mcp/` 严禁反向导入 `agent/`, `bootstrap/`, `cmd/`, LLM SDK 或 Fabric SDK, 且生产代码禁止直接导入 `core/dao`, `core/ledger`, `pgx` 或 `goose`, 统一经 `core/domain/...` 调用领域逻辑; `service/mcp` 亦禁止导入 `service/api`.
+- **L3 服务层无基础设施直连**: `service/api/` 与 `service/mcp/` 严禁反向导入 `agent/`, `bootstrap/`, `cmd/`, LLM SDK 或 Fabric SDK, 且生产代码禁止直接导入 `core/dao`, `core/ledger`, `pgx` 或 `goose`, 统一经 `core/domain/...` 调用领域逻辑; `service/mcp` 亦禁止导入 `service/api`, 其生产代码仅允许调用 `core/domain/wallet`.
 - **L2 领域层无入站 HTTP 与上层耦合**: `core/domain/...` 严禁导入 `service/`, `agent/`, `bootstrap/`, `cmd/`, LLM/MCP/Fabric SDK, 生产代码严禁使用入站 HTTP 服务端构造 (`http.ServeMux`, `http.ResponseWriter`, `http.Server` 等; `core/domain/wallet` 的出站 `http.Client` 例外). `core/domain/gateway` 与 `core/domain/wallet` 互相零直接导入, 跨边界通信全部经 HTTP/`http.Handler` 与独立 DTO 完成.
 - **L2 数据与账本顺序**: `core/dao` 根包位于 `core/ledger` 之下, 不得导入 `core/ledger` 及以上各层或 Fabric/LLM/MCP/OPA SDK; 仅 `core/dao/central` 为实现 `ledger.StateSource` 契约允许导入 `core/ledger`. `core/ledger` 不得导入 `core/domain` 及以上各层或 LLM/MCP/OPA SDK.
 - **装配, 入口与私有包边界**: `bootstrap/` 不得导入 `cmd/`. `cmd/` 入口包必须经 `bootstrap/` 装配, 严禁直接导入 `core/dao`, `core/domain`, `pgx`, `goose`, Fabric SDK, OPA 或 LLM SDK. `internal/httpx`, `internal/mtls` 和 `internal/testutil` 为模块私有包, 不得导入 `core/domain` 及以上各层; `experiments/` 等外部模块仅可导入 `grad/platform` 公开包 (如 `bootstrap.NewLocalMTLSClient`), `grad/platform` 严禁反向依赖 `grad/experiments`.

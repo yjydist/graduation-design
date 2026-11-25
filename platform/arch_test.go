@@ -259,7 +259,11 @@ func checkFileArchitecture(f archFileSpec) []string {
 					platformModule+"/core/dao",
 					platformModule+"/core/ledger",
 				) {
-					addViolation("L3 service/mcp production code must call core/domain instead of " + imp)
+					addViolation("L3 service/mcp production code must call core/domain/wallet instead of " + imp)
+				}
+				if hasImportPrefix(imp, platformModule+"/core/domain") &&
+					!hasImportPrefix(imp, platformModule+"/core/domain/wallet") {
+					addViolation("L3 service/mcp production code must only call core/domain/wallet instead of " + imp)
 				}
 				if hasAnyPrefix(imp, pgxPrefixes...) {
 					addViolation("L3 service/mcp production code must not import database driver " + imp)
@@ -485,6 +489,28 @@ func TestArchRulesEngine(t *testing.T) {
 				Imports: []string{"grad/platform/agent/llm"},
 			},
 			wantError: true,
+		},
+		{
+			name: "service/mcp production importing non-wallet core/domain is rejected",
+			spec: archFileSpec{
+				RelPath: "service/mcp/server.go",
+				PkgRel:  "service/mcp",
+				Imports: []string{"grad/platform/core/domain/gateway"},
+			},
+			wantError: true,
+		},
+		{
+			name: "service/mcp importing core/domain/wallet is allowed",
+			spec: archFileSpec{
+				RelPath: "service/mcp/server.go",
+				PkgRel:  "service/mcp",
+				Imports: []string{
+					"github.com/modelcontextprotocol/go-sdk/mcp",
+					"grad/platform/core/domain/wallet",
+					"grad/protocol",
+				},
+			},
+			wantError: false,
 		},
 		{
 			name: "core/domain registering http.ServeMux is rejected",

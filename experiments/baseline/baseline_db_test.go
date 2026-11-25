@@ -16,9 +16,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"grad/platform/gateway"
-	"grad/platform/migrations"
-	"grad/platform/state/central"
+	"grad/platform/core/dao"
+	"grad/platform/core/dao/central"
+	domgw "grad/platform/core/domain/gateway"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -38,7 +38,7 @@ func testPgPool(t *testing.T) *pgxpool.Pool {
 	require.NoError(t, err)
 	t.Cleanup(db.Close)
 	require.NoError(t, db.Ping(ctx))
-	require.NoError(t, migrations.Up(ctx, db))
+	require.NoError(t, dao.Up(ctx, db))
 	return db
 }
 
@@ -169,18 +169,18 @@ func TestBaselineChecksHTTPOrderAndPrimaryIndependently(t *testing.T) {
 
 	for _, tc := range []struct {
 		name          string
-		order         *gateway.OrderPayload
+		order         *domgw.OrderPayload
 		decisionError bool
 		badPrimary    bool
 		verdict       string
 	}{
-		{name: "matching", order: &gateway.OrderPayload{OrderID: "order", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 80000}, verdict: "PASS"},
+		{name: "matching", order: &domgw.OrderPayload{OrderID: "order", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 80000}, verdict: "PASS"},
 		{name: "missing-order", decisionError: true, verdict: "FAIL"},
-		{name: "wrong-order-id", order: &gateway.OrderPayload{OrderID: "wrong", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 80000}, decisionError: true, verdict: "FAIL"},
-		{name: "wrong-quote-id", order: &gateway.OrderPayload{OrderID: "order", QuoteID: "wrong", Status: "CREATED", TotalAmountMinor: 80000}, decisionError: true, verdict: "FAIL"},
-		{name: "wrong-status", order: &gateway.OrderPayload{OrderID: "order", QuoteID: "quote", Status: "WRONG", TotalAmountMinor: 80000}, verdict: "FAIL"},
-		{name: "wrong-amount", order: &gateway.OrderPayload{OrderID: "order", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 120000}, verdict: "FAIL"},
-		{name: "wrong-primary-key-status", order: &gateway.OrderPayload{OrderID: "order", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 80000}, badPrimary: true, verdict: "FAIL"},
+		{name: "wrong-order-id", order: &domgw.OrderPayload{OrderID: "wrong", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 80000}, decisionError: true, verdict: "FAIL"},
+		{name: "wrong-quote-id", order: &domgw.OrderPayload{OrderID: "order", QuoteID: "wrong", Status: "CREATED", TotalAmountMinor: 80000}, decisionError: true, verdict: "FAIL"},
+		{name: "wrong-status", order: &domgw.OrderPayload{OrderID: "order", QuoteID: "quote", Status: "WRONG", TotalAmountMinor: 80000}, verdict: "FAIL"},
+		{name: "wrong-amount", order: &domgw.OrderPayload{OrderID: "order", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 120000}, verdict: "FAIL"},
+		{name: "wrong-primary-key-status", order: &domgw.OrderPayload{OrderID: "order", QuoteID: "quote", Status: "CREATED", TotalAmountMinor: 80000}, badPrimary: true, verdict: "FAIL"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			keyStatus := "COMPLETED"
@@ -200,7 +200,7 @@ func TestBaselineChecksHTTPOrderAndPrimaryIndependently(t *testing.T) {
 
 			handler := r.observe(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("X-Request-Id", "request")
-				require.NoError(t, json.NewEncoder(w).Encode(gateway.ExecuteResponse{
+				require.NoError(t, json.NewEncoder(w).Encode(domgw.ExecuteResponse{
 					DecisionID: "decision",
 					Code:       "ALLOW",
 					Order:      tc.order,

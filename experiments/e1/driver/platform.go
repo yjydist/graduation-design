@@ -14,9 +14,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	platformrt "grad/platform/runtime"
-	"grad/platform/state"
-	"grad/platform/state/fabric"
+	platformrt "grad/platform/bootstrap"
+	"grad/platform/core/ledger"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -29,7 +28,7 @@ type deployment struct {
 }
 
 type seedReport struct {
-	Operations []*fabric.Operation `json:"operations"`
+	Operations []*ledger.Operation `json:"operations"`
 }
 
 func (e *e1Trial) command(ctx context.Context, output any, command string, extra ...string) error {
@@ -59,7 +58,7 @@ func (e *e1Trial) prepareRegistry() error {
 	}
 	e.f = *fx
 
-	pending := map[string]*fabric.Operation{}
+	pending := map[string]*ledger.Operation{}
 	for _, pair := range []struct{ domain, role string }{{"A", "U"}, {"B", "B1"}, {"C", "C"}} {
 		// Use the same operation key and bytes as seed so its normal retry resumes from this step.
 		if _, err := e.invoke("seed/domain-"+pair.domain, "T", "BootstrapDomain", e.f.Domains[pair.domain], "VALID"); err != nil {
@@ -83,7 +82,7 @@ func (e *e1Trial) prepareRegistry() error {
 	return runErr
 }
 
-func (e *e1Trial) invoke(label, role, method string, input any, expected string) (*fabric.Operation, error) {
+func (e *e1Trial) invoke(label, role, method string, input any, expected string) (*ledger.Operation, error) {
 	file, err := os.CreateTemp(e.instanceDir, "e1-input-*.json")
 	if err != nil {
 		return nil, err
@@ -103,7 +102,7 @@ func (e *e1Trial) invoke(label, role, method string, input any, expected string)
 		return nil, runErr
 	}
 	e.event("operation", raw)
-	var op fabric.Operation
+	var op ledger.Operation
 	if err := json.Unmarshal(raw, &op); err != nil {
 		return nil, errors.Join(runErr, err)
 	}
@@ -119,11 +118,11 @@ func (e *e1Trial) invoke(label, role, method string, input any, expected string)
 	return &op, fmt.Errorf("%s expected %s; observed %s at %s (%s)", label, expected, op.Status, op.Stage, op.Observation)
 }
 
-func (e *e1Trial) op(label, role, method string, input any, expected string) (*fabric.Operation, error) {
+func (e *e1Trial) op(label, role, method string, input any, expected string) (*ledger.Operation, error) {
 	return e.invoke(e.id+"/"+label, role, method, input, expected)
 }
 
-func (e *e1Trial) seedOperation(label string) *fabric.Operation {
+func (e *e1Trial) seedOperation(label string) *ledger.Operation {
 	for _, op := range e.seed.Operations {
 		if op != nil && op.Key == "seed/"+label {
 			return op
@@ -133,18 +132,18 @@ func (e *e1Trial) seedOperation(label string) *fabric.Operation {
 }
 
 type checkResult struct {
-	fabric.Point
+	ledger.Point
 	DeploymentID string                     `json:"deploymentId"`
-	Probe        state.ProbeLease           `json:"probe"`
+	Probe        ledger.ProbeLease          `json:"probe"`
 	Records      map[string]json.RawMessage `json:"records"`
 }
 
 type liveState struct {
-	state.StateSource
+	ledger.StateSource
 	trial *e1Trial
 }
 
-func (s *liveState) AssembleSnapshot(ctx context.Context, leaf string, now time.Time) (*state.StateSnapshot, error) {
+func (s *liveState) AssembleSnapshot(ctx context.Context, leaf string, now time.Time) (*ledger.StateSnapshot, error) {
 	if _, err := s.trial.refresh(ctx, leaf); err != nil {
 		return nil, err
 	}
@@ -178,7 +177,7 @@ func (e *e1Trial) refresh(ctx context.Context, leaf string) (checkResult, error)
 	return check, nil
 }
 
-func (e *e1Trial) currentView(ctx context.Context, leaf string) (*fabric.ConsistentProtocolView, error) {
+func (e *e1Trial) currentView(ctx context.Context, leaf string) (*ledger.ConsistentProtocolView, error) {
 	if _, err := e.refresh(ctx, leaf); err != nil {
 		return nil, err
 	}

@@ -21,13 +21,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"grad/experiments/harness"
-	"grad/platform/agent"
-	"grad/platform/gateway"
-	"grad/platform/registrysvc"
-	"grad/platform/runtime"
-	"grad/platform/state"
-	"grad/platform/state/central"
-	"grad/platform/state/fabric"
+	"grad/platform/bootstrap"
+	"grad/platform/core/dao/central"
+	domgw "grad/platform/core/domain/gateway"
+	domreg "grad/platform/core/domain/registry"
+	"grad/platform/core/domain/wallet"
+	"grad/platform/core/ledger"
+	apigw "grad/platform/service/api/gateway"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -66,10 +66,10 @@ type baselineRun struct {
 	evidence *Evidence
 	runID    string
 	stage    string
-	i        *fabric.Instance
+	i        *ledger.Instance
 	dir      string
-	d        *fabric.Deployment
-	f        *runtime.Fixtures
+	d        *ledger.Deployment
+	f        *bootstrap.Fixtures
 	db, c0db *pgxpool.Pool
 	c0       *central.Source
 	resolver *protocol.DIDWebResolver
@@ -286,8 +286,8 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	e.Manifest["genesis_hash"] = d.GenesisHash
 	e.Manifest["chaincode"] = map[string]any{
 		"name":          d.RegistryName,
-		"version":       fabric.RegistryVersion,
-		"sequence":      fabric.RegistrySequence,
+		"version":       ledger.RegistryVersion,
+		"sequence":      ledger.RegistrySequence,
 		"source_digest": d.SourceDigest,
 		"build_digest":  d.BuildDigest,
 	}
@@ -310,7 +310,7 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	}()
 
 	setup := baselineProcurement(d.DeploymentID, r.inputs)
-	report, err := runtime.SeedProcurement(ctx, i, db, d, setup)
+	report, err := bootstrap.SeedProcurement(ctx, i, db, d, setup)
 	if err != nil {
 		return err
 	}
@@ -356,13 +356,13 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 	}
 	r.stage = "preparation"
 
-	if err = gateway.EnsureSchema(ctx, c0db, d.DeploymentID, r.inputs.Fixture.Supplier); err != nil {
+	if err = domgw.EnsureSchema(ctx, c0db, d.DeploymentID, r.inputs.Fixture.Supplier); err != nil {
 		return err
 	}
-	if err = gateway.EnsureSchema(ctx, db, d.DeploymentID, r.inputs.Fixture.Supplier); err != nil {
+	if err = domgw.EnsureSchema(ctx, db, d.DeploymentID, r.inputs.Fixture.Supplier); err != nil {
 		return err
 	}
-	if err = runtime.SyncSeedDeliveries(ctx, i, c0db, d, report); err != nil {
+	if err = bootstrap.SyncSeedDeliveries(ctx, i, c0db, d, report); err != nil {
 		return err
 	}
 	e.Manifest["configurations"] = []any{}
@@ -387,7 +387,7 @@ func (r *baselineRun) claimInstance() error {
 	if err != nil {
 		return err
 	}
-	inst, err := fabric.OpenInstance(dir)
+	inst, err := ledger.OpenInstance(dir)
 	if err != nil {
 		return err
 	}
@@ -407,7 +407,7 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 		return err
 	}
 	db := r.db
-	var src state.StateSource
+	var src ledger.StateSource
 	if name == "C0" {
 		db = r.c0db
 		src = r.c0
@@ -434,10 +434,10 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 	r.evidence.Manifest["policy_digest"] = bundle.PolicyDigest
 
 	cache := profile.NewSignatureCache()
-	srv, err := gateway.NewServer(gateway.ServerConfig{
+	gwSvc, err := domgw.NewService(domgw.Config{
 		DB:             db,
 		State:          src,
-		CertChecker:    registrysvc.NewDeliveryService(db, r.d.DeploymentID),
+		CertChecker:    domreg.NewDeliveryService(db, r.d.DeploymentID),
 		DIDs:           r.resolver,
 		Policy:         bundle,
 		SignatureCache: cache,
@@ -447,6 +447,10 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 		SupplierID:     r.inputs.Fixture.Supplier,
 		VerifierID:     r.runID + "-" + name,
 	})
+	if err != nil {
+		return err
+	}
+	srv, err := apigw.NewServer(gwSvc)
 	if err != nil {
 		return err
 	}
@@ -469,7 +473,7 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 	// A fresh wallet keeps intents and quotes isolated while sharing the exact signed chain.
 	var active *RequestRow
 	wrapped := r.observe(srv.Handler(), func() *RequestRow { return active })
-	wallet, err := runtime.BuildWallet(ctx, r.i, r.d, r.f, db, wrapped)
+	w, err := bootstrap.BuildWallet(ctx, r.i, r.d, r.f, db, wrapped)
 	if err != nil {
 		return err
 	}
@@ -504,7 +508,7 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 		if time.Now().Unix() >= min(task.EXP, r.f.Certifications["B"].Certification.EXP) {
 			return fmt.Errorf("baseline materials expired")
 		}
-		if err := gateway.SetCatalogPrice(ctx, db, r.d.DeploymentID, r.inputs.Fixture.Product, c.AmountMinor); err != nil {
+		if err := domgw.SetCatalogPrice(ctx, db, r.d.DeploymentID, r.inputs.Fixture.Product, c.AmountMinor); err != nil {
 			return err
 		}
 		var price int64
@@ -538,10 +542,10 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 		check.OrderRowsBefore = someInt64(before)
 
 		active = qrow
-		var quoted agent.RequestQuoteOutput
+		var quoted wallet.RequestQuoteOutput
 		r.action(ctx, qrow, cache, func(call context.Context) error {
 			var err error
-			quoted, err = wallet.RequestQuote(call, agent.RequestQuoteInput{
+			quoted, err = w.RequestQuote(call, wallet.RequestQuoteInput{
 				Actor:             "B1",
 				GrantID:           leaf.ID,
 				TaskID:            task.ID,
@@ -562,7 +566,7 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 		orow.QuoteID = someString(quoteID)
 		orow.AmountMinor = quoted.TotalAmountMinor
 		r.action(ctx, orow, cache, func(call context.Context) error {
-			_, err := wallet.CreateOrder(call, agent.CreateOrderInput{
+			_, err := w.CreateOrder(call, wallet.CreateOrderInput{
 				Actor:             "B1",
 				GrantID:           leaf.ID,
 				TaskID:            task.ID,
@@ -587,7 +591,7 @@ func (r *baselineRun) configuration(ctx context.Context, name string) error {
 }
 
 func setNormalContext(handler http.Handler, taskID string, version, deadline int64) error {
-	body, err := json.Marshal(gateway.ContextUpdateRequest{
+	body, err := json.Marshal(domgw.ContextUpdateRequest{
 		ExpectedContextVersion: version,
 		SourceID:               "ctx-verifier-c",
 		ObservedAt:             time.Now().UTC().Unix(),
@@ -604,7 +608,7 @@ func setNormalContext(handler http.Handler, taskID string, version, deadline int
 	if rec.Code != http.StatusOK {
 		return fmt.Errorf("POST /v1/contexts HTTP %d: %s", rec.Code, rec.Body.String())
 	}
-	var result gateway.ContextResponse
+	var result domgw.ContextResponse
 	return json.Unmarshal(rec.Body.Bytes(), &result)
 }
 
@@ -686,7 +690,7 @@ func (r *baselineRun) observe(next http.Handler, current func() *RequestRow) htt
 			stage = "challenge"
 			row.ChallengeNs = someInt64(time.Since(start).Nanoseconds())
 			if rec.Code == http.StatusCreated {
-				var c gateway.ChallengeResponse
+				var c domgw.ChallengeResponse
 				if json.Unmarshal(rec.Body.Bytes(), &c) == nil && c.ChallengeID != "" {
 					row.ChallengeID = someString(c.ChallengeID)
 				}
@@ -695,7 +699,7 @@ func (r *baselineRun) observe(next http.Handler, current func() *RequestRow) htt
 				row.Disposition = "error"
 				row.FailureStage = someString(stage)
 				requestID := rec.Header().Get("X-Request-Id")
-				var body gateway.ErrorBody
+				var body apigw.ErrorBody
 				if json.Unmarshal(rec.Body.Bytes(), &body) == nil {
 					if body.RequestID != "" {
 						requestID = body.RequestID
@@ -716,11 +720,11 @@ func (r *baselineRun) observe(next http.Handler, current func() *RequestRow) htt
 				row.RequestID = someString(reqID)
 			}
 			var body struct {
-				RequestID  string                `json:"requestId"`
-				DecisionID *string               `json:"decisionId"`
-				Code       string                `json:"code"`
-				Quote      *gateway.QuotePayload `json:"quote"`
-				Order      *gateway.OrderPayload `json:"order"`
+				RequestID  string              `json:"requestId"`
+				DecisionID *string             `json:"decisionId"`
+				Code       string              `json:"code"`
+				Quote      *domgw.QuotePayload `json:"quote"`
+				Order      *domgw.OrderPayload `json:"order"`
 			}
 			if json.Unmarshal(rec.Body.Bytes(), &body) == nil {
 				if body.RequestID != "" {

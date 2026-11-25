@@ -7,23 +7,23 @@ import (
 	"slices"
 	"strings"
 
-	"grad/platform/runtime"
-	"grad/platform/state/fabric"
+	"grad/platform/bootstrap"
+	"grad/platform/core/ledger"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
 
-func baselineProcurement(deploymentID string, in *Inputs) runtime.ProcurementSetup {
-	ids := func(mode string) runtime.ProcurementPathIDs {
+func baselineProcurement(deploymentID string, in *Inputs) bootstrap.ProcurementSetup {
+	ids := func(mode string) bootstrap.ProcurementPathIDs {
 		namespace := deploymentID + "/baseline/" + in.LogicalID(mode, "")
-		return runtime.ProcurementPathIDs{
+		return bootstrap.ProcurementPathIDs{
 			Task: registry.Digest([]byte(namespace + "task")),
 			G0:   registry.Digest([]byte(namespace + "G0")),
 			G1:   registry.Digest([]byte(namespace + "G1")),
 			G2:   registry.Digest([]byte(namespace + "G2")),
 		}
 	}
-	return runtime.ProcurementSetup{
+	return bootstrap.ProcurementSetup{
 		Spec: protocol.TaskSpec{
 			SupplierID:  in.Fixture.Supplier,
 			ProductID:   in.Fixture.Product,
@@ -46,7 +46,7 @@ type baselineRegistration struct {
 }
 
 // prepareRegistration prepares the C0 preload snapshot from the exact fixtures submitted to Fabric.
-func prepareRegistration(dir string, d *fabric.Deployment, report *runtime.SeedReport, setup runtime.ProcurementSetup) (*baselineRegistration, error) {
+func prepareRegistration(dir string, d *ledger.Deployment, report *bootstrap.SeedReport, setup bootstrap.ProcurementSetup) (*baselineRegistration, error) {
 	f := report.Fixtures()
 	if f.RPTask.ID != setup.RP.Task || f.BMTask.ID != setup.BM.Task {
 		return nil, fmt.Errorf("baseline requires fixtures prepared for this seed in a clean instance")

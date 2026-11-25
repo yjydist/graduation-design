@@ -19,9 +19,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"grad/experiments/harness"
-	"grad/platform/gateway"
-	"grad/platform/state"
-	"grad/platform/state/fabric"
+	domgw "grad/platform/core/domain/gateway"
+	"grad/platform/core/ledger"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -35,7 +34,7 @@ func newBaselineTestRun(t *testing.T) *baselineRun {
 	return &baselineRun{
 		inputs:   in,
 		evidence: e,
-		d:        &fabric.Deployment{DeploymentID: "test"},
+		d:        &ledger.Deployment{DeploymentID: "test"},
 		options:  Options{RequestTimeout: time.Nanosecond, Timeout: time.Minute},
 	}
 }
@@ -72,7 +71,7 @@ func TestBaselineReproduciblePlan(t *testing.T) {
 			assert.Equal(t, []int{200, 403}[n%2], c.ExpectedStatus)
 			assert.Equal(t, a.Cases[n%4].CaseID, c.CaseID, "configurations are not paired")
 		}
-		assert.Equal(t, gateway.ChallengeTTLSeconds, a.Fixture.TimeRules.ChallengeTTL)
+		assert.Equal(t, domgw.ChallengeTTLSeconds, a.Fixture.TimeRules.ChallengeTTL)
 		assert.Equal(t, int64(registry.ProbeLifetime.Seconds()), a.Fixture.TimeRules.ProbeLifetime)
 		assert.Equal(t, int64(registry.ProbeInterval.Seconds()), a.Fixture.TimeRules.ProbeInterval)
 	}
@@ -105,9 +104,9 @@ func TestBaselineHasNoRandomState(t *testing.T) {
 
 func TestBaselineConfigurations(t *testing.T) {
 	for _, want := range []Configuration{
-		{Name: "C0", StateSource: state.SourceCentralized},
-		{Name: "B0", StateSource: state.SourceFabric},
-		{Name: "B1", StateSource: state.SourceFabric, SignatureCache: true},
+		{Name: "C0", StateSource: ledger.SourceCentralized},
+		{Name: "B0", StateSource: ledger.SourceFabric},
+		{Name: "B1", StateSource: ledger.SourceFabric, SignatureCache: true},
 	} {
 		got, err := BaselineConfiguration(want.Name)
 		require.NoError(t, err)
@@ -553,11 +552,11 @@ func TestBaselinePairedChecksRejectMissingOrInconsistentResults(t *testing.T) {
 			row.Code = someString("ALLOW")
 			row.SignatureCacheHits = someInt64(0)
 			if c.Configuration == "C0" {
-				row.StateSource = someString(state.SourceCentralized)
+				row.StateSource = someString(ledger.SourceCentralized)
 				row.Revision = someInt64(1)
 				row.StateReadAt = someTime(time.Now())
 			} else {
-				row.StateSource = someString(state.SourceFabric)
+				row.StateSource = someString(ledger.SourceFabric)
 				row.BlockNumber = someInt64(4)
 				row.BlockHash = someString(registry.Digest([]byte("block")))
 				row.ProbeTxID = someString("probe")

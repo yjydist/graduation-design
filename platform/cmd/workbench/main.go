@@ -14,7 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"grad/platform/runtime"
+	"grad/platform/bootstrap"
 )
 
 func main() {
@@ -48,7 +48,7 @@ func newCommand() *cobra.Command {
 		Short: "Provision an isolated Fabric deployment for the three workbenches",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runtime.PrepareWorkbench(cmd.Context(), fabricPath, output)
+			return bootstrap.PrepareWorkbench(cmd.Context(), fabricPath, output)
 		},
 	}
 	prepare.Flags().StringVar(&fabricPath, "fabric", "", "Directory of the running isolated Fabric deployment")
@@ -60,7 +60,7 @@ func newCommand() *cobra.Command {
 }
 
 func serve(ctx context.Context, config string) error {
-	app, err := runtime.StartWorkbench(ctx, config)
+	app, err := bootstrap.StartWorkbench(ctx, config)
 	if err != nil {
 		return err
 	}

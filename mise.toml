@@ -55,4 +55,4 @@ run = "go run grad/platform/cmd/ledgerctl inspect"
 
 [tasks."ledger:verify"]
 description = "运行 Fabric 实机集成验收 (//go:build fabriclive, 需设置绝对路径 FABRIC_INSTANCE)"
-run = "go test -tags=fabriclive -v -count=1 -timeout=0 grad/platform/state/fabric grad/platform/runtime"
+run = "go test -tags=fabriclive -v -count=1 -timeout=0 grad/platform/core/ledger grad/platform/bootstrap"

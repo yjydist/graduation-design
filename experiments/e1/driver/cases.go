@@ -12,11 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"grad/platform/agent"
-	"grad/platform/gateway"
-	"grad/platform/policy"
-	"grad/platform/registrysvc"
-	"grad/platform/state/fabric"
+	domgw "grad/platform/core/domain/gateway"
+	"grad/platform/core/domain/policy"
+	domreg "grad/platform/core/domain/registry"
+	"grad/platform/core/domain/wallet"
+	"grad/platform/core/ledger"
+	apigw "grad/platform/service/api/gateway"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -28,7 +29,7 @@ func (e *e1Trial) link() error {
 		return fmt.Errorf("missing dual-domain link transactions")
 	}
 	states := make([]registry.IdentityLink, 2)
-	for n, op := range []*fabric.Operation{propose, approve} {
+	for n, op := range []*ledger.Operation{propose, approve} {
 		raw, err := e.rawAt("link", e.f.IdentityLink.ID, op.Commit.Number)
 		if err != nil {
 			return err
@@ -42,11 +43,11 @@ func (e *e1Trial) link() error {
 		return fmt.Errorf("link did not transition from PENDING to effective ACTIVE")
 	}
 	source, target := e.f.Identities["U"], e.f.Identities["U-in-B"]
-	srcKey, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "U.key.pem"))
+	srcKey, err := ledger.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "U.key.pem"))
 	if err != nil {
 		return err
 	}
-	dstKey, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "U-in-B.key.pem"))
+	dstKey, err := ledger.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "U-in-B.key.pem"))
 	if err != nil {
 		return err
 	}
@@ -109,17 +110,17 @@ func (e *e1Trial) freshRequest(m *e1Mode, action, key string) (protocol.AccessRe
 	return req, nil
 }
 
-func (e *e1Trial) signed(m *e1Mode, handler http.Handler, req protocol.AccessRequest, paths []protocol.TrustPathEntry, now func() time.Time) (protocol.AccessEvidencePackage, gateway.ChallengeResponse, error) {
-	key, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "B1.key.pem"))
+func (e *e1Trial) signed(m *e1Mode, handler http.Handler, req protocol.AccessRequest, paths []protocol.TrustPathEntry, now func() time.Time) (protocol.AccessEvidencePackage, domgw.ChallengeResponse, error) {
+	key, err := ledger.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "B1.key.pem"))
 	if err != nil {
-		return protocol.AccessEvidencePackage{}, gateway.ChallengeResponse{}, err
+		return protocol.AccessEvidencePackage{}, domgw.ChallengeResponse{}, err
 	}
 	prefix := m.pkg.LeafPresentation[:strings.LastIndexByte(m.pkg.LeafPresentation, '~')+1]
 	return e.buildLeafExecutePackage(handler, req, m.pkg.TaskSpec, key, e.f.Identities["B1"].KeyID,
 		prefix, m.pkg.AncestorCredentials, m.pkg.Grants, slices.Clone(paths), now().Unix())
 }
 
-func (e *e1Trial) exercise(m *e1Mode, handler http.Handler, action, key string, paths []protocol.TrustPathEntry, now func() time.Time) (int, string, *gateway.ExecuteResponse, error) {
+func (e *e1Trial) exercise(m *e1Mode, handler http.Handler, action, key string, paths []protocol.TrustPathEntry, now func() time.Time) (int, string, *domgw.ExecuteResponse, error) {
 	req, err := e.freshRequest(m, action, key)
 	if err != nil {
 		return 0, "", nil, err
@@ -130,8 +131,8 @@ func (e *e1Trial) exercise(m *e1Mode, handler http.Handler, action, key string, 
 		return 0, "", nil, err
 	}
 	rec := gatewayPostExecute(observed, pkg)
-	var out gateway.ExecuteResponse
-	var denied gateway.ErrorBody
+	var out domgw.ExecuteResponse
+	var denied apigw.ErrorBody
 	_ = json.Unmarshal(rec.Body.Bytes(), &out)
 	_ = json.Unmarshal(rec.Body.Bytes(), &denied)
 	return rec.Code, denied.Code, &out, nil
@@ -158,7 +159,7 @@ func (e *e1Trial) retryOrder(m *e1Mode) error {
 		return err
 	}
 	res := gatewayPostExecute(observed, first)
-	var original gateway.ExecuteResponse
+	var original domgw.ExecuteResponse
 	if res.Code != http.StatusOK || json.Unmarshal(res.Body.Bytes(), &original) != nil || original.Order == nil {
 		return fmt.Errorf("response-loss injection had no successful commit to lose: HTTP %d", res.Code)
 	}
@@ -168,7 +169,7 @@ func (e *e1Trial) retryOrder(m *e1Mode) error {
 		return err
 	}
 	retried := gatewayPostExecute(observed, second)
-	var same gateway.ExecuteResponse
+	var same domgw.ExecuteResponse
 	_ = json.Unmarshal(retried.Body.Bytes(), &same)
 	after, err := e.orderCount(m)
 	if err != nil {
@@ -187,7 +188,7 @@ func (e *e1Trial) retryOrder(m *e1Mode) error {
 
 func (e *e1Trial) decisions() error {
 	e.stage = "F09"
-	decisions := make(map[string]gateway.DecisionRecord)
+	decisions := make(map[string]domgw.DecisionRecord)
 	for _, m := range e.modes {
 		var id string
 		for _, r := range e.requests {
@@ -200,7 +201,7 @@ func (e *e1Trial) decisions() error {
 		}
 		rec := httptest.NewRecorder()
 		e.observe(m, e.server.Handler()).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/decisions/"+id, nil))
-		var result gateway.DecisionRecord
+		var result domgw.DecisionRecord
 		if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &result) != nil {
 			return fmt.Errorf("decision readback HTTP %d", rec.Code)
 		}
@@ -262,7 +263,7 @@ func (e *e1Trial) supplierPolicy(m *e1Mode) error {
 	}, policy.ResourcesConfig{
 		AllowedResources:  []string{registry.ResourceQuotes, registry.ResourceOrders},
 		AllowedActions:    []string{registry.ActionQuoteRead, registry.ActionOrderCreate},
-		AllowedProductIDs: []string{gateway.DefaultProductID},
+		AllowedProductIDs: []string{domgw.DefaultProductID},
 		MaxQuantity:       10,
 		PolicyDeadline:    &deadline,
 	})
@@ -316,7 +317,7 @@ func (e *e1Trial) didBinding() error {
 			return fmt.Errorf("F06 package unavailable for F12")
 		}
 		b := e.f.Identities["B1"]
-		good, err := os.ReadFile(e.inst.RegistryPath(fabric.DIDRelPath(b.ID)))
+		good, err := os.ReadFile(e.inst.RegistryPath(ledger.DIDRelPath(b.ID)))
 		if err != nil {
 			return err
 		}
@@ -369,7 +370,7 @@ func (e *e1Trial) modeBinding(m *e1Mode) error {
 		return err
 	}
 	rec := gatewayPostExecute(handler, pkg)
-	var denied gateway.ErrorBody
+	var denied apigw.ErrorBody
 	_ = json.Unmarshal(rec.Body.Bytes(), &denied)
 	if err := e.save("F13-"+m.tag, map[string]any{"requestedMode": other, "boundMode": m.task.Mode, "status": rec.Code, "code": denied.Code}); err != nil {
 		return err
@@ -384,7 +385,7 @@ func (e *e1Trial) modeBinding(m *e1Mode) error {
 			return err
 		}
 		pa := e.f.Identities["PA"]
-		key, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "PA.key.pem"))
+		key, err := ledger.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "PA.key.pem"))
 		if err != nil {
 			return err
 		}
@@ -424,7 +425,7 @@ func (e *e1Trial) offlineRoot() error {
 		return err
 	}
 	root := e.d.Bootstrap.Root
-	raw, err := os.ReadFile(e.inst.RegistryPath(fabric.DIDRelPath(root.DID)))
+	raw, err := os.ReadFile(e.inst.RegistryPath(ledger.DIDRelPath(root.DID)))
 	if err != nil {
 		return err
 	}
@@ -470,7 +471,7 @@ func (e *e1Trial) offlineRoot() error {
 	if status != http.StatusOK {
 		return fmt.Errorf("short certification positive control returned %d %s", status, code)
 	}
-	if err := fabric.Poll(e.ctx, 22*time.Second, func() (bool, error) { return time.Now().Unix() >= expiry+1, nil }); err != nil {
+	if err := ledger.Poll(e.ctx, 22*time.Second, func() (bool, error) { return time.Now().Unix() >= expiry+1, nil }); err != nil {
 		return err
 	}
 	return e.forModes(func(m *e1Mode) error {
@@ -506,7 +507,7 @@ func (e *e1Trial) renewB(label string, keyVersion uint64, expiry int64) (string,
 	if err != nil {
 		return "", err
 	}
-	tKey, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "T.key.pem"))
+	tKey, err := ledger.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "T.key.pem"))
 	if err != nil {
 		return "", err
 	}
@@ -553,7 +554,7 @@ func (e *e1Trial) renewB(label string, keyVersion uint64, expiry int64) (string,
 	if err != nil {
 		return "", err
 	}
-	ds := registrysvc.NewDeliveryService(e.db, e.d.DeploymentID)
+	ds := domreg.NewDeliveryService(e.db, e.d.DeploymentID)
 	for _, actor := range []string{"C", "A1", "B1"} {
 		recipient := e.f.Identities[actor].ID
 		if err := ds.PublishDomainCertification(e.ctx, snap.Snapshot, recipient, "B", jws, rootPub, op.TxID, int64(op.Commit.Number), true, time.Now().Unix()); err != nil {
@@ -725,7 +726,7 @@ func (e *e1Trial) renewAuthority() error {
 		if err := e.updatePriceAndContext(&next, 80000); err != nil {
 			return err
 		}
-		out, err := next.wallet.RequestQuote(e.ctx, agent.RequestQuoteInput{Actor: "B1", TaskID: next.task.ID, GrantID: next.leafID, AuthorizationMode: next.task.Mode, ProductID: gateway.DefaultProductID, Quantity: 1, IdempotencyKey: "e1-" + m.tag + "-ib2-quote"})
+		out, err := next.wallet.RequestQuote(e.ctx, wallet.RequestQuoteInput{Actor: "B1", TaskID: next.task.ID, GrantID: next.leafID, AuthorizationMode: next.task.Mode, ProductID: domgw.DefaultProductID, Quantity: 1, IdempotencyKey: "e1-" + m.tag + "-ib2-quote"})
 		if err != nil {
 			return err
 		}

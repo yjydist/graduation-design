@@ -8,8 +8,9 @@ import (
 	"slices"
 	"time"
 
-	"grad/platform/gateway"
-	"grad/platform/state/fabric"
+	domgw "grad/platform/core/domain/gateway"
+	"grad/platform/core/ledger"
+	apigw "grad/platform/service/api/gateway"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -56,7 +57,7 @@ func (e *e1Trial) bootstrap() error {
 func (e *e1Trial) checkLinkedAccountIsolation() error {
 	mode := e.modes[0]
 	account := e.f.Identities["U-in-B"]
-	key, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "U-in-B.key.pem"))
+	key, err := ledger.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "U-in-B.key.pem"))
 	if err != nil {
 		return err
 	}
@@ -87,8 +88,8 @@ func (e *e1Trial) checkLinkedAccountIsolation() error {
 	req := protocol.AccessRequest{
 		SchemaVersion: registry.Schema, DeploymentID: e.d.DeploymentID, Actor: account.ID, PrincipalDomain: "A",
 		AuthorizationMode: registry.RP, TaskID: mode.task.ID, Audience: "https://c.local", Resource: registry.ResourceQuotes,
-		Action: registry.ActionQuoteRead, SupplierID: gateway.DefaultSupplierID, ProductID: gateway.DefaultProductID,
-		Quantity: 1, Currency: gateway.DefaultCurrency, IdempotencyKey: "e1-linked-account",
+		Action: registry.ActionQuoteRead, SupplierID: domgw.DefaultSupplierID, ProductID: domgw.DefaultProductID,
+		Quantity: 1, Currency: domgw.DefaultCurrency, IdempotencyKey: "e1-linked-account",
 	}
 	if _, err := e.ensureTaskContextNormal(e.server.Handler(), mode.task.ID, time.Now().Unix()); err != nil {
 		return err
@@ -100,7 +101,7 @@ func (e *e1Trial) checkLinkedAccountIsolation() error {
 		return err
 	}
 	resp := gatewayPostExecute(handler, pkg)
-	var denied gateway.ErrorBody
+	var denied apigw.ErrorBody
 	_ = json.Unmarshal(resp.Body.Bytes(), &denied)
 	if err := e.save("F02-isolation", map[string]any{"actor": account.ID, "status": resp.Code, "code": denied.Code}); err != nil {
 		return err

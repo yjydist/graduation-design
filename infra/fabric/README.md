@@ -51,7 +51,7 @@ FABRIC_INSTANCE="$PWD/.local/fabric-d0-rebuilt" mise run fabric:down
 
 ## 3 实机回归与故障边界
 
-`mise run ledger:verify` 运行 `//go:build fabriclive` 集成测试 (`grad/platform/state/fabric` 与 `grad/platform/runtime`), 覆盖通道治理与 BFT, 部署绑定与断点恢复, 角色写权限与委托替换, 时间窗口与并发 MVCC 竞争, 视图故障与探针期限, 以及全栈网关/钱包/MCP 验收. 未设置 `FABRIC_INSTANCE` 时自动跳过; 回归会修改登记并停止/重启节点, 应使用隔离实例.
+`mise run ledger:verify` 运行 `//go:build fabriclive` 集成测试 (`grad/platform/core/ledger` 与 `grad/platform/bootstrap`), 覆盖通道治理与 BFT, 部署绑定与断点恢复, 角色写权限与委托替换, 时间窗口与并发 MVCC 竞争, 视图故障与探针期限, 以及全栈网关/钱包/MCP 验收. 未设置 `FABRIC_INSTANCE` 时自动跳过; 回归会修改登记并停止/重启节点, 应使用隔离实例.
 
 可按需指定单个实机测试函数:
 
@@ -64,13 +64,13 @@ FABRIC_INSTANCE="$PWD/.local/fabric-d0-rebuilt" mise run ledger:verify -- -run '
 
 ## 4 管理与核账服务装配
 
-管理服务库入口 `registrysvc.NewFabricService` / `registrysvc.NewFabricServiceWithDB` (或顶层装配 `runtime.StartFabricGatewayStack`) 连接已有部署与原交易日志 (`fabric.Journal`). 宿主在验证客户端证书的 TLS 服务上挂载 Handler, 并运行 `RunRecovery`, 启动时恢复已受理的待定请求.
+管理服务库入口 `core/domain/registry` 的 `NewFabricService` / `NewFabricServiceWithDB` (或顶层装配 `bootstrap.StartFabricGatewayStack`) 连接已有部署与原交易日志 (`ledger.Journal`). 宿主经 `service/api/registry` 在验证客户端证书的 TLS 服务上挂载 Handler, 并运行 `RunRecovery`, 启动时恢复已受理的待定请求.
 
 `POST /v1/management/RecoverIdentity` 只接受完整 `protocol.RecoveryDualProofBundle`, 不接受原始链码恢复参数. 宿主先重新核验原域内账号, 通过 `RegistrationCoordinator.IssueRecoveryChallenge` 保存一次性挑战. 受理时校验新应用密钥与新管理证书双证明, 当前注册机构和目标域 MSP, 对照服务端批准的完整挑战, 在同一事务消费挑战并保存从挑战派生的待提交请求. 重启恢复再次核对持久化批准与原请求的绑定; 没有批准的旧待定恢复请求拒绝提交. 同操作键精确重试返回原操作, 换操作键复用已消费挑战被拒绝.
 
 `GET /v1/operations/{id}` 要求可信认证身份, 仅原发起身份或宿主明确授权的本域审计者可查询. 宿主每次启动调用 `SetOperationAuditors` 装配审计证书的 MSP 与指纹白名单, 仅声明审计角色不会获得权限. 受权查询仍返回 HTTP 200 与 `PENDING`/`CONFIRMED`/`FAILED`, 无认证或越权查询返回 403.
 
-外部 `ledgerctl mcp` 的核账工具分别从 `RECOVERY_MTLS_CERT`/`RECOVERY_MTLS_KEY`/`RECOVERY_MTLS_CA`, `AUDIT_MTLS_CERT`/`AUDIT_MTLS_KEY`/`AUDIT_MTLS_CA` 和 `RECEIPT_MTLS_CERT`/`RECEIPT_MTLS_KEY`/`RECEIPT_MTLS_CA` 读取三个服务客户端的证书, 私钥与服务端 CA 文件路径. 客户端证书用 DID URI 和角色 OU 绑定恢复, 审计和回执服务, 通过 HTTPS 网关连接; `X-Caller-*` 头不能认证身份. 未配置认证客户端时, 核账工具保留 `UNKNOWN` 并返回配置错误. 进程内验收由宿主通过 `runtime.NewLocalMTLSClient` 显式装配三个固定身份的通道.
+外部 `ledgerctl mcp` 的核账工具分别从 `RECOVERY_MTLS_CERT`/`RECOVERY_MTLS_KEY`/`RECOVERY_MTLS_CA`, `AUDIT_MTLS_CERT`/`AUDIT_MTLS_KEY`/`AUDIT_MTLS_CA` 和 `RECEIPT_MTLS_CERT`/`RECEIPT_MTLS_KEY`/`RECEIPT_MTLS_CA` 读取三个服务客户端的证书, 私钥与服务端 CA 文件路径. 客户端证书用 DID URI 和角色 OU 绑定恢复, 审计和回执服务, 通过 HTTPS 网关连接; `X-Caller-*` 头不能认证身份. 未配置认证客户端时, 核账工具保留 `UNKNOWN` 并返回配置错误. 进程内验收由宿主通过 `bootstrap.NewLocalMTLSClient` 显式装配三个固定身份的通道.
 
 核账 C 服务在同一事务保存审计记录和 `order_outcome_outbox`. 嵌入式宿主用 `DeliverStoredReceipt` 交付该原回执, 服务重启或响应丢失时用 `DeliverPendingReceipts` 继续投递, 接收端按原 `caseId`/`sendRevision`/`checkNo` 和全部内容去重. `decision_evidence` 保存原出示和 DID 文档供历史复核, 这些数据库材料不属于公开证据导出.
 

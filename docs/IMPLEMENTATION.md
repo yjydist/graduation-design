@@ -29,7 +29,7 @@ C 在同一份授权视图中核对主体密钥, 祖先授权和任务. Fabric �
 | --- | --- | --- |
 | `grad/protocol` | `protocol/` | 规范化编解码 (`encoding/json/jsontext`), P-256/ES256 (`crypto/ecdsa`, `go-jose/v4`), DID/VC/SD-JWT/委托/证据包与固定高度校验; 子包 `grad/protocol/registry` 保持零第三方依赖 |
 | `grad/chaincode` | `chaincode/` | Fabric Go 链码 `authregistry`, 仅依赖 `grad/protocol/registry` 与 `fabric-chaincode-go/v2` |
-| `grad/platform` | `platform/` | 状态源 (`state/fabric`, `state/central`), 嵌入式 PostgreSQL 迁移 (`migrations`), OPA 策略 (`policy`), 管理与交付服务 (`registrysvc`), 供应商网关 (`gateway`), 隔离智能体钱包与 MCP 工具 (`agent`), 运行时装配 (`runtime`), `ledgerctl` CLI 与 `workbench` 浏览器后端 |
+| `grad/platform` | `platform/` | 按五层架构组织: L2 数据访问与迁移 (`core/dao`, `core/dao/central`), 账本状态源 (`core/ledger`) 与无 HTTP 耦合领域逻辑 (`core/domain/{policy,registry,gateway,wallet,procurement,evidence}`), L3 入站服务 (`service/api/{gateway,registry,workbench,interdomain}`, `service/mcp`), L4 智能体 (`agent/{llm,orchestrator}`), 顶层装配 (`bootstrap`) 与 L5 进程入口 (`cmd/ledgerctl`, `cmd/workbench`), 并由 `arch_test.go` 强制校验分层边界 |
 | `grad/experiments` | `experiments/` | 论文实验底座 (`harness`), 统一 `exp` CLI (`cmd/exp`), 基线与各编号实验驱动, 仅依赖 `grad/protocol` 与 `grad/platform` 公开 API |
 
 平台运行时遵循五层单向依赖架构原则 (L5 -> L4 -> L3 -> L2 -> L1, 并行共享纯协议核 `grad/protocol`):
@@ -89,7 +89,7 @@ flowchart TB
 ```
 
 1. A/B/C 分别运行一个 Peer 并加入同一业务通道. MSP 限制通道准入, TLS 保护连接. A/B/C 及独立运维方分别控制四个排序身份, 区块签名取三者. 日常链码背书取 A/B/C 任意两个 Peer, 链码生命周期及关键应用通道政策由三域共同批准. T 以独立 TMsp 客户端提交及查询, 业务域仍是 A/B/C 三个. 后续业务服务端口为 8101/8102/8103, 第二个 C 网关为 8104, T 为 8100. 见[1 技术栈与五层架构基线](#1-技术栈与五层架构基线).
-2. 三域核对同一公开引导清单. 清单固定通道, T 的 RootRecord, 初始化客户端, A 域/U 的任务创建资格, C 的资源绑定和 instanceId. 仓库采用四模块 Go 工作区 (`protocol/`, `chaincode/`, `platform/`, `experiments/`), 链码从独立模块 `chaincode/` 编译并通过 CCaaS 打包, 源码摘要仅覆盖 `chaincode/go.mod`, `chaincode/go.sum`, `chaincode/registry/*.go` 与 `protocol/registry/*.go` (不含测试文件). 各组织安装的链码包由 `platform/state/fabric` 与 `platform/cmd/ledgerctl` 绑定清单摘要, 初始化证书和链码构建摘要. 初始化入口核对调用者和完整摘要, 读取未占用的根键, 原子写入根, 实例参数和任务创建资格. 根 DID 文档随信任材料分发并核对摘要, 固定根变更需要新部署.
+2. 三域核对同一公开引导清单. 清单固定通道, T 的 RootRecord, 初始化客户端, A 域/U 的任务创建资格, C 的资源绑定和 instanceId. 仓库采用四模块 Go 工作区 (`protocol/`, `chaincode/`, `platform/`, `experiments/`), 链码从独立模块 `chaincode/` 编译并通过 CCaaS 打包, 源码摘要仅覆盖 `chaincode/go.mod`, `chaincode/go.sum`, `chaincode/registry/*.go` 与 `protocol/registry/*.go` (不含测试文件). 各组织安装的链码包由 `platform/core/ledger` 与 `platform/cmd/ledgerctl` 绑定清单摘要, 初始化证书和链码构建摘要. 初始化入口核对调用者和完整摘要, 读取未占用的根键, 原子写入根, 实例参数和任务创建资格. 根 DID 文档随信任材料分发并核对摘要, 固定根变更需要新部署.
 3. 实例标识为随机 32 字节的无前缀小写 hex. deploymentId 绑定 channelId, 创世块头哈希, 链码名, instanceId 和 schemaVersion. 通道已提交定义提供版本, sequence 和策略. 各组织安装 package ID 另随构建和清单摘要锁定. 启动核对信任材料, 实际通道与配置, 链码定义, 根和任务资格, 再续读原检查点. 通道配置或链码定义出现未批准的变更时停止在线检查. 见[3.4 部署绑定与管理证明](#34-部署绑定与管理证明).
 4. T 核实企业域身份及域 DID, 管理员, 注册机构和 IA/IB/IC 的控制权. 挑战绑定部署, 域, DID, 管理证书绑定, 申请范围和期限, 应用密钥版本与文档摘要, 一次性 nonce 和会话. 域及身份机构各证明应用密钥和管理证书私钥控制权, 管理员和注册机构各证明自己的管理证书私钥. T 消费挑战, 以 T 管理证书提交引导交易, 域初态 PENDING, 只登记域与其身份机构.
 5. 首份认证引用已经 CONFIRMED 的引导操作, 并匹配批准的域, 机构, 范围及期限. T 用根应用密钥签 DomainAuthorityCredential, 用根管理证书登记结构字段和摘要. 首份认证将域置为 ACTIVE 并设置当前认证指针. 后续业务认证续发或变更须重新核实双证明, 原子替换认证和指针, 保留 ACTIVE/SUSPENDED, REVOKED 为终态. 原正文先持久化, 原交易 VALID 后复核当前资格和实际期限, 然后投递. 收件人核对签名, 摘要和当前指针并按原 ID 保存.
@@ -115,7 +115,7 @@ Fabric 为每次调用验证客户端签名. 链码从该 X.509 客户端证书�
 
 有资格要求的管理操作按提案时间 t 检查 `t - (w + epsilon) >= nbf` 且 `t + (w + epsilon) < exp`. 三个 Peer 启用同一时间窗口 w, 校时误差界为 epsilon. 子区间还须结构上包含于上级批准区间内. 已背书交易可以晚于业务期限通过提交校验, 交付和业务定案仍以可信实际时钟重验全部期限与当前资格. 有权调用者可撤销已经到期的记录.
 
-账本登记可共享的结构字段, 原文摘要, 状态和版本. 提案参数, 公开写集及事件同样遵守该披露边界, 链码错误码统一输出规范码字符串 (不带 `D0:` 历史前缀). 凭证正文, 披露盐, 签名委托, 策略正文和报价留在受控链下存储. 服务端核对原签名和正文, C 核验逐维包含及金额约束. `platform/runtime` 负责生成可验证的协议夹具并执行种子登记与受控交付同步 (`fixtures.json` 统一使用 `procurementTaskSpec`, 移除历史 `synthetic` 与 `m2TaskSpec` 字段, C 服务凭证键统一为 `"C"`, 资源 URI 严格使用规范前缀), 私钥隔离存储在 `<instance>/private/`, 公开目录仅包含证书, DID 文档与可验证签名材料.
+账本登记可共享的结构字段, 原文摘要, 状态和版本. 提案参数, 公开写集及事件同样遵守该披露边界, 链码错误码统一输出规范码字符串 (不带 `D0:` 历史前缀). 凭证正文, 披露盐, 签名委托, 策略正文和报价留在受控链下存储. 服务端核对原签名和正文, C 核验逐维包含及金额约束. `platform/bootstrap` 负责生成可验证的协议夹具并执行种子登记与受控交付同步 (`fixtures.json` 统一使用 `procurementTaskSpec`, 移除历史 `synthetic` 与 `m2TaskSpec` 字段, C 服务凭证键统一为 `"C"`, 资源 URI 严格使用规范前缀), 私钥隔离存储在 `<instance>/private/`, 公开目录仅包含证书, DID 文档与可验证签名材料.
 
 #### 2.2.1 提交确认与恢复
 
@@ -133,7 +133,7 @@ Fabric 为每次调用验证客户端签名. 链码从该 X.509 客户端证书�
 
 新请求在受理前发现版本冲突返回 409 STATE_CHANGED. 已受理请求返回 202 和原 operationId. 查询为 200, 并返回原操作的 PENDING, CONFIRMED 或 FAILED. 原因以原提案响应或原区块校验码为准, 事后模拟没有取证效力. 只有确认 VALID 且交付时资格及期限仍有效才开放材料. 见[6.2 REST 接口](#62-rest-接口)与[4 证据交付与网关执行](#4-证据交付与网关执行).
 
-管理 HTTP 服务 (`platform/registrysvc`) 使用与 `platform/cmd/ledgerctl` (`ledgerctl invoke` / `operation`) 及 `platform/runtime` 共用的原交易日志 (`platform/state/fabric` 的 `fabric.Journal`). 宿主通过 `registrysvc.NewFabricService` 或 `registrysvc.NewFabricServiceWithDB` (以及 `runtime.StartFabricGatewayStack`) 装配真实 Fabric 后端, 挂载经过客户端证书验证的 Handler, 并运行 `RunRecovery` 消费持久化待定请求. 请求的规范输入与调用者随受理事务保存; HTTP 202 后推进原提案, 背书和提交, 进程恢复仍以同一操作键读取原签名字节与 txID. 原提交结果及交付状态持久化, 已确认结果不被迟到的 PENDING 或重复提交覆盖. 管理证书指纹映射到宿主持有的签名身份, 不使用调用者自报头选择管理账户.
+管理 HTTP 服务 (`platform/service/api/registry`) 与管理领域服务 (`platform/core/domain/registry`) 使用与 `platform/cmd/ledgerctl` (`ledgerctl invoke` / `operation`) 及 `platform/bootstrap` 共用的原交易日志 (`platform/core/ledger` 的 `ledger.Journal`). 宿主通过 `core/domain/registry` 的 `NewFabricService` 或 `NewFabricServiceWithDB` (以及 `bootstrap.StartFabricGatewayStack`) 装配真实 Fabric 后端, 经 `service/api/registry` 挂载经过客户端证书验证的 Handler, 并运行 `RunRecovery` 消费持久化待定请求. 请求的规范输入与调用者随受理事务保存; HTTP 202 后推进原提案, 背书和提交, 进程恢复仍以同一操作键读取原签名字节与 txID. 原提交结果及交付状态持久化, 已确认结果不被迟到的 PENDING 或重复提交覆盖. 管理证书指纹映射到宿主持有的签名身份, 不使用调用者自报头选择管理账户.
 
 ### 2.3 身份状态与管理账户恢复
 
@@ -467,7 +467,7 @@ sequenceDiagram
 
 ### 4.2 固定高度的读取器
 
-在线读取返回部署, 区块号/哈希, 登记依赖和探针原期限. 可用结果表示登记事实在该进程的期限内可用. 应用签名, DID 文档, 策略及采购准入仍按后续校验. 历史模式按显式高度返回块末尾事实, 与在线就绪和探针期限分离. 业务网关 (`platform/gateway`) 仅依赖 `state.StateSource` / `state.HistoricalStateSource` 契约与 `CertificationChecker` 接口, 不直接耦合 `agent`, `registrysvc` 或 `runtime`.
+在线读取返回部署, 区块号/哈希, 登记依赖和探针原期限. 可用结果表示登记事实在该进程的期限内可用. 应用签名, DID 文档, 策略及采购准入仍按后续校验. 历史模式按显式高度返回块末尾事实, 与在线就绪和探针期限分离. 业务网关 (`platform/core/domain/gateway` 与 `platform/service/api/gateway`) 仅依赖 `core/ledger` 的 `ledger.StateSource` / `ledger.HistoricalStateSource` 契约与 `CertificationChecker` 接口, 不直接耦合 `core/domain/wallet`, `core/domain/registry`, `agent/` 或 `bootstrap`.
 
 | 步骤 | StateProvider 的行为 |
 | --- | --- |
@@ -698,9 +698,9 @@ C 数据库按部署隔离. `gateway.EnsureSchema` 执行嵌入式迁移并幂�
 | POST /access/execute | 规范请求, 证据包, 挑战及叶子 KB | 200/4xx/503; 直接执行, 不签发宽权限 token |
 | GET /operations/{id} | operationId | 查询成功为 HTTP 200, 返回 PENDING/CONFIRMED/FAILED, txId, stage, validationCode, blockNumber, blockHash, transactionIndex, observedPeer, failureCode; FAILED 不把该 GET 改成 HTTP 409 |
 | GET /grants/{id}/path | 叶子 ID | 授权路径和当前验证结果; 需审计权限 |
-| POST /internal/order-outcome-cases | caseId, sendRevision, deploymentId, request, requestHash, challengeIds | C 网关接口 (`platform/gateway`): B 恢复服务经 mTLS 向 C 登记已停发 (`sendRevision >= 2`) 的核账单; 202 只确认登记 |
-| POST /audit/order-outcomes | 原订单 request 及可能已发送的 challengeIds; 已登记核账单另带 caseId | C 网关接口 (`platform/gateway`): 仅 C 审计员按核账规程查主库, 读取历史结果并原子写 outbox |
-| POST /internal/order-outcome-receipts | 绑定原意图的最小核账回执 | B 侧恢复服务接口 (`platform/agent`): 仅 C 核账服务向 B 恢复服务交付, 200 表示 B 已持久化 |
+| POST /internal/order-outcome-cases | caseId, sendRevision, deploymentId, request, requestHash, challengeIds | C 网关接口 (`platform/service/api/gateway`): B 恢复服务经 mTLS 向 C 登记已停发 (`sendRevision >= 2`) 的核账单; 202 只确认登记 |
+| POST /audit/order-outcomes | 原订单 request 及可能已发送的 challengeIds; 已登记核账单另带 caseId | C 网关接口 (`platform/service/api/gateway`): 仅 C 审计员按核账规程查主库, 读取历史结果并原子写 outbox |
+| POST /internal/order-outcome-receipts | 绑定原意图的最小核账回执 | B 侧恢复服务接口 (`platform/service/api/interdomain`): 仅 C 核账服务向 B 恢复服务交付, 200 表示 B 已持久化 |
 | GET /decisions/{id} | decisionId | 决策解释; 限请求主体及审计者 |
 | GET /health/ready | 无 | 状态完整且新鲜才 ready; 不暴露密钥 |
 
@@ -769,7 +769,7 @@ T 和各域采用相同操作键和提交规则. 域认证更新走 T 接口, �
 
 ### 6.4 浏览器工作台接口
 
-浏览器以同源 `/api/v1` 调用本域工作台. `platform/workbench/openapi.json` 描述请求字段, 成功响应和错误信封, 可从 `GET /api/v1/openapi.json` 获取. 工作台从服务端会话和本域运行配置选定部署, 域, 角色, DID 及管理证书. 现有 `/v1` 管理和材料交付接口继续承接受控服务调用, C 网关继续核对实际凭证, 授权路径和业务键并定案.
+浏览器以同源 `/api/v1` 调用本域工作台. `platform/service/api/workbench/openapi.json` 描述请求字段, 成功响应和错误信封, 可从 `GET /api/v1/openapi.json` 获取. 工作台从服务端会话和本域运行配置选定部署, 域, 角色, DID 及管理证书. 现有 `/v1` 管理和材料交付接口继续承接受控服务调用, C 网关继续核对实际凭证, 授权路径和业务键并定案.
 
 | 入口 | 会话及业务边界 |
 | --- | --- |
@@ -814,11 +814,11 @@ flowchart TB
 
 ### 7.1 B 如何排除重复下单
 
-B 在发送 execute **之前**持久化 intentId, 原请求, H, k, challengeId 和发送代次, 将意图标记为 OUTCOME_UNKNOWN (`platform/agent`, 表 `client_actions` 和 `order_outcome_receipts`, 见 `platform/migrations/005_agent.sql`). 停发和最终网络发送由同一意图行锁串行处理, 发送方持锁到该次网络调用结束. 停发时递增 sendRevision (>= 2), 固定完整尝试清单, 拒绝迟到的旧工作进程申请新发送. 已绑定 caseId 的意图也拒绝读取当前 sendRevision 的新工作进程, 内存钱包遵循同一规则. 未知订单不得改价格或换键补发. 询价响应也需核对主体, 任务, 商品和总价才可推进订单.
+B 在发送 execute **之前**持久化 intentId, 原请求, H, k, challengeId 和发送代次, 将意图标记为 OUTCOME_UNKNOWN (`platform/core/domain/wallet` 与 `platform/core/dao`, 表 `client_actions` 和 `order_outcome_receipts`, 见 `platform/core/dao/005_agent.sql`). 停发和最终网络发送由同一意图行锁串行处理, 发送方持锁到该次网络调用结束. 停发时递增 sendRevision (>= 2), 固定完整尝试清单, 拒绝迟到的旧工作进程申请新发送. 已绑定 caseId 的意图也拒绝读取当前 sendRevision 的新工作进程, 内存钱包遵循同一规则. 未知订单不得改价格或换键补发. 询价响应也需核对主体, 任务, 商品和总价才可推进订单.
 
 ### 7.2 C 如何确认业务事实
 
-C 业务网关 (`platform/gateway`, 表 `order_outcome_cases`, `order_outcome_audits`, `order_outcome_outbox` 和 `decision_evidence`, 见 `platform/migrations/004_gateway.sql`) 与 B 侧意图存储严格解耦, 不读写 `client_actions` 或 `order_outcome_receipts`. B 恢复服务用绑定角色的 mTLS 向 C 提交 {caseId,sendRevision,deploymentId,request,requestHash,challengeIds} (`POST /v1/internal/order-outcome-cases`), 其中 `sendRevision >= 2` 表示 B 已完成停发. C 验证发送域与 actor, 同一 caseId 的内容不可改. 仅 C 审计员能执行对账 (`POST /v1/audit/order-outcomes`). 服务身份从已验证 mTLS 客户端证书的 DID URI 与角色 OU 取得, 或由宿主在可信进程内通道 (`platform/internal/mtls`) 安装; X-Caller-* 请求头不能授予或覆盖身份. B 恢复服务, C 审计员与 C 回执服务分别使用宿主配置的认证客户端, MCP 工具参数不能选择服务身份. 在主库按 actor/taskId/H 枚举所有相关挑战, 与 B 的清单取并集并按 ID 排序加锁. 在所有行取得锁之后重新读取业务键与订单.
+C 业务网关 (`platform/core/domain/gateway` 与 `platform/service/api/gateway`, 表 `order_outcome_cases`, `order_outcome_audits`, `order_outcome_outbox` 和 `decision_evidence`, 见 `platform/core/dao/004_gateway.sql`) 与 B 侧意图存储严格解耦, 不读写 `client_actions` 或 `order_outcome_receipts`. B 恢复服务用绑定角色的 mTLS 向 C 提交 {caseId,sendRevision,deploymentId,request,requestHash,challengeIds} (`POST /v1/internal/order-outcome-cases`), 其中 `sendRevision >= 2` 表示 B 已完成停发. C 验证发送域与 actor, 同一 caseId 的内容不可改. 仅 C 审计员能执行对账 (`POST /v1/audit/order-outcomes`). 服务身份从已验证 mTLS 客户端证书的 DID URI 与角色 OU 取得, 或由宿主在可信进程内通道 (`platform/internal/mtls`) 安装; X-Caller-* 请求头不能授予或覆盖身份. B 恢复服务, C 审计员与 C 回执服务分别使用宿主配置的认证客户端, MCP 工具参数不能选择服务身份. 在主库按 actor/taskId/H 枚举所有相关挑战, 与 B 的清单取并集并按 ID 排序加锁. 在所有行取得锁之后重新读取业务键与订单.
 
 | 证据 | 可给出的业务结论 |
 | --- | --- |

@@ -12,9 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"grad/platform/gateway"
-	"grad/platform/state"
-	"grad/platform/state/fabric"
+	domgw "grad/platform/core/domain/gateway"
+	"grad/platform/core/ledger"
 	"grad/protocol/registry"
 )
 
@@ -100,7 +99,7 @@ func TestApplyProbeLeaseAndDecisionTiming(t *testing.T) {
 	committedAt := decisionAt.Add(5 * time.Millisecond)
 
 	var rec probeSlotRecord
-	applyProbeLease(&rec, state.ProbeLease{
+	applyProbeLease(&rec, ledger.ProbeLease{
 		TxID:           "probe-tx-1",
 		ProbeBlock:     12,
 		SentAt:         sentAt,
@@ -119,7 +118,7 @@ func TestApplyProbeLeaseAndDecisionTiming(t *testing.T) {
 	require.NotNil(t, rec.ProbeCheckedMonoNs)
 	assert.Equal(t, int64(200_001_000), *rec.ProbeCheckedMonoNs)
 
-	applyDecisionTiming(&rec, gateway.DecisionTiming{
+	applyDecisionTiming(&rec, domgw.DecisionTiming{
 		DecisionID:          "dec-1",
 		BlockNumber:         13,
 		BlockHash:           strings.Repeat("f", 64),
@@ -150,7 +149,7 @@ func TestWriteRevocationsAndRequestsCSVSchema(t *testing.T) {
 	baseTime := time.Date(2026, 11, 22, 10, 0, 0, 0, time.UTC)
 
 	tApply := baseTime.Add(50 * time.Millisecond).UnixNano()
-	rev := &fabric.RevocationEvent{
+	rev := &ledger.RevocationEvent{
 		GrantID:         strings.Repeat("1", 64),
 		TxID:            "rev-tx-1",
 		BlockNumber:     20,
@@ -162,9 +161,9 @@ func TestWriteRevocationsAndRequestsCSVSchema(t *testing.T) {
 		ValidObservedAt: baseTime.Add(30 * time.Millisecond),
 	}
 
-	tr1 := &instanceTracker{id: "gw-1", probeRole: "probe1", timings: map[string]gateway.DecisionTiming{}}
-	tr1.recordAdopt(fabric.AdoptEvent{BlockNumber: 20, AdoptedAt: baseTime.Add(90 * time.Millisecond)}, 20)
-	tr2 := &instanceTracker{id: "gw-2", probeRole: "probe2", timings: map[string]gateway.DecisionTiming{}}
+	tr1 := &instanceTracker{id: "gw-1", probeRole: "probe1", timings: map[string]domgw.DecisionTiming{}}
+	tr1.recordAdopt(ledger.AdoptEvent{BlockNumber: 20, AdoptedAt: baseTime.Add(90 * time.Millisecond)}, 20)
+	tr2 := &instanceTracker{id: "gw-2", probeRole: "probe2", timings: map[string]domgw.DecisionTiming{}}
 
 	cfg := e6Config{
 		configuration:  "B0",

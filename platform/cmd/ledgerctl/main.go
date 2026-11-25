@@ -14,8 +14,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
 
-	"grad/platform/runtime"
-	"grad/platform/state/fabric"
+	"grad/platform/bootstrap"
+	"grad/platform/core/ledger"
 	"grad/protocol/registry"
 )
 
@@ -100,7 +100,7 @@ func newDeployCmd(opts *cliOptions) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, cancel := commandContext(cmd, opts.timeout)
 			defer cancel()
-			inst, err := fabric.OpenInstance(opts.dir)
+			inst, err := ledger.OpenInstance(opts.dir)
 			if err != nil {
 				return err
 			}
@@ -123,7 +123,7 @@ func newSeedCmd(opts *cliOptions) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, cancel := commandContext(cmd, opts.timeout)
 			defer cancel()
-			inst, err := fabric.OpenInstance(opts.dir)
+			inst, err := ledger.OpenInstance(opts.dir)
 			if err != nil {
 				return err
 			}
@@ -144,7 +144,7 @@ func newSeedCmd(opts *cliOptions) *cobra.Command {
 			if err := dep.ValidatePeer(ctx, p); err != nil {
 				return err
 			}
-			report, err := runtime.Seed(ctx, inst, db, dep)
+			report, err := bootstrap.Seed(ctx, inst, db, dep)
 			if report != nil {
 				err = errors.Join(err, writeJSONOutput(cmd.OutOrStdout(), report))
 			}
@@ -167,11 +167,11 @@ func newCheckCmd(opts *cliOptions) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, cancel := commandContext(cmd, opts.timeout)
 			defer cancel()
-			inst, err := fabric.OpenInstance(opts.dir)
+			inst, err := ledger.OpenInstance(opts.dir)
 			if err != nil {
 				return err
 			}
-			snap, err := runtime.CheckRegistryAccess(ctx, inst, grant, probeRole, probeInterval, probeLifetime)
+			snap, err := bootstrap.CheckRegistryAccess(ctx, inst, grant, probeRole, probeInterval, probeLifetime)
 			if err != nil {
 				return err
 			}
@@ -200,11 +200,11 @@ func newInspectCmd(opts *cliOptions) *cobra.Command {
 			}
 			ctx, cancel := commandContext(cmd, opts.timeout)
 			defer cancel()
-			inst, err := fabric.OpenInstance(opts.dir)
+			inst, err := ledger.OpenInstance(opts.dir)
 			if err != nil {
 				return err
 			}
-			snap, err := runtime.InspectHistory(ctx, inst, grant, blockNo)
+			snap, err := bootstrap.InspectHistory(ctx, inst, grant, blockNo)
 			if err != nil {
 				return err
 			}
@@ -228,7 +228,7 @@ func newInvokeCmd(opts *cliOptions) *cobra.Command {
 			}
 			ctx, cancel := commandContext(cmd, opts.timeout)
 			defer cancel()
-			inst, err := fabric.OpenInstance(opts.dir)
+			inst, err := ledger.OpenInstance(opts.dir)
 			if err != nil {
 				return err
 			}
@@ -241,10 +241,10 @@ func newInvokeCmd(opts *cliOptions) *cobra.Command {
 				return err
 			}
 			defer db.Close()
-			if err := fabric.EnsureSchema(ctx, db); err != nil {
+			if err := ledger.EnsureSchema(ctx, db); err != nil {
 				return err
 			}
-			j := fabric.NewJournal(inst, db, dep.DeploymentID)
+			j := ledger.NewJournal(inst, db, dep.DeploymentID)
 			stored, err := j.Load(ctx, key, db)
 			if err != nil {
 				return err
@@ -298,7 +298,7 @@ func newOperationCmd(opts *cliOptions) *cobra.Command {
 			}
 			ctx, cancel := commandContext(cmd, opts.timeout)
 			defer cancel()
-			inst, err := fabric.OpenInstance(opts.dir)
+			inst, err := ledger.OpenInstance(opts.dir)
 			if err != nil {
 				return err
 			}
@@ -311,10 +311,10 @@ func newOperationCmd(opts *cliOptions) *cobra.Command {
 				return err
 			}
 			defer db.Close()
-			if err := fabric.EnsureSchema(ctx, db); err != nil {
+			if err := ledger.EnsureSchema(ctx, db); err != nil {
 				return err
 			}
-			j := fabric.NewJournal(inst, db, dep.DeploymentID)
+			j := ledger.NewJournal(inst, db, dep.DeploymentID)
 			stored, err := j.Load(ctx, key, db)
 			if err != nil {
 				return err
@@ -363,7 +363,7 @@ func newMCPCmd(opts *cliOptions) *cobra.Command {
 				ctx, cancel = context.WithTimeout(ctx, opts.timeout)
 				defer cancel()
 			}
-			inst, err := fabric.OpenInstance(opts.dir)
+			inst, err := ledger.OpenInstance(opts.dir)
 			if err != nil {
 				return err
 			}
@@ -379,7 +379,7 @@ func newMCPCmd(opts *cliOptions) *cobra.Command {
 				}
 				defer db.Close()
 			}
-			return runtime.RunMCP(ctx, inst, dep, db, gatewayURL, cmd.InOrStdin(), cmd.OutOrStdout())
+			return bootstrap.RunMCP(ctx, inst, dep, db, gatewayURL, cmd.InOrStdin(), cmd.OutOrStdout())
 		},
 	}
 	cmd.Flags().StringVar(&gatewayURL, "gateway", os.Getenv("GATEWAY_URL"), "Gateway HTTP base URL (defaults to $GATEWAY_URL or http://127.0.0.1:8103)")

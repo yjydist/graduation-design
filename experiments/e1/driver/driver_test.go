@@ -14,19 +14,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"grad/platform/agent"
-	"grad/platform/gateway"
-	platformrt "grad/platform/runtime"
+	"grad/platform/agent/llm"
+	platformrt "grad/platform/bootstrap"
+	domgw "grad/platform/core/domain/gateway"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
 
 func TestModelMetadataFromRecordedResponses(t *testing.T) {
-	trial := e1Trial{cfg: agent.RunnerConfig{Provider: "openai", Model: "alias"}}
+	trial := e1Trial{cfg: llm.RunnerConfig{Provider: "openai", Model: "alias"}}
 	assert.Empty(t, trial.modelMetadata()["responseModels"])
 	trial.traces = []e1Trace{
-		{Result: &agent.RunResult{ResponseModels: []string{"version-b", "version-a"}}},
-		{Result: &agent.RunResult{ResponseModels: []string{"version-a"}}},
+		{Result: &llm.RunResult{ResponseModels: []string{"version-b", "version-a"}}},
+		{Result: &llm.RunResult{ResponseModels: []string{"version-a"}}},
 		{Error: "no response"},
 	}
 	metadata := trial.modelMetadata()
@@ -81,10 +81,10 @@ func TestFixturesSchemaProcurementTaskSpec(t *testing.T) {
 	t.Parallel()
 
 	spec := protocol.TaskSpec{
-		SupplierID:  gateway.DefaultSupplierID,
-		ProductID:   gateway.DefaultProductID,
+		SupplierID:  domgw.DefaultSupplierID,
+		ProductID:   domgw.DefaultProductID,
 		MaxQuantity: 1,
-		Currency:    gateway.DefaultCurrency,
+		Currency:    domgw.DefaultCurrency,
 		Resources:   []string{registry.ResourceOrders, registry.ResourceQuotes},
 		Actions:     []string{registry.ActionOrderCreate, registry.ActionQuoteRead},
 		Description: "E1 procurement task",
@@ -194,7 +194,7 @@ func TestWritePublicJSONRejectsPrivateKeyAndRedacts(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(raw), `"status": "ok"`)
 
-	trial := &e1Trial{cfg: agent.RunnerConfig{APIKey: "sk-supersecretkey123456"}}
+	trial := &e1Trial{cfg: llm.RunnerConfig{APIKey: "sk-supersecretkey123456"}}
 	assert.Equal(t, "auth failed: [REDACTED]", trial.redact("auth failed: sk-supersecretkey123456"))
 }
 
@@ -215,11 +215,11 @@ func TestFreshRequestAndDecodeGrantPayload(t *testing.T) {
 				Audience:          "https://c.local",
 				Resource:          registry.ResourceOrders,
 				Action:            registry.ActionOrderCreate,
-				SupplierID:        gateway.DefaultSupplierID,
+				SupplierID:        domgw.DefaultSupplierID,
 				QuoteID:           &quoteID,
-				ProductID:         gateway.DefaultProductID,
+				ProductID:         domgw.DefaultProductID,
 				Quantity:          1,
-				Currency:          gateway.DefaultCurrency,
+				Currency:          domgw.DefaultCurrency,
 				AmountMinor:       80000,
 				IdempotencyKey:    "orig-key",
 			},
@@ -246,7 +246,7 @@ func TestFreshRequestAndDecodeGrantPayload(t *testing.T) {
 		Grantee:           "did:web:a.local:u",
 		Resources:         []string{registry.ResourceOrders, registry.ResourceQuotes},
 		Actions:           []string{registry.ActionOrderCreate, registry.ActionQuoteRead},
-		Suppliers:         []string{gateway.DefaultSupplierID},
+		Suppliers:         []string{domgw.DefaultSupplierID},
 		MaxAmountMinor:    500000,
 		RemainingDepth:    2,
 	}

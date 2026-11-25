@@ -3,7 +3,7 @@ package baseline
 import (
 	"fmt"
 
-	"grad/platform/state"
+	"grad/platform/core/ledger"
 	"grad/protocol"
 )
 
@@ -18,11 +18,11 @@ type Configuration struct {
 func BaselineConfiguration(name string) (Configuration, error) {
 	switch name {
 	case "C0":
-		return Configuration{Name: name, StateSource: state.SourceCentralized, SignatureCache: false}, nil
+		return Configuration{Name: name, StateSource: ledger.SourceCentralized, SignatureCache: false}, nil
 	case "B0":
-		return Configuration{Name: name, StateSource: state.SourceFabric, SignatureCache: false}, nil
+		return Configuration{Name: name, StateSource: ledger.SourceFabric, SignatureCache: false}, nil
 	case "B1":
-		return Configuration{Name: name, StateSource: state.SourceFabric, SignatureCache: true}, nil
+		return Configuration{Name: name, StateSource: ledger.SourceFabric, SignatureCache: true}, nil
 	default:
 		return Configuration{}, fmt.Errorf("unknown baseline configuration %q", name)
 	}

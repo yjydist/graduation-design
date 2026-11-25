@@ -25,20 +25,20 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"grad/experiments/harness"
-	"grad/platform/agent"
-	"grad/platform/gateway"
-	"grad/platform/policy"
-	"grad/platform/registrysvc"
-	platformrt "grad/platform/runtime"
-	"grad/platform/state"
-	"grad/platform/state/fabric"
+	"grad/platform/bootstrap"
+	domgw "grad/platform/core/domain/gateway"
+	"grad/platform/core/domain/policy"
+	domreg "grad/platform/core/domain/registry"
+	"grad/platform/core/domain/wallet"
+	"grad/platform/core/ledger"
+	apigw "grad/platform/service/api/gateway"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
 
 const (
 	clockTimebaseHostUTC = "host-utc-unix-ns"
-	defaultSupplierID    = gateway.DefaultSupplierID
+	defaultSupplierID    = domgw.DefaultSupplierID
 	defaultAudience      = "https://c.local"
 )
 
@@ -199,26 +199,26 @@ type ctxKeySnapshotCapture struct{}
 
 type snapshotCapture struct {
 	mu   sync.Mutex
-	snap *state.StateSnapshot
+	snap *ledger.StateSnapshot
 }
 
-func (c *snapshotCapture) set(s *state.StateSnapshot) {
+func (c *snapshotCapture) set(s *ledger.StateSnapshot) {
 	c.mu.Lock()
 	c.snap = s
 	c.mu.Unlock()
 }
 
-func (c *snapshotCapture) get() *state.StateSnapshot {
+func (c *snapshotCapture) get() *ledger.StateSnapshot {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.snap
 }
 
 type observingStateSource struct {
-	state.StateSource
+	ledger.StateSource
 }
 
-func (o *observingStateSource) AssembleSnapshot(ctx context.Context, leafGrantID string, now time.Time) (*state.StateSnapshot, error) {
+func (o *observingStateSource) AssembleSnapshot(ctx context.Context, leafGrantID string, now time.Time) (*ledger.StateSnapshot, error) {
 	snap, err := o.StateSource.AssembleSnapshot(ctx, leafGrantID, now)
 	if err == nil && snap != nil {
 		if capObj, ok := ctx.Value(ctxKeySnapshotCapture{}).(*snapshotCapture); ok && capObj != nil {
@@ -231,31 +231,31 @@ func (o *observingStateSource) AssembleSnapshot(ctx context.Context, leafGrantID
 type instanceTracker struct {
 	id        string
 	probeRole string
-	provider  *fabric.StateProvider
+	provider  *ledger.StateProvider
 	stop      func()
-	server    *gateway.Server
+	server    *apigw.Server
 
 	mu            sync.Mutex
-	timings       map[string]gateway.DecisionTiming
+	timings       map[string]domgw.DecisionTiming
 	firstAdoptRAt *time.Time
 	firstAdoptRH  *int64
-	adopts        []fabric.AdoptEvent
+	adopts        []ledger.AdoptEvent
 }
 
-func (t *instanceTracker) recordTiming(dt gateway.DecisionTiming) {
+func (t *instanceTracker) recordTiming(dt domgw.DecisionTiming) {
 	t.mu.Lock()
 	t.timings[dt.DecisionID] = dt
 	t.mu.Unlock()
 }
 
-func (t *instanceTracker) lookupTiming(decisionID string) (gateway.DecisionTiming, bool) {
+func (t *instanceTracker) lookupTiming(decisionID string) (domgw.DecisionTiming, bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	dt, ok := t.timings[decisionID]
 	return dt, ok
 }
 
-func (t *instanceTracker) recordAdopt(ev fabric.AdoptEvent, revBlock int64) {
+func (t *instanceTracker) recordAdopt(ev ledger.AdoptEvent, revBlock int64) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.adopts = append(t.adopts, ev)
@@ -361,7 +361,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 		eventMu.Unlock()
 	}()
 
-	inst, err := fabric.OpenInstance(cfg.dir)
+	inst, err := ledger.OpenInstance(cfg.dir)
 	if err != nil {
 		return fmt.Errorf("open Fabric instance: %w", err)
 	}
@@ -376,7 +376,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	defer db.Close()
 
 	setup := e6ProcurementSetup(d.DeploymentID, runID, cfg.seed)
-	seedReport, err := platformrt.SeedProcurement(ctx, inst, db, d, setup)
+	seedReport, err := bootstrap.SeedProcurement(ctx, inst, db, d, setup)
 	if err != nil {
 		return fmt.Errorf("seed procurement fixtures: %w", err)
 	}
@@ -384,10 +384,10 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	if err := inst.ApplyCommittedRegistry(ctx, db, d); err != nil {
 		return fmt.Errorf("apply committed registry: %w", err)
 	}
-	if err := gateway.EnsureSchema(ctx, db, d.DeploymentID, defaultSupplierID); err != nil {
+	if err := domgw.EnsureSchema(ctx, db, d.DeploymentID, defaultSupplierID); err != nil {
 		return fmt.Errorf("ensure gateway schema: %w", err)
 	}
-	if err := platformrt.SyncSeedDeliveries(ctx, inst, db, d, seedReport); err != nil {
+	if err := bootstrap.SyncSeedDeliveries(ctx, inst, db, d, seedReport); err != nil {
 		return fmt.Errorf("sync seed deliveries: %w", err)
 	}
 	didServer, resolver, err := inst.StartRegistryDIDResolver(d)
@@ -427,7 +427,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 		fixtureDigest = sum
 	}
 	if err := harness.MergeJSON(filepath.Join(cfg.out, "manifest.json"), map[string]any{
-		"stateSource": state.SourceFabric,
+		"stateSource": ledger.SourceFabric,
 		"deployment": map[string]any{
 			"deploymentId":          d.DeploymentID,
 			"channelId":             d.ChannelID,
@@ -481,18 +481,18 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 		tr := &instanceTracker{
 			id:        instID,
 			probeRole: role,
-			timings:   map[string]gateway.DecisionTiming{},
+			timings:   map[string]domgw.DecisionTiming{},
 		}
 		provider, stopFn, err := inst.StartObservedStateProvider(ctx, db, d, role, g2.ID, cfg.probeInterval, cfg.probeLifetime, func(ev string, at time.Time, details any) {
 			emitEvent(ev, at, map[string]any{"instanceId": instID, "probeRole": role, "data": details})
 			switch v := details.(type) {
-			case fabric.BlockAppliedEvent:
+			case ledger.BlockAppliedEvent:
 				applyMu.Lock()
 				if _, exists := blockAppliedAt[v.BlockNumber]; !exists {
 					blockAppliedAt[v.BlockNumber] = v.AppliedAt
 				}
 				applyMu.Unlock()
-			case fabric.AdoptEvent:
+			case ledger.AdoptEvent:
 				tr.recordAdopt(v, revBlockAtomic.Load())
 			}
 		})
@@ -506,10 +506,10 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 		if strings.EqualFold(cfg.configuration, "B1") {
 			sigCache = protocol.NewSignatureCache()
 		}
-		srv, err := gateway.NewServer(gateway.ServerConfig{
+		gwSvc, err := domgw.NewService(domgw.Config{
 			DB:                  db,
 			State:               &observingStateSource{StateSource: provider},
-			CertChecker:         registrysvc.NewDeliveryService(db, d.DeploymentID),
+			CertChecker:         domreg.NewDeliveryService(db, d.DeploymentID),
 			DIDs:                resolver,
 			Policy:              bundle,
 			SignatureCache:      sigCache,
@@ -521,6 +521,10 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 			OnDecisionCommitted: tr.recordTiming,
 		})
 		if err != nil {
+			return fmt.Errorf("create gateway service %s: %w", instID, err)
+		}
+		srv, err := apigw.NewServer(gwSvc)
+		if err != nil {
 			return fmt.Errorf("create gateway server %s: %w", instID, err)
 		}
 		tr.server = srv
@@ -528,7 +532,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	}
 
 	// Set Q800 catalog price and NORMAL trusted context.
-	if err := gateway.SetCatalogPrice(ctx, db, d.DeploymentID, gateway.DefaultProductID, gateway.DefaultProductPriceMinor); err != nil {
+	if err := domgw.SetCatalogPrice(ctx, db, d.DeploymentID, domgw.DefaultProductID, domgw.DefaultProductPriceMinor); err != nil {
 		return fmt.Errorf("set Q800 catalog price: %w", err)
 	}
 	if err := ensureNormalContext(trackers[0].server.Handler(), task.ID, minExp); err != nil {
@@ -536,16 +540,16 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 	}
 
 	// Use real deterministic wallet to request a real Q800 quote for B1.
-	wallet, err := platformrt.BuildWallet(ctx, inst, d, fx, db, trackers[0].server.Handler())
+	w, err := bootstrap.BuildWallet(ctx, inst, d, fx, db, trackers[0].server.Handler())
 	if err != nil {
 		return fmt.Errorf("build deterministic wallet: %w", err)
 	}
-	quoteOut, err := wallet.RequestQuote(ctx, agent.RequestQuoteInput{
+	quoteOut, err := w.RequestQuote(ctx, wallet.RequestQuoteInput{
 		Actor:             "B1",
 		GrantID:           g2.ID,
 		TaskID:            task.ID,
 		AuthorizationMode: authMode,
-		ProductID:         gateway.DefaultProductID,
+		ProductID:         domgw.DefaultProductID,
 		Quantity:          1,
 		IdempotencyKey:    runID + "-q800",
 	})
@@ -677,7 +681,7 @@ func runE6(ctx context.Context, cfg e6Config) (retErr error) {
 		"experiment":        "E6",
 		"status":            "PASS",
 		"stage":             "execution",
-		"stateSource":       state.SourceFabric,
+		"stateSource":       ledger.SourceFabric,
 		"deploymentId":      d.DeploymentID,
 		"mode":              authMode,
 		"modeShort":         modeShort,
@@ -762,7 +766,7 @@ func runInstanceProber(ctx context.Context, tr *instanceTracker, mat *probeMater
 	}
 }
 
-func applyProbeLease(rec *probeSlotRecord, lease state.ProbeLease) {
+func applyProbeLease(rec *probeSlotRecord, lease ledger.ProbeLease) {
 	pb := int64(lease.ProbeBlock)
 	rec.ProbeTxID = lease.TxID
 	rec.ProbeBlock = &pb
@@ -784,7 +788,7 @@ func applyProbeLease(rec *probeSlotRecord, lease state.ProbeLease) {
 	}
 }
 
-func applyDecisionTiming(rec *probeSlotRecord, dt gateway.DecisionTiming) {
+func applyDecisionTiming(rec *probeSlotRecord, dt domgw.DecisionTiming) {
 	dNs := dt.DecisionAt.UTC().UnixNano()
 	cNs := dt.CommittedAt.UTC().UnixNano()
 	dSec := dt.DecisionAtSec
@@ -836,9 +840,9 @@ func executeOrderProbe(parentCtx context.Context, tr *instanceTracker, mat *prob
 		Action:            registry.ActionOrderCreate,
 		SupplierID:        defaultSupplierID,
 		QuoteID:           &mat.quoteID,
-		ProductID:         gateway.DefaultProductID,
+		ProductID:         domgw.DefaultProductID,
 		Quantity:          1,
-		Currency:          gateway.DefaultCurrency,
+		Currency:          domgw.DefaultCurrency,
 		AmountMinor:       80000,
 		IdempotencyKey:    idempKey,
 	}
@@ -849,7 +853,7 @@ func executeOrderProbe(parentCtx context.Context, tr *instanceTracker, mat *prob
 	}
 
 	// Step 1: Request fresh challenge.
-	chalBody, _ := json.Marshal(gateway.ChallengeRequest{Actor: mat.actorDID, TaskID: mat.taskID, RequestHash: reqHash})
+	chalBody, _ := json.Marshal(domgw.ChallengeRequest{Actor: mat.actorDID, TaskID: mat.taskID, RequestHash: reqHash})
 	chalHTTPReq := httptest.NewRequest(http.MethodPost, "/v1/auth/challenges", bytes.NewReader(chalBody)).WithContext(callCtx)
 	chalHTTPReq.Header.Set("Content-Type", "application/json")
 	chalResp := httptest.NewRecorder()
@@ -866,7 +870,7 @@ func executeOrderProbe(parentCtx context.Context, tr *instanceTracker, mat *prob
 		}
 		return rec
 	}
-	var chal gateway.ChallengeResponse
+	var chal domgw.ChallengeResponse
 	if err := json.Unmarshal(chalResp.Body.Bytes(), &chal); err != nil {
 		rec.UnobservedReason = "challenge_decode_failed"
 		return rec
@@ -919,10 +923,10 @@ func executeOrderProbe(parentCtx context.Context, tr *instanceTracker, mat *prob
 	}
 
 	var parsed struct {
-		RequestID  string                `json:"requestId"`
-		DecisionID *string               `json:"decisionId"`
-		Code       string                `json:"code"`
-		Order      *gateway.OrderPayload `json:"order"`
+		RequestID  string              `json:"requestId"`
+		DecisionID *string             `json:"decisionId"`
+		Code       string              `json:"code"`
+		Order      *domgw.OrderPayload `json:"order"`
 	}
 	if json.Unmarshal(execResp.Body.Bytes(), &parsed) == nil {
 		if parsed.RequestID != "" {
@@ -1039,9 +1043,9 @@ func enrichProbeRecords(ctx context.Context, db *pgxpool.Pool, deploymentID, g1I
 	return nil
 }
 
-func loadProbeMaterial(inst *fabric.Instance, deploymentID string, fx *platformrt.Fixtures, task registry.Task, g0, g1, g2 registry.Grant, quoteID string) (*probeMaterial, error) {
+func loadProbeMaterial(inst *ledger.Instance, deploymentID string, fx *bootstrap.Fixtures, task registry.Task, g0, g1, g2 registry.Grant, quoteID string) (*probeMaterial, error) {
 	b1 := fx.Identities["B1"]
-	b1Priv, err := fabric.LoadECPrivateKeyPEM(inst.PrivatePath("app", "B1.key.pem"))
+	b1Priv, err := ledger.LoadECPrivateKeyPEM(inst.PrivatePath("app", "B1.key.pem"))
 	if err != nil {
 		return nil, err
 	}
@@ -1127,22 +1131,22 @@ func loadProbeMaterial(inst *fabric.Instance, deploymentID string, fx *platformr
 	}, nil
 }
 
-func e6ProcurementSetup(deploymentID, runID string, seed int) platformrt.ProcurementSetup {
-	ids := func(mode string) platformrt.ProcurementPathIDs {
+func e6ProcurementSetup(deploymentID, runID string, seed int) bootstrap.ProcurementSetup {
+	ids := func(mode string) bootstrap.ProcurementPathIDs {
 		ns := fmt.Sprintf("%s/e6/%s/%d/%s/", deploymentID, runID, seed, mode)
-		return platformrt.ProcurementPathIDs{
+		return bootstrap.ProcurementPathIDs{
 			Task: registry.Digest([]byte(ns + "task")),
 			G0:   registry.Digest([]byte(ns + "G0")),
 			G1:   registry.Digest([]byte(ns + "G1")),
 			G2:   registry.Digest([]byte(ns + "G2")),
 		}
 	}
-	return platformrt.ProcurementSetup{
+	return bootstrap.ProcurementSetup{
 		Spec: protocol.TaskSpec{
 			SupplierID:  defaultSupplierID,
-			ProductID:   gateway.DefaultProductID,
+			ProductID:   domgw.DefaultProductID,
 			MaxQuantity: 1,
-			Currency:    gateway.DefaultCurrency,
+			Currency:    domgw.DefaultCurrency,
 			Resources:   []string{registry.ResourceOrders, registry.ResourceQuotes},
 			Actions:     []string{registry.ActionOrderCreate, registry.ActionQuoteRead},
 			Description: "E6 revocation window procurement task",
@@ -1153,7 +1157,7 @@ func e6ProcurementSetup(deploymentID, runID string, seed int) platformrt.Procure
 }
 
 func ensureNormalContext(handler http.Handler, taskID string, deadline int64) error {
-	body, _ := json.Marshal(gateway.ContextUpdateRequest{
+	body, _ := json.Marshal(domgw.ContextUpdateRequest{
 		ExpectedContextVersion: 0,
 		SourceID:               "ctx-e6-c",
 		ObservedAt:             time.Now().UTC().Unix() - 1,
@@ -1170,7 +1174,7 @@ func ensureNormalContext(handler http.Handler, taskID string, deadline int64) er
 	return nil
 }
 
-func buildRevocationCSVRows(runID, authMode string, cfg e6Config, rev *fabric.RevocationEvent, tApplyNs *int64, trackers []*instanceTracker, clockResNs int64) []revocationCSVRow {
+func buildRevocationCSVRows(runID, authMode string, cfg e6Config, rev *ledger.RevocationEvent, tApplyNs *int64, trackers []*instanceTracker, clockResNs int64) []revocationCSVRow {
 	rows := make([]revocationCSVRow, 0, len(trackers))
 	for _, tr := range trackers {
 		adoptAt, adoptH := tr.resolveFirstAdopt(int64(rev.BlockNumber))
@@ -1212,7 +1216,7 @@ func buildRevocationCSVRows(runID, authMode string, cfg e6Config, rev *fabric.Re
 	return rows
 }
 
-func writeRevocationsCSV(path, runID, authMode string, cfg e6Config, rev *fabric.RevocationEvent, tApplyNs *int64, trackers []*instanceTracker, clockResNs int64) error {
+func writeRevocationsCSV(path, runID, authMode string, cfg e6Config, rev *ledger.RevocationEvent, tApplyNs *int64, trackers []*instanceTracker, clockResNs int64) error {
 	rows := buildRevocationCSVRows(runID, authMode, cfg, rev, tApplyNs, trackers, clockResNs)
 	return harness.WriteCSV(path, rows)
 }

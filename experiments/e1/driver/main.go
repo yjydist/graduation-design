@@ -20,13 +20,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"grad/experiments/harness"
-	"grad/platform/agent"
-	"grad/platform/gateway"
-	"grad/platform/policy"
-	"grad/platform/registrysvc"
-	platformrt "grad/platform/runtime"
-	"grad/platform/state"
-	"grad/platform/state/fabric"
+	"grad/platform/agent/llm"
+	platformrt "grad/platform/bootstrap"
+	domgw "grad/platform/core/domain/gateway"
+	"grad/platform/core/domain/policy"
+	domreg "grad/platform/core/domain/registry"
+	"grad/platform/core/domain/wallet"
+	"grad/platform/core/ledger"
+	apigw "grad/platform/service/api/gateway"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -61,19 +62,19 @@ type e1Trial struct {
 	ctx                          context.Context
 	id, dir, ledgerctl, revision string
 	instanceDir                  string
-	inst                         *fabric.Instance
-	dep                          *fabric.Deployment
-	cfg                          agent.RunnerConfig
+	inst                         *ledger.Instance
+	dep                          *ledger.Deployment
+	cfg                          llm.RunnerConfig
 	configuredURL                string
 	d                            deployment
 	db                           *pgxpool.Pool
 	f                            platformrt.Fixtures
 	seed                         seedReport
-	sp                           *fabric.StateProvider
-	state                        state.StateSource
+	sp                           *ledger.StateProvider
+	state                        ledger.StateSource
 	did                          *protocol.DIDWebServer
 	resolver                     *protocol.DIDWebResolver
-	server                       *gateway.Server
+	server                       *apigw.Server
 	bundle                       *policy.VerifiedBundle
 	modes                        []*e1Mode
 	requests                     []e1HTTPRecord
@@ -88,7 +89,7 @@ type e1Mode struct {
 	task      registry.Task
 	g0, g1    registry.Grant
 	leafID    string
-	wallet    *agent.WalletContext
+	wallet    *wallet.WalletContext
 	delegated bool
 	q800      string
 	pkg       *protocol.AccessEvidencePackage
@@ -131,14 +132,14 @@ func (e *e1Trial) run() (err error) {
 		}
 		err = errors.Join(err, writePublicJSON(filepath.Join(e.dir, "summary.json"), r))
 	}()
-	e.cfg = agent.LoadRunnerConfigFromEnv()
+	e.cfg = llm.LoadRunnerConfigFromEnv()
 	e.configuredURL = e.cfg.BaseURL
 	base, err := url.Parse(e.cfg.BaseURL)
 	if err != nil || base.Host == "" || (base.Scheme != "https" && base.Scheme != "http") ||
 		base.User != nil || base.RawQuery != "" || base.Fragment != "" || e.cfg.APIKey == "" || e.cfg.Model == "" {
 		return fmt.Errorf("invalid LLM endpoint, model or API key configuration")
 	}
-	if e.cfg.Provider == agent.ProviderOpenAI && (base.Path == "" || base.Path == "/") {
+	if e.cfg.Provider == llm.ProviderOpenAI && (base.Path == "" || base.Path == "/") {
 		base.Path = "/v1"
 		e.cfg.BaseURL = base.String()
 	}
@@ -205,7 +206,7 @@ func (e *e1Trial) setup() error {
 	if err := e.command(e.ctx, &e.d, "deploy"); err != nil {
 		return err
 	}
-	inst, err := fabric.OpenInstance(e.instanceDir)
+	inst, err := ledger.OpenInstance(e.instanceDir)
 	if err != nil {
 		return err
 	}
@@ -227,7 +228,7 @@ func (e *e1Trial) setup() error {
 		return err
 	}
 
-	provider := fabric.NewStateProviderFromBootstrap(db, e.d.DeploymentID, e.d.Bootstrap, nil)
+	provider := ledger.NewStateProviderFromBootstrap(db, e.d.DeploymentID, e.d.Bootstrap, nil)
 	e.sp = provider
 	e.state = &liveState{StateSource: provider, trial: e}
 	if _, err := e.refresh(e.ctx, e.f.RPG2.ID); err != nil {
@@ -237,7 +238,7 @@ func (e *e1Trial) setup() error {
 	if err != nil {
 		return err
 	}
-	if err := gateway.EnsureSchema(e.ctx, db, e.d.DeploymentID, gateway.DefaultSupplierID); err != nil {
+	if err := domgw.EnsureSchema(e.ctx, db, e.d.DeploymentID, domgw.DefaultSupplierID); err != nil {
 		return err
 	}
 	c := e.f.Identities["C"].ID
@@ -363,19 +364,23 @@ func (e *e1Trial) forModes(run func(*e1Mode) error) error {
 	return combined
 }
 
-func (e *e1Trial) newGateway(resolver *protocol.DIDWebResolver, bundle *policy.VerifiedBundle, now func() time.Time) (*gateway.Server, error) {
-	return gateway.NewServer(gateway.ServerConfig{
+func (e *e1Trial) newGateway(resolver *protocol.DIDWebResolver, bundle *policy.VerifiedBundle, now func() time.Time) (*apigw.Server, error) {
+	svc, err := domgw.NewService(domgw.Config{
 		DB:           e.db,
 		State:        e.state,
-		CertChecker:  registrysvc.NewDeliveryService(e.db, e.d.DeploymentID),
+		CertChecker:  domreg.NewDeliveryService(e.db, e.d.DeploymentID),
 		DIDs:         resolver,
 		Policy:       bundle,
 		DeploymentID: e.d.DeploymentID,
 		ServiceDID:   e.f.Identities["C"].ID,
 		Audience:     "https://c.local",
-		SupplierID:   gateway.DefaultSupplierID,
+		SupplierID:   domgw.DefaultSupplierID,
 		NowFn:        now,
 	})
+	if err != nil {
+		return nil, err
+	}
+	return apigw.NewServer(svc)
 }
 
 func (e *e1Trial) gatewayFor(resolver *protocol.DIDWebResolver, bundle *policy.VerifiedBundle, now func() time.Time) (http.Handler, error) {

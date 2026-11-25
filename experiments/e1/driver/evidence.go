@@ -19,7 +19,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"grad/experiments/harness"
-	"grad/platform/state/fabric"
+	"grad/platform/core/ledger"
 )
 
 func writePublicJSON(path string, value any) error {
@@ -153,7 +153,7 @@ func (e *e1Trial) exportBlocks(ctx context.Context) (err error) {
 	defer func() { err = errors.Join(err, index.Close()) }()
 	enc := json.NewEncoder(index)
 	for rows.Next() {
-		var p fabric.Point
+		var p ledger.Point
 		var parent string
 		var raw []byte
 		if err := rows.Scan(&p.Number, &p.Hash, &parent, &raw); err != nil {

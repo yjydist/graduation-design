@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"grad/platform/gateway"
-	"grad/platform/policy"
+	domgw "grad/platform/core/domain/gateway"
+	"grad/platform/core/domain/policy"
 	"grad/protocol"
 )
 
@@ -30,7 +30,7 @@ func (e *e1Trial) ensureTaskContextNormal(handler http.Handler, taskID string, n
 	if err := e.db.QueryRow(e.ctx, `SELECT COALESCE(MAX(context_version),0) FROM trusted_contexts WHERE deployment_id=$1 AND task_id=$2`, e.d.DeploymentID, taskID).Scan(&version); err != nil {
 		return 0, err
 	}
-	resp, err := postJSON(handler, "/v1/contexts/"+taskID, gateway.ContextUpdateRequest{
+	resp, err := postJSON(handler, "/v1/contexts/"+taskID, domgw.ContextUpdateRequest{
 		ExpectedContextVersion: version,
 		SourceID:               "ctx-verifier-c",
 		ObservedAt:             now - 1,
@@ -43,20 +43,20 @@ func (e *e1Trial) ensureTaskContextNormal(handler http.Handler, taskID string, n
 	if resp.Code != http.StatusOK {
 		return 0, fmt.Errorf("context update returned HTTP %d: %s", resp.Code, resp.Body.String())
 	}
-	var out gateway.ContextResponse
+	var out domgw.ContextResponse
 	err = json.Unmarshal(resp.Body.Bytes(), &out)
 	return out.ContextVersion, err
 }
 
 func (e *e1Trial) buildLeafExecutePackage(handler http.Handler, req protocol.AccessRequest, spec protocol.TaskSpec,
 	priv *ecdsa.PrivateKey, keyID, presentation string, anc []protocol.AncestorCredential, grants []string,
-	paths []protocol.TrustPathEntry, now int64) (protocol.AccessEvidencePackage, gateway.ChallengeResponse, error) {
-	var challenge gateway.ChallengeResponse
+	paths []protocol.TrustPathEntry, now int64) (protocol.AccessEvidencePackage, domgw.ChallengeResponse, error) {
+	var challenge domgw.ChallengeResponse
 	hash, err := req.Hash(false)
 	if err != nil {
 		return protocol.AccessEvidencePackage{}, challenge, err
 	}
-	resp, err := postJSON(handler, "/v1/auth/challenges", gateway.ChallengeRequest{Actor: req.Actor, TaskID: req.TaskID, RequestHash: hash})
+	resp, err := postJSON(handler, "/v1/auth/challenges", domgw.ChallengeRequest{Actor: req.Actor, TaskID: req.TaskID, RequestHash: hash})
 	if err != nil {
 		return protocol.AccessEvidencePackage{}, challenge, err
 	}

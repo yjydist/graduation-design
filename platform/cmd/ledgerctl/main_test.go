@@ -23,17 +23,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"grad/platform/runtime"
-	"grad/platform/state/fabric"
+	"grad/platform/bootstrap"
+	"grad/platform/core/ledger"
 	"grad/protocol/registry"
 )
 
-func prepareOfflineInstanceDir(t *testing.T) (string, *runtime.Fixtures) {
+func prepareOfflineInstanceDir(t *testing.T) (string, *bootstrap.Fixtures) {
 	t.Helper()
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "network.env"), []byte("FABRIC_DB=5432\n"), 0644))
 
-	inst, err := fabric.OpenInstance(dir)
+	inst, err := ledger.OpenInstance(dir)
 	require.NoError(t, err)
 
 	type loc struct{ org, user string }
@@ -109,16 +109,16 @@ func prepareOfflineInstanceDir(t *testing.T) (string, *runtime.Fixtures) {
 			PublicKey:      mat.RootPubHex,
 		},
 		Initializer:        bindings["init"],
-		TaskCreator:        registry.TaskAuthority{Domain: "A", Subject: fabric.SubjectU, Management: bindings["U"]},
-		ResourceID:         registry.Digest([]byte("resource:" + fabric.SubjectC)),
-		ResourceOwner:      fabric.SubjectC,
+		TaskCreator:        registry.TaskAuthority{Domain: "A", Subject: ledger.SubjectU, Management: bindings["U"]},
+		ResourceID:         registry.Digest([]byte("resource:" + ledger.SubjectC)),
+		ResourceOwner:      ledger.SubjectC,
 		ResourceManagement: bindings["C"],
 	}
 	bootRaw, err := json.Marshal(boot)
 	require.NoError(t, err)
-	require.NoError(t, fabric.WritePublicFile(inst.RegistryPath("bootstrap.json"), bootRaw))
+	require.NoError(t, ledger.WritePublicFile(inst.RegistryPath("bootstrap.json"), bootRaw))
 
-	dep := &fabric.Deployment{
+	dep := &ledger.Deployment{
 		DeploymentFields: fields,
 		DeploymentID:     fields.DeploymentID(),
 		ConfigDigest:     registry.Digest([]byte("cli-config")),
@@ -131,14 +131,14 @@ func prepareOfflineInstanceDir(t *testing.T) (string, *runtime.Fixtures) {
 			"c": "authregistry_c:" + registry.Digest([]byte("pkg-c")),
 		},
 		DefinitionDigest: registry.Digest([]byte("cli-def")),
-		DefinitionBlock:  fabric.Point{Number: 1, Hash: registry.Digest([]byte("b1"))},
+		DefinitionBlock:  ledger.Point{Number: 1, Hash: registry.Digest([]byte("b1"))},
 		DefinitionTxID:   registry.Digest([]byte("tx1")),
-		InitBlock:        fabric.Point{Number: 2, Hash: registry.Digest([]byte("b2"))},
+		InitBlock:        ledger.Point{Number: 2, Hash: registry.Digest([]byte("b2"))},
 		Bootstrap:        boot,
 	}
-	require.NoError(t, fabric.WriteJSON(inst.RegistryPath("deployment.json"), dep))
+	require.NoError(t, ledger.WriteJSON(inst.RegistryPath("deployment.json"), dep))
 
-	f, err := runtime.PrepareFixtures(inst, dep, nil)
+	f, err := bootstrap.PrepareFixtures(inst, dep, nil)
 	require.NoError(t, err)
 	return dir, f
 }

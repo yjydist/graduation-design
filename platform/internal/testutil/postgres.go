@@ -18,7 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 
-	"grad/platform/migrations"
+	"grad/platform/core/dao"
 )
 
 const (
@@ -164,7 +164,7 @@ func OpenMigratedDB(t testing.TB) (*pgxpool.Pool, string) {
 	pool, dsn := OpenTestDB(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := migrations.Up(ctx, pool); err != nil {
+	if err := dao.Up(ctx, pool); err != nil {
 		t.Fatalf("testutil: apply migrations: %v", err)
 	}
 	return pool, dsn

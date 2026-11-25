@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"grad/platform/policy"
+	"grad/platform/core/domain/policy"
 	"grad/protocol"
 	"grad/protocol/registry"
 )

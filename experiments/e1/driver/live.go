@@ -13,10 +13,13 @@ import (
 	"time"
 
 	"grad/experiments/harness"
-	"grad/platform/agent"
-	"grad/platform/gateway"
-	"grad/platform/registrysvc"
-	"grad/platform/state/fabric"
+	"grad/platform/agent/llm"
+	"grad/platform/agent/orchestrator"
+	domgw "grad/platform/core/domain/gateway"
+	domreg "grad/platform/core/domain/registry"
+	"grad/platform/core/domain/wallet"
+	"grad/platform/core/ledger"
+	svcmcp "grad/platform/service/mcp"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -24,7 +27,7 @@ import (
 type e1Trace struct {
 	Case, Mode, Prompt string
 	Started, Finished  time.Time
-	Result             *agent.RunResult
+	Result             *llm.RunResult
 	Error              string
 }
 
@@ -80,7 +83,7 @@ func (e *e1Trial) observe(m *e1Mode, next http.Handler) http.Handler {
 		row.Status, row.Finished, row.RequestID = rec.Code, time.Now(), rec.Header().Get("X-Request-Id")
 		switch row.Path {
 		case "/v1/auth/challenges":
-			var data gateway.ChallengeResponse
+			var data domgw.ChallengeResponse
 			if json.Unmarshal(rec.Body.Bytes(), &data) == nil {
 				row.ChallengeID = data.ChallengeID
 				if e.stage == "F06" && data.ChallengeID != "" {
@@ -90,8 +93,8 @@ func (e *e1Trial) observe(m *e1Mode, next http.Handler) http.Handler {
 		case "/v1/access/execute":
 			var data struct {
 				RequestID, DecisionID, Code string
-				Quote                       *gateway.QuotePayload
-				Order                       *gateway.OrderPayload
+				Quote                       *domgw.QuotePayload
+				Order                       *domgw.OrderPayload
 			}
 			if json.Unmarshal(rec.Body.Bytes(), &data) == nil {
 				row.DecisionID, row.Code = data.DecisionID, data.Code
@@ -152,9 +155,9 @@ func (e *e1Trial) writeHTTP() error {
 	return harness.WriteCSV(filepath.Join(e.dir, "requests.csv"), toE1HTTPCSVRows(e.requests))
 }
 
-func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
+func (e *e1Trial) wallet(m *e1Mode) (*wallet.WalletContext, error) {
 	aID := e.f.Identities["A1"]
-	aPriv, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "A1.key.pem"))
+	aPriv, err := ledger.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", "A1.key.pem"))
 	if err != nil {
 		return nil, err
 	}
@@ -174,8 +177,8 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 			paths = append(paths, protocol.TrustPathEntry{Issuer: e.f.Domains[dom].Issuers[0].ID, DomainCertification: string(raw)})
 		}
 	}
-	ds := registrysvc.NewDeliveryService(e.db, e.d.DeploymentID)
-	var parentReceipt registrysvc.GrantDeliveryPackage
+	ds := domreg.NewDeliveryService(e.db, e.d.DeploymentID)
+	var parentReceipt domreg.GrantDeliveryPackage
 	var parentRaw []byte
 	if err := e.db.QueryRow(e.ctx, `SELECT package_json FROM grant_outbox WHERE deployment_id=$1 AND recipient=$2 AND grant_id=$3`, e.d.DeploymentID, aID.ID, m.g1.ID).Scan(&parentRaw); err != nil {
 		return nil, fmt.Errorf("read G1 delivery: %w", err)
@@ -191,17 +194,17 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 	if err := e.db.QueryRow(e.ctx, `SELECT count(*) FROM wallet_receipts WHERE deployment_id=$1 AND recipient=$2 AND grant_id=$3`, e.d.DeploymentID, aID.ID, m.g1.ID).Scan(&parentReceiptCount); err != nil || parentReceiptCount != 1 {
 		return nil, fmt.Errorf("G1 confirmed wallet receipt count=%d: %v", parentReceiptCount, err)
 	}
-	w, err := agent.NewWalletContext(agent.WalletConfig{
+	w, err := wallet.NewWalletContext(wallet.WalletConfig{
 		DeploymentID:    e.d.DeploymentID,
 		Audience:        "https://c.local",
-		SupplierID:      gateway.DefaultSupplierID,
+		SupplierID:      domgw.DefaultSupplierID,
 		SupplierDID:     e.f.Identities["C"].ID,
 		DefaultTaskSpec: e.f.ProcurementTaskSpec,
-		Currency:        gateway.DefaultCurrency,
+		Currency:        domgw.DefaultCurrency,
 		DB:              e.db,
 		HTTPHandler:     e.observe(m, e.server.Handler()),
 		Now:             time.Now,
-		AnchorChildFunc: func(ctx context.Context, req agent.AnchorChildGrantRequest) (*agent.AnchorChildGrantResult, error) {
+		AnchorChildFunc: func(ctx context.Context, req wallet.AnchorChildGrantRequest) (*wallet.AnchorChildGrantResult, error) {
 			c := req.Claims
 			if req.IssuerActor != "A1" || req.GranteeDID != e.f.Identities["B1"].ID || c.ID != m.leafID || req.ParentID != m.g1.ID ||
 				c.TaskID != m.task.ID || c.AuthorizationMode != m.task.Mode {
@@ -233,7 +236,7 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 			if err != nil {
 				return nil, err
 			}
-			pkg := registrysvc.GrantDeliveryPackage{
+			pkg := domreg.GrantDeliveryPackage{
 				DeploymentID:           e.d.DeploymentID,
 				Recipient:              c.Grantee,
 				GrantID:                c.ID,
@@ -253,7 +256,7 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 			if err := e.save(e.stage+"-delegate-"+m.tag, map[string]any{"operation": op, "g2": c, "g2JWS": req.RawGrantJWS, "receipt": receipt}); err != nil {
 				return nil, err
 			}
-			return &agent.AnchorChildGrantResult{Anchored: true, TrustPaths: paths}, nil
+			return &wallet.AnchorChildGrantResult{Anchored: true, TrustPaths: paths}, nil
 		},
 	})
 	if err != nil {
@@ -261,7 +264,7 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 	}
 	for _, role := range []string{"A1", "B1"} {
 		id := e.f.Identities[role]
-		key, err := fabric.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", role+".key.pem"))
+		key, err := ledger.LoadECPrivateKeyPEM(e.inst.PrivatePath("app", role+".key.pem"))
 		if err != nil {
 			return nil, err
 		}
@@ -269,7 +272,7 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := w.RegisterActor(agent.Signer{
+		if err := w.RegisterActor(wallet.Signer{
 			Actor: role, DID: id.ID, KeyID: id.KeyID, CredentialID: e.f.Credentials[role].ID,
 			KeyVersion: id.KeyVersion, DomainID: id.Domain, EntityType: id.Kind, Roles: []string{id.Kind},
 			PrivateKey: key, SDJWTPresentation: string(sd),
@@ -297,7 +300,7 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := w.AddGrantBundle(agent.GrantBundle{
+	if err := w.AddGrantBundle(wallet.GrantBundle{
 		Claims: parent, RawGrantJWS: g1Raw, TaskSpec: e.f.ProcurementTaskSpec,
 		Revision: 1, ChainRawGrants: []string{g0Raw, g1Raw}, Anchored: true, TrustPaths: paths,
 		AncestorCredentials: []protocol.AncestorCredential{
@@ -310,7 +313,7 @@ func (e *e1Trial) wallet(m *e1Mode) (*agent.WalletContext, error) {
 	return w, nil
 }
 
-func (e *e1Trial) live(m *e1Mode, prompt string) (*agent.RunResult, error) {
+func (e *e1Trial) live(m *e1Mode, prompt string) (*llm.RunResult, error) {
 	if m.wallet == nil {
 		return nil, fmt.Errorf("F05 wallet was not prepared")
 	}
@@ -320,7 +323,7 @@ func (e *e1Trial) live(m *e1Mode, prompt string) (*agent.RunResult, error) {
 	cfg := e.cfg
 	cfg.SystemPrompt = "You are the MCP procurement agent in an isolated test experiment. Only use configured wallet tools and the identifiers in this task. Do not invent tool results. For an explicitly requested negative control against the test gateway, submit the specified request once and report the real denial. Never perform external purchases."
 	var callErr error
-	tr.Result, callErr = agent.RunAgentTask(call, agent.NewMCPServer(m.wallet), cfg, prompt)
+	tr.Result, callErr = orchestrator.RunAgentTask(call, svcmcp.NewMCPServer(m.wallet), cfg, prompt)
 	tr.Finished = time.Now().UTC()
 	if callErr != nil {
 		tr.Error = harness.RedactSecrets(callErr.Error(), cfg.APIKey)
@@ -362,7 +365,7 @@ func (e *e1Trial) delegate(m *e1Mode) error {
 }
 
 func (e *e1Trial) updatePriceAndContext(m *e1Mode, price int64) error {
-	if err := gateway.SetCatalogPrice(e.ctx, e.db, e.d.DeploymentID, gateway.DefaultProductID, price); err != nil {
+	if err := domgw.SetCatalogPrice(e.ctx, e.db, e.d.DeploymentID, domgw.DefaultProductID, price); err != nil {
 		return err
 	}
 	_, err := e.ensureTaskContextNormal(e.server.Handler(), m.task.ID, time.Now().Unix())
@@ -376,7 +379,7 @@ func (e *e1Trial) orderCount(m *e1Mode) (int, error) {
 }
 
 func (e *e1Trial) orderPrompt(m *e1Mode, text string) string {
-	return fmt.Sprintf("You are B1. For all calls actor=B1, taskId=%q, grantId=%q, authorizationMode=%q, productId=%q, quantity=1. Use the actual returned quoteId, never a placeholder. %s", m.task.ID, m.leafID, m.task.Mode, gateway.DefaultProductID, text)
+	return fmt.Sprintf("You are B1. For all calls actor=B1, taskId=%q, grantId=%q, authorizationMode=%q, productId=%q, quantity=1. Use the actual returned quoteId, never a placeholder. %s", m.task.ID, m.leafID, m.task.Mode, domgw.DefaultProductID, text)
 }
 
 func (e *e1Trial) acceptOrder(m *e1Mode) error {

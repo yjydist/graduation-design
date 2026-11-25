@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"grad/platform/state/fabric"
+	"grad/platform/core/ledger"
 	"grad/protocol"
 	"grad/protocol/registry"
 )
@@ -111,7 +111,7 @@ func (r *baselineRun) checkRegistryReadback(ctx context.Context, expected *proto
 		kind, id, _ := strings.Cut(key, "/")
 		ledgerKeys[n] = registry.Key(kind, id)
 	}
-	applied, err := fabric.ReadAppliedRegistry(ctx, r.db, r.d, ledgerKeys)
+	applied, err := ledger.ReadAppliedRegistry(ctx, r.db, r.d, ledgerKeys)
 	if err != nil {
 		return fmt.Errorf("read Fabric registry: %w", err)
 	}

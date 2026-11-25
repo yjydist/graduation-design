@@ -11,7 +11,7 @@
 | `mise.toml` | 工具链版本和项目构建, 测试与部署命令. |
 | `protocol/` | 独立 Go 模块 `grad/protocol`: 协议编解码, 密码学原语, 凭证/委托/证据包校验与链上登记共享类型. |
 | `chaincode/` | 独立 Go 模块 `grad/chaincode`: Fabric 登记链码 `authregistry`. |
-| `platform/` | 独立 Go 模块 `grad/platform`: 状态源, OPA 策略, 管理服务, 网关, 智能体钱包, 工作台后端与 `ledgerctl` CLI. |
+| `platform/` | 独立 Go 模块 `grad/platform`: 按五层架构组织的 `core/` (`ledger/`, `dao/`, `domain/`), `service/` (`api/`, `mcp/`), `agent/` (`llm/`, `orchestrator/`), `bootstrap/`, `cmd/` 与架构守卫 `arch_test.go`. |
 | `web/` | A/B/C 共用的工作台前端与同源 HTTPS 代理镜像. |
 | `experiments/` | 独立 Go 模块 `grad/experiments`: 论文实验方法, 统一 `exp` CLI, 底座, 驱动, 进度和证据. |
 | `infra/` | 基础设施配置, Fabric 与工作台部署脚本及集成验收记录. |
@@ -21,12 +21,12 @@
 
 目录结构只列直属文件和目录. 下一级细节由顶层模块的 `AGENTS.md` 维护 (`protocol/`, `chaincode/`, `platform/`, `web/`, `experiments/`, `infra/`), 其余子目录继承最近的父级指引.
 
-平台系统遵循严格自顶向下的五层单向依赖架构 (各业务层并行共享零反向依赖的纯协议核 `grad/protocol`):
+平台系统遵循严格自顶向下的五层单向依赖架构 (各业务层并行共享零反向依赖的纯协议核 `grad/protocol`, 由 `platform/arch_test.go` 在测试期静态强制校验, 顶层装配统一收口于 `platform/bootstrap/`):
 
-- **L5 应用层**: `web/` 工作台前端与极薄进程/CLI 入口 (`workbench`, `ledgerctl`).
-- **L4 Agent 层**: LLM 客户端与任务编排智能体, 严格通过标准 MCP 协议调用 L3 工具, 严禁直接导入 L2 领域层, 私钥钱包, PostgreSQL 或 Fabric SDK.
-- **L3 服务层**: 入站 REST/mTLS HTTP API 与标准 MCP 工具服务, 仅做编解码, 认证鉴权并调用 L2 领域逻辑, 不直连基础设施或反向导入 L4.
-- **L2 逻辑封装层**: 账本封装, 数据持久化访问与无 HTTP 耦合的深模块领域逻辑 (策略, 登记, 网关执行与核账, 隔离钱包, 采购编排状态与证据投影).
+- **L5 应用层**: `web/` 工作台前端与极薄进程/CLI 入口 (`platform/cmd/workbench/`, `platform/cmd/ledgerctl/`).
+- **L4 Agent 层**: `platform/agent/` (`llm/`, `orchestrator/`) 中的 LLM 客户端与任务编排智能体, 严格通过标准 MCP 协议调用 L3 工具, 严禁直接导入 L2 领域层, 私钥钱包, PostgreSQL 或 Fabric SDK.
+- **L3 服务层**: `platform/service/` (`api/`, `mcp/`) 中的入站 REST/mTLS HTTP API 与标准 MCP 工具服务, 仅做编解码, 认证鉴权并调用 L2 领域逻辑, 不直连基础设施或反向导入 L4.
+- **L2 逻辑封装层**: `platform/core/` (`ledger/`, `dao/`, `domain/`) 中的账本封装, 数据持久化访问与无 HTTP 耦合的深模块领域逻辑 (策略, 登记, 网关执行与核账, 隔离钱包, 采购编排状态与证据投影).
 - **L1 基础设施层**: Hyperledger Fabric 通道网络 (Peer, SmartBFT Orderer, CCaaS `authregistry`) 与 PostgreSQL 17.9.
 
 ## 模块边界与常用命令

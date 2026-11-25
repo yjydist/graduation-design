@@ -17,11 +17,11 @@ import (
 )
 
 func TestPublishedFabricBindings(t *testing.T) {
-	data, err := os.ReadFile("../../docs/implementation/协议编码与测试向量.md")
+	data, err := os.ReadFile("../../docs/IMPLEMENTATION.md")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, section, found := strings.Cut(string(data), "## 4 部署绑定与管理证明")
+	_, section, found := strings.Cut(string(data), "### 3.4 部署绑定与管理证明")
 	_, body, fence := strings.Cut(section, "```json\n")
 	raw, _, end := strings.Cut(body, "\n```")
 	if !found || !fence || !end {

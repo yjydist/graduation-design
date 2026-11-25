@@ -210,6 +210,14 @@ func checkFileArchitecture(f archFileSpec) []string {
 				hasAnyPrefix(imp, fabricPrefixes...) {
 				addViolation("L2 core/domain must not import " + imp)
 			}
+			if hasImportPrefix(f.PkgRel, "core/domain/gateway") &&
+				hasImportPrefix(imp, platformModule+"/core/domain/wallet") {
+				addViolation("L2 core/domain/gateway must not import " + imp)
+			}
+			if hasImportPrefix(f.PkgRel, "core/domain/wallet") &&
+				hasImportPrefix(imp, platformModule+"/core/domain/gateway") {
+				addViolation("L2 core/domain/wallet must not import " + imp)
+			}
 
 		case layerServiceAPI:
 			if hasAnyPrefix(imp,
@@ -483,6 +491,24 @@ func TestArchRulesEngine(t *testing.T) {
 				Imports: []string{"net/http", "grad/protocol", "grad/platform/core/dao"},
 			},
 			wantError: false,
+		},
+		{
+			name: "core/domain/gateway importing core/domain/wallet is rejected",
+			spec: archFileSpec{
+				RelPath: "core/domain/gateway/execute.go",
+				PkgRel:  "core/domain/gateway",
+				Imports: []string{"grad/platform/core/domain/wallet"},
+			},
+			wantError: true,
+		},
+		{
+			name: "core/domain/wallet importing core/domain/gateway is rejected",
+			spec: archFileSpec{
+				RelPath: "core/domain/wallet/operations.go",
+				PkgRel:  "core/domain/wallet",
+				Imports: []string{"grad/platform/core/domain/gateway"},
+			},
+			wantError: true,
 		},
 		{
 			name: "core/dao root importing core/ledger is rejected",

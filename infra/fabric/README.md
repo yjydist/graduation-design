@@ -60,7 +60,7 @@ FABRIC_INSTANCE="$PWD/.local/fabric-d0-rebuilt" mise run ledger:verify -- -run '
 FABRIC_INSTANCE="$PWD/.local/fabric-d0-rebuilt" mise run ledger:verify -- -run '^TestFabricLiveFullStackAcceptance$'
 ```
 
-三个业务组织与独立运维方分别对应四个排序身份. 当前容器均由同一宿主和运维控制, 停机仅检验容器级故障和连续恢复. 应用层使用持久化 P-256 应用密钥, 测试 CA `did:web` 解析, 固定 W3C VC v2 本地上下文摘要与真实 ES256/SD-JWT 凭证和 `AccessEvidencePackage` 出示. 业务服务端点, 策略求值与订单事务见[网关执行规格](../../docs/implementation/证据交付与网关执行.md).
+三个业务组织与独立运维方分别对应四个排序身份. 当前容器均由同一宿主和运维控制, 停机仅检验容器级故障和连续恢复. 应用层使用持久化 P-256 应用密钥, 测试 CA `did:web` 解析, 固定 W3C VC v2 本地上下文摘要与真实 ES256/SD-JWT 凭证和 `AccessEvidencePackage` 出示. 业务服务端点, 策略求值与订单事务见[网关执行规格](../../docs/IMPLEMENTATION.md#4-证据交付与网关执行).
 
 ## 4 管理与核账服务装配
 

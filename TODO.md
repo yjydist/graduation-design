@@ -20,7 +20,7 @@
 
 ### 最小协议
 
-[归档任务](openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md), [协议编码与测试向量](docs/implementation/协议编码与测试向量.md).
+[归档任务](openspec/changes/archive/2026-11-13-bootstrap-d0-protocol/tasks.md), [协议编码与测试向量](docs/IMPLEMENTATION.md#3-协议编码与测试向量).
 
 - [x] 实现严格 JSON 解析, JCS 和挑战编码. 固定向量可复算 `taskSpecDigest`, 询价和订单的 `requestHash` 及 nonce 编码. [编码与向量验收](infra/fabric/evidence/protocol/rebuilt/run-7361ca2734fcc311/summary.json).
 - [x] 实现 P-256 公钥与 DID/JWK 指纹校验. 固定向量可复算公钥坐标和文档摘要, 非法点和错误密钥用途配对被拒. [DID/JWK 验证记录](infra/fabric/evidence/protocol/rebuilt/run-7361ca2734fcc311/summary.json).
@@ -70,7 +70,7 @@
 
 ## M4 演示与交付
 
-[演示与交付规格](docs/implementation/证据交付与网关执行.md#4-演示与交付), [三域 Web 工作台提案](openspec/changes/archive/2026-11-24-m4-domain-web-workbench/proposal.md), [归档任务](openspec/changes/archive/2026-11-24-m4-domain-web-workbench/tasks.md), [独立核验](openspec/changes/archive/2026-11-24-m4-domain-web-workbench/verification.md), [三域实机核验](infra/workbench/evidence/m4-domain-web-workbench/README.md).
+[演示与交付规格](docs/IMPLEMENTATION.md#44-演示与交付), [三域 Web 工作台提案](openspec/changes/archive/2026-11-24-m4-domain-web-workbench/proposal.md), [归档任务](openspec/changes/archive/2026-11-24-m4-domain-web-workbench/tasks.md), [独立核验](openspec/changes/archive/2026-11-24-m4-domain-web-workbench/verification.md), [三域实机核验](infra/workbench/evidence/m4-domain-web-workbench/README.md).
 
 - [x] 建立 Web 与 MCP 共用的业务操作. 交付按主体及任务约束的工具入口, 以及人工操作和智能体调用共用授权与幂等判据的回归.
 - [x] 交付三域共用的前后端镜像和 Compose 模板. 验证 A/B/C 用相同镜像摘要及各自运行配置独立启动, 浏览器按版本化 API 访问本域后端.
@@ -85,7 +85,7 @@
 
 ## 论文
 
-[毕设要求](毕设要求.md), [需求与验证证据](experiments/README.md#任务书需求与实验用例), [论文清单](paper/论文.md).
+[毕设要求](毕设要求.md), [需求与验证证据](experiments/README.md#任务书需求与实验用例), [论文正文草稿](paper/thesis.md), [参考文献表](paper/references.md).
 
 - [ ] 起草研究方法与实验设计章节. 交付可审阅初稿, 含对照变量, 采样设计和 E1-E8 对应问题.
 - [ ] 整理论文结果表, 图和图注. 交付标明样本, 单位, 不确定性, 运行 ID 和原始数据入口的图表.

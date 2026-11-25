@@ -13,7 +13,7 @@ flowchart TB
     P -->|"上级已撤销或探针已到期"| D["拒绝下单"]
 ```
 
-身份采用三域共同认可的权威机构 T 作为唯一信任根. T 认证 A/B/C 域及 IA/IB/IC 的签发资格, 各域机构证明本域用户, 智能体和服务的身份. 采购委托由业务方签发, C 独立决定销售准入. 见[跨域身份与信任](docs/design/跨域身份与信任.md).
+身份采用三域共同认可的权威机构 T 作为唯一信任根. T 认证 A/B/C 域及 IA/IB/IC 的签发资格, 各域机构证明本域用户, 智能体和服务的身份. 采购委托由业务方签发, C 独立决定销售准入. 见[跨域身份与信任](docs/DESIGN.md#2-跨域身份与信任).
 
 本仓库采用 Go 1.27 四模块工作区 (`go.work`), 提供两个入口. [毕设项目](#毕设项目)涵盖设计, 实现 (`protocol/`, `chaincode/`, `platform/`), 部署和回归. [论文实验](experiments/README.md) (`experiments/`) 按 E1-E8 组织研究问题, 方法, 运行和结果, 通过项目公开接口测量已固定的项目构建.
 
@@ -21,14 +21,14 @@ flowchart TB
 
 | 想做什么 | 从这里开始 |
 | --- | --- |
-| 看懂一次采购为何获准或被拒 | [采购场景与总体设计](docs/design/采购场景与总体设计.md) |
-| 查任务书要求对应的设计与实现 | [毕设要求](毕设要求.md), [设计导航与需求追踪](docs/AGENTS.md#从任务书到实现) |
-| 搭建网络, 编写验证器 | [技术栈](docs/implementation/技术栈.md), [实现导航](docs/AGENTS.md#实现导航) |
+| 看懂一次采购为何获准或被拒 | [采购场景与总体设计](docs/DESIGN.md#1-采购场景与总体设计) |
+| 查任务书要求对应的设计与实现 | [毕设要求](毕设要求.md), [系统设计与需求追踪](docs/DESIGN.md#r1-r5-需求追踪总表) |
+| 搭建网络, 编写验证器 | [技术栈与五层架构基线](docs/IMPLEMENTATION.md#1-技术栈与五层架构基线), [系统实现契约](docs/IMPLEMENTATION.md) |
 | 了解四模块边界与源码布局 | [协议模块](protocol/AGENTS.md), [链码模块](chaincode/AGENTS.md), [平台模块](platform/AGENTS.md), [实验模块](experiments/AGENTS.md) |
 | 复跑 Fabric 集成验收 | [网络与 ledgerctl](infra/fabric/README.md), [Fabric 证据](infra/fabric/evidence/README.md) |
 | 启动 A/B/C 浏览器工作台 | [三域部署与演示](infra/workbench/README.md) |
 | 查阶段状态, 任务和验证证据 | [任务安排与退出条件](TODO.md) |
-| 阅读论文或准备写作 | [文献清单](paper/论文.md), [全文与笔记索引](paper/README.md) |
+| 撰写毕设论文或核对文献引用 | [论文写作工作区](paper/README.md), [论文正文草稿](paper/thesis.md), [参考文献表](paper/references.md) |
 
 ### 构建与测试
 

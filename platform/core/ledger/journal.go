@@ -337,6 +337,60 @@ func (j Journal) Write(ctx context.Context, key, role, method string, input []by
 	return j.Recover(ctx, key, nil)
 }
 
+// SubmitOrResume verifies any existing journal record for key against (role, method, input),
+// returns already-settled operations immediately, validates the pinned Fabric peer against dep,
+// and submits or resumes the durable original-txID operation.
+func (j Journal) SubmitOrResume(ctx context.Context, dep *Deployment, key, role, method string, input []byte) (*Operation, error) {
+	stored, err := j.Load(ctx, key, j.DB)
+	if err != nil {
+		return nil, err
+	}
+	if stored != nil {
+		if _, _, err := j.MatchInput(stored, role, method, input); err != nil {
+			return nil, err
+		}
+		if stored.Status != "PENDING" {
+			return stored, nil
+		}
+	}
+	p, err := j.Instance.Peer("c", "read")
+	if err != nil {
+		return nil, err
+	}
+	defer p.Close()
+	if err := dep.ValidatePeer(ctx, p); err != nil {
+		if stored != nil {
+			return stored, nil
+		}
+		return nil, err
+	}
+	return j.Write(ctx, key, role, method, input)
+}
+
+// QueryOrRecover loads an existing durable operation by key, returns settled operations immediately,
+// and attempts original-txID recovery for PENDING operations when the pinned Fabric peer validates against dep.
+func (j Journal) QueryOrRecover(ctx context.Context, dep *Deployment, key string) (*Operation, error) {
+	stored, err := j.Load(ctx, key, j.DB)
+	if err != nil {
+		return nil, err
+	}
+	if stored == nil {
+		return nil, fmt.Errorf("unknown operation %q", key)
+	}
+	if stored.Status != "PENDING" {
+		return stored, nil
+	}
+	p, err := j.Instance.Peer("c", "read")
+	if err != nil {
+		return nil, err
+	}
+	defer p.Close()
+	if err := dep.ValidatePeer(ctx, p); err != nil {
+		return stored, nil
+	}
+	return j.Recover(ctx, key, nil)
+}
+
 // Recover resumes a PENDING journaled operation strictly using its original proposal/signed transaction bytes.
 // submitOverride is an optional test hook used to inject lost submit responses after broadcast.
 func (j Journal) Recover(ctx context.Context, key string, submitOverride func(context.Context, *client.Transaction) error) (*Operation, error) {

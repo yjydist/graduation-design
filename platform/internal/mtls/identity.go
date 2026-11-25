@@ -6,8 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
-	"net/http/httptest"
 	"strings"
+
+	"grad/platform/internal/httpx"
 )
 
 // Identity is installed by a trusted host or extracted from a verified client certificate,
@@ -69,9 +70,7 @@ type localTransport struct {
 
 func (t localTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(WithIdentity(r.Context(), t.identity))
-	w := httptest.NewRecorder()
-	t.handler.ServeHTTP(w, r)
-	return w.Result(), nil
+	return httpx.InvokeHandler(t.handler, r), nil
 }
 
 // NewLocalClient creates an explicit role-bound in-process channel.

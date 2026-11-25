@@ -172,6 +172,72 @@ func DecodeJSON(r *http.Request, maxBytes int64, dst any) error {
 	return nil
 }
 
+// InvokeHandler dispatches req directly to handler in-process without importing
+// net/http/httptest into production binaries.
+func InvokeHandler(handler http.Handler, req *http.Request) *http.Response {
+	r := req
+	if r != nil && r.Body == nil {
+		copied := *r
+		copied.Body = http.NoBody
+		r = &copied
+	}
+	buf := &responseBuffer{
+		header: make(http.Header),
+		status: http.StatusOK,
+	}
+	handler.ServeHTTP(buf, r)
+	return buf.result(r)
+}
+
+type responseBuffer struct {
+	header      http.Header
+	snapHeader  http.Header
+	status      int
+	wroteHeader bool
+	body        bytes.Buffer
+}
+
+func (w *responseBuffer) Header() http.Header {
+	return w.header
+}
+
+func (w *responseBuffer) WriteHeader(code int) {
+	if w.wroteHeader {
+		return
+	}
+	w.status = code
+	w.wroteHeader = true
+	w.snapHeader = w.header.Clone()
+}
+
+func (w *responseBuffer) Write(p []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+	return w.body.Write(p)
+}
+
+func (w *responseBuffer) result(req *http.Request) *http.Response {
+	code := w.status
+	hdr := w.snapHeader
+	if !w.wroteHeader {
+		code = http.StatusOK
+		hdr = w.header.Clone()
+	}
+	data := bytes.Clone(w.body.Bytes())
+	return &http.Response{
+		Status:        fmt.Sprintf("%d %s", code, http.StatusText(code)),
+		StatusCode:    code,
+		Proto:         "HTTP/1.1",
+		ProtoMajor:    1,
+		ProtoMinor:    1,
+		Header:        hdr,
+		Body:          io.NopCloser(bytes.NewReader(data)),
+		ContentLength: int64(len(data)),
+		Request:       req,
+	}
+}
+
 func newUUID() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {

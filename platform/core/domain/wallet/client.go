@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"time"
 
@@ -311,12 +310,19 @@ func (c *GatewayClient) doPublicJSON(ctx context.Context, method, path string, p
 		return 0, nil, err
 	}
 	if c.httpHandler != nil {
-		req := httptest.NewRequest(method, path, bytes.NewReader(bodyBytes)).WithContext(ctx)
+		req, err := http.NewRequestWithContext(ctx, method, defaultGatewayBaseURL+path, bytes.NewReader(bodyBytes))
+		if err != nil {
+			return 0, nil, err
+		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set(httpx.HeaderRequestID, httpx.NewRequestID())
-		rec := httptest.NewRecorder()
-		c.httpHandler.ServeHTTP(rec, req)
-		return rec.Code, rec.Body.Bytes(), nil
+		resp := httpx.InvokeHandler(c.httpHandler, req)
+		defer resp.Body.Close()
+		raw, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return 0, nil, err
+		}
+		return resp.StatusCode, raw, nil
 	}
 	if c.baseURL == "" {
 		return 0, nil, errors.New("gateway BaseURL or HTTPHandler is required")

@@ -68,8 +68,8 @@ flowchart TB
 
 具体包映射与职责:
 - **`platform/core/ledger/`** (原 `state/fabric/` + `state/` 契约): 链码封装, Fabric 实例与 CCaaS 构建, Deliver 完整块流, 固定高度视图, 单调时钟原探针与原交易日志.
-- **`platform/core/dao/`** (原 `migrations/` + `state/central/` + 各包内嵌 SQL): 嵌入式 SQL 迁移, C0 集中快照, 以及 gateway / registry / wallet / workbench 的 PostgreSQL 持久化访问与事务封装.
-- **`platform/core/domain/`**: 深模块业务逻辑, 仅依赖 `core/dao`, `core/ledger` 与 `protocol`, 不含任何 `net/http` 路由代码:
+- **`platform/core/dao/`** (原 `migrations/` + `state/central/` + 事务与钱包意图存储): 嵌入式 SQL 迁移 (`001_fabric.sql` 至 `012_bound_quotes.sql`), 显式事务与咨询锁封装 (`Tx` / `RunInTx`), 存储绑定 (`store_binding.go`), C0 集中快照 (`central/`), 以及钱包意图锁与回执存储 (`ActionStore`).
+- **`platform/core/domain/`**: 深模块业务逻辑, 仅依赖 `core/dao`, `core/ledger` 与 `protocol`, 不含任何 `net/http` 路由代码; `gateway`, `registry`, `procurement` 与 `evidence` 通过 `core/dao` 的 `Tx` / `RunInTx` 与 `*pgxpool.Pool` 维持严格的行锁顺序与事务原子性:
   - `policy/`: OPA Rego v1 策略包校验与确定性求值.
   - `registry/`: 身份注册/恢复双证明, 异步管理操作受理/投影, 受控 outbox/receipt 交付.
   - `gateway/`: 挑战管理, 固定高度+锁后复核执行核, 未知订单核账与审计隔离.

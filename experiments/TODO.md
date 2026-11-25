@@ -83,7 +83,7 @@
 
 [E6 方法](e6/method.md), [E6 驱动](e6/README.md), [结果模板](e6/result.md). M3 [预跑时间线](../infra/fabric/evidence/m3-recovery/original/run-f71a13453be0384e/m3-e6-revocation-window.json)用于核对观测点. 重构前的旧批次 E6 短跑产物已在 `rebuild-monorepo-architecture` 期间清理, 短跑与正式批次待在新 4 模块架构下通过统一 `exp` CLI 重新执行.
 
-- [x] 校验网关锁后定案采集点和实际时钟精度. 已持久化 `decision_at_ns` 与亚秒探针时点并保留 `OnDecisionCommitted` 钩子, 延迟响应与定案时点回归测试核对定案, 业务提交与响应分离且原秒级期限判据通过. [网关数据库与定案回归](../platform/gateway/gateway_db_test.go).
+- [x] 校验网关锁后定案采集点和实际时钟精度. 已持久化 `decision_at_ns` 与亚秒探针时点并保留 `OnDecisionCommitted` 钩子, 延迟响应与定案时点回归测试核对定案, 业务提交与响应分离且原秒级期限判据通过. [网关数据库与定案回归](../platform/core/domain/gateway/gateway_db_test.go).
 - [ ] 完成 RP 隔离短跑. 导出撤销原 txID, `t_valid`, `t_apply`, 双实例 `t_adopt`, 定案及响应关联记录, 核对 `0` 违规放行与实际时钟分辨率.
 - [ ] 完成 BM 隔离短跑. 在独立隔离实例完成双实例持续探针采样, 核对计划与完成样本对账, 漏探测计数及 `0` 违规放行.
 - [ ] 离线复算一轮短跑窗口. 停止服务后用 `mise -C experiments run experiment:analyze -- --experiment E6` (`e6-analyzer/v1`) 重算阶段耗时, 窗口, 删失归类与样本对账, 核对原始目录文件摘要不变.

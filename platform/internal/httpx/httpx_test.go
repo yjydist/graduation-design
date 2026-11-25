@@ -3,6 +3,7 @@ package httpx_test
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -175,5 +176,46 @@ func TestRequestIDAndMiddleware(t *testing.T) {
 		assert.True(t, strings.HasPrefix(seenFirst, "urn:grad:req:"))
 		assert.Equal(t, seenFirst, seenSecond)
 		assert.Equal(t, seenFirst, rec.Header().Get(httpx.HeaderRequestID))
+	})
+}
+
+func TestInvokeHandler(t *testing.T) {
+	t.Run("captures explicit status, headers, and body", func(t *testing.T) {
+		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.NotNil(t, r.Body)
+			w.Header().Set("X-Test", "before")
+			httpx.WriteJSON(w, http.StatusAccepted, map[string]string{"ok": "yes"})
+			w.Header().Set("X-Test", "after-write")
+		})
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://c.local/ping", nil)
+		require.NoError(t, err)
+
+		resp := httpx.InvokeHandler(h, req)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusAccepted, resp.StatusCode)
+		assert.Equal(t, "before", resp.Header.Get("X-Test"))
+		assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"ok":"yes"}`, string(body))
+		assert.Equal(t, int64(len(body)), resp.ContentLength)
+	})
+
+	t.Run("defaults to 200 OK when handler writes nothing", func(t *testing.T) {
+		h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("X-Empty", "1")
+		})
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://c.local/empty", nil)
+		require.NoError(t, err)
+
+		resp := httpx.InvokeHandler(h, req)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Equal(t, "1", resp.Header.Get("X-Empty"))
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Empty(t, body)
 	})
 }

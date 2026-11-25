@@ -141,6 +141,10 @@ func checkFileArchitecture(f archFileSpec) []string {
 		if hasImportPrefix(imp, experimentsModule) {
 			addViolation("forbidden reverse dependency on " + imp)
 		}
+		// Global rule: production code outside internal/testutil must not import net/http/httptest.
+		if !f.IsTest && f.PkgRel != "internal/testutil" && imp == "net/http/httptest" {
+			addViolation("production code must not import " + imp)
+		}
 
 		switch layer {
 		case layerInternal:
@@ -497,6 +501,15 @@ func TestArchRulesEngine(t *testing.T) {
 				Imports: []string{"grad/platform/core/dao", "grad/platform/core/ledger"},
 			},
 			wantError: false,
+		},
+		{
+			name: "production wallet code importing net/http/httptest is rejected",
+			spec: archFileSpec{
+				RelPath: "core/domain/wallet/client.go",
+				PkgRel:  "core/domain/wallet",
+				Imports: []string{"net/http", "net/http/httptest"},
+			},
+			wantError: true,
 		},
 		{
 			name: "legacy top-level package is rejected",

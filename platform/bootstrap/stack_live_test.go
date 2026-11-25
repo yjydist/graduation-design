@@ -282,7 +282,96 @@ func TestFabricLiveFullStackAcceptance(t *testing.T) {
 	require.NotNil(t, auditBody.RevocationBlock)
 	assert.Less(t, *auditBody.DecisionBlock, *auditBody.RevocationBlock)
 
-	// 5. Verify apireg.Server HTTP management operation endpoint with mTLS fingerprint.
+	// 5. Verify live Fabric ReplaceGrant (A1 atomically revokes old child grant for B1 and delivers replacement to B2).
+	replaceOldID := registry.Digest([]byte("live-replace-old-" + runSuffix))
+	oldChildOut, err := stack.Wallet.DelegateGrant(ctx, wallet.DelegateGrantInput{
+		IssuerActor:       "A1",
+		SubjectActor:      "B1",
+		ParentGrantID:     f.RPG1.ID,
+		GrantID:           replaceOldID,
+		TaskID:            f.RPTask.ID,
+		AuthorizationMode: protocol.ModeResourcePreauthorized,
+		MaxAmountMinor:    95000,
+		RemainingDepth:    0,
+	})
+	require.NoError(t, err)
+	require.True(t, oldChildOut.Anchored)
+
+	require.NoError(t, ledger.Poll(ctx, 15*time.Second, func() (bool, error) {
+		_, sErr := stack.FabricSP.AssembleSnapshot(ctx, replaceOldID, time.Now().UTC())
+		return sErr == nil, nil
+	}))
+
+	replaceNewID := registry.Digest([]byte("live-replace-new-" + runSuffix))
+	repOut, err := stack.Wallet.ReplaceGrant(ctx, wallet.ReplaceGrantInput{
+		IssuerActor:     "A1",
+		OldGrantID:      replaceOldID,
+		NewSubjectActor: "B2",
+		NewGrantID:      replaceNewID,
+		MaxAmountMinor:  85000,
+		RemainingDepth:  0,
+		Reason:          "live failover from B1 to B2",
+	})
+	require.NoError(t, err)
+	assert.True(t, repOut.Anchored)
+	assert.Equal(t, replaceOldID, repOut.RevokedGrantID)
+	assert.Equal(t, replaceNewID, repOut.ReplacementGrant.GrantID)
+	assert.Equal(t, f.Identities["B2"].ID, repOut.ReplacementGrant.GranteeDID)
+
+	require.NoError(t, ledger.Poll(ctx, 15*time.Second, func() (bool, error) {
+		_, sErr := stack.FabricSP.AssembleSnapshot(ctx, replaceNewID, time.Now().UTC())
+		return sErr == nil, nil
+	}))
+
+	var repReceiptCount int
+	require.NoError(t, db.QueryRow(ctx,
+		`SELECT count(*) FROM wallet_receipts WHERE deployment_id=$1 AND recipient=$2 AND grant_id=$3`,
+		dep.DeploymentID, f.Identities["B2"].ID, replaceNewID,
+	).Scan(&repReceiptCount))
+	assert.Equal(t, 1, repReceiptCount, "replacement grant must be delivered into wallet_receipts for B2")
+
+	oldSnap, err := stack.FabricSP.AssembleSnapshot(ctx, replaceOldID, time.Now().UTC())
+	require.NoError(t, err)
+	assert.Equal(t, registry.Revoked, oldSnap.Snapshot.Grants[replaceOldID].Status)
+
+	oldDeniedQuote, err := stack.Wallet.RequestQuote(ctx, wallet.RequestQuoteInput{
+		Actor:             "B1",
+		GrantID:           replaceOldID,
+		TaskID:            f.RPTask.ID,
+		AuthorizationMode: protocol.ModeResourcePreauthorized,
+		ProductID:         domgw.DefaultProductID,
+		Quantity:          1,
+		IdempotencyKey:    "live-rep-old-q-" + runSuffix,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "DENY", oldDeniedQuote.Decision)
+
+	repQuote, err := stack.Wallet.RequestQuote(ctx, wallet.RequestQuoteInput{
+		Actor:             "B2",
+		GrantID:           replaceNewID,
+		TaskID:            f.RPTask.ID,
+		AuthorizationMode: protocol.ModeResourcePreauthorized,
+		ProductID:         domgw.DefaultProductID,
+		Quantity:          1,
+		IdempotencyKey:    "live-rep-new-q-" + runSuffix,
+	})
+	require.NoError(t, err)
+	require.Equal(t, "ALLOW", repQuote.Decision, "code=%s msg=%s", repQuote.ErrorCode, repQuote.ErrorMessage)
+
+	repOrder, err := stack.Wallet.CreateOrder(ctx, wallet.CreateOrderInput{
+		Actor:             "B2",
+		GrantID:           replaceNewID,
+		TaskID:            f.RPTask.ID,
+		AuthorizationMode: protocol.ModeResourcePreauthorized,
+		QuoteID:           repQuote.QuoteID,
+		AmountMinor:       repQuote.TotalAmountMinor,
+		IdempotencyKey:    "live-rep-new-o-" + runSuffix,
+	})
+	require.NoError(t, err)
+	require.Equal(t, "ALLOW", repOrder.Decision, "code=%s msg=%s", repOrder.ErrorCode, repOrder.ErrorMessage)
+	assert.NotEmpty(t, repOrder.OrderID)
+
+	// 6. Verify apireg.Server HTTP management operation endpoint with mTLS fingerprint.
 	mgmtReq, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://a.local/v1/management/RevokeGrant", bytes.NewReader([]byte(fmt.Sprintf(`{"deploymentId":%q,"id":%q,"expectedRevision":1,"expectedDigest":%q}`, dep.DeploymentID, childID, delOut.Grant.GrantID))))
 	require.NoError(t, err)
 	mgmtReq.Header.Set("Content-Type", "application/json")
@@ -302,7 +391,7 @@ func TestFabricLiveFullStackAcceptance(t *testing.T) {
 	require.NoError(t, json.NewDecoder(getOpResp.Body).Decode(&opErr))
 	assert.Equal(t, registry.ErrCodeOperationUnknown, opErr["code"])
 
-	// 6. Build and invoke ledgerctl binary for check, inspect, and mcp stdio handshake on live instance.
+	// 7. Build and invoke ledgerctl binary for check, inspect, and mcp stdio handshake on live instance.
 	binPath := filepath.Join(t.TempDir(), "ledgerctl")
 	buildCmd := exec.CommandContext(ctx, "go", "build", "-o", binPath, "../cmd/ledgerctl")
 	out, err := buildCmd.CombinedOutput()

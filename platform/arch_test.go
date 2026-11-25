@@ -288,7 +288,20 @@ func checkFileArchitecture(f archFileSpec) []string {
 			}
 
 		case layerCmd:
-			// L5 cmd may wire bootstrap, service, agent, and public domain/ledger helpers.
+			// L5 cmd entrypoints must wire via bootstrap (and public ledger instance helpers)
+			// rather than directly coupling to DAO, domain internals, or infrastructure SDKs.
+			if hasAnyPrefix(imp,
+				platformModule+"/core/dao",
+				platformModule+"/core/domain",
+			) {
+				addViolation("L5 cmd must wire through bootstrap instead of importing " + imp)
+			}
+			if hasAnyPrefix(imp, pgxPrefixes...) ||
+				hasAnyPrefix(imp, fabricPrefixes...) ||
+				hasAnyPrefix(imp, llmSDKPrefixes...) ||
+				hasAnyPrefix(imp, opaPrefixes...) {
+				addViolation("L5 cmd must not directly import infrastructure or LLM SDK " + imp)
+			}
 		}
 	}
 
@@ -545,6 +558,64 @@ func TestArchRulesEngine(t *testing.T) {
 				Imports: []string{"context"},
 			},
 			wantError: true,
+		},
+		{
+			name: "cmd importing pgxpool is rejected",
+			spec: archFileSpec{
+				RelPath: "cmd/workbench/main.go",
+				PkgRel:  "cmd/workbench",
+				Imports: []string{"github.com/jackc/pgx/v5/pgxpool"},
+			},
+			wantError: true,
+		},
+		{
+			name: "cmd importing core/dao is rejected",
+			spec: archFileSpec{
+				RelPath: "cmd/ledgerctl/main.go",
+				PkgRel:  "cmd/ledgerctl",
+				Imports: []string{"grad/platform/core/dao"},
+			},
+			wantError: true,
+		},
+		{
+			name: "cmd importing core/domain is rejected",
+			spec: archFileSpec{
+				RelPath: "cmd/workbench/main.go",
+				PkgRel:  "cmd/workbench",
+				Imports: []string{"grad/platform/core/domain/wallet"},
+			},
+			wantError: true,
+		},
+		{
+			name: "cmd importing fabric-gateway is rejected",
+			spec: archFileSpec{
+				RelPath: "cmd/ledgerctl/main.go",
+				PkgRel:  "cmd/ledgerctl",
+				Imports: []string{"github.com/hyperledger/fabric-gateway/pkg/client"},
+			},
+			wantError: true,
+		},
+		{
+			name: "cmd importing llm sdk is rejected",
+			spec: archFileSpec{
+				RelPath: "cmd/workbench/main.go",
+				PkgRel:  "cmd/workbench",
+				Imports: []string{"github.com/openai/openai-go"},
+			},
+			wantError: true,
+		},
+		{
+			name: "cmd importing bootstrap and core/ledger is allowed",
+			spec: archFileSpec{
+				RelPath: "cmd/ledgerctl/main.go",
+				PkgRel:  "cmd/ledgerctl",
+				Imports: []string{
+					"grad/platform/bootstrap",
+					"grad/platform/core/ledger",
+					"grad/protocol/registry",
+				},
+			},
+			wantError: false,
 		},
 	}
 

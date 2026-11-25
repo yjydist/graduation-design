@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
 
 	"grad/platform/bootstrap"
@@ -232,47 +231,11 @@ func newInvokeCmd(opts *cliOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			dep, err := inst.LoadDeployment()
-			if err != nil {
-				return err
-			}
-			db, err := inst.Database(ctx)
-			if err != nil {
-				return err
-			}
-			defer db.Close()
-			if err := ledger.EnsureSchema(ctx, db); err != nil {
-				return err
-			}
-			j := ledger.NewJournal(inst, db, dep.DeploymentID)
-			stored, err := j.Load(ctx, key, db)
-			if err != nil {
-				return err
-			}
 			raw, err := os.ReadFile(inputPath)
 			if err != nil {
 				return err
 			}
-			if stored != nil {
-				if _, _, err := j.MatchInput(stored, role, method, raw); err != nil {
-					return err
-				}
-				if stored.Status != "PENDING" {
-					return writeJSONOutput(cmd.OutOrStdout(), stored)
-				}
-			}
-			p, err := inst.Peer("c", "read")
-			if err != nil {
-				return err
-			}
-			defer p.Close()
-			if err := dep.ValidatePeer(ctx, p); err != nil {
-				if stored != nil {
-					return writeJSONOutput(cmd.OutOrStdout(), stored)
-				}
-				return err
-			}
-			op, err := j.Write(ctx, key, role, method, raw)
+			op, err := bootstrap.InvokeOperation(ctx, inst, key, role, method, raw)
 			if op != nil {
 				err = errors.Join(err, writeJSONOutput(cmd.OutOrStdout(), op))
 			}
@@ -302,38 +265,7 @@ func newOperationCmd(opts *cliOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			dep, err := inst.LoadDeployment()
-			if err != nil {
-				return err
-			}
-			db, err := inst.Database(ctx)
-			if err != nil {
-				return err
-			}
-			defer db.Close()
-			if err := ledger.EnsureSchema(ctx, db); err != nil {
-				return err
-			}
-			j := ledger.NewJournal(inst, db, dep.DeploymentID)
-			stored, err := j.Load(ctx, key, db)
-			if err != nil {
-				return err
-			}
-			if stored == nil {
-				return fmt.Errorf("unknown operation %q", key)
-			}
-			if stored.Status != "PENDING" {
-				return writeJSONOutput(cmd.OutOrStdout(), stored)
-			}
-			p, err := inst.Peer("c", "read")
-			if err != nil {
-				return err
-			}
-			defer p.Close()
-			if err := dep.ValidatePeer(ctx, p); err != nil {
-				return writeJSONOutput(cmd.OutOrStdout(), stored)
-			}
-			op, err := j.Recover(ctx, key, nil)
+			op, err := bootstrap.InspectOperation(ctx, inst, key)
 			if op != nil {
 				err = errors.Join(err, writeJSONOutput(cmd.OutOrStdout(), op))
 			}
@@ -367,19 +299,7 @@ func newMCPCmd(opts *cliOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			dep, err := inst.LoadDeployment()
-			if err != nil {
-				return err
-			}
-			var db *pgxpool.Pool
-			if !offline {
-				db, err = inst.Database(ctx)
-				if err != nil {
-					return err
-				}
-				defer db.Close()
-			}
-			return bootstrap.RunMCP(ctx, inst, dep, db, gatewayURL, cmd.InOrStdin(), cmd.OutOrStdout())
+			return bootstrap.RunInstanceMCP(ctx, inst, offline, gatewayURL, cmd.InOrStdin(), cmd.OutOrStdout())
 		},
 	}
 	cmd.Flags().StringVar(&gatewayURL, "gateway", os.Getenv("GATEWAY_URL"), "Gateway HTTP base URL (defaults to $GATEWAY_URL or http://127.0.0.1:8103)")

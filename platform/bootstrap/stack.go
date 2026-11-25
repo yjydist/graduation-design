@@ -662,6 +662,124 @@ func RunMCPServer(ctx context.Context, srv *mcp.Server, in io.Reader, out io.Wri
 	return svcmcp.RunMCPServer(ctx, srv, in, out)
 }
 
+// RunInstanceMCP loads the deployment for inst, optionally opens PostgreSQL when
+// offline is false, and serves the isolated wallet MCP server over in/out.
+func RunInstanceMCP(
+	ctx context.Context,
+	inst *ledger.Instance,
+	offline bool,
+	gatewayURL string,
+	in io.Reader,
+	out io.Writer,
+) error {
+	if inst == nil {
+		return fmt.Errorf("fabric instance is required")
+	}
+	dep, err := inst.LoadDeployment()
+	if err != nil {
+		return err
+	}
+	var db *pgxpool.Pool
+	if !offline {
+		db, err = inst.Database(ctx)
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+	}
+	return RunMCP(ctx, inst, dep, db, gatewayURL, in, out)
+}
+
+// InvokeOperation submits or idempotently resumes a durable original-txID
+// Fabric registry operation from raw JSON input against inst.
+func InvokeOperation(
+	ctx context.Context,
+	inst *ledger.Instance,
+	key, role, method string,
+	raw []byte,
+) (*ledger.Operation, error) {
+	if inst == nil {
+		return nil, fmt.Errorf("fabric instance is required")
+	}
+	dep, err := inst.LoadDeployment()
+	if err != nil {
+		return nil, err
+	}
+	db, err := inst.Database(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	if err := ledger.EnsureSchema(ctx, db); err != nil {
+		return nil, err
+	}
+	j := ledger.NewJournal(inst, db, dep.DeploymentID)
+	stored, err := j.Load(ctx, key, db)
+	if err != nil {
+		return nil, err
+	}
+	if stored != nil {
+		if _, _, err := j.MatchInput(stored, role, method, raw); err != nil {
+			return nil, err
+		}
+		if stored.Status != "PENDING" {
+			return stored, nil
+		}
+	}
+	p, err := inst.Peer("c", "read")
+	if err != nil {
+		return nil, err
+	}
+	defer p.Close()
+	if err := dep.ValidatePeer(ctx, p); err != nil {
+		if stored != nil {
+			return stored, nil
+		}
+		return nil, err
+	}
+	return j.Write(ctx, key, role, method, raw)
+}
+
+// InspectOperation queries or recovers an existing durable original-txID
+// Fabric registry operation by key against inst.
+func InspectOperation(ctx context.Context, inst *ledger.Instance, key string) (*ledger.Operation, error) {
+	if inst == nil {
+		return nil, fmt.Errorf("fabric instance is required")
+	}
+	dep, err := inst.LoadDeployment()
+	if err != nil {
+		return nil, err
+	}
+	db, err := inst.Database(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	if err := ledger.EnsureSchema(ctx, db); err != nil {
+		return nil, err
+	}
+	j := ledger.NewJournal(inst, db, dep.DeploymentID)
+	stored, err := j.Load(ctx, key, db)
+	if err != nil {
+		return nil, err
+	}
+	if stored == nil {
+		return nil, fmt.Errorf("unknown operation %q", key)
+	}
+	if stored.Status != "PENDING" {
+		return stored, nil
+	}
+	p, err := inst.Peer("c", "read")
+	if err != nil {
+		return nil, err
+	}
+	defer p.Close()
+	if err := dep.ValidatePeer(ctx, p); err != nil {
+		return stored, nil
+	}
+	return j.Recover(ctx, key, nil)
+}
+
 // Stack holds a fully wired procurement runtime combining state source, DID resolver,
 // OPA policy bundle, delivery service, optional management service + HTTP API, supplier gateway,
 // and isolated wallet context.

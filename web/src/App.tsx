@@ -144,7 +144,7 @@ export function App() {
       <TooltipProvider>
         <AuthProvider>
           <WorkbenchRouter />
-          <Toaster position="bottom-right" />
+          <Toaster />
         </AuthProvider>
       </TooltipProvider>
     </BrowserRouter>

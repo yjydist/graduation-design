@@ -8,7 +8,6 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
-import { toast } from "sonner";
 import { backendApi } from "@/api/backend";
 import { formatApiError, type FormattedApiError } from "@/api/http";
 import type { Decision } from "@/api/types";
@@ -35,18 +34,21 @@ import {
   formatIsoTimestamp,
   formatUnixSeconds,
 } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export function DecisionsAuditPage() {
   const { decisionId: routeDecisionId } = useParams<{ decisionId?: string }>();
   const navigate = useNavigate();
 
   const [queryInput, setQueryInput] = useState(routeDecisionId ?? "");
+  const [queryError, setQueryError] = useState<string | null>(null);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FormattedApiError | null>(null);
 
   useEffect(() => {
     setQueryInput(routeDecisionId ?? "");
+    setQueryError(null);
   }, [routeDecisionId]);
 
   const loadDecision = useCallback(async (id: string) => {
@@ -77,9 +79,10 @@ export function DecisionsAuditPage() {
     event.preventDefault();
     const trimmed = queryInput.trim();
     if (!trimmed) {
-      toast.error("请输入有效的决定 ID 后查询。", { duration: 6000 });
+      setQueryError("请输入有效的决定 ID 后查询。");
       return;
     }
+    setQueryError(null);
     navigate(`/decisions/${encodeURIComponent(trimmed)}`);
   };
 
@@ -99,7 +102,7 @@ export function DecisionsAuditPage() {
               className="h-9 gap-1.5 rounded-lg"
             >
               <RefreshCw
-                className={`size-4 ${loading ? "animate-spin" : ""}`}
+                className={cn("size-4", loading && "animate-spin")}
                 strokeWidth={2}
                 aria-hidden="true"
               />
@@ -121,27 +124,53 @@ export function DecisionsAuditPage() {
         <CardContent>
           <form
             onSubmit={handleSubmit}
-            className="flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-end"
+            noValidate
+            className="max-w-2xl space-y-1.5"
           >
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Label htmlFor="decision-id-input" className="text-sm font-medium">
-                决定 ID（decisionId）
-              </Label>
-              <Input
-                id="decision-id-input"
-                name="decisionId"
-                value={queryInput}
-                onChange={(e) => setQueryInput(e.target.value)}
-                placeholder="输入完整的决定 ID"
-                autoCapitalize="none"
-                spellCheck={false}
-                className="h-9 rounded-lg font-mono text-xs"
-              />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Label htmlFor="decision-id-input" className="text-sm font-medium">
+                  决定 ID（decisionId）{" "}
+                  <span className="text-destructive" aria-hidden="true">
+                    *
+                  </span>
+                </Label>
+                <Input
+                  id="decision-id-input"
+                  name="decisionId"
+                  required
+                  aria-required="true"
+                  aria-invalid={Boolean(queryError)}
+                  aria-describedby={queryError ? "decision-id-error" : undefined}
+                  value={queryInput}
+                  onChange={(e) => {
+                    setQueryInput(e.target.value);
+                    if (queryError) setQueryError(null);
+                  }}
+                  placeholder="输入完整的决定 ID"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  className={cn(
+                    "h-9 rounded-lg font-mono text-xs",
+                    queryError && "border-destructive",
+                  )}
+                />
+              </div>
+              <Button type="submit" className="h-9 shrink-0 gap-1.5 rounded-lg">
+                <Search className="size-4" strokeWidth={2} aria-hidden="true" />
+                <span>读取完整决定</span>
+              </Button>
             </div>
-            <Button type="submit" className="h-9 shrink-0 gap-1.5 rounded-lg">
-              <Search className="size-4" strokeWidth={2} aria-hidden="true" />
-              <span>读取完整决定</span>
-            </Button>
+            {queryError && (
+              <p
+                id="decision-id-error"
+                role="alert"
+                className="text-xs text-destructive"
+              >
+                {queryError}
+              </p>
+            )}
           </form>
         </CardContent>
       </Card>

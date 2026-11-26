@@ -45,6 +45,7 @@ import {
   formatUnixSeconds,
   truncateMiddle,
 } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 const ACTIVE_STEP_STATUSES = new Set([
   "pending",
@@ -468,7 +469,7 @@ export function RunDetailPage() {
               className="h-9 gap-1.5 rounded-lg"
             >
               <RefreshCw
-                className={`size-4 ${runLoading ? "animate-spin" : ""}`}
+                className={cn("size-4", runLoading && "animate-spin")}
                 strokeWidth={2}
                 aria-hidden="true"
               />

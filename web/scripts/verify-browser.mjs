@@ -65,6 +65,8 @@ const state = {
   authenticated: true,
   emptyRuns: false,
   runsError: false,
+  loginDelayMs: 0,
+  loginCalls: 0,
 };
 
 const RUN_FIXTURE = {
@@ -274,6 +276,48 @@ function createTestServer() {
       if (urlPath === "/api/v1/health/ready") {
         return sendJson(200, { domainId: "A", ready: true });
       }
+      if (urlPath === "/api/v1/session/login" && req.method === "POST") {
+        state.loginCalls += 1;
+        let raw = "";
+        req.on("data", (chunk) => {
+          raw += chunk;
+        });
+        req.on("end", () => {
+          const respond = () => {
+            try {
+              const body = JSON.parse(raw || "{}");
+              if (body.username && body.password) {
+                state.authenticated = true;
+                return sendJson(200, {
+                  domainId: "A",
+                  subjectId: "did:web:a.example:user:u",
+                  role: "BUYER",
+                  actions: [
+                    "managePurchasingAuthority",
+                    "procure",
+                    "auditDecisions",
+                  ],
+                  csrfToken: "a".repeat(43),
+                });
+              }
+            } catch {
+              // Fall through to 401.
+            }
+            return sendJson(401, {
+              requestId: "req-login-fail",
+              code: "LOGIN_FAILED",
+              decisionId: null,
+              message: "invalid credentials",
+            });
+          };
+          if (state.loginDelayMs > 0) {
+            setTimeout(respond, state.loginDelayMs);
+          } else {
+            respond();
+          }
+        });
+        return;
+      }
       if (urlPath === "/api/v1/session") {
         if (!state.authenticated) {
           return sendJson(401, {
@@ -290,6 +334,9 @@ function createTestServer() {
           actions: ["managePurchasingAuthority", "procure", "auditDecisions"],
           csrfToken: "a".repeat(43),
         });
+      }
+      if (urlPath.startsWith("/api/v1/drafts/")) {
+        return sendJson(200, RUN_FIXTURE.task);
       }
       if (urlPath === "/api/v1/management/purchasing-authority") {
         return sendJson(200, {
@@ -584,7 +631,7 @@ async function main() {
     }
 
     // 3. RunDetailPage: verify G1 ceiling comparison (1200 P2 quote flagged over limit)
-    //    + ConfirmDialog open & Escape close + Sonner Toast under strict CSP
+    //    + Tabs keyboard arrow navigation + ConfirmDialog open & Escape close + Sonner Toast position
     await send("Emulation.setDeviceMetricsOverride", {
       width: 1280,
       height: 900,
@@ -603,6 +650,39 @@ async function main() {
       "PurchaseView failed to evaluate ¥800 (in limit) and ¥1,200 (exceeds limit) against G1 ceiling",
     );
 
+    const pressKey = async (key, code, windowsVirtualKeyCode, text) => {
+      await send("Input.dispatchKeyEvent", {
+        type: text ? "keyDown" : "rawKeyDown",
+        key,
+        code,
+        windowsVirtualKeyCode,
+        nativeVirtualKeyCode: windowsVirtualKeyCode,
+        ...(text ? { text, unmodifiedText: text } : {}),
+      });
+      await send("Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key,
+        code,
+        windowsVirtualKeyCode,
+        nativeVirtualKeyCode: windowsVirtualKeyCode,
+      });
+    };
+
+    // Keyboard arrow navigation across RunDetail tabs
+    await evalJs(`(() => {
+      const firstTab = document.querySelector('[role="tab"][aria-selected="true"]');
+      if (firstTab) firstTab.focus();
+    })()`);
+    await pressKey("ArrowRight", "ArrowRight", 39);
+    await wait(150);
+    await pressKey("Enter", "Enter", 13, "\r");
+    await wait(250);
+    const tabsKeyboardOk = await evalJs(`(() => {
+      const activeTab = document.querySelector('[role="tab"][aria-selected="true"]');
+      return Boolean(activeTab && activeTab.textContent.includes("工具轨迹") && document.body.innerText.includes("服务调用"));
+    })()`);
+    assert(tabsKeyboardOk, "Keyboard ArrowRight/Enter failed to switch RunDetail tabs to ToolTraces");
+
     const openedDialog = await evalJs(`(() => {
       const btn = Array.from(document.querySelectorAll("button")).find((b) => b.textContent.includes("暂停 G1"));
       if (!btn) return false;
@@ -615,12 +695,7 @@ async function main() {
       await evalJs(`Boolean(document.querySelector('[data-slot="alert-dialog-content"]'))`),
       "ConfirmDialog did not open",
     );
-    await send("Input.dispatchKeyEvent", {
-      type: "keyDown",
-      key: "Escape",
-      code: "Escape",
-      windowsVirtualKeyCode: 27,
-    });
+    await pressKey("Escape", "Escape", 27);
     await wait(250);
     assert(
       !(await evalJs(`Boolean(document.querySelector('[data-slot="alert-dialog-content"]'))`)),
@@ -632,12 +707,133 @@ async function main() {
       if (copyBtn) copyBtn.click();
     })()`);
     await wait(350);
+    const desktopToastPos = await evalJs(`(() => {
+      const toast = document.querySelector("[data-sonner-toast]");
+      const list = document.querySelector("[data-sonner-toaster]");
+      return {
+        rendered: Boolean(toast),
+        y: list?.getAttribute("data-y-position"),
+        x: list?.getAttribute("data-x-position"),
+      };
+    })()`);
     assert(
-      await evalJs(`Boolean(document.querySelector("[data-sonner-toast]"))`),
-      "Sonner toast did not render",
+      desktopToastPos.rendered && desktopToastPos.y === "bottom" && desktopToastPos.x === "right",
+      `Expected desktop bottom-right Sonner toast, got ${JSON.stringify(desktopToastPos)}`,
+    );
+
+    // Verify Topbar user DropdownMenu opens cleanly (including DropdownMenuGroup/Label) and closes on Escape
+    await evalJs(`document.querySelector('[data-slot="dropdown-menu-trigger"]')?.click()`);
+    await wait(250);
+    assert(
+      await evalJs(`Boolean(document.querySelector('[data-slot="dropdown-menu-content"]') && document.body.innerText.includes("退出登录"))`),
+      "Topbar user DropdownMenu failed to render menu label and logout item",
+    );
+    await pressKey("Escape", "Escape", 27);
+    await wait(200);
+    assert(
+      !(await evalJs(`Boolean(document.querySelector('[data-slot="dropdown-menu-content"]'))`)),
+      "Topbar user DropdownMenu did not close on Escape",
+    );
+
+    // 3b. Field-level ARIA validation checks on Management, Decisions, and DraftEditor
+    await send("Page.navigate", { url: `${baseUrl}/management` });
+    await wait(600);
+    const opValidationOk = await evalJs(`(() => {
+      const form = document.querySelector('#operation-id-input')?.closest('form');
+      const submitBtn = form?.querySelector('button[type="submit"]');
+      if (!submitBtn) return false;
+      submitBtn.click();
+      return true;
+    })()`);
+    assert(opValidationOk, "Operation lookup submit button not found");
+    await wait(150);
+    assert(
+      await evalJs(`(() => {
+        const input = document.querySelector('#operation-id-input');
+        const err = document.querySelector('#operation-id-error[role="alert"]');
+        return input?.getAttribute("aria-invalid") === "true" && input?.getAttribute("aria-describedby") === "operation-id-error" && Boolean(err);
+      })()`),
+      "OperationTracker missing field-level aria-invalid / aria-describedby validation",
+    );
+
+    await send("Page.navigate", { url: `${baseUrl}/decisions` });
+    await wait(600);
+    await evalJs(`(() => {
+      const form = document.querySelector('#decision-id-input')?.closest('form');
+      form?.querySelector('button[type="submit"]')?.click();
+    })()`);
+    await wait(150);
+    assert(
+      await evalJs(`(() => {
+        const input = document.querySelector('#decision-id-input');
+        const err = document.querySelector('#decision-id-error[role="alert"]');
+        return input?.getAttribute("aria-invalid") === "true" && input?.getAttribute("aria-describedby") === "decision-id-error" && Boolean(err);
+      })()`),
+      "DecisionsAuditPage missing field-level aria-invalid / aria-describedby validation",
+    );
+
+    await send("Page.navigate", { url: `${baseUrl}/chat/${RUN_FIXTURE.draftId}` });
+    await wait(700);
+    await evalJs(`(() => {
+      const setNative = (el, val) => {
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+        setter.call(el, val);
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+      const qty = document.querySelector("#draft-quantity");
+      const did = document.querySelector("#draft-delegate");
+      if (qty) setNative(qty, "0");
+      if (did) setNative(did, "not-a-did");
+    })()`);
+    await wait(100);
+    await evalJs(`(() => {
+      const btn = Array.from(document.querySelectorAll("button")).find((b) => b.textContent.includes("保存草稿修改"));
+      btn?.click();
+    })()`);
+    await wait(150);
+    assert(
+      await evalJs(`(() => {
+        const qty = document.querySelector("#draft-quantity");
+        const did = document.querySelector("#draft-delegate");
+        return (
+          qty?.getAttribute("aria-invalid") === "true" &&
+          Boolean(document.querySelector('#draft-quantity-error[role="alert"]')) &&
+          did?.getAttribute("aria-invalid") === "true" &&
+          Boolean(document.querySelector('#draft-delegate-error[role="alert"]'))
+        );
+      })()`),
+      "DraftEditor missing per-field aria-invalid / alert error feedback",
+    );
+
+    // 3c. Mobile (<768px) Sheet drawer open/Esc close + mobile top-center Toast position
+    await send("Emulation.setDeviceMetricsOverride", {
+      width: 320,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: true,
+    });
+    await send("Page.navigate", { url: `${baseUrl}/runs` });
+    await wait(600);
+    await evalJs(`document.querySelector('button[aria-label="打开导航菜单"]')?.click()`);
+    await wait(250);
+    assert(
+      await evalJs(`Boolean(document.querySelector('[data-slot="sheet-content"]'))`),
+      "Mobile Sheet drawer did not open at 320px",
+    );
+    await pressKey("Escape", "Escape", 27);
+    await wait(250);
+    assert(
+      !(await evalJs(`Boolean(document.querySelector('[data-slot="sheet-content"]'))`)),
+      "Mobile Sheet drawer did not close on Escape",
     );
 
     // 4. Empty /runs single-primary-button check & ErrorState retry check
+    await send("Emulation.setDeviceMetricsOverride", {
+      width: 1280,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
     state.emptyRuns = true;
     await send("Page.navigate", { url: `${baseUrl}/runs` });
     await wait(600);
@@ -661,8 +857,10 @@ async function main() {
     assert(errorStateOk, "ErrorState alert with error code and retry button missing on /runs error");
     state.runsError = false;
 
-    // 5. Unauthenticated /login route at 320px + keyboard Tab focus check
+    // 5. Unauthenticated /login at 320px: keyboard Tab + Enter login, pending anti-duplicate-submit, mobile Toast
     state.authenticated = false;
+    state.loginDelayMs = 400;
+    state.loginCalls = 0;
     await send("Emulation.setDeviceMetricsOverride", {
       width: 320,
       height: 900,
@@ -682,17 +880,57 @@ async function main() {
     );
 
     // Keyboard Tab navigation moves focus onto an interactive control on /login
-    await send("Input.dispatchKeyEvent", {
-      type: "keyDown",
-      key: "Tab",
-      code: "Tab",
-      windowsVirtualKeyCode: 9,
-    });
+    await pressKey("Tab", "Tab", 9);
     await wait(100);
     const activeTag = await evalJs(`document.activeElement?.tagName ?? ""`);
     assert(
       ["A", "BUTTON", "INPUT"].includes(activeTag),
       `Expected keyboard Tab focus on an interactive element, got ${activeTag}`,
+    );
+
+    // Fill username -> Tab to password -> Enter twice to verify pending disabled & single POST
+    await evalJs(`document.querySelector("#login-username")?.focus()`);
+    await send("Input.insertText", { text: "u" });
+    await pressKey("Tab", "Tab", 9);
+    await wait(50);
+    assert(
+      await evalJs(`document.activeElement?.id === "login-password"`),
+      "Tab from #login-username did not focus #login-password",
+    );
+    await send("Input.insertText", { text: "demo-secret" });
+    await pressKey("Enter", "Enter", 13, "\r");
+    await wait(80);
+    // Attempt a duplicate Enter & click while request is in-flight
+    await pressKey("Enter", "Enter", 13, "\r");
+    const pendingState = await evalJs(`(() => {
+      const btn = document.querySelector('button[type="submit"]');
+      if (btn) btn.click();
+      return {
+        disabled: Boolean(btn?.disabled),
+        text: btn?.textContent ?? "",
+      };
+    })()`);
+    assert(
+      pendingState.disabled && pendingState.text.includes("正在验证身份"),
+      `Expected pending disabled login button while submitting, got ${JSON.stringify(pendingState)}`,
+    );
+
+    await wait(700);
+    assert(
+      state.loginCalls === 1,
+      `Expected exactly 1 /session/login call (anti-duplicate submit), got ${state.loginCalls}`,
+    );
+    const postLogin = await evalJs(`(() => {
+      const list = document.querySelector("[data-sonner-toaster]");
+      return {
+        path: location.pathname,
+        toastY: list?.getAttribute("data-y-position"),
+        toastX: list?.getAttribute("data-x-position"),
+      };
+    })()`);
+    assert(
+      postLogin.path === "/runs" && postLogin.toastY === "top" && postLogin.toastX === "center",
+      `Expected redirect to /runs with mobile top-center toast, got ${JSON.stringify(postLogin)}`,
     );
 
     // Verify zero CSP violations, console errors, or uncaught exceptions

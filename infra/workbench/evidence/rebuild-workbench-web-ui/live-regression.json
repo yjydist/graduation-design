@@ -1,0 +1,63 @@
+{
+  "verifiedAt": "2026-11-26T08:16:44.121Z",
+  "frontendImageDigest": "sha256:88b034e9f63b6533239a328a20f195114212f888df10b42306978f665007508a",
+  "backendImageDigest": "sha256:82de143fa45a67d1e04174faaa2cc697b63cbc55f3f306d52ab30e0207974ff0",
+  "domains": {
+    "A": {
+      "origin": "https://a.localhost:18451",
+      "operationId": "management:b73ca042ca6e8d57c377c35b30e820c827724e64dfdf3d84382410ed3958b836",
+      "spaReloadConfirmed": true,
+      "validationCode": "VALID"
+    },
+    "B": {
+      "origin": "https://b.localhost:18452",
+      "operationId": "management:ca9405b0455d121b6c225c59efb9c5a0d8a2cda3396847c31890ffb12fe13662",
+      "spaReloadConfirmed": true,
+      "validationCode": "VALID"
+    },
+    "C": {
+      "origin": "https://c.localhost:18453",
+      "operationId": "management:34950d08f19afb49c79cef3db579bc5358e5a166d0b71a038cb8a8edd8c9a5a1",
+      "spaReloadConfirmed": true,
+      "validationCode": "VALID"
+    }
+  },
+  "procurement": {
+    "draftId": "b5a75d2a85c74f7e5e8608c0ebd945744d926a1d72316390790ba85d9e631b36",
+    "runId": "2760481bb821a3689e6ee0d10231001419c97a8ae68390364293763de370d3c8",
+    "taskId": "bb45f1b77c0b81d60bac9fa4eb4a559f81571ed84c16d3a325902b4785e1ff5e",
+    "stage": "EXECUTE",
+    "status": "DECIDED",
+    "grantStatus": "ACTIVE",
+    "allowedActions": [
+      "suspend"
+    ],
+    "stepCount": 8,
+    "traceCount": 6,
+    "evidence": {
+      "identityCount": 22,
+      "disclosureCount": 8,
+      "delegationCount": 3,
+      "quoteCount": 1,
+      "orderCount": 1,
+      "decisionCount": 2,
+      "firstDecisionId": "urn:grad:decision:3fdff6dc-0ded-40d0-aa78-ee5a1ba8c4e9"
+    },
+    "suspendResumeVerified": true,
+    "spaReloadVerified": true
+  },
+  "auditorDecision": {
+    "decisionId": "urn:grad:decision:3fdff6dc-0ded-40d0-aa78-ee5a1ba8c4e9",
+    "hasBlockAndProbe": true,
+    "hasTrustRoot": true,
+    "hasPolicyPath": true
+  },
+  "uiChecks": {
+    "liveDarkModePersisted": true,
+    "loadedFonts": [
+      "Geist Variable",
+      "Geist Mono Variable"
+    ],
+    "cspAndRuntimeErrors": 0
+  }
+}

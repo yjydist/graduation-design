@@ -1,3 +1,5 @@
+// Customized from shadcn base-vega: align overlay/modal z-index tokens,
+// shadow-e3, and Chinese screen-reader close label per web/AGENTS.md sections 3.4 and 7.
 import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 import { cn } from "@/lib/utils"
@@ -70,7 +72,7 @@ function SheetContent({
           >
             <XIcon
             />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">关闭</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

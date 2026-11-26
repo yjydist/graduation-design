@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/features/auth/AuthContext";
 import { resolveRoleLabel } from "@/lib/domain-labels";
+import { cn } from "@/lib/utils";
 
 export function LoginPage() {
   const { domainId, ready, readinessError, login, refreshReadiness } =
@@ -99,7 +100,7 @@ export function LoginPage() {
             className="w-fit gap-1.5 rounded-lg"
           >
             <RefreshCw
-              className={`size-3.5 ${rechecking ? "animate-spin" : ""}`}
+              className={cn("size-3.5", rechecking && "animate-spin")}
               strokeWidth={2}
               aria-hidden="true"
             />

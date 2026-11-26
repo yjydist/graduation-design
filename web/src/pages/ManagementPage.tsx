@@ -32,6 +32,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { OperationTracker } from "@/features/management/OperationTracker";
 import { DOMAIN_LABELS } from "@/lib/domain-labels";
 import { EMPTY_PLACEHOLDER, formatInteger } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 const CLEAR_SENTINEL = "__CLEAR_PA__";
 
@@ -169,7 +170,7 @@ export function ManagementPage() {
             className="h-9 gap-1.5 rounded-lg"
           >
             <RefreshCw
-              className={`size-4 ${authorityLoading ? "animate-spin" : ""}`}
+              className={cn("size-4", authorityLoading && "animate-spin")}
               strokeWidth={2}
               aria-hidden="true"
             />

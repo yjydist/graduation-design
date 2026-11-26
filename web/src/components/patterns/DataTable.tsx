@@ -108,9 +108,11 @@ export function DataTable<T>({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="overflow-x-auto">
-          <Table aria-label={caption}>
-            <caption className="sr-only">{caption}</caption>
+        <Table
+          aria-label={caption}
+          containerClassName="max-h-[70dvh] overflow-y-auto"
+        >
+          <caption className="sr-only">{caption}</caption>
             <TableHeader>
               <TableRow className="h-10 bg-muted hover:bg-muted">
                 {columns.map((column, index) => {
@@ -218,7 +220,6 @@ export function DataTable<T>({
               )}
             </TableBody>
           </Table>
-        </div>
       </div>
 
       {!loading && sortedRows.length > pageSize && (

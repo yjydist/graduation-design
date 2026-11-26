@@ -79,6 +79,8 @@ describe("Pattern state matrix rendering", () => {
     expect(populatedHtml).toContain("bg-card hover:bg-muted");
     expect(populatedHtml).toContain("bg-brand-muted hover:bg-brand-muted");
     expect(populatedHtml).toContain("sticky left-0 z-10 bg-inherit");
+    expect(populatedHtml).toContain("max-h-[70dvh] overflow-y-auto");
+    expect((populatedHtml.match(/overflow-x-auto/g) ?? []).length).toBe(1);
   });
 
   it("renders StatusBadge with both icon and semantic label (never color-only)", () => {

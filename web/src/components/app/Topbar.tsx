@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -63,19 +64,22 @@ export function Topbar({
             <span className="truncate text-sm font-medium">{roleLabel}</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72 rounded-xl">
-            <DropdownMenuLabel className="space-y-1 py-2">
-              <p className="text-sm font-semibold text-popover-foreground">
-                {roleLabel}
-              </p>
-              <p className="break-all font-mono text-xs font-normal text-muted-foreground">
-                {subjectId}
-              </p>
-            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="space-y-1 py-2">
+                <p className="text-sm font-semibold text-popover-foreground">
+                  {roleLabel}
+                </p>
+                <p className="break-all font-mono text-xs font-normal text-muted-foreground">
+                  {subjectId}
+                </p>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              variant="destructive"
               disabled={loggingOut}
               onClick={onLogout}
-              className="gap-2 text-destructive focus:text-destructive"
+              className="gap-2"
             >
               {loggingOut ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />

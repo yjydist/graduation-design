@@ -44,6 +44,15 @@ export interface DraftEditorProps {
 
 const KNOWN_PRODUCTS = ["urn:grad:product:P1", "urn:grad:product:P2"] as const;
 
+type DraftFieldKey =
+  | "quantity"
+  | "maxAmountMinor"
+  | "expiresAt"
+  | "delegateDid"
+  | "description";
+
+type DraftFieldErrors = Partial<Record<DraftFieldKey, string>>;
+
 export function DraftEditor({
   draft,
   onUpdated,
@@ -66,6 +75,7 @@ export function DraftEditor({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<DraftFieldErrors>({});
 
   useEffect(() => {
     setProductId(draft.productId);
@@ -77,10 +87,21 @@ export function DraftEditor({
     setDescription(draft.description);
     setDirty(false);
     setFormError(null);
+    setFieldErrors({});
   }, [draft]);
+
+  const clearFieldError = (field: DraftFieldKey) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   const descCount = countCodePoints(description);
   const descOverLimit = descCount > MAX_DRAFT_DESCRIPTION_CODEPOINTS;
+  const descInvalid = descOverLimit || Boolean(fieldErrors.description);
   const parsedAmount = Number(maxAmountMinor);
   const parsedQty = Number(quantity);
 
@@ -88,29 +109,32 @@ export function DraftEditor({
     event.preventDefault();
     setFormError(null);
 
+    const nextErrors: DraftFieldErrors = {};
     const descCheck = validateDraftDescription(description);
     if (!descCheck.ok) {
-      setFormError(descCheck.error);
-      return;
+      nextErrors.description = descCheck.error;
     }
     if (!Number.isInteger(parsedQty) || parsedQty < 1) {
-      setFormError("采购数量须为大于等于 1 的整数。");
-      return;
+      nextErrors.quantity = "采购数量须为大于等于 1 的整数。";
     }
     if (!Number.isInteger(parsedAmount) || parsedAmount < 1) {
-      setFormError("单笔上限（分）须为大于等于 1 的整数。");
-      return;
+      nextErrors.maxAmountMinor = "单笔上限（分）须为大于等于 1 的整数。";
     }
     const expiresUnix = fromDatetimeLocalValue(expiresAtLocal);
     if (!expiresUnix || expiresUnix <= 0) {
-      setFormError("请选择有效的截止时间。");
-      return;
+      nextErrors.expiresAt = "请选择有效的截止时间。";
     }
     const trimmedDid = delegateDid.trim();
     if (!trimmedDid.startsWith("did:web:") || trimmedDid.length <= 8) {
-      setFormError("受托者 DID 须为有效的 did:web: 标识。");
+      nextErrors.delegateDid = "受托者 DID 须为有效的 did:web: 标识。";
+    }
+
+    if (Object.keys(nextErrors).length > 0 || !descCheck.ok || !expiresUnix) {
+      setFieldErrors(nextErrors);
+      setFormError("请先修正表单中标出的无效参数后再保存。");
       return;
     }
+    setFieldErrors({});
 
     setSaving(true);
     try {
@@ -244,14 +268,31 @@ export function DraftEditor({
                 step={1}
                 required
                 aria-required="true"
+                aria-invalid={Boolean(fieldErrors.quantity)}
+                aria-describedby={
+                  fieldErrors.quantity ? "draft-quantity-error" : undefined
+                }
                 value={quantity}
                 onChange={(e) => {
                   setQuantity(e.target.value);
+                  clearFieldError("quantity");
                   setDirty(true);
                 }}
                 disabled={saving || confirming}
-                className="h-9 rounded-lg tabular-nums"
+                className={cn(
+                  "h-9 rounded-lg tabular-nums",
+                  fieldErrors.quantity && "border-destructive",
+                )}
               />
+              {fieldErrors.quantity && (
+                <p
+                  id="draft-quantity-error"
+                  role="alert"
+                  className="text-xs text-destructive"
+                >
+                  {fieldErrors.quantity}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -298,20 +339,43 @@ export function DraftEditor({
                 step={1}
                 required
                 aria-required="true"
+                aria-invalid={Boolean(fieldErrors.maxAmountMinor)}
+                aria-describedby={
+                  fieldErrors.maxAmountMinor
+                    ? "draft-amount-error"
+                    : "draft-amount-hint"
+                }
                 value={maxAmountMinor}
                 onChange={(e) => {
                   setMaxAmountMinor(e.target.value);
+                  clearFieldError("maxAmountMinor");
                   setDirty(true);
                 }}
                 disabled={saving || confirming}
-                className="h-9 rounded-lg tabular-nums"
+                className={cn(
+                  "h-9 rounded-lg tabular-nums",
+                  fieldErrors.maxAmountMinor && "border-destructive",
+                )}
               />
-              <p className="text-xs tabular-nums text-muted-foreground">
-                折合金额：
-                {Number.isFinite(parsedAmount) && parsedAmount > 0
-                  ? formatMinorAmount(parsedAmount)
-                  : "—"}
-              </p>
+              {fieldErrors.maxAmountMinor ? (
+                <p
+                  id="draft-amount-error"
+                  role="alert"
+                  className="text-xs text-destructive"
+                >
+                  {fieldErrors.maxAmountMinor}
+                </p>
+              ) : (
+                <p
+                  id="draft-amount-hint"
+                  className="text-xs tabular-nums text-muted-foreground"
+                >
+                  折合金额：
+                  {Number.isFinite(parsedAmount) && parsedAmount > 0
+                    ? formatMinorAmount(parsedAmount)
+                    : "—"}
+                </p>
+              )}
             </div>
           </div>
 
@@ -326,14 +390,31 @@ export function DraftEditor({
               step={1}
               required
               aria-required="true"
+              aria-invalid={Boolean(fieldErrors.expiresAt)}
+              aria-describedby={
+                fieldErrors.expiresAt ? "draft-expires-error" : undefined
+              }
               value={expiresAtLocal}
               onChange={(e) => {
                 setExpiresAtLocal(e.target.value);
+                clearFieldError("expiresAt");
                 setDirty(true);
               }}
               disabled={saving || confirming}
-              className="h-9 rounded-lg tabular-nums"
+              className={cn(
+                "h-9 rounded-lg tabular-nums",
+                fieldErrors.expiresAt && "border-destructive",
+              )}
             />
+            {fieldErrors.expiresAt && (
+              <p
+                id="draft-expires-error"
+                role="alert"
+                className="text-xs text-destructive"
+              >
+                {fieldErrors.expiresAt}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -344,18 +425,36 @@ export function DraftEditor({
             <Input
               id="draft-delegate"
               type="text"
+              autoComplete="off"
               spellCheck={false}
               autoCapitalize="none"
               required
               aria-required="true"
+              aria-invalid={Boolean(fieldErrors.delegateDid)}
+              aria-describedby={
+                fieldErrors.delegateDid ? "draft-delegate-error" : undefined
+              }
               value={delegateDid}
               onChange={(e) => {
                 setDelegateDid(e.target.value);
+                clearFieldError("delegateDid");
                 setDirty(true);
               }}
               disabled={saving || confirming}
-              className="h-9 rounded-lg font-mono text-xs"
+              className={cn(
+                "h-9 rounded-lg font-mono text-xs",
+                fieldErrors.delegateDid && "border-destructive",
+              )}
             />
+            {fieldErrors.delegateDid && (
+              <p
+                id="draft-delegate-error"
+                role="alert"
+                className="text-xs text-destructive"
+              >
+                {fieldErrors.delegateDid}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -367,7 +466,7 @@ export function DraftEditor({
               <span
                 className={cn(
                   "text-xs tabular-nums",
-                  descOverLimit ? "text-destructive" : "text-muted-foreground",
+                  descInvalid ? "text-destructive" : "text-muted-foreground",
                 )}
               >
                 {descCount} / {MAX_DRAFT_DESCRIPTION_CODEPOINTS} 字符
@@ -378,29 +477,32 @@ export function DraftEditor({
               rows={3}
               required
               aria-required="true"
-              aria-invalid={descOverLimit}
+              aria-invalid={descInvalid}
               aria-describedby="draft-description-hint"
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
+                clearFieldError("description");
                 setDirty(true);
               }}
               disabled={saving || confirming}
               className={cn(
                 "rounded-lg text-sm leading-6",
-                descOverLimit && "border-destructive",
+                descInvalid && "border-destructive",
               )}
             />
             <p
               id="draft-description-hint"
+              role={descInvalid ? "alert" : undefined}
               className={cn(
                 "text-xs",
-                descOverLimit ? "text-destructive" : "text-muted-foreground",
+                descInvalid ? "text-destructive" : "text-muted-foreground",
               )}
             >
-              {descOverLimit
-                ? `已超出 ${MAX_DRAFT_DESCRIPTION_CODEPOINTS} 个 Unicode 码点上限，请精简后再保存。`
-                : "长度按 Unicode 码点计数，须为 1 至 512 个字符。"}
+              {fieldErrors.description ??
+                (descOverLimit
+                  ? `已超出 ${MAX_DRAFT_DESCRIPTION_CODEPOINTS} 个 Unicode 码点上限，请精简后再保存。`
+                  : "长度按 Unicode 码点计数，须为 1 至 512 个字符。")}
             </p>
           </div>
 

@@ -156,7 +156,7 @@ function PurchaseView({
             description="待 B1 代理向 C 网关发起询价后，原始报价金额与有效期将展示在此处。"
           />
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
             <Table aria-label="供应商报价明细">
               <caption className="sr-only">供应商报价明细</caption>
               <TableHeader>
@@ -242,7 +242,7 @@ function PurchaseView({
             当前任务尚未生成成交订单（可能仍在执行中，或因超限、委托暂停被 C 网关拦截拒绝）。
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
             <Table aria-label="成交订单明细">
               <caption className="sr-only">成交订单明细</caption>
               <TableHeader>

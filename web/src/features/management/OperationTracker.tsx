@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EMPTY_PLACEHOLDER, formatInteger } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export interface OperationTrackerProps {
   operationId?: string;
@@ -40,6 +41,7 @@ export function OperationTracker({
   onConfirmed,
 }: OperationTrackerProps) {
   const [lookupInput, setLookupInput] = useState(operationId ?? "");
+  const [lookupError, setLookupError] = useState<string | null>(null);
   const [operation, setOperation] = useState<Operation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<{
@@ -52,6 +54,7 @@ export function OperationTracker({
 
   useEffect(() => {
     setLookupInput(operationId ?? "");
+    setLookupError(null);
   }, [operationId]);
 
   const loadOperation = useCallback(
@@ -114,9 +117,10 @@ export function OperationTracker({
     event.preventDefault();
     const trimmed = lookupInput.trim();
     if (!trimmed) {
-      toast.error("请输入有效的操作 ID 后查询。", { duration: 6000 });
+      setLookupError("请输入有效的操作 ID 后查询。");
       return;
     }
+    setLookupError(null);
     onSelectOperation(trimmed);
   };
 
@@ -133,31 +137,57 @@ export function OperationTracker({
       <CardContent className="space-y-5">
         <form
           onSubmit={handleLookupSubmit}
-          className="flex flex-col gap-3 sm:flex-row sm:items-end"
+          noValidate
+          className="space-y-1.5"
         >
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <Label htmlFor="operation-id-input" className="text-sm font-medium">
-              操作 ID
-            </Label>
-            <Input
-              id="operation-id-input"
-              name="operationId"
-              value={lookupInput}
-              onChange={(e) => setLookupInput(e.target.value)}
-              placeholder="输入原操作 ID（operationId）"
-              autoCapitalize="none"
-              spellCheck={false}
-              className="h-9 rounded-lg font-mono text-xs"
-            />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Label htmlFor="operation-id-input" className="text-sm font-medium">
+                操作 ID{" "}
+                <span className="text-destructive" aria-hidden="true">
+                  *
+                </span>
+              </Label>
+              <Input
+                id="operation-id-input"
+                name="operationId"
+                required
+                aria-required="true"
+                aria-invalid={Boolean(lookupError)}
+                aria-describedby={lookupError ? "operation-id-error" : undefined}
+                value={lookupInput}
+                onChange={(e) => {
+                  setLookupInput(e.target.value);
+                  if (lookupError) setLookupError(null);
+                }}
+                placeholder="输入原操作 ID（operationId）"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                className={cn(
+                  "h-9 rounded-lg font-mono text-xs",
+                  lookupError && "border-destructive",
+                )}
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="secondary"
+              className="h-9 shrink-0 gap-1.5 rounded-lg"
+            >
+              <Search className="size-4" strokeWidth={2} aria-hidden="true" />
+              <span>查询原交易</span>
+            </Button>
           </div>
-          <Button
-            type="submit"
-            variant="secondary"
-            className="h-9 shrink-0 gap-1.5 rounded-lg"
-          >
-            <Search className="size-4" strokeWidth={2} aria-hidden="true" />
-            <span>查询原交易</span>
-          </Button>
+          {lookupError && (
+            <p
+              id="operation-id-error"
+              role="alert"
+              className="text-xs text-destructive"
+            >
+              {lookupError}
+            </p>
+          )}
         </form>
 
         {loading ? (

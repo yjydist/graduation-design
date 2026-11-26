@@ -1,3 +1,4 @@
+// Customized from shadcn base-vega: localize screen-reader label per web/AGENTS.md section 7.
 import * as React from "react"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
@@ -108,7 +109,7 @@ function BreadcrumbEllipsis({
     >
       <MoreHorizontalIcon
       />
-      <span className="sr-only">More</span>
+      <span className="sr-only">更多</span>
     </span>
   )
 }

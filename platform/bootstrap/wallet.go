@@ -1,12 +1,10 @@
 package bootstrap
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -19,7 +17,7 @@ import (
 	domreg "grad/platform/core/domain/registry"
 	"grad/platform/core/domain/wallet"
 	"grad/platform/core/ledger"
-	"grad/platform/internal/httpx"
+	apigw "grad/platform/service/api/gateway"
 	"grad/platform/service/api/interdomain"
 	"grad/protocol"
 	"grad/protocol/registry"
@@ -380,41 +378,11 @@ func buildLocalReceiptDelivery(
 		localClient := NewLocalMTLSClient(interdomain.NewWalletReceiptHandler(walletRef()), defaultAuditSvcDID, "C_AUDIT_SERVICE", "CMsp")
 		var ack *wallet.OrderOutcomeReceiptResponse
 		sender := func(sendCtx context.Context, persisted domgw.OrderOutcomeReceipt) error {
-			payload, err := json.Marshal(persisted)
+			decoded, err := apigw.SendHTTPReceipt(sendCtx, localClient, receiptEndpointPath, persisted)
 			if err != nil {
 				return err
 			}
-			req, err := http.NewRequestWithContext(sendCtx, http.MethodPost, receiptEndpointPath, bytes.NewReader(payload))
-			if err != nil {
-				return err
-			}
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set(httpx.HeaderRequestID, httpx.NewRequestID())
-
-			resp, err := localClient.Do(req)
-			if err != nil {
-				return err
-			}
-			defer resp.Body.Close()
-
-			if resp.StatusCode != http.StatusOK {
-				return fmt.Errorf("receipt delivery HTTP %d", resp.StatusCode)
-			}
-			body, err := io.ReadAll(io.LimitReader(resp.Body, domgw.MaxExecuteBodyBytes+1))
-			if err != nil {
-				return err
-			}
-			if int64(len(body)) > domgw.MaxExecuteBodyBytes {
-				return fmt.Errorf("receipt acknowledgement exceeds %d bytes", domgw.MaxExecuteBodyBytes)
-			}
-			var decoded domgw.OrderOutcomeReceiptResponse
-			if err := json.Unmarshal(body, &decoded); err != nil {
-				return err
-			}
-			if err := domgw.VerifyReceiptEcho(persisted, decoded.Receipt); err != nil {
-				return err
-			}
-			ack = toWalletReceiptResponse(&decoded)
+			ack = toWalletReceiptResponse(decoded)
 			return nil
 		}
 		if err := domgw.DeliverReceiptWithDB(ctx, db, deploymentID, r.CaseID, r.SendRevision, r.CheckNo, sender); err != nil {

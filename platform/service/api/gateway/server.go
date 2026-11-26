@@ -75,49 +75,63 @@ func (s *Server) Handler() http.Handler {
 	return s.handler
 }
 
-// NewHTTPReceiptSender constructs an outbound HTTP domgw.ReceiptSender that POSTs
-// a reconciliation receipt with X-Request-Id, validates HTTP 200 OK, decodes the
-// acknowledgement envelope, and verifies canonical receipt echo binding.
+// SendHTTPReceipt POSTs a reconciliation receipt with X-Request-Id to targetURL via client,
+// validates HTTP 200 OK, decodes the bounded acknowledgement envelope, and verifies canonical
+// receipt echo binding before returning the verified acknowledgement.
+func SendHTTPReceipt(
+	ctx context.Context,
+	client *http.Client,
+	targetURL string,
+	receipt domgw.OrderOutcomeReceipt,
+) (*domgw.OrderOutcomeReceiptResponse, error) {
+	if client == nil {
+		return nil, fmt.Errorf("authenticated receipt client is required")
+	}
+	if strings.TrimSpace(targetURL) == "" {
+		return nil, fmt.Errorf("receipt endpoint URL is required")
+	}
+	payload, err := json.Marshal(receipt)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(httpx.HeaderRequestID, httpx.NewRequestID())
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("receipt delivery HTTP %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, domgw.MaxExecuteBodyBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > domgw.MaxExecuteBodyBytes {
+		return nil, fmt.Errorf("receipt acknowledgement exceeds %d bytes", domgw.MaxExecuteBodyBytes)
+	}
+	var ack domgw.OrderOutcomeReceiptResponse
+	if err := json.Unmarshal(body, &ack); err != nil {
+		return nil, err
+	}
+	if err := domgw.VerifyReceiptEcho(receipt, ack.Receipt); err != nil {
+		return nil, err
+	}
+	return &ack, nil
+}
+
+// NewHTTPReceiptSender constructs an outbound HTTP domgw.ReceiptSender backed by SendHTTPReceipt.
 func NewHTTPReceiptSender(client *http.Client, targetURL string) domgw.ReceiptSender {
 	return func(ctx context.Context, receipt domgw.OrderOutcomeReceipt) error {
-		if client == nil {
-			return fmt.Errorf("authenticated receipt client is required")
-		}
-		if strings.TrimSpace(targetURL) == "" {
-			return fmt.Errorf("receipt endpoint URL is required")
-		}
-		payload, err := json.Marshal(receipt)
-		if err != nil {
-			return err
-		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(payload))
-		if err != nil {
-			return err
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set(httpx.HeaderRequestID, httpx.NewRequestID())
-
-		resp, err := client.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("receipt delivery HTTP %d", resp.StatusCode)
-		}
-		body, err := io.ReadAll(io.LimitReader(resp.Body, domgw.MaxExecuteBodyBytes+1))
-		if err != nil {
-			return err
-		}
-		if int64(len(body)) > domgw.MaxExecuteBodyBytes {
-			return fmt.Errorf("receipt acknowledgement exceeds %d bytes", domgw.MaxExecuteBodyBytes)
-		}
-		var ack domgw.OrderOutcomeReceiptResponse
-		if err := json.Unmarshal(body, &ack); err != nil {
-			return err
-		}
-		return domgw.VerifyReceiptEcho(receipt, ack.Receipt)
+		_, err := SendHTTPReceipt(ctx, client, targetURL, receipt)
+		return err
 	}
 }
 

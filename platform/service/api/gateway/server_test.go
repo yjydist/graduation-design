@@ -603,6 +603,13 @@ func TestNewHTTPReceiptSenderAndServerDelivery(t *testing.T) {
 		}))
 		defer receiver.Close()
 
+		ack, err := SendHTTPReceipt(t.Context(), receiver.Client(), receiver.URL, sampleReceipt)
+		require.NoError(t, err)
+		require.NotNil(t, ack)
+		assert.Equal(t, "RECEIVED", ack.Status)
+		assert.Equal(t, "RECONCILED", ack.ClientActionStatus)
+		assert.Equal(t, sampleReceipt, ack.Receipt)
+
 		sender := NewHTTPReceiptSender(receiver.Client(), receiver.URL)
 		require.NoError(t, sender(t.Context(), sampleReceipt))
 		assert.Equal(t, http.MethodPost, gotMethod)

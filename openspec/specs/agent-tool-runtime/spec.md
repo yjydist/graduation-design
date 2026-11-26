@@ -8,18 +8,18 @@
 
 ### Requirement: 基于官方 MCP SDK 的确定性钱包与协议工具服务
 
-系统 SHALL 使用官方 MCP Go SDK (`github.com/modelcontextprotocol/go-sdk/mcp`) 封装 `inspect_wallet`, `delegate_grant`, `replace_grant`, `request_quote`, `create_order` 与 `reconcile_order` 六个强类型工具, 强制隔离应用私钥与原始披露盐值. 钱包工具运行时 SHALL 独立拥有 `client_actions` 意图锁持久化 (`OUTCOME_UNKNOWN` 与 `sendRevision`) 且仅通过 HTTP/Handler 客户端边界与 C 网关交互 (不依赖网关内部数据库实现), 支持原子替换子授权改派新受托者及响应丢失后的停发核账恢复, 并同时支持进程内传输, 由顶层运行时装配的 `ledgerctl mcp` stdio 服务及基准测试底层 Go 函数直调.
+系统 SHALL 将 L2 确定性钱包领域核与 L3 官方 MCP Go SDK 工具服务显式解耦. L3 MCP 服务 SHALL 封装 `inspect_wallet`, `delegate_grant`, `replace_grant`, `request_quote`, `create_order` 与 `reconcile_order` 六个强类型工具, 仅调用 L2 钱包领域服务并强制隔离应用私钥与原始披露盐值. L2 钱包层 SHALL 独立维护 `client_actions` 意图锁并通过 HTTP 客户端与 C 网关交互, 支持改派与停发核账恢复. L3 MCP 服务 SHALL 同时支持进程内传输与 `ledgerctl mcp` stdio 服务.
 
 #### Scenario: 私钥隔离与发送前意图锁持久化
 
 - **WHEN** 上层通过 MCP `tools/call` 调用 `inspect_wallet`, `delegate_grant`, `replace_grant`, `request_quote`, `create_order` 或 `reconcile_order`
 - **THEN** 工具输出仅包含业务摘要, 委托约束, 报价, 订单或核账结果, 不得包含应用私钥字节或原始披露盐值
-- **AND** `create_order` 在请求 C 网关前必先在智能体侧独立存储持久化 `client_actions` 意图行 (`OUTCOME_UNKNOWN`, `actionId`, `requestHash`, `idempotencyKey`, `sendRevision`), 挑战 `nonce` 原样绑定与 `KB-JWT` 签名均由确定性工具核完成
+- **AND** `create_order` 在请求 C 网关前必先在 L2 钱包持久化层写入 `client_actions` 意图行 (`OUTCOME_UNKNOWN`, `actionId`, `requestHash`, `idempotencyKey`, `sendRevision`), 挑战 `nonce` 原样绑定与 `KB-JWT` 签名均由 L2 确定性核完成
 
 #### Scenario: 进程内与 stdio 标准 MCP 传输一致工作
 
-- **WHEN** 内置智能体运行器通过 `mcp.NewInMemoryTransports()`, 或外部 MCP 客户端通过 `ledgerctl mcp` stdio 进程连接 `mcp.Server` 并执行 `tools/list` 与 `tools/call`
-- **THEN** 两类传输返回的 JSON Schema 与工具执行结果一致, 底层核心函数同时可供高频基准测试直接调用
+- **WHEN** L4 智能体编排器通过 `mcp.NewInMemoryTransports()`, 或外部 MCP 客户端通过 `ledgerctl mcp` stdio 进程连接 L3 `mcp.Server` 并执行 `tools/list` 与 `tools/call`
+- **THEN** 两类传输返回的 JSON Schema 与工具执行结果一致, L2 确定性钱包操作同时可供高频基准测试直接调用
 
 #### Scenario: replace_grant 与 reconcile_order 工具确定性执行改派与未知订单核账
 
@@ -76,3 +76,20 @@ A 域工作台后端 SHALL 可通过受控域间 HTTP 调用 B1 已接收运行�
 - **WHEN** Agent 输入或工具参数试图改变执行域, 签名主体, 任务, 授权模式, 或引用不属于当前任务的委托
 - **THEN** 运行时拒绝调用并记录结构化失败, 不以其它身份查询钱包, 签名或发起业务请求
 - **AND** Web 会话及模型提示不授予 Agent 额外权限, 工具轨迹排除凭据和未披露材料
+
+### Requirement: 五层单向依赖与智能体协议隔离边界
+
+平台模块 (`grad/platform`) SHALL 按 L1 基础设施, L2 逻辑封装 (`core/`), L3 服务 (`service/api`, `service/mcp`), L4 Agent (`agent/`) 与薄装配入口 (`bootstrap/`, `cmd/`) 组织严格单向依赖, 任一层 SHALL 仅依赖其下方允许层与 `grad/protocol`. L4 Agent 层 SHALL 仅通过 L3 MCP 协议执行工具调用, 不得直接导入 L2, 数据库或 Fabric SDK. 平台测试套件 SHALL 包含自动化导入红线校验 (`arch_test.go`), 在单测期阻断任何越层依赖.
+
+#### Scenario: L4 Agent 与 L3 服务层满足单向导入红线
+
+- **WHEN** 运行平台单元测试 (含 `arch_test.go`) 静态扫描 `grad/platform/...` 全部生产与测试包的导入图
+- **THEN** `platform/agent/...` 的导入中不含 `platform/core/...`, `platform/service/api/...`, `pgx` 或 `fabric-gateway`
+- **AND** `platform/service/...` 的导入中不含 `platform/agent/...`, `pgxpool` 直接业务查询或 LLM SDK, `platform/core/...` 不含 `platform/service/...` 或 `platform/agent/...`
+- **AND** 任何新增越层导入都会立即导致架构校验测试失败
+
+#### Scenario: 单域二进制通过标准 MCP 协议隔离 L4 与 L3
+
+- **WHEN** A/B/C 域后端进程启动并处理采购对话, A1 转委托及 B1 询价下单流程
+- **THEN** L4 编排层通过标准 MCP 会话调用 L3 MCP Server 暴露的受限工具集, 不绕过 MCP 直接持有或读取 L2 钱包私钥上下文
+- **AND** `platform/bootstrap` 与 `platform/cmd` 仅承担依赖注入装配与生命周期管理, 不承载业务领域判断或协议状态机逻辑

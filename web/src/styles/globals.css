@@ -216,3 +216,13 @@
     }
   }
 }
+
+/* External scrollbar suppression for Base UI with <CSPProvider disableStyleElements>
+   so Select/ScrollArea never inject runtime <style> tags under strict default-src 'self' CSP. */
+.base-ui-disable-scrollbar {
+  scrollbar-width: none;
+}
+
+.base-ui-disable-scrollbar::-webkit-scrollbar {
+  display: none;
+}

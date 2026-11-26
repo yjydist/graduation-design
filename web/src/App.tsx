@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { CSPProvider } from "@base-ui/react/csp-provider";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Building2, ListChecks, MessageSquare, Scale } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
@@ -140,13 +141,15 @@ function WorkbenchRouter() {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <TooltipProvider>
-        <AuthProvider>
-          <WorkbenchRouter />
-          <Toaster />
-        </AuthProvider>
-      </TooltipProvider>
-    </BrowserRouter>
+    <CSPProvider disableStyleElements>
+      <BrowserRouter>
+        <TooltipProvider>
+          <AuthProvider>
+            <WorkbenchRouter />
+            <Toaster />
+          </AuthProvider>
+        </TooltipProvider>
+      </BrowserRouter>
+    </CSPProvider>
   );
 }

@@ -62,7 +62,7 @@ export function Topbar({
             <User className="size-4 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
             <span className="truncate text-sm font-medium">{roleLabel}</span>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-72 rounded-xl border border-border bg-popover shadow-e2">
+          <DropdownMenuContent align="end" className="w-72 rounded-xl">
             <DropdownMenuLabel className="space-y-1 py-2">
               <p className="text-sm font-semibold text-popover-foreground">
                 {roleLabel}

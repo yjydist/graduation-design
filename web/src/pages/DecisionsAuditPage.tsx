@@ -109,9 +109,11 @@ export function DecisionsAuditPage() {
         }
       />
 
-      <Card className="rounded-xl border border-border bg-card shadow-none">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">查询网关决定</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            查询网关决定
+          </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             C 域审计员可按决定 ID 复核全部已归档的网关决策记录；其他主体仅限查询与其权限匹配的记录。
           </CardDescription>
@@ -147,10 +149,7 @@ export function DecisionsAuditPage() {
       {loading ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {Array.from({ length: 4 }).map((_, idx) => (
-            <Card
-              key={idx}
-              className="rounded-xl border border-border bg-card shadow-none"
-            >
+            <Card key={idx}>
               <CardHeader>
                 <Skeleton className="h-5 w-36" />
               </CardHeader>
@@ -169,12 +168,14 @@ export function DecisionsAuditPage() {
           code={error.code}
           requestId={error.requestId}
           onRetry={
-            routeDecisionId ? () => void loadDecision(routeDecisionId) : undefined
+            routeDecisionId
+              ? () => void loadDecision(routeDecisionId)
+              : undefined
           }
         />
       ) : decision ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card className="rounded-xl border border-border bg-card shadow-none">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Scale
@@ -270,7 +271,7 @@ export function DecisionsAuditPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-xl border border-border bg-card shadow-none">
+          <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <FileCheck2
                 className="size-4 text-muted-foreground"
@@ -340,7 +341,7 @@ export function DecisionsAuditPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-xl border border-border bg-card shadow-none">
+          <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <ShieldCheck
                 className="size-4 text-muted-foreground"
@@ -390,7 +391,7 @@ export function DecisionsAuditPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-xl border border-border bg-card shadow-none">
+          <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <GitBranch
                 className="size-4 text-muted-foreground"
@@ -456,7 +457,7 @@ export function DecisionsAuditPage() {
           </Card>
         </div>
       ) : (
-        <Card className="rounded-xl border border-border bg-card shadow-none">
+        <Card>
           <CardContent className="p-0">
             <EmptyState
               icon={<Scale className="size-5" strokeWidth={2} />}

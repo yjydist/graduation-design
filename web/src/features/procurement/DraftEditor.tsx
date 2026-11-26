@@ -164,7 +164,7 @@ export function DraftEditor({
   };
 
   return (
-    <Card className="rounded-xl border border-border bg-card shadow-none">
+    <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2">
         <div className="space-y-1">
           <CardTitle className="text-base font-semibold">

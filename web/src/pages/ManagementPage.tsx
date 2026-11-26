@@ -1,27 +1,16 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  Blocks,
-  Building2,
-  FileSearch,
-  Hash,
-  Loader2,
-  RefreshCw,
-  Search,
-  Server,
-  Shield,
-} from "lucide-react";
+import { Building2, Hash, Loader2, RefreshCw, Server, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { backendApi } from "@/api/backend";
 import { formatApiError, getOrCreateIdempotencyKey } from "@/api/http";
-import type { Operation, PurchasingAuthority } from "@/api/types";
+import type { PurchasingAuthority } from "@/api/types";
 import { ConfirmDialog } from "@/components/patterns/ConfirmDialog";
 import { EmptyState } from "@/components/patterns/EmptyState";
 import { ErrorState } from "@/components/patterns/ErrorState";
 import { KeyValueList } from "@/components/patterns/KeyValueList";
 import { PageHeader } from "@/components/patterns/PageHeader";
 import { StatCard } from "@/components/patterns/StatCard";
-import { StatusBadge } from "@/components/patterns/StatusBadge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,7 +19,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -41,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/features/auth/AuthContext";
+import { OperationTracker } from "@/features/management/OperationTracker";
 import { DOMAIN_LABELS } from "@/lib/domain-labels";
 import { EMPTY_PLACEHOLDER, formatInteger } from "@/lib/format";
 
@@ -62,21 +51,7 @@ export function ManagementPage() {
   const [selectedService, setSelectedService] = useState<string>("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  const [lookupInput, setLookupInput] = useState(routeOpId ?? "");
-  const [operation, setOperation] = useState<Operation | null>(null);
-  const [operationLoading, setOperationLoading] = useState(false);
-  const [operationError, setOperationError] = useState<{
-    message: string;
-    code?: string;
-    requestId?: string;
-  } | null>(null);
-
-  const prevOpStatusRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    setLookupInput(routeOpId ?? "");
-  }, [routeOpId]);
+  const [opRefreshToken, setOpRefreshToken] = useState(0);
 
   const loadAuthority = useCallback(async (silent = false) => {
     if (!silent) {
@@ -96,7 +71,10 @@ export function ManagementPage() {
         if (prev && data.eligibleServiceIds.includes(prev)) {
           return prev;
         }
-        return data.eligibleServiceIds[0] ?? (data.purchasingAuthority ? CLEAR_SENTINEL : "");
+        return (
+          data.eligibleServiceIds[0] ??
+          (data.purchasingAuthority ? CLEAR_SENTINEL : "")
+        );
       });
     } catch (err) {
       setAuthorityError(formatApiError(err));
@@ -108,61 +86,6 @@ export function ManagementPage() {
   useEffect(() => {
     void loadAuthority();
   }, [loadAuthority]);
-
-  const loadOperation = useCallback(
-    async (opId: string, silent = false) => {
-      if (!silent) {
-        setOperationLoading(true);
-      }
-      setOperationError(null);
-      try {
-        const op = await backendApi.getOperation(opId);
-        setOperation(op);
-        if (prevOpStatusRef.current === "PENDING" && op.status === "CONFIRMED") {
-          toast.success("链上交易已确认，本域采购权威登记已更新。", {
-            duration: 3000,
-          });
-          void loadAuthority(true);
-        } else if (
-          prevOpStatusRef.current === "PENDING" &&
-          op.status === "FAILED"
-        ) {
-          toast.error("链上交易确认失败", {
-            description: op.failureCode || op.validationCode || "请检查失败码与登记版本。",
-            duration: 6000,
-          });
-        }
-        prevOpStatusRef.current = op.status;
-      } catch (err) {
-        setOperation(null);
-        setOperationError(formatApiError(err));
-      } finally {
-        setOperationLoading(false);
-      }
-    },
-    [loadAuthority],
-  );
-
-  useEffect(() => {
-    prevOpStatusRef.current = null;
-    if (!routeOpId) {
-      setOperation(null);
-      setOperationError(null);
-      setOperationLoading(false);
-      return;
-    }
-    void loadOperation(routeOpId);
-  }, [routeOpId, loadOperation]);
-
-  useEffect(() => {
-    if (!routeOpId || operation?.status !== "PENDING") {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      void loadOperation(routeOpId, true);
-    }, 2500);
-    return () => window.clearInterval(timer);
-  }, [routeOpId, operation?.status, loadOperation]);
 
   const handleOpenConfirm = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -212,15 +135,16 @@ export function ManagementPage() {
     }
   };
 
-  const handleLookupSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const trimmed = lookupInput.trim();
-    if (!trimmed) {
-      toast.error("请输入有效的操作 ID 后查询。", { duration: 6000 });
-      return;
-    }
-    navigate(`/management/${encodeURIComponent(trimmed)}`);
-  };
+  const handleOperationConfirmed = useCallback(() => {
+    void loadAuthority(true);
+  }, [loadAuthority]);
+
+  const handleSelectOperation = useCallback(
+    (opId: string) => {
+      navigate(`/management/${encodeURIComponent(opId)}`);
+    },
+    [navigate],
+  );
 
   const isClearing = selectedService === CLEAR_SENTINEL;
   const hasAnyChoice =
@@ -240,7 +164,7 @@ export function ManagementPage() {
             disabled={authorityLoading}
             onClick={() => {
               void loadAuthority();
-              if (routeOpId) void loadOperation(routeOpId);
+              if (routeOpId) setOpRefreshToken((n) => n + 1);
             }}
             className="h-9 gap-1.5 rounded-lg"
           >
@@ -313,7 +237,7 @@ export function ManagementPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="lg:col-span-6">
-          <Card className="rounded-xl border border-border bg-card shadow-none">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base font-semibold">
                 PA 资格配置
@@ -411,7 +335,9 @@ export function ManagementPage() {
                     {submitting && (
                       <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                     )}
-                    <span>{isClearing ? "申请清除采购权威" : "提交资格变更"}</span>
+                    <span>
+                      {isClearing ? "申请清除采购权威" : "提交资格变更"}
+                    </span>
                   </Button>
                 </form>
               )}
@@ -420,154 +346,12 @@ export function ManagementPage() {
         </div>
 
         <div className="space-y-6 lg:col-span-6">
-          <Card className="rounded-xl border border-border bg-card shadow-none">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">
-                原交易与入块状态核对
-              </CardTitle>
-              <CardDescription className="text-sm text-muted-foreground">
-                输入操作 ID 查询提交阶段、Fabric 交易 txId、入块校验码与区块哈希。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <form
-                onSubmit={handleLookupSubmit}
-                className="flex flex-col gap-3 sm:flex-row sm:items-end"
-              >
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <Label htmlFor="operation-id-input" className="text-sm font-medium">
-                    操作 ID
-                  </Label>
-                  <Input
-                    id="operation-id-input"
-                    name="operationId"
-                    value={lookupInput}
-                    onChange={(e) => setLookupInput(e.target.value)}
-                    placeholder="输入原操作 ID（operationId）"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    className="h-9 rounded-lg font-mono text-xs"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  className="h-9 shrink-0 gap-1.5 rounded-lg"
-                >
-                  <Search className="size-4" strokeWidth={2} aria-hidden="true" />
-                  <span>查询原交易</span>
-                </Button>
-              </form>
-
-              {operationLoading ? (
-                <div className="space-y-3 rounded-lg border border-border p-4">
-                  <Skeleton className="h-5 w-28" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              ) : operationError ? (
-                <ErrorState
-                  title="操作记录查询失败"
-                  message={operationError.message}
-                  code={operationError.code}
-                  requestId={operationError.requestId}
-                  onRetry={
-                    routeOpId ? () => void loadOperation(routeOpId) : undefined
-                  }
-                />
-              ) : operation ? (
-                <div className="space-y-4 rounded-xl border border-border bg-muted p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Blocks
-                        className="size-4 text-muted-foreground"
-                        strokeWidth={2}
-                        aria-hidden="true"
-                      />
-                      <span className="text-sm font-semibold text-foreground">
-                        {operation.method || "链上登记操作"}
-                      </span>
-                    </div>
-                    <StatusBadge status={operation.status} />
-                  </div>
-
-                  {operation.status === "PENDING" && (
-                    <p className="text-xs text-muted-foreground">
-                      正在每 2.5 秒自动轮询 Fabric 入块确认结果…
-                    </p>
-                  )}
-
-                  <KeyValueList
-                    columns={2}
-                    items={[
-                      {
-                        label: "操作 ID",
-                        value: operation.operationId,
-                        mono: true,
-                        copyText: operation.operationId,
-                      },
-                      {
-                        label: "原交易 txId",
-                        value: operation.txId ?? "等待账本分配",
-                        mono: Boolean(operation.txId),
-                        copyText: operation.txId ?? undefined,
-                      },
-                      {
-                        label: "交易阶段",
-                        value: operation.stage,
-                      },
-                      {
-                        label: "入块校验码",
-                        value: operation.validationCode ?? EMPTY_PLACEHOLDER,
-                        mono: Boolean(operation.validationCode),
-                      },
-                      {
-                        label: "确认块高",
-                        value:
-                          operation.blockNumber !== null
-                            ? formatInteger(operation.blockNumber)
-                            : EMPTY_PLACEHOLDER,
-                      },
-                      {
-                        label: "交易序号",
-                        value:
-                          operation.transactionIndex !== null
-                            ? formatInteger(operation.transactionIndex)
-                            : EMPTY_PLACEHOLDER,
-                      },
-                      {
-                        label: "区块哈希",
-                        value: operation.blockHash ?? EMPTY_PLACEHOLDER,
-                        mono: Boolean(operation.blockHash),
-                        copyText: operation.blockHash,
-                      },
-                      {
-                        label: "观测节点",
-                        value: operation.observedPeer ?? EMPTY_PLACEHOLDER,
-                        mono: Boolean(operation.observedPeer),
-                      },
-                      {
-                        label: "已交付状态",
-                        value: operation.delivered ? "是" : "否",
-                      },
-                      {
-                        label: "提交失败码",
-                        value: operation.failureCode ?? EMPTY_PLACEHOLDER,
-                        mono: Boolean(operation.failureCode),
-                      },
-                    ]}
-                  />
-                </div>
-              ) : (
-                <EmptyState
-                  icon={<FileSearch className="size-5" strokeWidth={2} />}
-                  title="尚未查询操作记录"
-                  description="在左侧提交 PA 资格变更后将自动追踪，或在上方输入已有操作 ID 核对链上交易。"
-                />
-              )}
-            </CardContent>
-          </Card>
+          <OperationTracker
+            operationId={routeOpId}
+            refreshToken={opRefreshToken}
+            onSelectOperation={handleSelectOperation}
+            onConfirmed={handleOperationConfirmed}
+          />
         </div>
       </div>
 

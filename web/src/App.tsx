@@ -1,55 +1,20 @@
 import { useMemo } from "react";
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-  useNavigate,
-} from "react-router-dom";
-import {
-  Building2,
-  ListChecks,
-  MessageSquare,
-  Scale,
-  ShieldAlert,
-} from "lucide-react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Building2, ListChecks, MessageSquare, Scale } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import type { NavItemConfig } from "@/components/app/Sidebar";
-import { EmptyState } from "@/components/patterns/EmptyState";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/features/auth/AuthContext";
-import { LoginPage } from "@/features/auth/LoginPage";
-import { DecisionsAuditPage } from "@/features/evidence/DecisionsAuditPage";
-import { RunEvidencePanel } from "@/features/evidence/RunEvidencePanel";
-import { ManagementPage } from "@/features/management/ManagementPage";
-import { ChatPage } from "@/features/procurement/ChatPage";
-import { RunDetailPage } from "@/features/procurement/RunDetailPage";
-import { RunsListPage } from "@/features/procurement/RunsListPage";
+import { ChatPage } from "@/pages/ChatPage";
+import { DecisionsAuditPage } from "@/pages/DecisionsAuditPage";
+import { ForbiddenPage } from "@/pages/ForbiddenPage";
+import { LoginPage } from "@/pages/LoginPage";
+import { ManagementPage } from "@/pages/ManagementPage";
+import { RunDetailPage } from "@/pages/RunDetailPage";
+import { RunsListPage } from "@/pages/RunsListPage";
 import { resolveRoleLabel } from "@/lib/domain-labels";
-
-function ForbiddenPage({ homePath }: { homePath: string }) {
-  const navigate = useNavigate();
-  return (
-    <EmptyState
-      icon={<ShieldAlert className="size-5" strokeWidth={2} />}
-      title="当前账号无权访问此页面"
-      description="操作权限由本域会话角色与链上登记决定。请返回当前账号获准使用的工作区。"
-      action={
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => navigate(homePath, { replace: true })}
-          className="rounded-lg"
-        >
-          返回可用页面
-        </Button>
-      }
-    />
-  );
-}
 
 function WorkbenchRouter() {
   const {
@@ -153,27 +118,7 @@ function WorkbenchRouter() {
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/chat/:draftId" element={<ChatPage />} />
             <Route path="/runs" element={<RunsListPage />} />
-            <Route
-              path="/runs/:runId"
-              element={
-                <RunDetailPage
-                  renderEvidence={({ run, evidence, loading, error, onRetry }) => (
-                    <RunEvidencePanel
-                      evidence={evidence}
-                      loading={loading}
-                      error={error}
-                      onRetry={onRetry}
-                      taskMaxAmountMinor={
-                        evidence?.delegations.find((d) => d.parentId && d.parentId !== d.rootId)
-                          ?.maxAmountMinor ??
-                        evidence?.delegations[0]?.maxAmountMinor ??
-                        run.task.maxAmountMinor
-                      }
-                    />
-                  )}
-                />
-              }
-            />
+            <Route path="/runs/:runId" element={<RunDetailPage />} />
           </>
         )}
 

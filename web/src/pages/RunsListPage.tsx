@@ -81,6 +81,8 @@ export function RunsListPage() {
     statusFilter !== ALL_FILTER ||
     modeFilter !== ALL_FILTER;
 
+  const isTrueEmpty = !loading && !error && runs.length === 0 && !hasActiveFilters;
+
   const filteredRuns = useMemo(() => {
     const query = search.trim().toLowerCase();
     return runs.filter((run) => {
@@ -188,12 +190,13 @@ export function RunsListPage() {
                 />
               }
             >
-              <MoreHorizontal className="size-4" strokeWidth={2} aria-hidden="true" />
+              <MoreHorizontal
+                className="size-4"
+                strokeWidth={2}
+                aria-hidden="true"
+              />
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="rounded-xl border border-border bg-popover shadow-e2"
-            >
+            <DropdownMenuContent align="end" className="rounded-xl">
               <DropdownMenuItem
                 onClick={() =>
                   navigate(`/runs/${encodeURIComponent(run.runId)}`)
@@ -231,19 +234,21 @@ export function RunsListPage() {
               />
               <span>刷新列表</span>
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => navigate("/chat")}
-              className="h-9 gap-1.5 rounded-lg"
-            >
-              <MessageSquarePlus
-                className="size-4"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-              <span>发起采购对话</span>
-            </Button>
+            {!isTrueEmpty && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => navigate("/chat")}
+                className="h-9 gap-1.5 rounded-lg"
+              >
+                <MessageSquarePlus
+                  className="size-4"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+                <span>发起采购对话</span>
+              </Button>
+            )}
           </>
         }
       />

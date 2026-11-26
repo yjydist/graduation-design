@@ -177,7 +177,7 @@ export function ChatPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="lg:col-span-6">
-          <Card className="flex h-full flex-col rounded-xl border border-border bg-card shadow-none">
+          <Card className="flex h-full flex-col">
             <CardHeader>
               <CardTitle className="text-base font-semibold">
                 与 A1 交互
@@ -326,7 +326,7 @@ export function ChatPage() {
 
         <div className="lg:col-span-6">
           {draftLoading ? (
-            <Card className="rounded-xl border border-border bg-card shadow-none">
+            <Card>
               <CardHeader>
                 <Skeleton className="h-5 w-36" />
                 <Skeleton className="h-4 w-64" />
@@ -346,7 +346,9 @@ export function ChatPage() {
               message={draftError.message}
               code={draftError.code}
               requestId={draftError.requestId}
-              onRetry={routeDraftId ? () => void loadDraft(routeDraftId) : undefined}
+              onRetry={
+                routeDraftId ? () => void loadDraft(routeDraftId) : undefined
+              }
             />
           ) : draft ? (
             <DraftEditor
@@ -355,7 +357,7 @@ export function ChatPage() {
               onConfirmed={handleConfirmed}
             />
           ) : (
-            <Card className="rounded-xl border border-border bg-card shadow-none">
+            <Card>
               <CardContent className="p-0">
                 <EmptyState
                   icon={<FileText className="size-5" strokeWidth={2} />}

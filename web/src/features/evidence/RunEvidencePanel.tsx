@@ -67,6 +67,35 @@ function resolveHopLevel(item: DelegationEvidence): "G0" | "G1" | "G2" {
   return "G2";
 }
 
+/**
+ * Resolves the effective single-order amount ceiling (in minor units) for quote comparison.
+ * Prioritizes the tightest active delegation hop (G2 -> G1 -> confirmed task limit -> G0)
+ * so an unissued G2 never silently falls back to a looser G0 supplier root ceiling.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function resolveEffectiveCeilingMinor(
+  delegations: DelegationEvidence[],
+  taskMaxAmountMinor?: number,
+): number | undefined {
+  let g0: number | undefined;
+  let g1: number | undefined;
+  let g2: number | undefined;
+  for (const hop of delegations) {
+    if (hop.maxAmountMinor === undefined || hop.maxAmountMinor <= 0) {
+      continue;
+    }
+    const level = resolveHopLevel(hop);
+    if (level === "G2") g2 = hop.maxAmountMinor;
+    else if (level === "G1") g1 = hop.maxAmountMinor;
+    else g0 = hop.maxAmountMinor;
+  }
+  const taskCap =
+    taskMaxAmountMinor !== undefined && taskMaxAmountMinor > 0
+      ? taskMaxAmountMinor
+      : undefined;
+  return g2 ?? g1 ?? taskCap ?? g0;
+}
+
 function isGrantInactive(status: string): boolean {
   const key = status.trim().toLowerCase();
   return (
@@ -773,7 +802,7 @@ export function RunEvidencePanel({
 }: RunEvidencePanelProps) {
   if (loading && !evidence) {
     return (
-      <Card className="rounded-xl border border-border bg-card shadow-none">
+      <Card>
         <CardHeader>
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-72" />
@@ -800,7 +829,7 @@ export function RunEvidencePanel({
 
   if (!evidence) {
     return (
-      <Card className="rounded-xl border border-border bg-card shadow-none">
+      <Card>
         <CardContent className="p-0">
           <EmptyState
             icon={<Scale className="size-5" strokeWidth={2} />}
@@ -812,8 +841,13 @@ export function RunEvidencePanel({
     );
   }
 
+  const effectiveCeilingMinor = resolveEffectiveCeilingMinor(
+    evidence.delegations,
+    taskMaxAmountMinor,
+  );
+
   return (
-    <Card className="rounded-xl border border-border bg-card shadow-none">
+    <Card>
       <CardHeader>
         <CardTitle className="text-base font-semibold">
           五类角色可见业务证据
@@ -847,7 +881,7 @@ export function RunEvidencePanel({
           <TabsContent value="purchase">
             <PurchaseView
               purchase={evidence.purchase}
-              ceilingMinor={taskMaxAmountMinor}
+              ceilingMinor={effectiveCeilingMinor}
             />
           </TabsContent>
 

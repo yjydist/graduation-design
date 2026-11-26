@@ -10,7 +10,8 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { resolveRoleLabel } from "@/lib/domain-labels";
 
 export function LoginPage() {
-  const { domainId, ready, readinessError, login, refreshReadiness } = useAuth();
+  const { domainId, ready, readinessError, login, refreshReadiness } =
+    useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -107,10 +108,17 @@ export function LoginPage() {
         </div>
       )}
 
-      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4" noValidate>
+      <form
+        onSubmit={(e) => void handleSubmit(e)}
+        className="space-y-4"
+        noValidate
+      >
         <div className="space-y-1.5">
           <Label htmlFor="login-username" className="text-sm font-medium">
-            本域账号 <span className="text-destructive" aria-hidden="true">*</span>
+            本域账号{" "}
+            <span className="text-destructive" aria-hidden="true">
+              *
+            </span>
           </Label>
           <Input
             id="login-username"
@@ -123,7 +131,9 @@ export function LoginPage() {
             required
             aria-required="true"
             aria-invalid={Boolean(fieldError)}
-            aria-describedby={fieldError ? "login-error" : "login-username-hint"}
+            aria-describedby={
+              fieldError ? "login-error" : "login-username-hint"
+            }
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             disabled={submitting}
@@ -137,7 +147,10 @@ export function LoginPage() {
 
         <div className="space-y-1.5">
           <Label htmlFor="login-password" className="text-sm font-medium">
-            密码 <span className="text-destructive" aria-hidden="true">*</span>
+            密码{" "}
+            <span className="text-destructive" aria-hidden="true">
+              *
+            </span>
           </Label>
           <Input
             id="login-password"

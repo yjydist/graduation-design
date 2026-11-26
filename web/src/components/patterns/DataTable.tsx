@@ -191,7 +191,7 @@ export function DataTable<T>({
                         "transition-colors duration-150",
                         selected
                           ? "bg-brand-muted hover:bg-brand-muted"
-                          : "hover:bg-muted",
+                          : "bg-card hover:bg-muted",
                       )}
                     >
                       {columns.map((column, index) => {
@@ -204,7 +204,7 @@ export function DataTable<T>({
                               column.align === "right" &&
                                 "text-right tabular-nums",
                               isSticky &&
-                                "sticky left-0 bg-inherit",
+                                "sticky left-0 z-10 bg-inherit",
                               column.cellClassName,
                             )}
                           >

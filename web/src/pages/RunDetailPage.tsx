@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import { classifyToolTrace } from "@/api/agent";
 import { backendApi } from "@/api/backend";
 import {
-  ApiError,
   formatApiError,
   getOrCreateIdempotencyKey,
   type FormattedApiError,
@@ -37,6 +36,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/features/auth/AuthContext";
+import { RunEvidencePanel } from "@/features/evidence/RunEvidencePanel";
 import { resolveModeLabel, resolveStageLabel } from "@/lib/domain-labels";
 import {
   EMPTY_PLACEHOLDER,
@@ -46,14 +46,31 @@ import {
   truncateMiddle,
 } from "@/lib/format";
 
-export interface RunDetailPageProps {
-  renderEvidence?: (params: {
-    run: Run;
-    evidence: RunEvidence | null;
-    loading: boolean;
-    error: FormattedApiError | null;
-    onRetry: () => void;
-  }) => ReactNode;
+const ACTIVE_STEP_STATUSES = new Set([
+  "pending",
+  "accepted",
+  "submitted",
+  "running",
+  "waiting",
+]);
+
+/**
+ * Determines whether the run detail view should keep background polling active.
+ * Polls only when the run is non-terminal (PENDING / OUTCOME_UNKNOWN) or has an
+ * in-flight ledger step (e.g. a newly submitted G1 suspend/resume operation),
+ * stopping automatically once finalized or when the backend returns an error.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function shouldPollRun(run: Run | null, hasError: boolean): boolean {
+  if (!run || hasError) {
+    return false;
+  }
+  if (run.status === "PENDING" || run.status === "OUTCOME_UNKNOWN") {
+    return true;
+  }
+  return run.steps.some((step) =>
+    ACTIVE_STEP_STATUSES.has(step.status.trim().toLowerCase()),
+  );
 }
 
 function RunStepsList({ steps }: { steps: RunStep[] }) {
@@ -279,7 +296,9 @@ function ToolTracesList({ traces }: { traces: ToolTrace[] | null }) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge
-                  variant={info.originKind === "service" ? "secondary" : "outline"}
+                  variant={
+                    info.originKind === "service" ? "secondary" : "outline"
+                  }
                   className="gap-1 text-xs"
                 >
                   {info.originKind === "service" ? (
@@ -319,7 +338,7 @@ function ToolTracesList({ traces }: { traces: ToolTrace[] | null }) {
   );
 }
 
-export function RunDetailPage({ renderEvidence }: RunDetailPageProps) {
+export function RunDetailPage() {
   const { runId } = useParams<{ runId: string }>();
   const { session } = useAuth();
 
@@ -362,12 +381,7 @@ export function RunDetailPage({ renderEvidence }: RunDetailPageProps) {
         setEvidence(evRes.value);
         setEvidenceError(null);
       } else {
-        const reason = evRes.reason;
-        if (reason instanceof ApiError && reason.status === 401) {
-          setEvidenceError(formatApiError(reason));
-        } else {
-          setEvidenceError(formatApiError(reason));
-        }
+        setEvidenceError(formatApiError(evRes.reason));
       }
       setEvidenceLoading(false);
     },
@@ -378,13 +392,15 @@ export function RunDetailPage({ renderEvidence }: RunDetailPageProps) {
     void loadAll(false);
   }, [loadAll]);
 
+  const pollingEnabled = shouldPollRun(run, Boolean(runError));
+
   useEffect(() => {
-    if (!runId) return;
+    if (!runId || !pollingEnabled) return;
     const timer = window.setInterval(() => {
       void loadAll(true);
     }, 2500);
     return () => window.clearInterval(timer);
-  }, [runId, loadAll]);
+  }, [runId, pollingEnabled, loadAll]);
 
   const handleGrantAction = async () => {
     if (!run || !session || !pendingAction) return;
@@ -539,7 +555,7 @@ export function RunDetailPage({ renderEvidence }: RunDetailPageProps) {
             {/* Primary 2/3 area */}
             <div className="space-y-6 lg:col-span-8">
               <Tabs defaultValue="evidence" className="space-y-4">
-                <TabsList className="w-full justify-start sm:w-fit">
+                <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 sm:w-fit">
                   <TabsTrigger value="evidence">五类业务证据</TabsTrigger>
                   <TabsTrigger value="traces">
                     工具轨迹（{run.traces?.length ?? 0}）
@@ -550,25 +566,17 @@ export function RunDetailPage({ renderEvidence }: RunDetailPageProps) {
                 </TabsList>
 
                 <TabsContent value="evidence">
-                  {renderEvidence ? (
-                    renderEvidence({
-                      run,
-                      evidence,
-                      loading: evidenceLoading,
-                      error: evidenceError,
-                      onRetry: () => void loadAll(false),
-                    })
-                  ) : (
-                    <Card className="rounded-xl border border-border bg-card shadow-none">
-                      <CardContent className="p-6 text-sm text-muted-foreground">
-                        正在准备证据视图…
-                      </CardContent>
-                    </Card>
-                  )}
+                  <RunEvidencePanel
+                    evidence={evidence}
+                    loading={evidenceLoading}
+                    error={evidenceError}
+                    onRetry={() => void loadAll(false)}
+                    taskMaxAmountMinor={run.task.maxAmountMinor}
+                  />
                 </TabsContent>
 
                 <TabsContent value="traces">
-                  <Card className="rounded-xl border border-border bg-card shadow-none">
+                  <Card>
                     <CardHeader>
                       <CardTitle className="text-base font-semibold">
                         已脱敏工具与服务调用轨迹
@@ -584,7 +592,7 @@ export function RunDetailPage({ renderEvidence }: RunDetailPageProps) {
                 </TabsContent>
 
                 <TabsContent value="steps">
-                  <Card className="rounded-xl border border-border bg-card shadow-none">
+                  <Card>
                     <CardHeader>
                       <CardTitle className="text-base font-semibold">
                         链上登记与委托交付步骤
@@ -603,7 +611,7 @@ export function RunDetailPage({ renderEvidence }: RunDetailPageProps) {
 
             {/* Secondary 1/3 metadata rail */}
             <aside className="space-y-6 lg:col-span-4">
-              <Card className="rounded-xl border border-border bg-card shadow-none">
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between gap-2">
                   <CardTitle className="text-base font-semibold">
                     运行状态
@@ -654,7 +662,7 @@ export function RunDetailPage({ renderEvidence }: RunDetailPageProps) {
                 </CardContent>
               </Card>
 
-              <Card className="rounded-xl border border-border bg-card shadow-none">
+              <Card>
                 <CardHeader>
                   <CardTitle className="text-base font-semibold">
                     已确认任务参数

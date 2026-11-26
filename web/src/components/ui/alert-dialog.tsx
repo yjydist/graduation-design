@@ -1,5 +1,5 @@
-"use client"
-
+// Customized from shadcn base-vega: align overlay/modal z-index tokens,
+// bg-black/40 scrim, rounded-2xl, shadow-e3, and duration-200 per web/AGENTS.md sections 1, 2.2, and 3.4.
 import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog"
 import { cn } from "@/lib/utils"

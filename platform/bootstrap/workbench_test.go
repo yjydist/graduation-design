@@ -79,7 +79,7 @@ func (g *stubWorkbenchGateway) handleChallenge(w http.ResponseWriter, r *http.Re
 	}
 	n := g.seq.Add(1)
 	nowSec := g.now().UTC().Unix()
-	sum := sha256.Sum256([]byte(fmt.Sprintf("wb-stub-nonce-%s-%d", g.depID, n)))
+	sum := sha256.Sum256(fmt.Appendf(nil, "wb-stub-nonce-%s-%d", g.depID, n))
 	resp := wallet.ChallengeResponse{
 		ChallengeID: fmt.Sprintf("urn:grad:chal:%04d", n),
 		Nonce:       base64.RawURLEncoding.EncodeToString(sum[:]),

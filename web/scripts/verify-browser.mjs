@@ -256,6 +256,18 @@ const EVIDENCE_FIXTURE = {
       probeDeadline: 1764137000,
       decisionAt: 1764136840,
     },
+    {
+      requestId: "req-precheck-001",
+      action: "order:precheck",
+      outcome: "DENY",
+      code: "GRANT_SUSPENDED",
+      blockNumber: 0,
+      blockHash: "",
+      policyDigest: "",
+      contextVersion: 0,
+      probeDeadline: 0,
+      decisionAt: 1764136838,
+    },
   ],
 };
 
@@ -677,11 +689,41 @@ async function main() {
 
     const quoteBadgeCheck = await evalJs(`(() => {
       const text = document.body.innerText;
-      return text.includes("在上限内") && text.includes("超出单笔上限");
+      const breadcrumb = document.querySelector('nav[aria-label="面包屑导航"]');
+      return {
+        quotesOk: text.includes("在上限内") && text.includes("超出单笔上限"),
+        hasBreadcrumb: Boolean(breadcrumb),
+      };
     })()`);
     assert(
-      quoteBadgeCheck,
+      quoteBadgeCheck.quotesOk,
       "PurchaseView failed to evaluate ¥800 (in limit) and ¥1,200 (exceeds limit) against G1 ceiling",
+    );
+    assert(
+      quoteBadgeCheck.hasBreadcrumb,
+      "RunDetailPage missing localized Breadcrumb aria-label='面包屑导航'",
+    );
+
+    // Switch inner evidence tab to Decisions timeline and verify precheck blockNumber=0 renders em-dash
+    await evalJs(`(() => {
+      const tab = Array.from(document.querySelectorAll('[role="tab"]')).find((t) =>
+        t.textContent?.includes("决策时间线"),
+      );
+      tab?.click();
+    })()`);
+    await wait(200);
+    const precheckBlockCheck = await evalJs(`(() => {
+      const items = Array.from(document.querySelectorAll("ol li"));
+      const precheckItem = items.find((li) => li.textContent?.includes("预检记录"));
+      if (!precheckItem) return null;
+      const dts = Array.from(precheckItem.querySelectorAll("dt"));
+      const blockDt = dts.find((dt) => dt.textContent?.trim() === "采用块高");
+      const blockDd = blockDt?.nextElementSibling?.textContent?.trim() ?? null;
+      return blockDd;
+    })()`);
+    assert(
+      precheckBlockCheck === "—",
+      `Expected precheck decision without block to render '—', got ${JSON.stringify(precheckBlockCheck)}`,
     );
 
     const pressKey = async (key, code, windowsVirtualKeyCode, text) => {
@@ -730,7 +772,7 @@ async function main() {
       "ConfirmDialog did not open",
     );
     await pressKey("Escape", "Escape", 27);
-    await wait(250);
+    await wait(600);
     assert(
       !(await evalJs(`Boolean(document.querySelector('[data-slot="alert-dialog-content"]'))`)),
       "ConfirmDialog did not close on Escape",
@@ -840,6 +882,19 @@ async function main() {
         !draftSelectLabels.modeText.includes("RESOURCE_PREAUTHORIZED"),
       `DraftEditor Select triggers exposed raw values: ${JSON.stringify(draftSelectLabels)}`,
     );
+    // Verify disabled Save button exposes tooltip on keyboard Tab focus
+    await evalJs(`document.querySelector("#draft-description")?.focus()`);
+    await pressKey("Tab", "Tab", 9);
+    await wait(250);
+    const saveTooltipText = await evalJs(
+      `document.querySelector('[data-slot="tooltip-content"]')?.textContent?.trim() ?? ""`,
+    );
+    assert(
+      saveTooltipText.includes("当前草稿尚无未保存的修改"),
+      `Expected disabled Save button tooltip explanation on keyboard Tab, got ${JSON.stringify(saveTooltipText)}`,
+    );
+    await pressKey("Escape", "Escape", 27);
+    await wait(150);
     await evalJs(`(() => {
       const form = document.querySelector("#chat-message")?.closest("form");
       form?.querySelector('button[type="submit"]')?.click();
@@ -862,6 +917,33 @@ async function main() {
       if (did) setNative(did, "not-a-did");
     })()`);
     await wait(100);
+    // When dirty, disabled Confirm button must expose tooltip on hover explaining to save first
+    const confirmRect = await evalJs(`(() => {
+      const confirmBtn = Array.from(document.querySelectorAll("button")).find((b) =>
+        b.textContent?.includes("确认并派单"),
+      );
+      const trigger = confirmBtn?.closest('[data-slot="tooltip-trigger"]');
+      if (!trigger) return null;
+      trigger.scrollIntoView({ block: "center" });
+      const rect = trigger.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    })()`);
+    assert(confirmRect, "Disabled Confirm button TooltipTrigger wrapper not found");
+    await send("Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      x: confirmRect.x,
+      y: confirmRect.y,
+    });
+    await wait(250);
+    const confirmTooltipText = await evalJs(
+      `document.querySelector('[data-slot="tooltip-content"]')?.textContent?.trim() ?? ""`,
+    );
+    assert(
+      confirmTooltipText.includes("请先保存草稿修改"),
+      `Expected disabled Confirm button tooltip explanation on hover, got ${JSON.stringify(confirmTooltipText)}`,
+    );
+    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 0 });
+    await wait(150);
     await evalJs(`(() => {
       const btn = Array.from(document.querySelectorAll("button")).find((b) => b.textContent.includes("保存草稿修改"));
       btn?.click();
@@ -909,7 +991,7 @@ async function main() {
       "Mobile Sheet drawer did not open at 320px",
     );
     await pressKey("Escape", "Escape", 27);
-    await wait(250);
+    await wait(600);
     assert(
       !(await evalJs(`Boolean(document.querySelector('[data-slot="sheet-content"]'))`)),
       "Mobile Sheet drawer did not close on Escape",

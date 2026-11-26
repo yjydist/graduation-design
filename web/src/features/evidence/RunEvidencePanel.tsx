@@ -717,7 +717,10 @@ function DecisionsTimelineView({ items }: { items: DecisionSummary[] }) {
                   : []),
                 {
                   label: "采用块高",
-                  value: formatInteger(item.blockNumber),
+                  value:
+                    item.blockNumber > 0 || item.blockHash
+                      ? formatInteger(item.blockNumber)
+                      : EMPTY_PLACEHOLDER,
                 },
                 {
                   label: "采用区块哈希",

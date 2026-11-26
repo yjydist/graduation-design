@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { CheckCircle2, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { agentApi } from "@/api/agent";
@@ -24,6 +24,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MODE_LABELS, PRODUCT_LABELS } from "@/lib/domain-labels";
 import {
   MAX_DRAFT_DESCRIPTION_CODEPOINTS,
@@ -63,6 +68,33 @@ type DraftFieldKey =
   | "description";
 
 type DraftFieldErrors = Partial<Record<DraftFieldKey, string>>;
+
+function DisabledReasonTooltip({
+  reason,
+  children,
+}: {
+  reason: string | null;
+  children: ReactNode;
+}) {
+  if (!reason) {
+    return <>{children}</>;
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            tabIndex={0}
+            className="inline-flex rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          />
+        }
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent>{reason}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function DraftEditor({
   draft,
@@ -131,6 +163,22 @@ export function DraftEditor({
   const descInvalid = descOverLimit || Boolean(fieldErrors.description);
   const parsedAmount = Number(maxAmountMinor);
   const parsedQty = Number(quantity);
+
+  const saveDisabledReason =
+    saving || confirming
+      ? null
+      : descOverLimit
+        ? `任务说明超出 ${MAX_DRAFT_DESCRIPTION_CODEPOINTS} 个字符上限，请精简后再保存。`
+        : !dirty
+          ? "当前草稿尚无未保存的修改。"
+          : null;
+
+  const confirmDisabledReason =
+    saving || confirming
+      ? null
+      : dirty
+        ? "请先保存草稿修改，再确认并启动派单。"
+        : null;
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -538,33 +586,37 @@ export function DraftEditor({
           )}
 
           <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
-            <Button
-              type="submit"
-              variant="secondary"
-              disabled={!dirty || saving || confirming || descOverLimit}
-              className="h-9 gap-1.5 rounded-lg"
-            >
-              {saving ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Save className="size-4" strokeWidth={2} aria-hidden="true" />
-              )}
-              <span>{saving ? "正在保存…" : "保存草稿修改"}</span>
-            </Button>
+            <DisabledReasonTooltip reason={saveDisabledReason}>
+              <Button
+                type="submit"
+                variant="secondary"
+                disabled={!dirty || saving || confirming || descOverLimit}
+                className="h-9 gap-1.5 rounded-lg"
+              >
+                {saving ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save className="size-4" strokeWidth={2} aria-hidden="true" />
+                )}
+                <span>{saving ? "正在保存…" : "保存草稿修改"}</span>
+              </Button>
+            </DisabledReasonTooltip>
 
-            <Button
-              type="button"
-              disabled={dirty || saving || confirming}
-              onClick={() => setConfirmOpen(true)}
-              className="h-9 gap-1.5 rounded-lg"
-            >
-              <CheckCircle2
-                className="size-4"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-              <span>确认并派单</span>
-            </Button>
+            <DisabledReasonTooltip reason={confirmDisabledReason}>
+              <Button
+                type="button"
+                disabled={dirty || saving || confirming}
+                onClick={() => setConfirmOpen(true)}
+                className="h-9 gap-1.5 rounded-lg"
+              >
+                <CheckCircle2
+                  className="size-4"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+                <span>确认并派单</span>
+              </Button>
+            </DisabledReasonTooltip>
           </div>
         </form>
       </CardContent>

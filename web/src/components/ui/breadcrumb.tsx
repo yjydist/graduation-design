@@ -1,4 +1,5 @@
-// Customized from shadcn base-vega: localize screen-reader label per web/AGENTS.md section 7.
+// Customized from shadcn base-vega: localize screen-reader labels and align
+// BreadcrumbLink focus-visible ring per web/AGENTS.md sections 7 and 8.1.
 import * as React from "react"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
@@ -8,7 +9,7 @@ import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react"
 function Breadcrumb({ className, ...props }: React.ComponentProps<"nav">) {
   return (
     <nav
-      aria-label="breadcrumb"
+      aria-label="面包屑导航"
       data-slot="breadcrumb"
       className={cn(className)}
       {...props}
@@ -48,7 +49,10 @@ function BreadcrumbLink({
     defaultTagName: "a",
     props: mergeProps<"a">(
       {
-        className: cn("transition-colors hover:text-foreground", className),
+        className: cn(
+          "rounded-sm transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          className
+        ),
       },
       props
     ),

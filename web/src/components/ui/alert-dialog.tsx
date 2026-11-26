@@ -1,5 +1,5 @@
 // Customized from shadcn base-vega: align overlay/modal z-index tokens,
-// bg-black/40 scrim, rounded-2xl, shadow-e3, and duration-200 per web/AGENTS.md sections 1, 2.2, and 3.4.
+// bg-black/40 scrim, rounded-2xl, shadow-e3, and duration-500 per web/AGENTS.md sections 1, 2.2, and 3.4.
 import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog"
 import { cn } from "@/lib/utils"
@@ -30,7 +30,7 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-overlay bg-black/40 duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-overlay bg-black/40 duration-500 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -52,7 +52,7 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-modal grid w-full -translate-x-1/2 -translate-y-1/2 gap-6 rounded-2xl border border-border bg-popover p-6 text-popover-foreground shadow-e3 duration-200 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-modal grid w-full -translate-x-1/2 -translate-y-1/2 gap-6 rounded-2xl border border-border bg-popover p-6 text-popover-foreground shadow-e3 duration-500 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}

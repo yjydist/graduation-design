@@ -1,5 +1,5 @@
-"use client"
-
+// Customized from shadcn base-vega: align Tabs sizing, focus-visible ring,
+// and solid semantic active border per web/AGENTS.md sections 1, 2.2, 3.4, and 8.1.
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"

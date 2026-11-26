@@ -6,6 +6,14 @@ import { EmptyState } from "@/components/patterns/EmptyState";
 import { StatCard } from "@/components/patterns/StatCard";
 import { StatusBadge } from "@/components/patterns/StatusBadge";
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -160,6 +168,26 @@ describe("Pattern state matrix rendering", () => {
     const emptyHtml = renderToStaticMarkup(<StatCard label="采购权威" value={null} />);
     expect(emptyHtml).toContain("—");
     expect(emptyHtml).not.toContain(">0<");
+  });
+
+  it("renders Breadcrumb with localized Chinese aria-label and unified focus-visible ring", () => {
+    const html = renderToStaticMarkup(
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/runs">采购运行</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>运行详情</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>,
+    );
+    expect(html).toContain('aria-label="面包屑导航"');
+    expect(html).toContain("focus-visible:ring-2");
+    expect(html).toContain("focus-visible:ring-ring");
+    expect(html).toContain("focus-visible:ring-offset-2");
   });
 });
 

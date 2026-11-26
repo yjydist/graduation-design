@@ -1,20 +1,16 @@
 import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import type { DomainId } from "@/api/types";
+import { DOMAIN_LABELS } from "@/lib/domain-labels";
 import { cn } from "@/lib/utils";
 
 export interface DomainBadgeProps {
-  domainId: "A" | "B" | "C" | null;
+  domainId: DomainId | null;
   ready: boolean | null;
   className?: string;
 }
 
-const DOMAIN_NAMES: Record<"A" | "B" | "C", string> = {
-  A: "A 域（买方）",
-  B: "B 域（代理）",
-  C: "C 域（卖方/网关）",
-};
-
 export function DomainBadge({ domainId, ready, className }: DomainBadgeProps) {
-  const domainText = domainId ? DOMAIN_NAMES[domainId] : "本域";
+  const domainText = domainId ? DOMAIN_LABELS[domainId] : "本域";
 
   if (ready === null) {
     return (

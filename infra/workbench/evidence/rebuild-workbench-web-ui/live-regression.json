@@ -1,39 +1,39 @@
 {
-  "verifiedAt": "2026-11-26T08:16:44.121Z",
-  "frontendImageDigest": "sha256:88b034e9f63b6533239a328a20f195114212f888df10b42306978f665007508a",
+  "verifiedAt": "2026-11-26T08:48:46.270Z",
+  "frontendImageDigest": "sha256:33aa0d97c8b801d1208df7a11af4c3398fb5bc091c29293522cc2fe849443b2f",
   "backendImageDigest": "sha256:82de143fa45a67d1e04174faaa2cc697b63cbc55f3f306d52ab30e0207974ff0",
   "domains": {
     "A": {
       "origin": "https://a.localhost:18451",
-      "operationId": "management:b73ca042ca6e8d57c377c35b30e820c827724e64dfdf3d84382410ed3958b836",
+      "operationId": "management:03a36178ba5b34db37434d0a75fcb07c792475dfc82d1f8733b2e5966673ee91",
       "spaReloadConfirmed": true,
       "validationCode": "VALID"
     },
     "B": {
       "origin": "https://b.localhost:18452",
-      "operationId": "management:ca9405b0455d121b6c225c59efb9c5a0d8a2cda3396847c31890ffb12fe13662",
+      "operationId": "management:93b544efa06e4a9b840e6cb33c79b6d4b7493f4a1367290cd42d3cb7277a61fe",
       "spaReloadConfirmed": true,
       "validationCode": "VALID"
     },
     "C": {
       "origin": "https://c.localhost:18453",
-      "operationId": "management:34950d08f19afb49c79cef3db579bc5358e5a166d0b71a038cb8a8edd8c9a5a1",
+      "operationId": "management:e12f6638df3682387106814dc0a39426c4d0b28329c5aa4f7d53c0026b3c5a5f",
       "spaReloadConfirmed": true,
       "validationCode": "VALID"
     }
   },
   "procurement": {
-    "draftId": "b5a75d2a85c74f7e5e8608c0ebd945744d926a1d72316390790ba85d9e631b36",
-    "runId": "2760481bb821a3689e6ee0d10231001419c97a8ae68390364293763de370d3c8",
-    "taskId": "bb45f1b77c0b81d60bac9fa4eb4a559f81571ed84c16d3a325902b4785e1ff5e",
+    "draftId": "f66886ac37551796a0c738d68a52f4788e34e80c5a9c51a4d4fbe246dc4f17ee",
+    "runId": "d13a8a4ace52248cb0920e8c51f2aa5e8b786f974fa5386a2fed2fa53920ef8d",
+    "taskId": "db0785038d266b8513c25998a1dac0d4cfb2db2723406a5b2393122f44f64259",
     "stage": "EXECUTE",
     "status": "DECIDED",
     "grantStatus": "ACTIVE",
     "allowedActions": [
       "suspend"
     ],
-    "stepCount": 8,
-    "traceCount": 6,
+    "stepCount": 12,
+    "traceCount": 9,
     "evidence": {
       "identityCount": 22,
       "disclosureCount": 8,
@@ -41,13 +41,13 @@
       "quoteCount": 1,
       "orderCount": 1,
       "decisionCount": 2,
-      "firstDecisionId": "urn:grad:decision:3fdff6dc-0ded-40d0-aa78-ee5a1ba8c4e9"
+      "firstDecisionId": "urn:grad:decision:72641495-21a7-4b33-9c1c-c31d51cc2ab9"
     },
     "suspendResumeVerified": true,
     "spaReloadVerified": true
   },
   "auditorDecision": {
-    "decisionId": "urn:grad:decision:3fdff6dc-0ded-40d0-aa78-ee5a1ba8c4e9",
+    "decisionId": "urn:grad:decision:72641495-21a7-4b33-9c1c-c31d51cc2ab9",
     "hasBlockAndProbe": true,
     "hasTrustRoot": true,
     "hasPolicyPath": true

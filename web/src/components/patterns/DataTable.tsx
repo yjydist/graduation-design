@@ -143,7 +143,7 @@ export function DataTable<T>({
                           type="button"
                           onClick={() => handleSort(column.key)}
                           className={cn(
-                            "inline-flex items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "inline-flex items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                             column.align === "right" && "ml-auto",
                           )}
                         >

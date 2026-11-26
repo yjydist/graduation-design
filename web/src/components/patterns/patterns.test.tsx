@@ -2,9 +2,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { DelegationEvidence, Run } from "@/api/types";
 import { DataTable, type DataTableColumn } from "@/components/patterns/DataTable";
+import { DisabledReasonTooltip } from "@/components/patterns/DisabledReasonTooltip";
 import { EmptyState } from "@/components/patterns/EmptyState";
 import { StatCard } from "@/components/patterns/StatCard";
 import { StatusBadge } from "@/components/patterns/StatusBadge";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -104,6 +106,34 @@ describe("Pattern state matrix rendering", () => {
     expect(populatedHtml).toContain("max-h-[70dvh] overflow-y-auto");
     expect((populatedHtml.match(/overflow-x-auto/g) ?? []).length).toBe(1);
     expect((populatedHtml.match(/aria-sort="none"/g) ?? []).length).toBe(1);
+    expect(populatedHtml).toContain(
+      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    );
+  });
+
+  it("wraps disabled controls in a keyboard-focusable tooltip trigger only when a reason is provided", () => {
+    const withReasonHtml = renderToStaticMarkup(
+      <TooltipProvider>
+        <DisabledReasonTooltip reason="超出字符上限">
+          <button type="button" disabled>
+            发送
+          </button>
+        </DisabledReasonTooltip>
+      </TooltipProvider>,
+    );
+    expect(withReasonHtml).toContain('tabindex="0"');
+    expect(withReasonHtml).toContain('data-slot="tooltip-trigger"');
+    expect(withReasonHtml).toContain("focus-visible:ring-offset-2");
+
+    const withoutReasonHtml = renderToStaticMarkup(
+      <TooltipProvider>
+        <DisabledReasonTooltip reason={null}>
+          <button type="button">发送</button>
+        </DisabledReasonTooltip>
+      </TooltipProvider>,
+    );
+    expect(withoutReasonHtml).not.toContain('data-slot="tooltip-trigger"');
+    expect(withoutReasonHtml).toContain(">发送</button>");
   });
 
   it("renders EmptyState with configurable heading level (h2 default, h1 for full-page states)", () => {

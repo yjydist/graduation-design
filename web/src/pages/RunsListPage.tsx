@@ -137,7 +137,7 @@ export function RunsListPage() {
           <div className="min-w-44 py-1">
             <Link
               to={`/runs/${encodeURIComponent(run.runId)}`}
-              className="font-medium text-foreground underline-offset-4 hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="rounded-sm font-medium text-foreground underline-offset-4 hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {run.task?.productId || run.runId}
             </Link>

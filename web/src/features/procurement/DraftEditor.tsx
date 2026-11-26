@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CheckCircle2, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { agentApi } from "@/api/agent";
 import { formatApiError } from "@/api/http";
 import type { AuthorizationMode, Draft, Run } from "@/api/types";
 import { ConfirmDialog } from "@/components/patterns/ConfirmDialog";
+import { DisabledReasonTooltip } from "@/components/patterns/DisabledReasonTooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,11 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { MODE_LABELS, PRODUCT_LABELS } from "@/lib/domain-labels";
 import {
   MAX_DRAFT_DESCRIPTION_CODEPOINTS,
@@ -68,33 +64,6 @@ type DraftFieldKey =
   | "description";
 
 type DraftFieldErrors = Partial<Record<DraftFieldKey, string>>;
-
-function DisabledReasonTooltip({
-  reason,
-  children,
-}: {
-  reason: string | null;
-  children: ReactNode;
-}) {
-  if (!reason) {
-    return <>{children}</>;
-  }
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <span
-            tabIndex={0}
-            className="inline-flex rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          />
-        }
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent>{reason}</TooltipContent>
-    </Tooltip>
-  );
-}
 
 export function DraftEditor({
   draft,

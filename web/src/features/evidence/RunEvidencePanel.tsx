@@ -782,7 +782,7 @@ function DecisionsTimelineView({ items }: { items: DecisionSummary[] }) {
               <div className="pt-1">
                 <Link
                   to={`/decisions/${encodeURIComponent(item.decisionId)}`}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex items-center gap-1.5 rounded-sm text-xs font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   <span>打开完整决策审计记录</span>
                   <ExternalLink className="size-3.5" aria-hidden="true" />

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { agentApi } from "@/api/agent";
 import { formatApiError } from "@/api/http";
 import type { Draft, Run } from "@/api/types";
+import { DisabledReasonTooltip } from "@/components/patterns/DisabledReasonTooltip";
 import { EmptyState } from "@/components/patterns/EmptyState";
 import { ErrorState } from "@/components/patterns/ErrorState";
 import { PageHeader } from "@/components/patterns/PageHeader";
@@ -206,7 +207,7 @@ export function ChatPage() {
                             setInputText(sample);
                             setInputError(null);
                           }}
-                          className="rounded-lg border border-border bg-card px-3 py-2 text-left text-xs leading-5 text-foreground transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="rounded-lg border border-border bg-card px-3 py-2 text-left text-xs leading-5 text-foreground transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         >
                           {sample}
                         </button>
@@ -307,19 +308,27 @@ export function ChatPage() {
                   </p>
                 </div>
 
-                <Button
-                  type="submit"
-                  variant={draft ? "secondary" : "default"}
-                  disabled={sending || overLimit}
-                  className="h-9 gap-1.5 rounded-lg"
+                <DisabledReasonTooltip
+                  reason={
+                    !sending && overLimit
+                      ? `采购需求超出 ${formatInteger(MAX_CHAT_MESSAGE_CODEPOINTS)} 个字符上限，请精简后再发送。`
+                      : null
+                  }
                 >
-                  {sending ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Send className="size-4" strokeWidth={2} aria-hidden="true" />
-                  )}
-                  <span>{sending ? "正在发送给 A1…" : "发送给 A1"}</span>
-                </Button>
+                  <Button
+                    type="submit"
+                    variant={draft ? "secondary" : "default"}
+                    disabled={sending || overLimit}
+                    className="h-9 gap-1.5 rounded-lg"
+                  >
+                    {sending ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Send className="size-4" strokeWidth={2} aria-hidden="true" />
+                    )}
+                    <span>{sending ? "正在发送给 A1…" : "发送给 A1"}</span>
+                  </Button>
+                </DisabledReasonTooltip>
               </form>
             </CardContent>
           </Card>

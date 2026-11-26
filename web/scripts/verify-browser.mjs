@@ -905,6 +905,28 @@ async function main() {
       "ChatPage missing role=alert on invalid message hint",
     );
 
+    // Over-limit chat input (>4000 code points) disables submit button and exposes DisabledReasonTooltip
+    await evalJs(`(() => {
+      const textarea = document.querySelector("#chat-message");
+      if (!textarea) return;
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set;
+      setter.call(textarea, "购".repeat(4001));
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    })()`);
+    await wait(120);
+    await evalJs(`document.querySelector("#chat-message")?.focus()`);
+    await pressKey("Tab", "Tab", 9);
+    await wait(250);
+    const chatOverLimitTooltip = await evalJs(
+      `document.querySelector('[data-slot="tooltip-content"]')?.textContent?.trim() ?? ""`,
+    );
+    assert(
+      chatOverLimitTooltip.includes("4,000 个字符上限"),
+      `Expected disabled ChatPage submit button tooltip when over 4000 code points, got ${JSON.stringify(chatOverLimitTooltip)}`,
+    );
+    await pressKey("Escape", "Escape", 27);
+    await wait(120);
+
     await evalJs(`(() => {
       const setNative = (el, val) => {
         const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
@@ -996,6 +1018,29 @@ async function main() {
       !(await evalJs(`Boolean(document.querySelector('[data-slot="sheet-content"]'))`)),
       "Mobile Sheet drawer did not close on Escape",
     );
+
+    // Verify ConfirmDialog at 320px viewport keeps >= 12px horizontal margin on both sides
+    await send("Page.navigate", { url: `${baseUrl}/runs/${RUN_FIXTURE.runId}` });
+    await wait(700);
+    await evalJs(`(() => {
+      const btn = Array.from(document.querySelectorAll("button")).find((b) => b.textContent?.includes("暂停 G1"));
+      btn?.click();
+    })()`);
+    await wait(250);
+    const mobileDialogRect = await evalJs(`(() => {
+      const el = document.querySelector('[data-slot="alert-dialog-content"]');
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { left: r.left, right: r.right, width: r.width, vw: window.innerWidth };
+    })()`);
+    assert(
+      mobileDialogRect &&
+        mobileDialogRect.left >= 12 &&
+        mobileDialogRect.vw - mobileDialogRect.right >= 12,
+      `ConfirmDialog at 320px should keep horizontal inset, got ${JSON.stringify(mobileDialogRect)}`,
+    );
+    await pressKey("Escape", "Escape", 27);
+    await wait(600);
 
     // 4. Empty /runs single-primary-button check & ErrorState retry check
     await send("Emulation.setDeviceMetricsOverride", {

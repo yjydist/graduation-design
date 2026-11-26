@@ -17,6 +17,7 @@ https://{$WORKBENCH_BROWSER_HOST}:8443 {
 	}
 	handle {
 		root * /srv
+		try_files {path} /index.html
 		file_server
 	}
 }

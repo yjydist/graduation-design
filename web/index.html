@@ -1,27 +1,13 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
-  <meta name="referrer" content="no-referrer">
-  <title>跨域采购工作台</title>
-  <link rel="stylesheet" href="/style.css">
-  <script type="module" src="/app.js"></script>
-</head>
-<body>
-  <a class="skip-link" href="#main">跳至内容</a>
-  <header class="app-header">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>跨域采购工作台</div>
-    <div id="domain-status" class="domain-status" role="status">正在连接</div>
-    <div id="account" class="account"></div>
-  </header>
-  <div id="layout" class="layout">
-    <nav id="navigation" aria-label="工作台" hidden></nav>
-    <main id="main" tabindex="-1">
-      <div id="notice" class="notice" role="status" hidden></div>
-      <section id="view" aria-labelledby="view-title"></section>
-    </main>
-  </div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>跨域多智能体采购工作台</title>
+    <script src="/theme-init.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

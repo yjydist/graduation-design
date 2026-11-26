@@ -126,24 +126,7 @@ func newSeedCmd(opts *cliOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			dep, err := inst.LoadDeployment()
-			if err != nil {
-				return err
-			}
-			db, err := inst.Database(ctx)
-			if err != nil {
-				return err
-			}
-			defer db.Close()
-			p, err := inst.Peer("c", "read")
-			if err != nil {
-				return err
-			}
-			defer p.Close()
-			if err := dep.ValidatePeer(ctx, p); err != nil {
-				return err
-			}
-			report, err := bootstrap.Seed(ctx, inst, db, dep)
+			report, err := bootstrap.SeedInstance(ctx, inst)
 			if report != nil {
 				err = errors.Join(err, writeJSONOutput(cmd.OutOrStdout(), report))
 			}

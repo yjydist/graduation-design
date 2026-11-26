@@ -130,6 +130,33 @@ func RunInstanceMCP(
 	return RunMCP(ctx, inst, dep, db, gatewayURL, in, out)
 }
 
+// SeedInstance loads the deployment for inst, opens PostgreSQL, validates the
+// Domain C read peer, and runs Seed to generate fixtures, anchor on Fabric,
+// and sync delivery outboxes.
+func SeedInstance(ctx context.Context, inst *ledger.Instance) (*SeedReport, error) {
+	if inst == nil {
+		return nil, fmt.Errorf("fabric instance is required")
+	}
+	dep, err := inst.LoadDeployment()
+	if err != nil {
+		return nil, err
+	}
+	db, err := inst.Database(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	p, err := inst.Peer("c", "read")
+	if err != nil {
+		return nil, err
+	}
+	defer p.Close()
+	if err := dep.ValidatePeer(ctx, p); err != nil {
+		return nil, err
+	}
+	return Seed(ctx, inst, db, dep)
+}
+
 // InvokeOperation submits or idempotently resumes a durable original-txID
 // Fabric registry operation from raw JSON input against inst.
 func InvokeOperation(

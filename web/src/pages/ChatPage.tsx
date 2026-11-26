@@ -292,6 +292,7 @@ export function ChatPage() {
                   />
                   <p
                     id="chat-message-hint"
+                    role={inputError || overLimit ? "alert" : undefined}
                     className={cn(
                       "text-xs",
                       inputError || overLimit

@@ -122,6 +122,15 @@ export function DataTable<T>({
                     <TableHead
                       key={column.key}
                       scope="col"
+                      aria-sort={
+                        column.sortable && column.sortValue
+                          ? isSorted
+                            ? sortDir === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                          : undefined
+                      }
                       className={cn(
                         "sticky top-0 z-10 h-10 bg-muted px-3 text-xs font-medium text-muted-foreground md:px-4",
                         column.align === "right" && "text-right",

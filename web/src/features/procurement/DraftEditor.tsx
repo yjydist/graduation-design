@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CheckCircle2, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { agentApi } from "@/api/agent";
@@ -43,6 +43,17 @@ export interface DraftEditorProps {
 }
 
 const KNOWN_PRODUCTS = ["urn:grad:product:P1", "urn:grad:product:P2"] as const;
+
+const MODE_OPTIONS = [
+  {
+    value: "RESOURCE_PREAUTHORIZED",
+    label: MODE_LABELS.RESOURCE_PREAUTHORIZED,
+  },
+  {
+    value: "BUYER_MANDATE",
+    label: MODE_LABELS.BUYER_MANDATE,
+  },
+] as const;
 
 type DraftFieldKey =
   | "quantity"
@@ -98,6 +109,22 @@ export function DraftEditor({
       return next;
     });
   };
+
+  const productOptions = useMemo(() => {
+    const options: Array<{ value: string; label: string }> = KNOWN_PRODUCTS.map(
+      (pid) => ({
+        value: pid,
+        label: PRODUCT_LABELS[pid] ?? pid,
+      }),
+    );
+    if (
+      productId &&
+      !KNOWN_PRODUCTS.includes(productId as (typeof KNOWN_PRODUCTS)[number])
+    ) {
+      options.push({ value: productId, label: productId });
+    }
+    return options;
+  }, [productId]);
 
   const descCount = countCodePoints(description);
   const descOverLimit = descCount > MAX_DRAFT_DESCRIPTION_CODEPOINTS;
@@ -228,6 +255,7 @@ export function DraftEditor({
                 商品编号 <span className="text-destructive" aria-hidden="true">*</span>
               </Label>
               <Select
+                items={productOptions}
                 value={productId}
                 onValueChange={(val) => {
                   if (val) {
@@ -241,17 +269,11 @@ export function DraftEditor({
                   <SelectValue placeholder="选择商品" />
                 </SelectTrigger>
                 <SelectContent>
-                  {KNOWN_PRODUCTS.map((pid) => (
-                    <SelectItem key={pid} value={pid}>
-                      {PRODUCT_LABELS[pid] ?? pid}
+                  {productOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
-                  {!KNOWN_PRODUCTS.includes(
-                    productId as (typeof KNOWN_PRODUCTS)[number],
-                  ) &&
-                    productId && (
-                      <SelectItem value={productId}>{productId}</SelectItem>
-                    )}
                 </SelectContent>
               </Select>
             </div>
@@ -300,6 +322,7 @@ export function DraftEditor({
                 授权模式 <span className="text-destructive" aria-hidden="true">*</span>
               </Label>
               <Select
+                items={MODE_OPTIONS}
                 value={mode}
                 onValueChange={(val) => {
                   if (
@@ -316,12 +339,11 @@ export function DraftEditor({
                   <SelectValue placeholder="选择授权模式" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="RESOURCE_PREAUTHORIZED">
-                    {MODE_LABELS.RESOURCE_PREAUTHORIZED}
-                  </SelectItem>
-                  <SelectItem value="BUYER_MANDATE">
-                    {MODE_LABELS.BUYER_MANDATE}
-                  </SelectItem>
+                  {MODE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

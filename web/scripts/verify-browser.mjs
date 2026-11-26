@@ -528,7 +528,7 @@ async function main() {
 
     const widths = [320, 768, 1024, 1440];
 
-    // 1. Authenticated routes: theme toggle + persistence + offline fonts
+    // 1. Authenticated routes: theme toggle + persistence + offline fonts + Select labels & aria-sort
     await send("Emulation.setDeviceMetricsOverride", {
       width: 1440,
       height: 900,
@@ -537,6 +537,40 @@ async function main() {
     });
     await send("Page.navigate", { url: `${baseUrl}/runs` });
     await wait(900);
+
+    // Verify Select triggers display mapped Chinese labels (never raw __ALL__ sentinel)
+    // and sortable DataTable column exposes aria-sort state transitions.
+    const runsSelectAndSort = await evalJs(`(() => {
+      const statusTrigger = document.querySelector('button[aria-label="按状态筛选"]');
+      const modeTrigger = document.querySelector('button[aria-label="按授权模式筛选"]');
+      const firstTh = document.querySelector('th[aria-sort]');
+      const initialSort = firstTh?.getAttribute("aria-sort");
+      firstTh?.querySelector("button")?.click();
+      return {
+        statusText: statusTrigger?.textContent?.trim() ?? "",
+        modeText: modeTrigger?.textContent?.trim() ?? "",
+        initialSort,
+      };
+    })()`);
+    assert(
+      runsSelectAndSort.statusText.includes("全部状态") &&
+        !runsSelectAndSort.statusText.includes("__ALL__") &&
+        runsSelectAndSort.modeText.includes("全部授权模式") &&
+        !runsSelectAndSort.modeText.includes("__ALL__"),
+      `RunsListPage Select triggers exposed raw values: ${JSON.stringify(runsSelectAndSort)}`,
+    );
+    assert(
+      runsSelectAndSort.initialSort === "none",
+      `Expected initial aria-sort="none" on sortable column, got ${runsSelectAndSort.initialSort}`,
+    );
+    await wait(120);
+    const afterFirstSort = await evalJs(
+      `document.querySelector('th[aria-sort]')?.getAttribute("aria-sort")`,
+    );
+    assert(
+      afterFirstSort === "descending",
+      `Expected aria-sort="descending" after clicking sortable header, got ${afterFirstSort}`,
+    );
 
     // Click ThemeToggle to enter dark mode and reload
     const toggledDark = await evalJs(`(() => {
@@ -735,9 +769,29 @@ async function main() {
       "Topbar user DropdownMenu did not close on Escape",
     );
 
-    // 3b. Field-level ARIA validation checks on Management, Decisions, and DraftEditor
+    // 3b. Field-level ARIA validation & Base UI Select label checks on Management, Decisions, Chat, and DraftEditor
     await send("Page.navigate", { url: `${baseUrl}/management` });
     await wait(600);
+    // Select the clear-PA sentinel option and verify trigger renders Chinese label (not __CLEAR_PA__)
+    await evalJs(`document.querySelector('#pa-service-select')?.click()`);
+    await wait(250);
+    const selectedClear = await evalJs(`(() => {
+      const items = Array.from(document.querySelectorAll('[data-slot="select-item"]'));
+      const clearItem = items.find((el) => el.textContent?.includes("清除当前采购权威"));
+      if (!clearItem) return false;
+      clearItem.click();
+      return true;
+    })()`);
+    assert(selectedClear, "ManagementPage clear PA SelectItem not found");
+    await wait(200);
+    const paTriggerText = await evalJs(
+      `document.querySelector('#pa-service-select')?.textContent?.trim() ?? ""`,
+    );
+    assert(
+      paTriggerText.includes("清除当前采购权威") && !paTriggerText.includes("__CLEAR_PA__"),
+      `ManagementPage Select trigger exposed raw sentinel: ${paTriggerText}`,
+    );
+
     const opValidationOk = await evalJs(`(() => {
       const form = document.querySelector('#operation-id-input')?.closest('form');
       const submitBtn = form?.querySelector('button[type="submit"]');
@@ -774,6 +828,28 @@ async function main() {
 
     await send("Page.navigate", { url: `${baseUrl}/chat/${RUN_FIXTURE.draftId}` });
     await wait(700);
+    // Verify DraftEditor Select triggers show human-readable labels, and ChatPage empty submit shows role="alert"
+    const draftSelectLabels = await evalJs(`({
+      productText: document.querySelector("#draft-product")?.textContent?.trim() ?? "",
+      modeText: document.querySelector("#draft-mode")?.textContent?.trim() ?? "",
+    })`);
+    assert(
+      draftSelectLabels.productText.includes("P1 标准采购品") &&
+        !draftSelectLabels.productText.includes("urn:grad:product:P1") &&
+        draftSelectLabels.modeText.includes("RP / 供应商预授权") &&
+        !draftSelectLabels.modeText.includes("RESOURCE_PREAUTHORIZED"),
+      `DraftEditor Select triggers exposed raw values: ${JSON.stringify(draftSelectLabels)}`,
+    );
+    await evalJs(`(() => {
+      const form = document.querySelector("#chat-message")?.closest("form");
+      form?.querySelector('button[type="submit"]')?.click();
+    })()`);
+    await wait(150);
+    assert(
+      await evalJs(`Boolean(document.querySelector('#chat-message-hint[role="alert"]'))`),
+      "ChatPage missing role=alert on invalid message hint",
+    );
+
     await evalJs(`(() => {
       const setNative = (el, val) => {
         const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
@@ -803,6 +879,18 @@ async function main() {
         );
       })()`),
       "DraftEditor missing per-field aria-invalid / alert error feedback",
+    );
+
+    // Verify fallback ForbiddenPage renders a unique semantic <h1>
+    await send("Page.navigate", { url: `${baseUrl}/non-existent-route` });
+    await wait(500);
+    const forbiddenH1 = await evalJs(`({
+      count: document.querySelectorAll("h1").length,
+      text: document.querySelector("h1")?.textContent?.trim() ?? "",
+    })`);
+    assert(
+      forbiddenH1.count === 1 && forbiddenH1.text.includes("当前账号无权访问此页面"),
+      `ForbiddenPage missing unique semantic <h1>: ${JSON.stringify(forbiddenH1)}`,
     );
 
     // 3c. Mobile (<768px) Sheet drawer open/Esc close + mobile top-center Toast position

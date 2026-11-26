@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Building2, Hash, Loader2, RefreshCw, Server, Shield } from "lucide-react";
 import { toast } from "sonner";
@@ -147,10 +153,26 @@ export function ManagementPage() {
     [navigate],
   );
 
+  const serviceOptions = useMemo(() => {
+    if (!authority) return [];
+    const options: Array<{ value: string; label: string; mono: boolean }> =
+      authority.eligibleServiceIds.map((serviceId) => ({
+        value: serviceId,
+        label: serviceId,
+        mono: true,
+      }));
+    if (authority.purchasingAuthority) {
+      options.push({
+        value: CLEAR_SENTINEL,
+        label: "清除当前采购权威（置空）",
+        mono: false,
+      });
+    }
+    return options;
+  }, [authority]);
+
   const isClearing = selectedService === CLEAR_SENTINEL;
-  const hasAnyChoice =
-    Boolean(authority?.eligibleServiceIds.length) ||
-    Boolean(authority?.purchasingAuthority);
+  const hasAnyChoice = serviceOptions.length > 0;
 
   return (
     <div className="space-y-6">
@@ -297,6 +319,7 @@ export function ManagementPage() {
                       </span>
                     </Label>
                     <Select
+                      items={serviceOptions}
                       value={selectedService}
                       onValueChange={(value) => setSelectedService(value ?? "")}
                       disabled={submitting}
@@ -309,18 +332,17 @@ export function ManagementPage() {
                         <SelectValue placeholder="请选择本域合资格服务或清除操作" />
                       </SelectTrigger>
                       <SelectContent>
-                        {authority.eligibleServiceIds.map((serviceId) => (
-                          <SelectItem key={serviceId} value={serviceId}>
-                            <span className="font-mono text-xs">
-                              {serviceId}
-                            </span>
+                        {serviceOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.mono ? (
+                              <span className="font-mono text-xs">
+                                {option.label}
+                              </span>
+                            ) : (
+                              option.label
+                            )}
                           </SelectItem>
                         ))}
-                        {authority.purchasingAuthority && (
-                          <SelectItem value={CLEAR_SENTINEL}>
-                            清除当前采购权威（置空）
-                          </SelectItem>
-                        )}
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">

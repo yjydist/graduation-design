@@ -8,6 +8,7 @@ export function ForbiddenPage({ homePath }: { homePath: string }) {
   return (
     <EmptyState
       icon={<ShieldAlert className="size-5" strokeWidth={2} />}
+      headingAs="h1"
       title="当前账号无权访问此页面"
       description="操作权限由本域会话角色与链上登记决定。请返回当前账号获准使用的工作区。"
       action={

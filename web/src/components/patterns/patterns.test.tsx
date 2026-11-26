@@ -5,6 +5,13 @@ import { DataTable, type DataTableColumn } from "@/components/patterns/DataTable
 import { EmptyState } from "@/components/patterns/EmptyState";
 import { StatCard } from "@/components/patterns/StatCard";
 import { StatusBadge } from "@/components/patterns/StatusBadge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { resolveEffectiveCeilingMinor } from "@/features/evidence/RunEvidencePanel";
 import { shouldPollRun } from "@/pages/RunDetailPage";
 
@@ -14,7 +21,14 @@ interface SampleRow {
 }
 
 const sampleColumns: DataTableColumn<SampleRow>[] = [
-  { key: "id", header: "ID", stickyFirst: true, cell: (row) => row.id },
+  {
+    key: "id",
+    header: "ID",
+    stickyFirst: true,
+    sortable: true,
+    sortValue: (row) => row.id,
+    cell: (row) => row.id,
+  },
   { key: "name", header: "名称", cell: (row) => row.name },
 ];
 
@@ -81,6 +95,50 @@ describe("Pattern state matrix rendering", () => {
     expect(populatedHtml).toContain("sticky left-0 z-10 bg-inherit");
     expect(populatedHtml).toContain("max-h-[70dvh] overflow-y-auto");
     expect((populatedHtml.match(/overflow-x-auto/g) ?? []).length).toBe(1);
+    expect((populatedHtml.match(/aria-sort="none"/g) ?? []).length).toBe(1);
+  });
+
+  it("renders EmptyState with configurable heading level (h2 default, h1 for full-page states)", () => {
+    const defaultHtml = renderToStaticMarkup(
+      <EmptyState icon={<span>i</span>} title="默认标题" description="说明文案。" />,
+    );
+    expect(defaultHtml).toContain("<h2");
+    expect(defaultHtml).not.toContain("<h1");
+
+    const h1Html = renderToStaticMarkup(
+      <EmptyState
+        icon={<span>i</span>}
+        headingAs="h1"
+        title="无权访问"
+        description="说明文案。"
+      />,
+    );
+    expect(h1Html).toContain("<h1");
+    expect(h1Html).not.toContain("<h2");
+  });
+
+  it("renders mapped Chinese labels instead of raw sentinel values in Base UI SelectValue", () => {
+    const items = [
+      { value: "__ALL__", label: "全部状态" },
+      { value: "OUTCOME_UNKNOWN", label: "业务结果未知" },
+    ] as const;
+
+    const html = renderToStaticMarkup(
+      <Select items={items} value="__ALL__">
+        <SelectTrigger aria-label="按状态筛选">
+          <SelectValue placeholder="全部状态" />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>,
+    );
+    expect(html).toContain("全部状态");
+    expect(html).not.toContain(">__ALL__<");
   });
 
   it("renders StatusBadge with both icon and semantic label (never color-only)", () => {

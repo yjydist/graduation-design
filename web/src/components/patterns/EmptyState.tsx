@@ -5,6 +5,7 @@ export interface EmptyStateProps {
   icon: ReactNode;
   title: string;
   description: string;
+  headingAs?: "h1" | "h2";
   action?: ReactNode;
   secondaryAction?: ReactNode;
   className?: string;
@@ -14,10 +15,12 @@ export function EmptyState({
   icon,
   title,
   description,
+  headingAs = "h2",
   action,
   secondaryAction,
   className,
 }: EmptyStateProps) {
+  const Heading = headingAs;
   return (
     <div
       className={cn(
@@ -31,7 +34,9 @@ export function EmptyState({
       >
         {icon}
       </div>
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      <Heading className="text-base font-semibold text-foreground">
+        {title}
+      </Heading>
       <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
         {description}
       </p>

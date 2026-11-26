@@ -45,6 +45,28 @@ import { cn } from "@/lib/utils";
 
 const ALL_FILTER = "__ALL__";
 
+const STATUS_FILTER_OPTIONS = [
+  { value: ALL_FILTER, label: "全部状态" },
+  { value: "PENDING", label: "待确认 / 处理中" },
+  { value: "DECIDED", label: "已定案" },
+  { value: "GATEWAY_DENIED", label: "网关拒绝" },
+  { value: "OUTCOME_UNKNOWN", label: "业务结果未知" },
+  { value: "MODEL_STOPPED", label: "模型已停止" },
+  { value: "FAILED", label: "失败" },
+] as const;
+
+const MODE_FILTER_OPTIONS = [
+  { value: ALL_FILTER, label: "全部授权模式" },
+  {
+    value: "RESOURCE_PREAUTHORIZED",
+    label: MODE_LABELS.RESOURCE_PREAUTHORIZED,
+  },
+  {
+    value: "BUYER_MANDATE",
+    label: MODE_LABELS.BUYER_MANDATE,
+  },
+] as const;
+
 export function RunsListPage() {
   const navigate = useNavigate();
 
@@ -267,6 +289,7 @@ export function RunsListPage() {
         }}
       >
         <Select
+          items={STATUS_FILTER_OPTIONS}
           value={statusFilter}
           onValueChange={(val) => setStatusFilter(val ?? ALL_FILTER)}
         >
@@ -277,17 +300,16 @@ export function RunsListPage() {
             <SelectValue placeholder="全部状态" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_FILTER}>全部状态</SelectItem>
-            <SelectItem value="PENDING">待确认 / 处理中</SelectItem>
-            <SelectItem value="DECIDED">已定案</SelectItem>
-            <SelectItem value="GATEWAY_DENIED">网关拒绝</SelectItem>
-            <SelectItem value="OUTCOME_UNKNOWN">业务结果未知</SelectItem>
-            <SelectItem value="MODEL_STOPPED">模型已停止</SelectItem>
-            <SelectItem value="FAILED">失败</SelectItem>
+            {STATUS_FILTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
         <Select
+          items={MODE_FILTER_OPTIONS}
           value={modeFilter}
           onValueChange={(val) => setModeFilter(val ?? ALL_FILTER)}
         >
@@ -298,13 +320,11 @@ export function RunsListPage() {
             <SelectValue placeholder="全部授权模式" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_FILTER}>全部授权模式</SelectItem>
-            <SelectItem value="RESOURCE_PREAUTHORIZED">
-              {MODE_LABELS.RESOURCE_PREAUTHORIZED}
-            </SelectItem>
-            <SelectItem value="BUYER_MANDATE">
-              {MODE_LABELS.BUYER_MANDATE}
-            </SelectItem>
+            {MODE_FILTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </FilterBar>

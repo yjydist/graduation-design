@@ -1,4 +1,7 @@
+x-demo-labels: &demo-labels
+  io.grad.demo.owner: ${GRAD_DEMO_OWNER:-}
 x-peer: &peer
+  labels: *demo-labels
   image: hyperledger/fabric-peer:3.1.5@sha256:e07c735b6f2d131315f3ae6e582c5aa602143d9d14805bb98be8ebc9d6baa82c
   platform: linux/arm64
   cpus: 1
@@ -21,6 +24,7 @@ x-peer-env: &peer-env
   CORE_CHAINCODE_EXECUTETIMEOUT: 8s
   FABRIC_LOGGING_SPEC: warning
 x-orderer: &orderer
+  labels: *demo-labels
   image: hyperledger/fabric-orderer:3.1.5@sha256:dcb4c042237993a6f537b2f54e701e749f8e108f25c0cbe0c6742c205fccc3d5
   platform: linux/arm64
   cpus: 1
@@ -45,6 +49,7 @@ x-orderer-env: &orderer-env
   ORDERER_CHANNELPARTICIPATION_ENABLED: "true"
   FABRIC_LOGGING_SPEC: warning
 x-chaincode: &chaincode
+  labels: *demo-labels
   image: hyperledger/fabric-baseos:3.1.5@sha256:48f66ba5da1dac8276138c80bf09d17fa68c6b729ea3bd2fc182b1898cc3f0c5
   platform: linux/arm64
   cpus: 0.5
@@ -141,6 +146,7 @@ services:
       - orderer-rogue:/var/hyperledger/production/orderer
     ports: ["127.0.0.1:${FABRIC_ADMIN_X}:9443"]
   db:
+    labels: *demo-labels
     image: postgres:17.9-alpine@sha256:c7526c0f6c3f30260a563d7bcf8ad778effac59a44f8ffa86678c35418338609
     platform: linux/arm64
     cpus: 1
@@ -174,13 +180,26 @@ services:
       - ${FABRIC_INSTANCE}/registry:/registry-bin:ro
       - ${FABRIC_INSTANCE}/cc-c:/registry:ro
 
+networks:
+  default:
+    labels: *demo-labels
+
 volumes:
   peer-a:
+    labels: *demo-labels
   peer-b:
+    labels: *demo-labels
   peer-c:
+    labels: *demo-labels
   orderer-a:
+    labels: *demo-labels
   orderer-b:
+    labels: *demo-labels
   orderer-c:
+    labels: *demo-labels
   orderer-d:
+    labels: *demo-labels
   orderer-rogue:
+    labels: *demo-labels
   db:
+    labels: *demo-labels

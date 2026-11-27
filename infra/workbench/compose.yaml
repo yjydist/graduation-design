@@ -1,5 +1,9 @@
+x-demo-labels: &demo-labels
+  io.grad.demo.owner: ${GRAD_DEMO_OWNER:-}
+
 services:
   frontend:
+    labels: *demo-labels
     image: ${WORKBENCH_FRONTEND_IMAGE:-grad-workbench-frontend:local}
     environment:
       WORKBENCH_BROWSER_HOST: ${WORKBENCH_BROWSER_HOST:?set the browser hostname}
@@ -15,6 +19,7 @@ services:
         condition: service_healthy
 
   backend:
+    labels: *demo-labels
     image: ${WORKBENCH_BACKEND_IMAGE:-grad-workbench-backend:local}
     command: ["--config", "/run/workbench/config.json"]
     user: "${WORKBENCH_UID:?set the mount owner UID}:${WORKBENCH_GID:?set the mount owner GID}"
@@ -50,6 +55,7 @@ services:
       start_period: 10s
 
   db:
+    labels: *demo-labels
     image: postgres:17.9-alpine@sha256:c7526c0f6c3f30260a563d7bcf8ad778effac59a44f8ffa86678c35418338609
     environment:
       POSTGRES_USER: workbench
@@ -74,12 +80,16 @@ services:
 
 networks:
   app:
+    labels: *demo-labels
     internal: true
   ingress:
+    labels: *demo-labels
   fabric:
     external: true
     name: ${WORKBENCH_FABRIC_NETWORK:?set the isolated Fabric network}
 
 volumes:
   database:
+    labels: *demo-labels
   frontend-tls:
+    labels: *demo-labels

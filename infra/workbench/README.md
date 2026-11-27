@@ -2,32 +2,16 @@
 
 A/B/C 使用同一前端镜像, 后端镜像与 Compose 模板. 浏览器以 HTTPS 连接本域前端, 前端同源转发 `/api/v1`. 后端在 Fabric 实例网络上另设 mTLS 端口用于域间材料交付, 采购派发及 C 网关调用. 每域使用自己的 PostgreSQL 数据卷和账号. 浏览器入口默认只绑定环回地址.
 
-## 1 准备隔离 Fabric 实例
+## 1 首次配置和启动
 
-在仓库根目录执行. 需要 Docker Engine, Compose, OpenSSL, `curl` 和项目 Go 工具链. Fabric 环境和最新的域认证, 身份凭证由[Fabric 运行手册](../fabric/README.md)说明.
+在 arm64 macOS 或 Linux 的仓库根目录执行. 主机需要 mise, Docker Engine 和 Compose, curl, OpenSSL 与 shasum. 本地演示占用环回端口 18441-18443 和 18460-18469.
 
 ```sh
-export FABRIC_INSTANCE="$PWD/.local/fabric-workbench-demo"
-export WORKBENCH_ROOT="$PWD/.local/workbench-demo"
-mise run fabric:rebuild -- "$FABRIC_INSTANCE" 18460
-mise run ledger:deploy
-mise run ledger:seed
-mise run ledger:check
-mise exec -- go build -o build/workbench grad/platform/cmd/workbench
-build/workbench prepare --fabric "$FABRIC_INSTANCE" --output "$WORKBENCH_ROOT"
+mise install
+mkdir -p .local/demo-config/a .local/demo-config/b
 ```
 
-选择未使用的实例目录和端口范围. `prepare` 使用已登记的部署与域身份, 为 B 补齐演示所需的本域服务登记, 再生成 `a/`, `b/`, `c/` 独立挂载目录. 域配置绑定部署标识, 允许的本域主体, 受信域间端点及证书指纹. 各域仅挂载自己的私有目录, 公共 DID 文档用于验证跨域身份. 现有工作台重启时复用原目录.
-
-| 域 | 账号 | 口令文件 (相对各域挂载目录) |
-| --- | --- | --- |
-| A/B/C | `admin` | `admin-password` |
-| A | `u` | `buyer-password` |
-| C | `auditor` | `auditor-password` |
-
-后端启动时通过平台迁移创建表, 核验账号与本域登记映射, 初始化服务端账号. `postgres-password` 用于数据库初始化和后端连接. 域间 mTLS 密钥, Fabric MSP 和钱包文件由 `prepare` 生成或按域选取. 将这些文件留在本地私有目录.
-
-在 A 和 B 的挂载目录各设置 `llm.env` 和 `model-api-key`. `llm.env` 写入模型连接信息, 例如以下配置. 将 `LLM_BASE_URL` 和 `LLM_MODEL` 替换为当前真实模型端点及名称.
+在 A/B 的源目录各准备一个 `llm.env` 和一个只含本域模型密钥的 `model-api-key`. 将下例的服务地址和模型名替换为实际值. 容器需要能到达模型端点, Docker Desktop 上的本机代理可通过 `host.docker.internal` 访问.
 
 ```dotenv
 LLM_PROVIDER=openai
@@ -36,71 +20,49 @@ LLM_MODEL=your-model
 LLM_MAX_STEPS=8
 ```
 
-本机模型代理需接受来自 Docker 的连接, Docker Desktop 可用 `host.docker.internal` 访问宿主. 模型密钥只写入各域的 `model-api-key` 文件, 权限设为 `0600`. C 域不需要模型连接.
-
-## 2 构建并启动三域
-
-两个镜像各构建一次. 用镜像标识固定三个实例的构建, Compose 配置变化无需重建镜像.
-
 ```sh
-docker build -t grad-workbench-frontend:local ./web
-docker build -f infra/workbench/backend.Dockerfile -t grad-workbench-backend:local .
-export WORKBENCH_FRONTEND_IMAGE="$(docker image inspect -f '{{.Id}}' grad-workbench-frontend:local)"
-export WORKBENCH_BACKEND_IMAGE="$(docker image inspect -f '{{.Id}}' grad-workbench-backend:local)"
-fabric_project="$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' "$FABRIC_INSTANCE/network.env")"
-export WORKBENCH_FABRIC_NETWORK="${fabric_project}_default"
-export WORKBENCH_UID="$(id -u)" WORKBENCH_GID="$(id -g)"
-
-workbench_compose() {
-    domain="$1"
-    shift
-    case "$domain" in
-        a) port=18441 ;;
-        b) port=18442 ;;
-        c) port=18443 ;;
-        *) return 2 ;;
-    esac
-    WORKBENCH_DOMAIN="$domain" \
-    WORKBENCH_BROWSER_HOST="$domain.localhost" \
-    WORKBENCH_PORT="$port" \
-    WORKBENCH_CONFIG_DIR="$WORKBENCH_ROOT/$domain" \
-    docker compose -p "$fabric_project-workbench-$domain" -f infra/workbench/compose.yaml "$@"
-}
-
-for domain in a b c; do
-    workbench_compose "$domain" config --quiet || break
-    workbench_compose "$domain" up -d --wait --wait-timeout 180 || break
-done
+chmod 600 .local/demo-config/a/model-api-key .local/demo-config/b/model-api-key
+mise run demo:up
 ```
 
-`WORKBENCH_FRONTEND_IMAGE` 和 `WORKBENCH_BACKEND_IMAGE` 也可设为仓库中的 OCI 摘要. `WORKBENCH_UID` 和 `WORKBENCH_GID` 对应准备目录的宿主所有者. 每域的浏览器主机名, 端口, 挂载目录, 数据卷与 Compose 项目名各自独立. 浏览器代理默认使用本项目的 `backend:8080`, 可用 `WORKBENCH_BROWSER_UPSTREAM` 绑定另一个运行端点.
+启动成功时, 三个入口均已通过本域 CA 校验, 健康接口返回对应域标识. 在演示浏览器的受信任根证书设置中分别导入输出指向的 `browser-root.crt`. 表中口令文件路径相对于 `.local/demo/workbench/`.
 
-三个浏览器入口分别为 `https://a.localhost:18441`, `https://b.localhost:18442`, `https://c.localhost:18443`. 本地演示的浏览器证书由各前端自己的 Caddy CA 签发. 导出各 CA 的公钥证书, 在演示浏览器或系统信任库中按本地环境信任. 重新启动会沿用原证书卷.
+| 浏览器入口 | 演示账号 | 口令文件 |
+| --- | --- | --- |
+| `https://a.localhost:18441` | `u` | `a/buyer-password` |
+| `https://b.localhost:18442` | `admin` | `b/admin-password` |
+| `https://c.localhost:18443` | `auditor` | `c/auditor-password` |
 
-```sh
-for domain in a b c; do
-    workbench_compose "$domain" cp \
-        frontend:/data/caddy/pki/authorities/local/root.crt \
-        "$WORKBENCH_ROOT/$domain/browser-root.crt" || break
-done
-```
-
-## 3 就绪检查和浏览器操作
+各域也提供本域 `admin`, 其口令在本域的 `admin-password`. 归属记录 `.local/demo/instance.json` 绑定本机 Docker Engine, 随机 Compose 项目, 部署标识, 数据卷, 有效期限和镜像. 本地镜像按内容保留, 各实例可以复用原镜像 ID. 同一有效实例可重跑 `demo:up` 复用已发布的域挂载, 数据卷和口令. 若中断, 从新终端在仓库根查询失败阶段和对应域的日志.
 
 ```sh
-for item in a:18441 b:18442 c:18443; do
-    domain="${item%:*}"
-    port="${item#*:}"
-    curl --fail --silent --show-error --noproxy '*' \
-        --resolve "$domain.localhost:$port:127.0.0.1" \
-        --cacert "$WORKBENCH_ROOT/$domain/browser-root.crt" \
-        "https://$domain.localhost:$port/api/v1/health/ready" || break
-    printf '\n'
-    workbench_compose "$domain" images
-done
+mise run demo:status
+mise run demo:logs -- b backend
+mise run demo:logs -- fabric peer-c --tail 20
 ```
 
-核对每域就绪结果中的 `domainId`, 前后端镜像标识, 数据库卷和后端只读挂载. 用 `workbench_compose a ps` 或 `workbench_compose a logs backend` 排查就绪错误. 浏览器从每域入口读取同源 API, 业务接口定义可在该入口的 `/api/v1/openapi.json` 查看.
+## 2 单域运维
+
+在已启动的演示上, 以下命令从归属记录取得实例和镜像.
+
+```sh
+mise run workbench:compose -- b ps
+mise run workbench:certs -- b
+mise run workbench:ready
+```
+
+独立的手工部署可指定 `FABRIC_INSTANCE` 和 `WORKBENCH_ROOT`. 先用 `fabric:rebuild`, `ledger:deploy`, `ledger:seed` 和 `ledger:check` 准备并校验隔离账本, 详见[Fabric 手册](../fabric/README.md). 以下示例使用已登记的实例和一个新的挂载目录.
+
+```sh
+export FABRIC_INSTANCE="$PWD/.local/fabric-workbench-manual"
+export WORKBENCH_ROOT="$PWD/.local/workbench-manual"
+mise run workbench:prepare -- --fabric "$FABRIC_INSTANCE" --output "$WORKBENCH_ROOT"
+mise run workbench:images
+```
+
+将各域模型输入放入 A/B 的私有挂载, 将镜像命令输出的两个 ID 分别设为 `WORKBENCH_FRONTEND_IMAGE` 和 `WORKBENCH_BACKEND_IMAGE`. 对每个域运行 `mise run workbench:compose -- <域> up -d --wait --wait-timeout 180`, 然后用 `workbench:certs` 和 `workbench:ready` 核实 HTTPS. 单域后端可通过 `mise run workbench:serve -- --config <域配置文件>` 启动. 各域独立绑定数据库, 本域 Fabric 身份和钱包. 管理员可按挂载所有者设置 `WORKBENCH_UID` 和 `WORKBENCH_GID`.
+
+## 3 浏览器操作
 
 - 用三个域各自的 `admin` 登录, 选择本域合资格服务并提交 PA 资格操作. 保存各自的操作 ID, 核对原交易 txId, 链上校验码及最终状态. A 域的 BM 演示需选择本域 PA.
 - 用 A 域的 `u` 登录, 与 A1 对话提出采购要求. 查看或修订草稿后确认版本, 再从运行页查看任务, G0/G1 的签发交付和 A1/B1 工具轨迹. 原型 C 目录的 P1 和 P2 分别用于 800 元和 1200 元演示. 分别提出 RP 采购一件 P1 和 BM 采购一件 P2, 单笔上限 1000 元, 委托 A1 并在一小时内执行. 核对 C 的实际报价.
@@ -111,38 +73,23 @@ done
 
 ### 3.1 补发确定性负例
 
-从与三域内部服务同一隔离网络的管理环境调用以下接口. 使用 A 域服务证书和内部 CA. `RUN_ID` 取自已派发任务, 每次新的探针使用独立的 由 64 个十六进制字符组成的键. 原探针重试沿用同一键.
+将 `RUN_ID` 设为已派发的运行 ID, `PROBE_KEY` 设为该探针的 64 位十六进制重试键. 新探针可用 `openssl rand -hex 32` 生成键. 运维入口用 A 域的 mTLS 证书经实例内部网络访问 B 域.
 
 ```sh
-probe_key="$(openssl rand -hex 32)"
-curl --fail-with-body --silent --show-error \
-    --cacert "$WORKBENCH_ROOT/a/internal-ca.crt" \
-    --cert "$WORKBENCH_ROOT/a/internal.crt" \
-    --key "$WORKBENCH_ROOT/a/internal.key" \
-    --json "{\"runId\":\"$RUN_ID\",\"key\":\"$probe_key\",\"order\":true}" \
-    "https://workbench-b:8081/internal/workbench/probe"
+mise run workbench:probe -- --run-id "$RUN_ID" --key "$PROBE_KEY" --order
 ```
 
-当 `order` 为 true 时, B1 仅在 C 已返回超出 G2 上限的报价后补发订单请求. 暂停后和恢复后的探针使用 `order: false` 询价. 用工作台决策时间线及 C 主库核对原拒绝码, 区块和订单数.
+使用 `--order` 时, B1 在 C 已返回超出 G2 上限的报价后补发订单请求. 省略该参数可在暂停或恢复后询价. 重试同一探针沿用原键.
 
-## 4 停止与再次启动
-
-先停止工作台, 再按 Fabric 手册停止其网络. 保留三个 Compose 项目的数据卷, 私有目录和 Fabric 实例目录.
+## 4 停机, 恢复和重建
 
 ```sh
-for domain in a b c; do
-    workbench_compose "$domain" down
-done
-mise run fabric:down
+mise run demo:down
+mise run demo:up
 ```
 
-再次启动时用相同的 Fabric 实例, 域挂载目录, 镜像标识和 Compose 项目名.
+停机会先关闭三域服务, 再关闭 Fabric, 并保留账本, 域数据库, 口令及浏览器 CA. 在有效期内启动后, 可按原运行和订单 ID 核对业务记录.
 
-```sh
-mise run fabric:up
-for domain in a b c; do
-    workbench_compose "$domain" up -d --wait --wait-timeout 180 || break
-done
-```
+需要清除演示数据时, 直接运行 `mise run demo:clean`. 运行中, 部分部署和已停机的实例都支持清理. 若中断, 处理输出指出的资源后重跑同一命令. 演示源配置在 `.local/demo-config/`, 可供下一次部署使用.
 
-检查重启前的原操作 ID 和采购运行 ID 仍可查询. 三域数据库通过各自项目的私有网络访问. 镜像构建只复制前端静态资源, 以及编译 Go 后端所需的源码和依赖. 运行口令, Fabric 私钥, 钱包和模型密钥均在启动时提供.
+夹具签发后有效 24 小时. 到期后, `demo:up` 显示截止时间. 完成旧记录复核后运行 `mise run demo:clean` 和 `mise run demo:up`, 使用新口令并在演示浏览器中信任新 CA. 使用 `mise run test:demo` 可离线检查这些部署行为.

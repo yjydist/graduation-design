@@ -124,7 +124,9 @@ type RunResult struct {
 type CommandFunc func(ctx context.Context, dir string, env []string, logPath string, name string, args ...string) error
 
 type RunnerDeps struct {
-	RepoRoot       string
+	RepoRoot string
+	// ModelEnvFile defaults to the checkout's experiments/llm.env.
+	ModelEnvFile   string
 	RunCmd         CommandFunc
 	GitResolve     func(ctx context.Context, repoRoot, rev string) (string, error)
 	GitWorkspace   func(ctx context.Context, repoRoot string) (commit string, dirty bool, err error)
@@ -424,10 +426,13 @@ func prepareFixedBuild(ctx context.Context, rc *runContext, driverDir string) er
 }
 
 func prepareE1Plan(rc *runContext) (RunPlan, map[string]any, string, []string, error) {
-	llmEnvPath := filepath.Join(rc.repoRoot, "experiments", "llm.env")
+	llmEnvPath := rc.deps.ModelEnvFile
+	if llmEnvPath == "" {
+		llmEnvPath = filepath.Join(rc.repoRoot, "experiments", "llm.env")
+	}
 	fileEnv, err := harness.ParseEnvFile(llmEnvPath)
 	if err != nil {
-		return RunPlan{}, nil, "", nil, fmt.Errorf("load experiments/llm.env: %w", err)
+		return RunPlan{}, nil, "", nil, fmt.Errorf("load E1 model configuration: %w", err)
 	}
 	resolve := func(key string) string {
 		if v, ok := rc.deps.LookupEnv(key); ok && strings.TrimSpace(v) != "" {
@@ -491,7 +496,6 @@ func prepareE1Plan(rc *runContext) (RunPlan, map[string]any, string, []string, e
 		"infra/fabric/compose.yaml",
 		"experiments/go.mod",
 		"experiments/go.sum",
-		"experiments/mise.toml",
 		"experiments/e1/run.sh",
 		"experiments/harness/*.go",
 		"experiments/cmd/exp/*.go",
@@ -641,7 +645,6 @@ func prepareE6Plan(rc *runContext) (RunPlan, []string, error) {
 		"infra/fabric/compose.yaml",
 		"experiments/go.mod",
 		"experiments/go.sum",
-		"experiments/mise.toml",
 		"experiments/harness/*.go",
 		"experiments/cmd/exp/*.go",
 		e6DriverDir + "/*.go",

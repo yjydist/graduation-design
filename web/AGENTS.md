@@ -20,6 +20,12 @@
 
 ---
 
+## 根目录开发命令
+
+从仓库根运行 `mise run web:install` 安装锁定的依赖. `mise run web:dev -- --port 5173` 启动开发服务, `mise run web:preview` 构建并预览生产资源.
+
+`mise run web:check` 执行类型检查, ESLint 和前端单测. 单独检查时使用 `web:typecheck`, `web:lint` 或 `web:test`. `mise run web:test:browser` 先构建当前源码, 再使用本机 Chrome 或 Chromium 回归. 可用 `CHROME_BIN` 指定浏览器路径.
+
 ## 2. 技术栈与工程约定
 
 ### 2.1 技术基线

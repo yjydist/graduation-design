@@ -90,31 +90,34 @@ flowchart TB
 
 ## 三层测试与验证
 
-在 `platform/` 目录下执行:
+从仓库根目录执行以下检查.
 
 1. 纯单元测试与五层架构守卫 (无 Docker 与外部依赖, 包含 `arch_test.go`):
    ```sh
-   go test -race -count=1 ./...
+   mise run test:race -- -count=1 grad/platform/...
+   mise run test:arch
    ```
 2. PostgreSQL 集成测试 (`//go:build db`, 自动通过 `testcontainers-go` 启动 `postgres:17-alpine`, 或设置 `TEST_POSTGRES_DSN`):
    ```sh
-   go test -tags=db -race -count=1 ./...
+   mise run test:db
+   mise run test:race -- -tags=db -count=1 grad/platform/...
    ```
 3. 真实 Fabric 联调验收 (`//go:build fabriclive`, 需设置 `FABRIC_INSTANCE` 指向已启动网络目录; 未设置时自动跳过):
    ```sh
-   go test -tags=fabriclive -v -count=1 ./core/ledger/... ./bootstrap/...
+   mise run ledger:verify
    ```
    仅验证编译:
    ```sh
-   go vet ./... && go vet -tags=db ./... && go vet -tags=fabriclive ./...
-   go test -tags=fabriclive -c -o /dev/null ./bootstrap
+   mise run test:vet
+   mise run test:fabric:compile
    ```
 
 ## ledgerctl 构建与运行
 
 ```sh
-cd platform && go build -o ../build/ledgerctl ./cmd/ledgerctl
-../build/ledgerctl --help
+mise run ledger:build
+build/ledgerctl --help
+mise run ledger:mcp -- --help
 ```
 
 全局参数为 `--dir` (默认 `$FABRIC_INSTANCE` 或 `.local/fabric-d0`) 与 `--timeout` (默认 `2m`), 子命令共 7 个: `deploy`, `seed`, `check`, `inspect`, `invoke`, `operation`, `mcp`.

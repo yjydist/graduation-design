@@ -27,12 +27,12 @@
 
 ## 验证命令
 
-在 `protocol/` 目录执行:
+从仓库根目录运行协议检查.
 
 ```bash
-go vet ./...
-go test -v -race -count=1 ./...
-go list -f '{{.Imports}}' ./registry
+mise run test:vet
+mise run test:race -- -v -count=1 grad/protocol/...
+mise run test:arch
 ```
 
-核对 `go list -f '{{.Imports}}' ./registry` 输出仅含 Go 标准库包名.
+`test:arch` 核对 `grad/protocol/registry` 的传递依赖均为 Go 标准库.

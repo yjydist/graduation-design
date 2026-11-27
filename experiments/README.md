@@ -30,13 +30,13 @@ R1-R5 对应[项目需求与实现](../docs/DESIGN.md#r1-r5-需求追踪总表).
 
 ## 运行与复算
 
-`experiments/` 作为独立 Go 模块 (`grad/experiments`) 接入 4 模块工作区, 通过统一 Cobra CLI (`cmd/exp`) 提供基线, 正式运行与离线复算入口. 从仓库根目录使用 `mise` 执行:
+`experiments/` 作为独立 Go 模块 (`grad/experiments`) 接入 4 模块工作区, 通过统一 Cobra CLI (`cmd/exp`) 提供基线, 正式运行与离线复算入口. 在仓库根目录执行以下任务. 相对实例, 原始记录及输出路径均以仓库根为基准.
 
 ```bash
-mise -C experiments run experiment:test
-mise -C experiments run experiment:baseline -- --help
-mise -C experiments run experiment:run -- --help
-mise -C experiments run experiment:analyze -- --help
+mise run experiment:test
+mise run experiment:baseline -- --help
+mise run experiment:run -- --help
+mise run experiment:analyze -- --help
 ```
 
 也可进入 `experiments/` 目录直接调用 `exp` CLI:

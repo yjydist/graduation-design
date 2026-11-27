@@ -16,8 +16,8 @@
 ## 构建与测试
 
 ```bash
-cd chaincode && go build -o /dev/null ./registry
-cd chaincode && go test -v -race ./...
+mise run chaincode:build
+mise run test:race -- -v grad/chaincode/...
 ```
 
 变更登记行为时核对[部署与链上登记契约](../docs/IMPLEMENTATION.md#2-部署与链上登记).

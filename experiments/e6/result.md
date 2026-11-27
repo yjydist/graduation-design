@@ -25,7 +25,7 @@
 
 ## 3 离线复算结果骨架
 
-停止 Fabric 与 PostgreSQL 容器后, 使用 `mise -C experiments run experiment:analyze -- --experiment E6 --run-dir experiments/e6/runs/<run-id> --out experiments/e6/analysis/<run-id>` (`e6-analyzer/v1`) 对原始目录进行只读复算, 原始目录文件摘要保持不变. 正式或短跑批次完成后按实例填入下表:
+停止 Fabric 与 PostgreSQL 容器后, 使用 `mise run experiment:analyze -- --experiment E6 --run-dir experiments/e6/runs/<run-id> --out experiments/e6/analysis/<run-id>` (`e6-analyzer/v1`) 对原始目录进行只读复算, 原始目录文件摘要保持不变. 正式或短跑批次完成后按实例填入下表:
 
 | 配置与实例 | 源运行 ID | `t_valid-t_submit` (ms) | `t_apply-t_valid` (ms) | `t_adopt-t_apply` (ms) | 确认后窗口 (ms) | 相对提交窗口 (ms) | 窗口状态 | 违规放行数 | 计划 / 完成 / 漏探测 / 超时 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

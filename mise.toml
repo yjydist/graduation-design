@@ -1,9 +1,26 @@
 [tools]
 go = "1.27"
+node = "22"
 python = "3.15"
 
 [env]
 CGO_ENABLED = "0"
+
+[tasks.build]
+description = "构建链码, 账本及实验 CLI, 工作台后端和 web/dist"
+depends = ["chaincode:build", "ledger:build", "workbench:build", "experiment:build", "web:build"]
+
+[tasks.test]
+description = "运行项目, 实验, 前端单测和演示编排离线回归"
+depends = ["test:unit", "experiment:test", "web:test", "test:demo"]
+
+[tasks.spec]
+description = "调用本仓 OpenSpec CLI, 例如 list --specs 或 validate <变更名>"
+run = "openspec"
+
+[tasks."chaincode:build"]
+description = "构建 Fabric 登记链码 build/authregistry"
+run = "go build -o build/authregistry grad/chaincode/registry"
 
 [tasks."ledger:build"]
 description = "构建 build/ledgerctl 可执行文件"
@@ -17,9 +34,38 @@ run = "go test grad/protocol/... grad/chaincode/... grad/platform/..."
 description = "运行 platform PostgreSQL 集成测试 (//go:build db)"
 run = "go test -tags=db -count=1 grad/platform/..."
 
+[tasks."test:demo"]
+description = "离线验证三域演示的预检, 恢复, 诊断及定向清理"
+run = "python -m unittest discover -s infra/workbench -p 'test_*.py'"
+
+[tasks."test:arch"]
+description = "检查平台五层架构, 实验边界及工作区依赖图"
+run = ["go test -count=1 grad/platform grad/experiments", "python infra/check_go_dependencies.py"]
+
+[tasks."test:vet"]
+description = "静态检查四模块及 db, fabriclive 构建标签"
+run = [
+  "go vet grad/protocol/... grad/chaincode/... grad/platform/... grad/experiments/...",
+  "go vet -tags=db grad/platform/... grad/experiments/...",
+  "go vet -tags=fabriclive grad/platform/...",
+]
+
+[tasks."test:race"]
+description = "启用 CGO 运行竞态检查, 可指定 go test 参数和包"
+env.CGO_ENABLED = "1"
+run = '''sh -c 'if [ "$#" -eq 0 ]; then set -- grad/protocol/... grad/chaincode/... grad/platform/...; fi; exec go test -race "$@"' race'''
+
+[tasks."test:fabric:compile"]
+description = "仅编译 Fabric 实机验收测试"
+run = "go test -tags=fabriclive -c -o /dev/null grad/platform/core/ledger grad/platform/bootstrap"
+
 [tasks."fabric:config"]
-description = "校验隔离的 Fabric Compose 配置"
+description = "首次准备隔离实例材料并校验 Fabric Compose 配置"
 run = "sh infra/fabric/network.sh config"
+
+[tasks."fabric:init"]
+description = "准备隔离 Fabric 实例的身份和创世材料"
+run = "sh infra/fabric/network.sh init"
 
 [tasks."fabric:up"]
 description = "启动并加入 Fabric procurement 通道"
@@ -37,6 +83,30 @@ run = "sh infra/fabric/network.sh ps"
 description = "使用新实例目录和端口创建独立 Fabric 通道"
 run = "sh infra/fabric/network.sh rebuild"
 
+[tasks."fabric:logs"]
+description = "查询指定 Fabric 服务日志"
+run = "sh infra/fabric/network.sh logs"
+
+[tasks."fabric:start"]
+description = "启动已有 Fabric 服务容器"
+run = "sh infra/fabric/network.sh start"
+
+[tasks."fabric:stop"]
+description = "停止指定 Fabric 服务容器"
+run = "sh infra/fabric/network.sh stop"
+
+[tasks."fabric:compose"]
+description = "在指定 Fabric 实例运行 Compose 命令"
+run = "sh infra/fabric/network.sh compose"
+
+[tasks."fabric:peer"]
+description = "以指定组织和用户身份运行 peer 命令"
+run = "sh infra/fabric/network.sh peer"
+
+[tasks."fabric:orderer"]
+description = "对指定排序节点运行 osnadmin channel 命令"
+run = "sh infra/fabric/network.sh orderer"
+
 [tasks."ledger:deploy"]
 description = "安装, 三域批准并初始化 Fabric 登记链码"
 run = "go run grad/platform/cmd/ledgerctl deploy"
@@ -53,6 +123,144 @@ run = "go run grad/platform/cmd/ledgerctl check"
 description = "按 --block 复查 Fabric 历史"
 run = "go run grad/platform/cmd/ledgerctl inspect"
 
+[tasks."ledger:invoke"]
+description = "提交或恢复指定幂等键的登记操作"
+run = "go run grad/platform/cmd/ledgerctl invoke"
+
+[tasks."ledger:operation"]
+description = "按幂等键核查原交易"
+run = "go run grad/platform/cmd/ledgerctl operation"
+
+[tasks."ledger:mcp"]
+description = "通过原始标准输入输出运行钱包 MCP 服务"
+raw = true
+run = "go run grad/platform/cmd/ledgerctl mcp"
+
 [tasks."ledger:verify"]
 description = "运行 Fabric 实机集成验收 (//go:build fabriclive, 需设置绝对路径 FABRIC_INSTANCE)"
 run = "go test -tags=fabriclive -v -count=1 -timeout=0 grad/platform/core/ledger grad/platform/bootstrap"
+
+[tasks."workbench:build"]
+description = "构建单域后端 build/workbench"
+run = "go build -o build/workbench grad/platform/cmd/workbench"
+
+[tasks."workbench:prepare"]
+description = "为已登记的 Fabric 实例准备三域工作台挂载目录"
+run = "go run grad/platform/cmd/workbench prepare"
+
+[tasks."workbench:serve"]
+description = "按 --config 启动一个域的工作台后端"
+run = "go run grad/platform/cmd/workbench"
+
+[tasks."workbench:images"]
+description = "构建三域共用镜像并输出镜像 ID"
+run = "python infra/workbench/ops.py images"
+
+[tasks."workbench:compose"]
+description = "按域运行 Compose 命令: <a|b|c> <动作> [参数...]"
+run = "python infra/workbench/ops.py compose"
+
+[tasks."workbench:certs"]
+description = "导出指定域或所有域的浏览器 CA 公钥证书"
+run = "python infra/workbench/ops.py certs"
+
+[tasks."workbench:ready"]
+description = "从各域 HTTPS 入口核对 CA, ready 和 domainId"
+run = "python infra/workbench/ops.py ready"
+
+[tasks."workbench:probe"]
+description = "以 A 域身份和给定运行 ID, 重试键调用 B 域探针"
+run = "python infra/workbench/ops.py probe"
+
+[tasks."web:install"]
+description = "按锁文件安装工作台前端依赖"
+dir = "web"
+sources = ["{{config_root}}/web/package.json", "{{config_root}}/web/package-lock.json"]
+outputs = ["{{config_root}}/web/node_modules/.package-lock.json"]
+run = "npm ci"
+
+[tasks."web:dev"]
+description = "启动 Vite 开发服务"
+dir = "web"
+depends = ["web:install"]
+run = "npm run dev --"
+
+[tasks."web:build"]
+description = "构建工作台静态资源 web/dist"
+dir = "web"
+depends = ["web:install"]
+run = "npm run build --"
+
+[tasks."web:preview"]
+description = "预览当前工作台构建"
+dir = "web"
+depends = ["web:build"]
+run = "npm run preview --"
+
+[tasks."web:typecheck"]
+description = "检查工作台 TypeScript 类型"
+dir = "web"
+depends = ["web:install"]
+run = "npm run typecheck --"
+
+[tasks."web:lint"]
+description = "运行工作台 ESLint 检查"
+dir = "web"
+depends = ["web:install"]
+run = "npm run lint --"
+
+[tasks."web:test"]
+description = "运行前端单元测试"
+dir = "web"
+depends = ["web:install"]
+run = "npm run test --"
+
+[tasks."web:test:browser"]
+description = "运行 headless Chrome 工作台回归"
+dir = "web"
+depends = ["web:build"]
+run = "npm run test:browser --"
+
+[tasks."web:check"]
+description = "检查前端类型, ESLint 和单元测试"
+depends = ["web:typecheck", "web:lint", "web:test"]
+
+[tasks."experiment:build"]
+description = "构建统一实验 CLI build/exp"
+run = "go build -o build/exp grad/experiments/cmd/exp"
+
+[tasks."experiment:baseline"]
+description = "在独立实例上运行 C0/B0/B1 三组采购基线"
+run = "go run grad/experiments/cmd/exp baseline"
+
+[tasks."experiment:run"]
+description = "编排 E1/E6 正式实验或仅生成计划"
+run = "go run grad/experiments/cmd/exp run"
+
+[tasks."experiment:analyze"]
+description = "从根目录指定的原始记录离线复算 E1/E6"
+run = "go run grad/experiments/cmd/exp analyze"
+
+[tasks."experiment:test"]
+description = "串行运行实验模块测试, 支持 -run 和 -tags"
+run = "go test -p 1 grad/experiments/..."
+
+[tasks."demo:up"]
+description = "在 arm64 主机启动或恢复本仓库的三域采购演示"
+run = "python infra/workbench/demo.py up"
+
+[tasks."demo:down"]
+description = "依次停止三域及 Fabric, 保留账本, 数据卷及凭据"
+run = "python infra/workbench/demo.py down"
+
+[tasks."demo:clean"]
+description = "关闭并定向删除本仓的演示容器, 网络, 卷和生成目录"
+run = "python infra/workbench/demo.py clean"
+
+[tasks."demo:status"]
+description = "核对本仓演示的阶段, 夹具期限和各域 HTTPS 状态"
+run = "python infra/workbench/demo.py status"
+
+[tasks."demo:logs"]
+description = "查询演示日志, 可指定 a/b/c/fabric 和服务名"
+run = "python infra/workbench/demo.py logs"

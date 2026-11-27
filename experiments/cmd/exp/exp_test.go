@@ -27,6 +27,23 @@ func testRepoRoot(t *testing.T) string {
 	return root
 }
 
+// E1 tests snapshot the real sources while reading model settings only from their own fixture.
+func offlineE1Deps(t *testing.T, apiKey string) RunnerDeps {
+	t.Helper()
+	deps := defaultRunnerDeps()
+	deps.RepoRoot = testRepoRoot(t)
+	deps.ModelEnvFile = filepath.Join(t.TempDir(), "llm.env")
+	config := "LLM_PROVIDER=openai\nLLM_MODEL=test-model\nLLM_BASE_URL=https://example.test\n"
+	require.NoError(t, os.WriteFile(deps.ModelEnvFile, []byte(config), 0o600))
+	deps.LookupEnv = func(key string) (string, bool) {
+		if key == "LLM_API_KEY" && apiKey != "" {
+			return apiKey, true
+		}
+		return "", false
+	}
+	return deps
+}
+
 func extractTarGz(t *testing.T, archivePath string) map[string][]byte {
 	t.Helper()
 	f, err := os.Open(archivePath)
@@ -135,19 +152,10 @@ func TestCLIHelpAndSubcommands(t *testing.T) {
 }
 
 func TestRunPlanOnlyAndSourceSnapshotReconstruction(t *testing.T) {
-	repo := testRepoRoot(t)
+	deps := offlineE1Deps(t, "test-secret-api-key-12345")
 	tmp := t.TempDir()
 	outRoot := filepath.Join(tmp, "runs")
 	instanceDir := filepath.Join(tmp, "fabric-e1-plan")
-
-	deps := defaultRunnerDeps()
-	deps.RepoRoot = repo
-	deps.LookupEnv = func(key string) (string, bool) {
-		if key == "LLM_API_KEY" {
-			return "test-secret-api-key-12345", true
-		}
-		return "", false
-	}
 
 	res, err := ExecuteRun(context.Background(), RunOptions{
 		Experiment:  "E1",
@@ -175,21 +183,8 @@ func TestRunPlanOnlyAndSourceSnapshotReconstruction(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, string(rawManifest), "test-secret-api-key-12345")
 
-	snapMap, ok := manifest["driverSnapshot"].(map[string]any)
-	require.True(t, ok)
-	archivePath := filepath.Join(res.RunDir, snapMap["archiveFile"].(string))
-	gotArchiveHash, err := harness.SHA256File(archivePath)
-	require.NoError(t, err)
-	assert.Equal(t, snapMap["archiveSha256"], gotArchiveHash)
-
-	fileHashes := manifest["fileSHA256"].(map[string]any)
-	extracted := extractTarGz(t, archivePath)
+	extracted := verifyPlanSnapshot(t, deps.RepoRoot, res.RunDir, "mise.toml", "experiments/e1/run.sh")
 	assert.NotContains(t, extracted, "experiments/llm.env")
-	for rel, expectedHash := range fileHashes {
-		content, exists := extracted[rel]
-		require.True(t, exists, "snapshot archive missing recorded file %s", rel)
-		assert.Equal(t, expectedHash, harness.SHA256Bytes(content), "hash mismatch for %s", rel)
-	}
 	for _, mustHave := range []string{
 		"go.work",
 		"experiments/go.mod",
@@ -200,6 +195,31 @@ func TestRunPlanOnlyAndSourceSnapshotReconstruction(t *testing.T) {
 	} {
 		assert.Contains(t, extracted, mustHave)
 	}
+}
+
+func verifyPlanSnapshot(t *testing.T, repo, runDir string, entrypoints ...string) map[string][]byte {
+	t.Helper()
+	var manifest struct {
+		DriverSnapshot SourceSnapshotInfo
+		FileSHA256     map[string]string
+	}
+	require.NoError(t, harness.ReadJSON(filepath.Join(runDir, "manifest.json"), &manifest))
+	archive := filepath.Join(runDir, manifest.DriverSnapshot.ArchiveFile)
+	hash, err := harness.SHA256File(archive)
+	require.NoError(t, err)
+	require.Equal(t, manifest.DriverSnapshot.ArchiveSHA256, hash)
+	files := extractTarGz(t, archive)
+	assert.NotContains(t, files, "experiments/mise.toml")
+	for rel, expected := range manifest.FileSHA256 {
+		require.Contains(t, files, rel)
+		assert.Equal(t, expected, harness.SHA256Bytes(files[rel]), rel)
+	}
+	for _, rel := range entrypoints {
+		hash, err := harness.SHA256File(filepath.Join(repo, rel))
+		require.NoError(t, err)
+		assert.Equal(t, hash, manifest.FileSHA256[rel], rel)
+	}
+	return files
 }
 
 func TestE1PlanExportsOnlyPublicModelConfiguration(t *testing.T) {
@@ -270,7 +290,8 @@ func TestRunE6PlanOnlyAndValidation(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "PLANNED", res.Summary.Status)
 
-	extracted := extractTarGz(t, filepath.Join(res.RunDir, "driver-source.tar.gz"))
+	extracted := verifyPlanSnapshot(t, repo, res.RunDir, "mise.toml")
+	assert.NotContains(t, extracted, "experiments/e1/run.sh")
 	for _, mustHave := range []string{
 		"go.work",
 		"experiments/go.mod",
@@ -284,17 +305,15 @@ func TestRunE6PlanOnlyAndValidation(t *testing.T) {
 }
 
 func TestRunGuardsAntiOverwriteIsolatedInstanceAndRevisionConflict(t *testing.T) {
-	repo := testRepoRoot(t)
+	deps := offlineE1Deps(t, "")
 	tmp := t.TempDir()
 	outRoot := filepath.Join(tmp, "runs")
-	deps := defaultRunnerDeps()
-	deps.RepoRoot = repo
 
 	// 1. Refuse default Fabric instance.
 	_, err := ExecuteRun(context.Background(), RunOptions{
 		Experiment:  "E1",
 		Revision:    "HEAD",
-		InstanceDir: filepath.Join(repo, ".local", "fabric-d0"),
+		InstanceDir: filepath.Join(deps.RepoRoot, ".local", "fabric-d0"),
 		BasePort:    19540,
 		OutRoot:     outRoot,
 		PlanOnly:    true,
@@ -383,7 +402,7 @@ func TestRunGuardsAntiOverwriteIsolatedInstanceAndRevisionConflict(t *testing.T)
 }
 
 func TestRunFourModuleBuildPathsAndWorkspaceSUT(t *testing.T) {
-	repo := testRepoRoot(t)
+	deps := offlineE1Deps(t, "super-secret-llm-key-987654")
 	tmp := t.TempDir()
 	outRoot := filepath.Join(tmp, "runs")
 	instanceDir := filepath.Join(tmp, "fabric-e1-enrich")
@@ -394,14 +413,6 @@ func TestRunFourModuleBuildPathsAndWorkspaceSUT(t *testing.T) {
 	}
 	var buildCalls []buildCall
 
-	deps := defaultRunnerDeps()
-	deps.RepoRoot = repo
-	deps.LookupEnv = func(key string) (string, bool) {
-		if key == "LLM_API_KEY" {
-			return "super-secret-llm-key-987654", true
-		}
-		return "", false
-	}
 	deps.ArchiveCommit = func(_ context.Context, _, _, destDir string) error {
 		driverDir := filepath.Join(destDir, e1DriverDir)
 		require.NoError(t, os.MkdirAll(driverDir, 0o755))
@@ -509,8 +520,8 @@ func TestRunFourModuleBuildPathsAndWorkspaceSUT(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, archiveCalled)
 	require.Len(t, buildCalls, 2)
-	assert.Equal(t, filepath.Join(repo, "platform"), buildCalls[0].dir)
-	assert.Equal(t, filepath.Join(repo, "experiments"), buildCalls[1].dir)
+	assert.Equal(t, filepath.Join(deps.RepoRoot, "platform"), buildCalls[0].dir)
+	assert.Equal(t, filepath.Join(deps.RepoRoot, "experiments"), buildCalls[1].dir)
 
 	var mWS map[string]any
 	require.NoError(t, harness.ReadJSON(filepath.Join(resWS.RunDir, "manifest.json"), &mWS))
@@ -518,18 +529,10 @@ func TestRunFourModuleBuildPathsAndWorkspaceSUT(t *testing.T) {
 }
 
 func TestRunControlledFailureAbortAndSecretScan(t *testing.T) {
-	repo := testRepoRoot(t)
+	deps := offlineE1Deps(t, "secret-key-build-fail-1234")
 	tmp := t.TempDir()
 
 	// Controlled build failure.
-	deps := defaultRunnerDeps()
-	deps.RepoRoot = repo
-	deps.LookupEnv = func(key string) (string, bool) {
-		if key == "LLM_API_KEY" {
-			return "secret-key-build-fail-1234", true
-		}
-		return "", false
-	}
 	deps.ArchiveCommit = func(_ context.Context, _, _, destDir string) error {
 		return os.MkdirAll(filepath.Join(destDir, "infra", "fabric"), 0o755)
 	}
@@ -547,6 +550,7 @@ func TestRunControlledFailureAbortAndSecretScan(t *testing.T) {
 		OutRoot:     filepath.Join(tmp, "runs"),
 	}, deps)
 	require.Error(t, err)
+	require.NotNil(t, resFail)
 	assert.Equal(t, "FAIL", resFail.Summary.Status)
 	assert.Equal(t, "build", resFail.Summary.Stage)
 	assert.Equal(t, 16, resFail.Summary.MissingCount)

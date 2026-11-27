@@ -1,19 +1,19 @@
 # E1 独立实验驱动
 
-E1 通过统一实验 CLI (`cmd/exp`) 的 `mise -C experiments run experiment:run` (或封装脚本 `run.sh`) 编排执行. 构建前先分配独立运行 ID, 保存计划清单 `manifest.json` 及包含编排与驱动源码的 `driver-source.tar.gz`, 再将指定 Git 提交导出到临时构建目录, 构建 `ledgerctl` 与 `e1-driver` 并补录二进制 SHA-256 及隔离实例信息. 场景和判据见 [E1 方法](method.md), 实验结果模板和原始记录约定见[结果报告](result.md).
+E1 通过统一实验 CLI (`cmd/exp`) 的 `mise run experiment:run` (或封装脚本 `run.sh`) 编排执行. 构建前先分配独立运行 ID, 保存计划清单 `manifest.json` 及包含编排与驱动源码的 `driver-source.tar.gz`, 再将指定 Git 提交导出到临时构建目录, 构建 `ledgerctl` 与 `e1-driver` 并补录二进制 SHA-256 及隔离实例信息. 场景和判据见 [E1 方法](method.md), 实验结果模板和原始记录约定见[结果报告](result.md).
 
 ## 运行
 
 启动 Docker, 将模型凭据放入当前环境的 `LLM_API_KEY`. 在项目根目录指定固定提交, 全新的实例目录与可用端口:
 
 ```bash
-mise -C experiments run experiment:run -- --experiment E1 \
+mise run experiment:run -- --experiment E1 \
   --revision <revision> \
   --instance .local/fabric-e1-run \
   --port 19100
 ```
 
-也可通过封装脚本 `run.sh` (透传参数至 `experiment:run -- --experiment E1`) 或在 `experiments/` 目录直接调用 `exp` CLI:
+也可通过封装脚本 `run.sh` (透传参数至 `experiment:run -- --experiment E1`) 或在根目录运行构建好的 CLI:
 
 ```bash
 bash experiments/e1/run.sh \
@@ -21,7 +21,8 @@ bash experiments/e1/run.sh \
   --instance .local/fabric-e1-run \
   --port 19100
 
-cd experiments && go run ./cmd/exp run --experiment E1 \
+mise run experiment:build
+build/exp run --experiment E1 \
   --revision <revision> \
   --instance .local/fabric-e1-run \
   --port 19100
@@ -36,7 +37,7 @@ cd experiments && go run ./cmd/exp run --experiment E1 \
 停止 Fabric, PostgreSQL 和模型服务后, 可从原始运行目录只读复算 F01-F16 关键计数, RP/BM 主库对账, 模型轨迹与失败缺测诊断, 并将派生汇总输出到独立目录:
 
 ```bash
-mise -C experiments run experiment:analyze -- --experiment E1 \
+mise run experiment:analyze -- --experiment E1 \
   --run-dir experiments/e1/runs/<run-id> \
   --out experiments/e1/analysis/<run-id>
 ```

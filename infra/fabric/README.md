@@ -29,8 +29,8 @@ mise run ledger:deploy -- --retry-initialization
 
 ```bash
 mise run ledger:build
-build/ledgerctl inspect --block 24
-build/ledgerctl operation --key seed/RP/G0
+mise run ledger:inspect -- --block 24
+mise run ledger:operation -- --key seed/RP/G0
 ```
 
 历史输出只有登记事实. `invoke --key <操作键> --role <角色> --method <链码方法> --input <JSON文件>` 接受并推进操作. `operation --key` 查原操作并在需要时恢复. 同键同输入返回原操作, C Peer 停机时仍可从本地日志取得原提案, txID 和已签交易. 同键异输入返回 `OPERATION_KEY_CONFLICT`. 受理新操作或推进待定操作前核对可信 Peer. 结果字段区分 `PENDING`, `CONFIRMED` 和 `FAILED`.

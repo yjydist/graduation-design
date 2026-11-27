@@ -13,7 +13,6 @@
 | `harness/` | 共用实验底座: 环境装配, 指标采集, 敏感信息扫描, 源码快照, 原子写入与 CSV 导出. |
 | `baseline/` | C0/B0/B1 采购基线驱动及其测试和运行说明. |
 | `e1/`, `e2/`, `e3/`, `e4/`, `e5/`, `e6/`, `e7/`, `e8/` | 各编号的方法及已完成的驱动和结果. |
-| `mise.toml` | 实验运行, 复算及测试任务. |
 | `llm.env` | 本地模型配置. API 密钥由当前环境提供. |
 
 ## 模块边界与工作流
@@ -21,7 +20,7 @@
 - `experiments/` 是 4 模块 Go 工作区 (`go.work`) 中的独立 Go 模块 (`grad/experiments`), 仅调用 `grad/protocol` 与 `grad/platform` 的公开 API, 严禁导入任何 `grad/platform/internal/...` 内部包.
 - 用 [实验索引](README.md#实验索引)定位方法, 用例及现有驱动. 方法定义变量, 采样和失败判据. 增改用例时保留 F/S 编号, 核对[系统实现契约](../docs/IMPLEMENTATION.md).
 - 实验通过项目现有接口执行. 需要额外观测点时在项目侧提供通用接口, 在实验侧解释事件, 配对结果和统计指标.
-- 在仓库根目录运行 `mise -C experiments run experiment:test` 核对实验底座, 驱动与分析器 (对应 `experiments/mise.toml` 在模块目录执行 `go test -p 1 ./...`). 执行前检查实验入口的配置和前置条件. 现场短跑用新的隔离实例目录, 端口和适用的独立数据库.
+- 在仓库根目录运行 `mise run experiment:test` 核对实验底座, 驱动与分析器 (按包串行执行 `go test -p 1 grad/experiments/...`). 执行前检查实验入口的配置和前置条件. 现场短跑用新的隔离实例目录, 端口和适用的独立数据库.
 - 真实 LLM 实验从 `llm.env` 加载模型选择, 通过环境传入 `LLM_API_KEY`. 运行清单记录实际模型, 接口协议和服务地址.
 
 ## 正式实验制品

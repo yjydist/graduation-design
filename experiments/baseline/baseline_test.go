@@ -304,6 +304,18 @@ func TestBaselineManagedFailuresRetainPlan(t *testing.T) {
 		assert.Len(t, res.Summary.CaseResults, 12)
 		assert.False(t, res.Summary.Passed)
 		assertBaselineFiles(t, res.EvidenceDirectory)
+		var manifest struct {
+			Locks map[string]string `json:"artifact_locks"`
+		}
+		require.NoError(t, harness.ReadJSON(filepath.Join(res.EvidenceDirectory, "manifest.json"), &manifest))
+		root, err := harness.RepoRoot()
+		require.NoError(t, err)
+		for _, path := range []string{"mise.toml", "infra/fabric/network.sh", "infra/fabric/channel.sh"} {
+			digest, err := harness.SHA256File(filepath.Join(root, path))
+			require.NoError(t, err)
+			assert.Equal(t, digest, manifest.Locks[path], path)
+		}
+		assert.NotContains(t, manifest.Locks, "experiments/mise.toml")
 	})
 	t.Run("timeout", func(t *testing.T) {
 		r := newBaselineTestRun(t)

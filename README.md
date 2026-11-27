@@ -44,7 +44,7 @@ flowchart TB
 | 使用目标 | 必需环境 | 说明 |
 | --- | --- | --- |
 | 运行 Go 离线单元测试与实验测试 | `mise` (自动安装 Go 1.27 与 Python 3.15) | 跨平台可用, 无需 Docker 或模型 API |
-| 构建或测试 Web 前端 | Node.js 22+ (`npm`) | 在 `web/` 目录执行, 无需启动后端 |
+| 构建或测试 Web 前端 | mise 管理的 Node.js 22 和 npm | 从根目录运行 `web:*` 任务 |
 | 运行 PostgreSQL 数据库集成测试 | Docker Engine | 自动通过 `testcontainers-go` 启动 `postgres:17-alpine`, 也可用 `TEST_POSTGRES_DSN` 连接已有库 |
 | 启动 Fabric 联盟链与实机集成验收 | `arm64` macOS 或 Linux, Docker Engine 与 Compose, `curl`, `shasum`, `openssl` | Fabric 3.1.5 镜像按 OCI digest 锁定为 `linux/arm64` |
 | 启动三域 Web 工作台或运行真实 LLM 实验 | 以上全部 + OpenAI 或 Anthropic 兼容模型 API | 仅 A/B 域智能体推理需要; C 域与确定性基线不需要 |
@@ -57,49 +57,32 @@ mise install
 
 ## 快速开始
 
-根据你想做的事情选择下面任意一条路径开始.
+从仓库根目录运行 `mise tasks` 查看所有带用途说明的任务. 日常开发, 三域演示和论文实验分别使用以下入口.
 
-### 1. 本地构建与测试 (无需部署整套联盟链)
+### 1. 本地构建与测试
 
-在仓库根目录执行, 可在 1 分钟内确认 Go 协议核, 链码, 平台后端, 前端工作台和实验模块均正常工作:
-
-```bash
-# 运行 protocol/, chaincode/, platform/ 全部离线单元测试
-mise run test:unit
-
-# 构建两个核心命令行入口: build/ledgerctl 与 build/workbench
-mise run ledger:build
-mise exec -- go build -o build/workbench grad/platform/cmd/workbench
-
-# 运行 platform/ 的 PostgreSQL 集成测试 (//go:build db, 需要 Docker 或 TEST_POSTGRES_DSN)
-mise run test:db
-
-# 运行论文实验模块的离线驱动与复算测试
-mise -C experiments run experiment:test
+```sh
+mise run build
+mise run test
 ```
 
-前端工作台 (`web/`) 的校验与构建在 `web/` 目录下执行:
+构建产物为 `build/authregistry`, `build/ledgerctl`, `build/workbench`, `build/exp` 和 `web/dist/`. 离线测试覆盖 Go 项目三模块, 实验模块, 前端单测和演示编排. 安装前端依赖使用 `web:install`, 构建和测试会自动执行需要的安装步骤.
 
-```bash
-cd web
-npm ci
-npm run typecheck
-npm run test
-npm run build
-```
+按需运行 `mise run web:check`, `mise run test:arch`, `mise run test:vet` 或 `mise run test:race -- grad/protocol/registry`. 浏览器回归 `web:test:browser` 需要 Chrome 或 Chromium, 可以用 `CHROME_BIN` 指定位置. 数据库集成使用 `test:db`, 需要 Docker 或测试数据库连接. 维护规范可运行 `mise run spec -- list --specs` 和 `mise run spec -- validate <变更名>`.
 
-如需本地调试前端界面, 可在 `web/` 目录运行 `npm run dev` (默认监听 `http://localhost:5173`, 并将 `/api/v1` 代理至 `VITE_API_PROXY_TARGET`, 默认为 `http://127.0.0.1:8080`).
+用 `mise run web:dev -- --port 5173` 调试前端. Vite 将 `/api/v1` 代理至 `VITE_API_PROXY_TARGET`, 默认值为 `http://127.0.0.1:8080`. 用 `mise run web:preview` 预览当前源码的生产构建.
 
 ### 2. 启动三域 Web 工作台 (完整交互体验)
 
-三域 Web 工作台是最直观的端到端运行形态: A/B/C 三域使用相同的浏览器前端镜像与后端镜像, 各自独立运行 PostgreSQL 与同源 HTTPS 代理, 并通过 Docker 内网 mTLS 互联.
+首次把 A/B 模型配置和密钥分别放入 `.local/demo-config/{a,b}/` 的 `llm.env` 和 `model-api-key`. 在 arm64 主机启动 Docker 后运行以下命令. 文件格式见[工作台手册](infra/workbench/README.md#1-首次配置和启动).
 
-整体启动分四步:
+```sh
+mise run demo:up
+mise run demo:status
+mise run demo:logs -- b backend
+```
 
-1. 在 `arm64` 主机启动隔离 Fabric 实例并完成链码部署, 夹具写入与三域配置生成 (`build/workbench prepare`).
-2. 在 A 域和 B 域各自的挂载目录写入模型配置 `llm.env` 与密钥文件 `model-api-key` (C 域无需模型连接).
-3. 构建工作台前后端 Docker 镜像并用 Compose 启动 A/B/C 三域实例.
-4. 导出各域本地 Caddy 根证书并在浏览器或系统信任库中信任.
+在演示浏览器中信任输出指向的三张公共根证书. `mise run demo:down` 停机并保留现场. `mise run demo:clean` 关闭并删除演示数据. 夹具到期后, 完成旧记录复核即可清理并重新部署.
 
 启动就绪后, 三个域的默认浏览器入口与预置账号如下 (各域口令文件由 `prepare` 生成在对应挂载目录下):
 
@@ -117,7 +100,27 @@ npm run build
 
 完整可复制的准备, 构建, 启动, 就绪检查与停机恢复命令见 [三域 Web 工作台运行手册](infra/workbench/README.md).
 
-### 3. 运行 Fabric 联盟链与 ledgerctl
+### 3. 运行论文实验 (exp CLI)
+
+`experiments/` 作为独立 Go 模块提供统一命令行 `exp`, 覆盖三组采购基线对照 (`C0`/`B0`/`B1`), E1/E6 正式运行与离线复算:
+
+```bash
+# 查看基线, 正式运行与离线复算参数
+mise run experiment:baseline -- --help
+mise run experiment:run -- --help
+mise run experiment:analyze -- --help
+```
+
+运行需要真实大语言模型的实验前, 先按需编辑 [experiments/llm.env](experiments/llm.env) 中的 `LLM_PROVIDER`, `LLM_BASE_URL` 与 `LLM_MODEL`, 再在仓库根目录加载配置并导出密钥:
+
+```bash
+source experiments/llm.env
+export LLM_API_KEY="<your-api-key>"
+```
+
+三组基线的完整运行命令见 [三组采购基线](experiments/baseline/README.md), E1-E8 全部研究问题, 方法与结果入口见 [论文实验索引](experiments/README.md).
+
+### 单独操作 Fabric 联盟链与 ledgerctl
 
 如果你只需要运行底层 Fabric 通道, 部署 `authregistry` 链码, 查验区块历史或跑全栈实机集成测试, 在 `arm64` 主机启动 Docker 后于根目录执行:
 
@@ -142,27 +145,7 @@ FABRIC_INSTANCE="$PWD/.local/fabric-d0" mise run ledger:verify
 mise run fabric:down
 ```
 
-`build/ledgerctl` 还支持 `invoke`, `operation` 与 `mcp` 等子命令 (运行 `build/ledgerctl --help` 查看). 独立重建新实例, 部署断点续跑与管理服务装配说明见 [Fabric 网络与集成验收手册](infra/fabric/README.md).
-
-### 4. 运行论文实验 (exp CLI)
-
-`experiments/` 作为独立 Go 模块提供统一命令行 `exp`, 覆盖三组采购基线对照 (`C0`/`B0`/`B1`), 正式实验运行 (`E1`-`E8`) 与离线复算:
-
-```bash
-# 查看基线, 正式运行与离线复算参数
-mise -C experiments run experiment:baseline -- --help
-mise -C experiments run experiment:run -- --help
-mise -C experiments run experiment:analyze -- --help
-```
-
-运行需要真实大语言模型的实验前, 先按需编辑 [experiments/llm.env](experiments/llm.env) 中的 `LLM_PROVIDER`, `LLM_BASE_URL` 与 `LLM_MODEL`, 再在仓库根目录加载配置并导出密钥:
-
-```bash
-source experiments/llm.env
-export LLM_API_KEY="<your-api-key>"
-```
-
-三组基线的完整运行命令见 [三组采购基线](experiments/baseline/README.md), E1-E8 全部研究问题, 方法与结果入口见 [论文实验索引](experiments/README.md).
+用 `mise tasks` 查看所有入口. `ledger:invoke` 提交登记操作, `ledger:operation` 按原键查询, `ledger:mcp` 通过标准输入输出提供钱包工具. 可用 `mise run ledger:mcp -- --help` 查看参数. 独立重建新实例, 部署断点续跑与管理服务装配说明见 [Fabric 网络与集成验收手册](infra/fabric/README.md).
 
 ## 仓库结构
 

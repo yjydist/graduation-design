@@ -219,7 +219,6 @@ func (r *baselineRun) prepare(ctx context.Context) error {
 		"infra/fabric/channel.sh",
 		"infra/fabric/network.sh",
 		"protocol/contexts/vc-v2.json",
-		"experiments/mise.toml",
 		"experiments/baseline/baseline.json",
 	} {
 		digest, err := harness.SHA256File(filepath.Join(repoRoot, filepath.FromSlash(rel)))

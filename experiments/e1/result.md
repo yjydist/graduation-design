@@ -65,12 +65,12 @@
 正式批次完成后, 在脱离 Fabric, PostgreSQL 和模型服务的离线环境下执行只读复算:
 
 ```bash
-mise -C experiments run experiment:run -- --experiment E1 \
+mise run experiment:run -- --experiment E1 \
   --revision <revision> \
   --instance .local/fabric-e1-run \
   --port 19100
 
-mise -C experiments run experiment:analyze -- --experiment E1 \
+mise run experiment:analyze -- --experiment E1 \
   --run-dir experiments/e1/runs/<run-id> \
   --out experiments/e1/analysis/<run-id>
 ```
